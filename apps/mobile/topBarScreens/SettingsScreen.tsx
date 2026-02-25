@@ -48,7 +48,7 @@ import { useScrollPositionWithHandler } from '../hooks/useScrollPosition';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import { logger } from '../utils/loggerService';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 

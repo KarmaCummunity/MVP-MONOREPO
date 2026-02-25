@@ -30,7 +30,7 @@ import {
   signUpWithEmail as fbSignUpWithEmail,
   sendVerification as fbSendVerification,
   sendPasswordReset
-} from '../utils/authService';
+} from '../src/services/auth.service';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 
@@ -322,7 +322,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
       // Get UUID from server using firebase_uid
-      const { apiService } = await import('../utils/apiService');
+      const { apiService } = await import('../src/api/api.service');
       const resolveResponse = await apiService.resolveUserId({
         firebase_uid: fbUser.uid,
         email: fbUser.email || email
@@ -412,7 +412,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
           const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
           // Get UUID from server using firebase_uid
-          const { apiService } = await import('../utils/apiService');
+          const { apiService } = await import('../src/api/api.service');
           const resolveResponse = await apiService.resolveUserId({
             firebase_uid: fbUser.uid,
             email: fbUser.email || email

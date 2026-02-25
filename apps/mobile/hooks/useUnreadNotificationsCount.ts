@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import { getUnreadNotificationCount, subscribeToNotificationEvents } from '../utils/notificationService';
+import { getUnreadNotificationCount, subscribeToNotificationEvents } from '../src/services/notification.service';
 
 /**
  * Hook to get and maintain the count of unread notifications for the current user.

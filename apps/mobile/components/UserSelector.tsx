@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import apiService from '../utils/apiService';
+import apiService from '../src/api/api.service';
 
 interface User {
     id: string;

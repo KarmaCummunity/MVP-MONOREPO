@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 
 export default function OrgDashboardScreen() {
   const { t } = useTranslation(['auth','common']);

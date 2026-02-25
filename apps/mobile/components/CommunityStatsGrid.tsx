@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { StatDetails } from './StatDetailsModal';
 import { useUser } from '../stores/userStore';
 import { useEffect, useState } from 'react';
-import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../utils/statsService';
+import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../src/services/stats.service';
 import { USE_BACKEND } from '../utils/dbConfig';
 
 export type CommunityStat = {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar, TouchableOpacity } from 'react-native';
-import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../utils/config.constants';
+import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../src/infrastructure/config';
 
 /**
  * DevEnvironmentBanner

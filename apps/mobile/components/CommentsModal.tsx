@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '../stores/userStore';
-import { postsService, Comment as ApiComment } from '../utils/postsService';
+import { postsService, Comment as ApiComment } from '../src/services/posts.service';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';

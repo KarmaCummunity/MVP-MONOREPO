@@ -20,7 +20,7 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { useAdminProtection } from '../hooks/useAdminProtection';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 
 interface AdminTimeManagementScreenProps {
   navigation: NavigationProp<AdminStackParamList>;

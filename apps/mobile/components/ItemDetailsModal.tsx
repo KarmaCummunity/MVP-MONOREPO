@@ -17,11 +17,11 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { getCategoryLabel } from '../utils/itemCategoryUtils';
-import { sendMessage, createConversation, getConversations } from '../utils/chatService';
+import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
+import { sendMessage, createConversation, getConversations } from '../src/services/chat.service';
 import { toastService, useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 

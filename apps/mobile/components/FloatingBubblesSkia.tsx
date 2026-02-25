@@ -20,8 +20,8 @@
 //   Group,
 //   Oval,
 // } from '@shopify/react-native-skia';
-// import { EnhancedStatsService, formatShortNumber } from '../utils/statsService';
-// import type { CommunityStats } from '../utils/statsService';
+// import { EnhancedStatsService, formatShortNumber } from '../src/services/stats.service';
+// import type { CommunityStats } from '../src/services/stats.service';
 // import colors from '../globals/colors';
 
 // const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

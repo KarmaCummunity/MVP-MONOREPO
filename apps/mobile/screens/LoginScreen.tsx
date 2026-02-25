@@ -28,7 +28,7 @@ import {
     signInWithEmail,
     signUpWithEmail,
     sendVerification
-} from '../utils/authService';
+} from '../src/services/auth.service';
 import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
 import i18n from '../app/i18n';
 
@@ -122,7 +122,7 @@ export default function LoginScreen() {
 
                 // Get UUID from server using firebase_uid
                 try {
-                    const { apiService } = await import('../utils/apiService');
+                    const { apiService } = await import('../src/api/api.service');
                     const resolveResponse = await apiService.resolveUserId({
                         firebase_uid: fbUser.uid,
                         email: email
@@ -209,7 +209,7 @@ export default function LoginScreen() {
                         if (signUpError.code === 'auth/email-already-in-use') {
                             const fbUser = await signInWithEmail(email, password);
                             // Get user data and proceed with login (same logic as above)
-                            const { apiService } = await import('../utils/apiService');
+                            const { apiService } = await import('../src/api/api.service');
                             const resolveResponse = await apiService.resolveUserId({
                                 firebase_uid: fbUser.uid,
                                 email: email

@@ -32,7 +32,7 @@ import {
   NotificationData,
   getUnreadNotificationCount,
   subscribeToNotificationEvents,
-} from '../utils/notificationService';
+} from '../src/services/notification.service';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';

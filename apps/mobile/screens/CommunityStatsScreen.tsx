@@ -8,9 +8,9 @@ import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { db } from '../utils/databaseService';
-import { EnhancedStatsService } from '../utils/statsService';
-import { apiService } from '../utils/apiService';
+import { db } from '../src/infrastructure/database.service';
+import { EnhancedStatsService } from '../src/services/stats.service';
+import { apiService } from '../src/api/api.service';
 
 const { width, height } = Dimensions.get('window');
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';

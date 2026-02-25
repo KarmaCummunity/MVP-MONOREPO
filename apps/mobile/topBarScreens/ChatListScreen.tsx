@@ -11,9 +11,9 @@ import { View, Text, StyleSheet, RefreshControl, Alert, TextInput, TouchableOpac
 import { useNavigation, NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import ChatListItem from '../components/ChatListItem';
 import { useUser } from '../stores/userStore';
-import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../utils/chatService';
-import { apiService } from '../utils/apiService';
-import { USE_BACKEND } from '../utils/config.constants';
+import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../src/services/chat.service';
+import { apiService } from '../src/api/api.service';
+import { USE_BACKEND } from '../src/infrastructure/config';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';

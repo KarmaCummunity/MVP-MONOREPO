@@ -17,7 +17,7 @@ import { BarChart, ProgressChart, PieChart } from 'react-native-chart-kit';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
