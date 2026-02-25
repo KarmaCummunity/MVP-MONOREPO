@@ -3,7 +3,7 @@
 // - Used by: AdminTablesController
 // - Provides: CRUD operations for tables, columns, and rows with validation
 import { Inject, Injectable } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 
 export interface CreateColumnDto {
@@ -156,6 +156,43 @@ export class AdminTablesService {
   }
 
   /**
+   * Validate a single column value; returns error message or null if valid.
+   */
+  private validateColumnValue(
+    column: CreateColumnDto,
+    value: unknown,
+  ): string | null {
+    if (
+      column.is_required &&
+      (value === undefined || value === null || value === "")
+    ) {
+      return `שדה חובה: ${column.name}`;
+    }
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+    switch (column.data_type) {
+      case "text":
+        return typeof value !== "string"
+          ? `שדה ${column.name} חייב להיות טקסט`
+          : null;
+      case "number":
+        return typeof value !== "number" && isNaN(Number(value))
+          ? `שדה ${column.name} חייב להיות מספר`
+          : null;
+      case "date": {
+        const dateValue =
+          value instanceof Date ? value : new Date(value as string | number);
+        return isNaN(dateValue.getTime())
+          ? `שדה ${column.name} חייב להיות תאריך תקין`
+          : null;
+      }
+      default:
+        return `סוג נתון לא נתמך: ${column.data_type}`;
+    }
+  }
+
+  /**
    * Validate row data according to column definitions
    */
   private validateRowData(
@@ -163,58 +200,9 @@ export class AdminTablesService {
     data: Record<string, unknown>,
   ): { valid: boolean; error?: string } {
     for (const column of columns) {
-      const value = data[column.name];
-
-      // Check required fields
-      if (
-        column.is_required &&
-        (value === undefined || value === null || value === "")
-      ) {
-        return { valid: false, error: `שדה חובה: ${column.name}` };
-      }
-
-      // Skip validation if value is empty and not required
-      if (value === undefined || value === null || value === "") {
-        continue;
-      }
-
-      // Validate data types
-      switch (column.data_type) {
-        case "text":
-          if (typeof value !== "string") {
-            return {
-              valid: false,
-              error: `שדה ${column.name} חייב להיות טקסט`,
-            };
-          }
-          break;
-        case "number":
-          if (typeof value !== "number" && isNaN(Number(value))) {
-            return {
-              valid: false,
-              error: `שדה ${column.name} חייב להיות מספר`,
-            };
-          }
-          break;
-        case "date": {
-          const dateValue =
-            value instanceof Date ? value : new Date(value as string | number);
-          if (isNaN(dateValue.getTime())) {
-            return {
-              valid: false,
-              error: `שדה ${column.name} חייב להיות תאריך תקין`,
-            };
-          }
-          break;
-        }
-        default:
-          return {
-            valid: false,
-            error: `סוג נתון לא נתמך: ${column.data_type}`,
-          };
-      }
+      const err = this.validateColumnValue(column, data[column.name]);
+      if (err) return { valid: false, error: err };
     }
-
     return { valid: true };
   }
 
@@ -395,18 +383,20 @@ export class AdminTablesService {
 
       // Fetch rows if requested
       if (includeRows) {
-        let rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
-        const params: unknown[] = [id];
-
+        // Pagination values are integers validated in the controller; use fixed params.
+        const rowsParams: unknown[] = [id];
+        let rowsQuery: string;
         if (pagination) {
-          rowsQuery += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-          params.push(
+          rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+          rowsParams.push(
             pagination.limit,
             (pagination.page - 1) * pagination.limit,
           );
+        } else {
+          rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
         }
 
-        const rowsResult = await this.pool.query(rowsQuery, params);
+        const rowsResult = await this.pool.query(rowsQuery, rowsParams);
         table.rows = rowsResult.rows;
 
         // Get total count
@@ -425,6 +415,79 @@ export class AdminTablesService {
   }
 
   /**
+   * Apply table-level field updates (name, description, metadata).
+   */
+  private async applyTableFieldUpdates(
+    client: PoolClient,
+    id: string,
+    dto: UpdateTableDto,
+  ): Promise<void> {
+    if (
+      !dto.name &&
+      dto.description === undefined &&
+      dto.metadata === undefined
+    ) {
+      return;
+    }
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+    if (dto.name) {
+      updates.push(`name = $${paramIndex++}`);
+      params.push(dto.name);
+    }
+    if (dto.description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      params.push(dto.description || null);
+    }
+    if (dto.metadata !== undefined) {
+      updates.push(`metadata = $${paramIndex++}::jsonb`);
+      params.push(JSON.stringify(dto.metadata));
+    }
+    if (updates.length === 0) return;
+    params.push(id);
+    await client.query(
+      `UPDATE admin_tables SET ${updates.join(", ")}, updated_at = NOW() WHERE id = $${paramIndex}::UUID`,
+      params,
+    );
+  }
+
+  /**
+   * Replace table columns with dto.columns (delete existing, insert new).
+   */
+  private async replaceTableColumns(
+    client: PoolClient,
+    id: string,
+    columns: CreateColumnDto[],
+  ): Promise<void> {
+    if (columns.length === 0) {
+      throw new Error("חייב להגדיר לפחות עמודה אחת");
+    }
+    const columnNames = columns.map((c) => c.name);
+    if (new Set(columnNames).size !== columnNames.length) {
+      throw new Error("לא ניתן להגדיר עמודות עם אותו שם");
+    }
+    await client.query(
+      `DELETE FROM admin_table_columns WHERE table_id = $1::UUID`,
+      [id],
+    );
+    for (let i = 0; i < columns.length; i++) {
+      const column = columns[i];
+      await client.query(
+        `INSERT INTO admin_table_columns (table_id, name, data_type, is_required, display_order)
+         VALUES ($1::UUID, $2, $3, $4, $5)`,
+        [
+          id,
+          column.name,
+          column.data_type,
+          column.is_required || false,
+          column.display_order !== undefined ? column.display_order : i,
+        ],
+      );
+    }
+  }
+
+  /**
    * Update table structure
    */
   async updateTable(id: string, dto: UpdateTableDto, _userId: string) {
@@ -432,89 +495,20 @@ export class AdminTablesService {
     try {
       await client.query("BEGIN");
 
-      // Check if table exists
       const tableCheck = await client.query(
         `SELECT id FROM admin_tables WHERE id = $1::UUID`,
         [id],
       );
-
       if (tableCheck.rows.length === 0) {
         throw new Error("טבלה לא נמצאה");
       }
 
-      // Update table fields
-      if (
-        dto.name ||
-        dto.description !== undefined ||
-        dto.metadata !== undefined
-      ) {
-        const updates: string[] = [];
-        const params: unknown[] = [];
-        let paramIndex = 1;
-
-        if (dto.name) {
-          updates.push(`name = $${paramIndex++}`);
-          params.push(dto.name);
-        }
-        if (dto.description !== undefined) {
-          updates.push(`description = $${paramIndex++}`);
-          params.push(dto.description || null);
-        }
-        if (dto.metadata !== undefined) {
-          updates.push(`metadata = $${paramIndex++}::jsonb`);
-          params.push(JSON.stringify(dto.metadata));
-        }
-
-        if (updates.length > 0) {
-          params.push(id);
-          await client.query(
-            `UPDATE admin_tables SET ${updates.join(", ")}, updated_at = NOW() WHERE id = $${paramIndex}::UUID`,
-            params,
-          );
-        }
-      }
-
-      // Update columns if provided
+      await this.applyTableFieldUpdates(client, id, dto);
       if (dto.columns) {
-        // Validate columns
-        if (dto.columns.length === 0) {
-          throw new Error("חייב להגדיר לפחות עמודה אחת");
-        }
-
-        const columnNames = dto.columns.map((c) => c.name);
-        if (new Set(columnNames).size !== columnNames.length) {
-          throw new Error("לא ניתן להגדיר עמודות עם אותו שם");
-        }
-
-        // Delete existing columns
-        await client.query(
-          `DELETE FROM admin_table_columns WHERE table_id = $1::UUID`,
-          [id],
-        );
-
-        // Insert new columns
-        for (let i = 0; i < dto.columns.length; i++) {
-          const column = dto.columns[i];
-          await client.query(
-            `INSERT INTO admin_table_columns (table_id, name, data_type, is_required, display_order)
-             VALUES ($1::UUID, $2, $3, $4, $5)`,
-            [
-              id,
-              column.name,
-              column.data_type,
-              column.is_required || false,
-              column.display_order !== undefined ? column.display_order : i,
-            ],
-          );
-        }
-
-        // Note: Existing rows are not automatically updated - their data might become invalid
-        // This is intentional - admins should be careful when changing table structure
+        await this.replaceTableColumns(client, id, dto.columns);
       }
 
       await client.query("COMMIT");
-
-      // Fetch updated table
       return await this.getTableById(id, false);
     } catch (err) {
       const error = err as Error;
@@ -554,15 +548,20 @@ export class AdminTablesService {
     pagination?: { page: number; limit: number },
   ) {
     try {
-      let query = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
-      const params: unknown[] = [tableId];
-
+      // Pagination values are integers; keep separate fixed-param queries to avoid dynamic SQL.
+      const rowsParams: unknown[] = [tableId];
+      let query: string;
       if (pagination) {
-        query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-        params.push(pagination.limit, (pagination.page - 1) * pagination.limit);
+        query = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+        rowsParams.push(
+          pagination.limit,
+          (pagination.page - 1) * pagination.limit,
+        );
+      } else {
+        query = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
       }
 
-      const rowsResult = await this.pool.query(query, params);
+      const rowsResult = await this.pool.query(query, rowsParams);
 
       // Get total count
       const countResult = await this.pool.query(

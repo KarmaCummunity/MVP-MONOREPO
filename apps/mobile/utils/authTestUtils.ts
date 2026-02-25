@@ -368,22 +368,28 @@ export class AuthenticationTester {
   }
   
   /**
-   * Test JWT validation functionality
+   * Test JWT validation functionality.
+   * Uses mock tokens only – NOT real credentials. Signature is intentionally
+   * invalid for unit-test assertions. Snyk: false positive for test fixtures.
    */
   private static testJWTValidation(): AuthTestResult {
-    // Test with a mock JWT token structure
-    const validJWTStructure = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTl9.invalid_signature';
+    // Mock JWT: header + payload base64 + intentionally invalid signature.
+    const MOCK_TEST_JWT =
+      'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9' +
+      '.' +
+      btoa('{"sub":"mock-user","email":"mock@test.dev","iat":1}') +
+      '.MOCK_INVALID_SIGNATURE';
     const invalidJWT = 'invalid.jwt.token';
     const emptyJWT = '';
-    
+
     try {
       // Test valid structure
-      const parts = validJWTStructure.split('.');
+      const parts = MOCK_TEST_JWT.split('.');
       if (parts.length !== 3) {
         throw new Error('Valid JWT should have 3 parts');
       }
       
-      // Test payload parsing
+      // Test payload parsing (mock payload has sub and email)
       const payload = JSON.parse(atob(parts[1]));
       if (!payload.sub || !payload.email) {
         throw new Error('JWT payload should contain sub and email');

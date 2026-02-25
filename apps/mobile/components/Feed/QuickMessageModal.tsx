@@ -40,7 +40,7 @@ const QuickMessageModal: React.FC<QuickMessageModalProps> = ({
   const [isSending, setIsSending] = useState(false);
 
   // Get default message based on post type
-  const getDefaultMessage = (): string => {
+  const getDefaultMessage = React.useCallback((): string => {
     switch (postType) {
       case 'item':
       case 'donation':
@@ -52,7 +52,7 @@ const QuickMessageModal: React.FC<QuickMessageModalProps> = ({
       default:
         return t('quickMessage:default', { defaultValue: 'האם זה עוד רלוונטי?' });
     }
-  };
+  }, [postType, t]);
 
   // Initialize message text when modal opens
   useEffect(() => {
@@ -61,7 +61,7 @@ const QuickMessageModal: React.FC<QuickMessageModalProps> = ({
     } else {
       setMessageText('');
     }
-  }, [visible, postType]);
+  }, [visible, getDefaultMessage]);
 
   const handleSend = async () => {
     if (!messageText.trim() || !selectedUser || isSending) return;

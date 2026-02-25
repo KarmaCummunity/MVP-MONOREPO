@@ -3,8 +3,7 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet,
-    Platform
+    StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';

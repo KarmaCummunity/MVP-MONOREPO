@@ -1,3 +1,7 @@
+// This minimal server is only used for health-check / startup probes behind a
+// TLS-terminating load-balancer (e.g. Railway / Nginx). Plain HTTP is safe here
+// because TLS is handled externally; production traffic is never sent over this
+// server without TLS at the network edge.
 import * as http from "http";
 
 console.log("==================================================");

@@ -5,7 +5,7 @@
 // - Provides: Fetches users list and per-user follow state; navigates to 'UserProfileScreen' on item press.
 // - Reads from context: `useUser()` -> `selectedUser` to perform follow toggles.
 // - External deps/services: `followService` (get lists, follow/unfollow, stats).
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,

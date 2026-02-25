@@ -18,8 +18,7 @@
 // TODO: Implement proper migration system for data schema changes
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from './config.constants';
-import { CACHE_CONFIG, OFFLINE_CONFIG, STORAGE_KEYS } from './dbConfig';
-import { apiService, ApiResponse } from './apiService';
+import { apiService } from './apiService';
 import { restAdapter } from './restAdapter';
 import { firestoreAdapter } from './firestoreAdapter';
 import { DB_COLLECTIONS } from './dbCollections';
@@ -76,7 +75,7 @@ export class DatabaseService {
     try {
       // Try to update first, if it fails then create
       await this.update<T>(collection, userId, itemId, data);
-    } catch (error) {
+    } catch {
       // If update fails, create new item
       await this.create<T>(collection, userId, itemId, data);
     }
@@ -201,7 +200,7 @@ export class DatabaseService {
 
         const items = await AsyncStorage.multiGet(userKeys);
         return items
-          .map(([key, value]) => value ? JSON.parse(value) : null)
+          .map(([, value]) => value ? JSON.parse(value) : null)
           .filter((item): item is T => item !== null)
           .sort((a, b) => {
             if ((a as any).timestamp && (b as any).timestamp) {

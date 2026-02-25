@@ -29,14 +29,42 @@ async function runMigration() {
     );
     process.exit(1);
   }
+  if (sqlFile.includes("\0")) {
+    console.error("❌ Null byte in path – refusing to run.");
+    process.exit(1);
+  }
 
-  const sqlPath = path.resolve(process.cwd(), sqlFile);
+  // Resolve and validate path: must stay inside the project root to prevent path traversal.
+  const projectRoot = path.resolve(process.cwd());
+  const sqlPath = path.resolve(projectRoot, sqlFile);
+  if (!sqlPath.startsWith(projectRoot + path.sep)) {
+    console.error(`❌ Path traversal detected. Refusing to read: ${sqlPath}`);
+    process.exit(1);
+  }
+
+  // Only allow .sql files.
+  if (path.extname(sqlPath).toLowerCase() !== ".sql") {
+    console.error(
+      `❌ Only .sql files are allowed. Got: ${path.extname(sqlPath)}`,
+    );
+    process.exit(1);
+  }
+
   if (!fs.existsSync(sqlPath)) {
     console.error(`❌ SQL file not found: ${sqlPath}`);
     process.exit(1);
   }
 
+  // sqlPath has already been validated: inside projectRoot, .sql extension only.
   const sql = fs.readFileSync(sqlPath, "utf8");
+  // Sanity-check: the file should only contain SQL-safe characters; reject if it
+  // contains null bytes or other binary content that indicates a non-SQL file.
+  if (sql.includes("\0")) {
+    console.error(
+      "❌ SQL file contains binary/null bytes – refusing to execute.",
+    );
+    process.exit(1);
+  }
 
   // Use the same logic as database.module.ts
   const connectionString = process.env.DATABASE_URL;

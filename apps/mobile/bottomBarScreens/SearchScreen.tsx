@@ -4,7 +4,7 @@
 // - Provides: Real-time search with tabs for different entities, debounced input, and detailed result cards.
 // - Reads from: `enhancedDatabaseService`, `apiService`.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -42,9 +42,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
     let timeout: any;
     return function (this: any, ...args: Parameters<T>) {
-        const context = this;
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
@@ -67,7 +66,7 @@ const SearchScreen = () => {
     const route = useRoute();
     const tabBarHeight = useBottomTabBarHeight();
     const { t } = useTranslation(['search', 'common', 'donations', 'trump']);
-    const { selectedUser } = useUser();
+    const { selectedUser: _selectedUser } = useUser();
     const { ToastComponent } = useToast();
 
     // Get initial query from route params (from deep link)
@@ -103,7 +102,7 @@ const SearchScreen = () => {
 
     // --- Search Logic ---
 
-    const performSearch = async (searchQuery: string, tab: SearchTab) => {
+    const performSearch = useCallback(async (searchQuery: string, tab: SearchTab) => {
         if (!searchQuery.trim()) {
             setResults([]);
             setHasSearched(false);
@@ -238,14 +237,14 @@ const SearchScreen = () => {
         } finally {
             setIsSearching(false);
         }
-    };
+    }, []);
 
     // Debounce the search
-    const debouncedSearch = useCallback(
-        debounce((nextQuery: string, nextTab: SearchTab) => {
+    const debouncedSearch = useMemo(
+        () => debounce((nextQuery: string, nextTab: SearchTab) => {
             performSearch(nextQuery, nextTab);
         }, 600),
-        []
+        [performSearch]
     );
 
     useEffect(() => {
@@ -264,7 +263,7 @@ const SearchScreen = () => {
                 performSearch(routeParams.q, activeTab);
             }
         }
-    }, [routeParams?.q, activeTab]);
+    }, [routeParams?.q, activeTab, performSearch, query]);
 
     const handleTextChange = (text: string) => {
         setQuery(text);

@@ -26,7 +26,6 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ParamListBase } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { getFollowing, getFollowers, getFollowSuggestions } from '../utils/followService';
 import { createConversation, getAllConversations, conversationExists, sendMessage } from '../utils/chatService';

@@ -1,0 +1,769 @@
+[
+  {
+    "vulnerabilities": [],
+    "ok": true,
+    "dependencyCount": 5,
+    "org": "navesarussi",
+    "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\nignore: {}\npatch: {}\n",
+    "isPrivate": true,
+    "licensesPolicy": {
+      "severities": {},
+      "orgLicenseRules": {
+        "AGPL-1.0": {
+          "licenseType": "AGPL-1.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "AGPL-3.0": {
+          "licenseType": "AGPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "Artistic-1.0": {
+          "licenseType": "Artistic-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "Artistic-2.0": {
+          "licenseType": "Artistic-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CDDL-1.0": {
+          "licenseType": "CDDL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CPOL-1.02": {
+          "licenseType": "CPOL-1.02",
+          "severity": "high",
+          "instructions": ""
+        },
+        "EPL-1.0": {
+          "licenseType": "EPL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "GPL-2.0": {
+          "licenseType": "GPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "GPL-3.0": {
+          "licenseType": "GPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "LGPL-2.0": {
+          "licenseType": "LGPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-2.1": {
+          "licenseType": "LGPL-2.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-3.0": {
+          "licenseType": "LGPL-3.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-1.1": {
+          "licenseType": "MPL-1.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-2.0": {
+          "licenseType": "MPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MS-RL": {
+          "licenseType": "MS-RL",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "SimPL-2.0": {
+          "licenseType": "SimPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        }
+      }
+    },
+    "packageManager": "npm",
+    "ignoreSettings": {
+      "adminOnly": false,
+      "reasonRequired": false,
+      "disregardFilesystemIgnores": false
+    },
+    "summary": "No known vulnerabilities",
+    "filesystemPolicy": false,
+    "uniqueCount": 0,
+    "projectName": "kc-monorepo",
+    "foundProjectCount": 4,
+    "displayTargetFile": "package.json",
+    "hasUnknownVersions": false,
+    "path": "/Users/navesarussi/KC/kc-monorepo"
+  },
+  {
+    "vulnerabilities": [],
+    "ok": true,
+    "dependencyCount": 200,
+    "org": "navesarussi",
+    "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\nignore: {}\npatch: {}\n",
+    "isPrivate": true,
+    "licensesPolicy": {
+      "severities": {},
+      "orgLicenseRules": {
+        "AGPL-1.0": {
+          "licenseType": "AGPL-1.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "AGPL-3.0": {
+          "licenseType": "AGPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "Artistic-1.0": {
+          "licenseType": "Artistic-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "Artistic-2.0": {
+          "licenseType": "Artistic-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CDDL-1.0": {
+          "licenseType": "CDDL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CPOL-1.02": {
+          "licenseType": "CPOL-1.02",
+          "severity": "high",
+          "instructions": ""
+        },
+        "EPL-1.0": {
+          "licenseType": "EPL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "GPL-2.0": {
+          "licenseType": "GPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "GPL-3.0": {
+          "licenseType": "GPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "LGPL-2.0": {
+          "licenseType": "LGPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-2.1": {
+          "licenseType": "LGPL-2.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-3.0": {
+          "licenseType": "LGPL-3.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-1.1": {
+          "licenseType": "MPL-1.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-2.0": {
+          "licenseType": "MPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MS-RL": {
+          "licenseType": "MS-RL",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "SimPL-2.0": {
+          "licenseType": "SimPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        }
+      }
+    },
+    "packageManager": "npm",
+    "ignoreSettings": {
+      "adminOnly": false,
+      "reasonRequired": false,
+      "disregardFilesystemIgnores": false
+    },
+    "summary": "No known vulnerabilities",
+    "filesystemPolicy": false,
+    "uniqueCount": 0,
+    "projectName": "@kc/api",
+    "foundProjectCount": 4,
+    "displayTargetFile": "apps/api/package.json",
+    "hasUnknownVersions": false,
+    "path": "/Users/navesarussi/KC/kc-monorepo/api"
+  },
+  {
+    "vulnerabilities": [],
+    "ok": true,
+    "dependencyCount": 167,
+    "org": "navesarussi",
+    "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\nignore: {}\npatch: {}\n",
+    "isPrivate": true,
+    "licensesPolicy": {
+      "severities": {},
+      "orgLicenseRules": {
+        "AGPL-1.0": {
+          "licenseType": "AGPL-1.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "AGPL-3.0": {
+          "licenseType": "AGPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "Artistic-1.0": {
+          "licenseType": "Artistic-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "Artistic-2.0": {
+          "licenseType": "Artistic-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CDDL-1.0": {
+          "licenseType": "CDDL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CPOL-1.02": {
+          "licenseType": "CPOL-1.02",
+          "severity": "high",
+          "instructions": ""
+        },
+        "EPL-1.0": {
+          "licenseType": "EPL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "GPL-2.0": {
+          "licenseType": "GPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "GPL-3.0": {
+          "licenseType": "GPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "LGPL-2.0": {
+          "licenseType": "LGPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-2.1": {
+          "licenseType": "LGPL-2.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-3.0": {
+          "licenseType": "LGPL-3.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-1.1": {
+          "licenseType": "MPL-1.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-2.0": {
+          "licenseType": "MPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MS-RL": {
+          "licenseType": "MS-RL",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "SimPL-2.0": {
+          "licenseType": "SimPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        }
+      }
+    },
+    "packageManager": "npm",
+    "ignoreSettings": {
+      "adminOnly": false,
+      "reasonRequired": false,
+      "disregardFilesystemIgnores": false
+    },
+    "summary": "No known vulnerabilities",
+    "filesystemPolicy": false,
+    "uniqueCount": 0,
+    "projectName": "@kc/dev-bot",
+    "foundProjectCount": 4,
+    "displayTargetFile": "apps/dev-bot/package.json",
+    "hasUnknownVersions": false,
+    "path": "/Users/navesarussi/KC/kc-monorepo/dev-bot"
+  },
+  {
+    "vulnerabilities": [],
+    "ok": true,
+    "dependencyCount": 669,
+    "org": "navesarussi",
+    "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\n# ignores vulnerabilities until expiry date; change duration by modifying expiry date\nignore:\n  SNYK-JS-INFLIGHT-6095116:\n    - '*':\n        reason: None Given\n        expires: 2026-03-26T21:02:16.942Z\n        created: 2026-02-24T21:02:16.945Z\n        source: cli\n  SNYK-JS-MINIMATCH-15309438:\n    - '*':\n        reason: None Given\n        expires: 2026-03-26T21:02:20.633Z\n        created: 2026-02-24T21:02:20.638Z\n        source: cli\npatch: {}\n",
+    "isPrivate": true,
+    "licensesPolicy": {
+      "severities": {},
+      "orgLicenseRules": {
+        "AGPL-1.0": {
+          "licenseType": "AGPL-1.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "AGPL-3.0": {
+          "licenseType": "AGPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "Artistic-1.0": {
+          "licenseType": "Artistic-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "Artistic-2.0": {
+          "licenseType": "Artistic-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CDDL-1.0": {
+          "licenseType": "CDDL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CPOL-1.02": {
+          "licenseType": "CPOL-1.02",
+          "severity": "high",
+          "instructions": ""
+        },
+        "EPL-1.0": {
+          "licenseType": "EPL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "GPL-2.0": {
+          "licenseType": "GPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "GPL-3.0": {
+          "licenseType": "GPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "LGPL-2.0": {
+          "licenseType": "LGPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-2.1": {
+          "licenseType": "LGPL-2.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-3.0": {
+          "licenseType": "LGPL-3.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-1.1": {
+          "licenseType": "MPL-1.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-2.0": {
+          "licenseType": "MPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MS-RL": {
+          "licenseType": "MS-RL",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "SimPL-2.0": {
+          "licenseType": "SimPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        }
+      }
+    },
+    "packageManager": "npm",
+    "ignoreSettings": {
+      "adminOnly": false,
+      "reasonRequired": false,
+      "disregardFilesystemIgnores": false
+    },
+    "summary": "2 vulnerable dependency paths",
+    "filesystemPolicy": true,
+    "filtered": {
+      "ignore": [
+        {
+          "id": "SNYK-JS-INFLIGHT-6095116",
+          "title": "Missing Release of Resource after Effective Lifetime",
+          "CVSSv3": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "credit": [
+            "jkomyno"
+          ],
+          "semver": {
+            "vulnerable": [
+              "*"
+            ]
+          },
+          "exploit": "Proof of Concept",
+          "fixedIn": [],
+          "patches": [],
+          "insights": {
+            "triageAdvice": null
+          },
+          "language": "js",
+          "severity": "medium",
+          "cvssScore": 6.2,
+          "functions": [],
+          "malicious": false,
+          "isDisputed": false,
+          "moduleName": "inflight",
+          "references": [
+            {
+              "url": "https://github.com/isaacs/inflight/issues/5",
+              "title": "GitHub Issue"
+            },
+            {
+              "url": "https://github.com/logdna/logdna-agent/pull/157",
+              "title": "GitHub PR"
+            }
+          ],
+          "cvssDetails": [],
+          "cvssSources": [
+            {
+              "type": "primary",
+              "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+              "assigner": "Snyk",
+              "severity": "medium",
+              "baseScore": 6.2,
+              "cvssVersion": "3.1",
+              "modificationTime": "2024-03-13T12:24:01.140165Z"
+            }
+          ],
+          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, “Attack vector” is marked as “Local”.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
+          "epssDetails": null,
+          "identifiers": {
+            "CVE": [],
+            "CWE": [
+              "CWE-772"
+            ]
+          },
+          "packageName": "inflight",
+          "proprietary": false,
+          "creationTime": "2023-11-30T12:51:43.483198Z",
+          "functions_new": [],
+          "alternativeIds": [],
+          "disclosureTime": "2023-11-28T12:47:27Z",
+          "exploitDetails": {
+            "sources": [
+              "Snyk"
+            ],
+            "maturityLevels": [
+              {
+                "type": "secondary",
+                "level": "Proof of Concept",
+                "format": "CVSSv3"
+              },
+              {
+                "type": "primary",
+                "level": "Proof of Concept",
+                "format": "CVSSv4"
+              }
+            ]
+          },
+          "packageManager": "npm",
+          "publicationTime": "2023-11-30T12:52:55.469185Z",
+          "severityBasedOn": "CVSS",
+          "modificationTime": "2024-03-13T12:24:01.140165Z",
+          "socialTrendAlert": false,
+          "severityWithCritical": "medium",
+          "from": [
+            "@kc/mobile@2.4.2",
+            "expo@53.0.27",
+            "@expo/cli@0.24.24",
+            "@react-native/dev-middleware@0.79.6",
+            "chromium-edge-launcher@0.2.0",
+            "rimraf@3.0.2",
+            "glob@7.2.3",
+            "inflight@1.0.6"
+          ],
+          "upgradePath": [],
+          "isUpgradable": false,
+          "isPatchable": false,
+          "name": "inflight",
+          "version": "1.0.6",
+          "filtered": {
+            "ignored": [
+              {
+                "reason": "None Given",
+                "expires": "2026-03-26T21:02:16.942Z",
+                "created": "2026-02-24T21:02:16.945Z",
+                "source": "cli",
+                "path": [
+                  "*"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "SNYK-JS-INFLIGHT-6095116",
+          "title": "Missing Release of Resource after Effective Lifetime",
+          "CVSSv3": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "credit": [
+            "jkomyno"
+          ],
+          "semver": {
+            "vulnerable": [
+              "*"
+            ]
+          },
+          "exploit": "Proof of Concept",
+          "fixedIn": [],
+          "patches": [],
+          "insights": {
+            "triageAdvice": null
+          },
+          "language": "js",
+          "severity": "medium",
+          "cvssScore": 6.2,
+          "functions": [],
+          "malicious": false,
+          "isDisputed": false,
+          "moduleName": "inflight",
+          "references": [
+            {
+              "url": "https://github.com/isaacs/inflight/issues/5",
+              "title": "GitHub Issue"
+            },
+            {
+              "url": "https://github.com/logdna/logdna-agent/pull/157",
+              "title": "GitHub PR"
+            }
+          ],
+          "cvssDetails": [],
+          "cvssSources": [
+            {
+              "type": "primary",
+              "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+              "assigner": "Snyk",
+              "severity": "medium",
+              "baseScore": 6.2,
+              "cvssVersion": "3.1",
+              "modificationTime": "2024-03-13T12:24:01.140165Z"
+            }
+          ],
+          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, “Attack vector” is marked as “Local”.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
+          "epssDetails": null,
+          "identifiers": {
+            "CVE": [],
+            "CWE": [
+              "CWE-772"
+            ]
+          },
+          "packageName": "inflight",
+          "proprietary": false,
+          "creationTime": "2023-11-30T12:51:43.483198Z",
+          "functions_new": [],
+          "alternativeIds": [],
+          "disclosureTime": "2023-11-28T12:47:27Z",
+          "exploitDetails": {
+            "sources": [
+              "Snyk"
+            ],
+            "maturityLevels": [
+              {
+                "type": "secondary",
+                "level": "Proof of Concept",
+                "format": "CVSSv3"
+              },
+              {
+                "type": "primary",
+                "level": "Proof of Concept",
+                "format": "CVSSv4"
+              }
+            ]
+          },
+          "packageManager": "npm",
+          "publicationTime": "2023-11-30T12:52:55.469185Z",
+          "severityBasedOn": "CVSS",
+          "modificationTime": "2024-03-13T12:24:01.140165Z",
+          "socialTrendAlert": false,
+          "severityWithCritical": "medium",
+          "from": [
+            "@kc/mobile@2.4.2",
+            "expo@53.0.27",
+            "babel-preset-expo@13.2.5",
+            "@react-native/babel-preset@0.79.6",
+            "@react-native/babel-plugin-codegen@0.79.6",
+            "@react-native/codegen@0.79.6",
+            "glob@7.2.3",
+            "inflight@1.0.6"
+          ],
+          "upgradePath": [],
+          "isUpgradable": false,
+          "isPatchable": false,
+          "name": "inflight",
+          "version": "1.0.6",
+          "filtered": {
+            "ignored": [
+              {
+                "reason": "None Given",
+                "expires": "2026-03-26T21:02:16.942Z",
+                "created": "2026-02-24T21:02:16.945Z",
+                "source": "cli",
+                "path": [
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "patch": []
+    },
+    "uniqueCount": 0,
+    "projectName": "@kc/mobile",
+    "foundProjectCount": 4,
+    "displayTargetFile": "apps/mobile/package.json",
+    "hasUnknownVersions": false,
+    "path": "/Users/navesarussi/KC/kc-monorepo/mobile"
+  },
+  {
+    "vulnerabilities": [],
+    "ok": true,
+    "dependencyCount": 172,
+    "org": "navesarussi",
+    "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\nignore: {}\npatch: {}\n",
+    "isPrivate": true,
+    "licensesPolicy": {
+      "severities": {},
+      "orgLicenseRules": {
+        "AGPL-1.0": {
+          "licenseType": "AGPL-1.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "AGPL-3.0": {
+          "licenseType": "AGPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "Artistic-1.0": {
+          "licenseType": "Artistic-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "Artistic-2.0": {
+          "licenseType": "Artistic-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CDDL-1.0": {
+          "licenseType": "CDDL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "CPOL-1.02": {
+          "licenseType": "CPOL-1.02",
+          "severity": "high",
+          "instructions": ""
+        },
+        "EPL-1.0": {
+          "licenseType": "EPL-1.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "GPL-2.0": {
+          "licenseType": "GPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "GPL-3.0": {
+          "licenseType": "GPL-3.0",
+          "severity": "high",
+          "instructions": ""
+        },
+        "LGPL-2.0": {
+          "licenseType": "LGPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-2.1": {
+          "licenseType": "LGPL-2.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "LGPL-3.0": {
+          "licenseType": "LGPL-3.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-1.1": {
+          "licenseType": "MPL-1.1",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MPL-2.0": {
+          "licenseType": "MPL-2.0",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "MS-RL": {
+          "licenseType": "MS-RL",
+          "severity": "medium",
+          "instructions": ""
+        },
+        "SimPL-2.0": {
+          "licenseType": "SimPL-2.0",
+          "severity": "high",
+          "instructions": ""
+        }
+      }
+    },
+    "packageManager": "cocoapods",
+    "ignoreSettings": {
+      "adminOnly": false,
+      "reasonRequired": false,
+      "disregardFilesystemIgnores": false
+    },
+    "summary": "No known vulnerabilities",
+    "filesystemPolicy": false,
+    "uniqueCount": 0,
+    "targetFile": "apps/mobile/ios/Podfile",
+    "projectName": "ios",
+    "foundProjectCount": 4,
+    "displayTargetFile": "apps/mobile/ios/Podfile",
+    "hasUnknownVersions": false,
+    "path": "/Users/navesarussi/KC/kc-monorepo"
+  }
+]

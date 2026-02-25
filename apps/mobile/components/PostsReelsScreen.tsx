@@ -9,9 +9,7 @@ import {
   NativeScrollEvent,
   RefreshControl,
   Text,
-  Alert,
-  Platform,
-  ActionSheetIOS
+  Alert
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -22,14 +20,13 @@ import { useFeedData } from '../hooks/useFeedData';
 import PostReelItem from './Feed/PostReelItem';
 import FeedHeader from './Feed/FeedHeader';
 import CommentsModal from './CommentsModal';
-import OptionsModal, { Option } from './Feed/OptionsModal';
+import OptionsModal from './Feed/OptionsModal';
 import ReportPostModal from './Feed/ReportPostModal';
 import EditPostModal from './Feed/EditPostModal';
 import { apiService } from '../utils/apiService';
 import { postsService } from '../utils/postsService';
 import VerticalGridSlider from './VerticalGridSlider';
 import { logger } from '../utils/loggerService';
-import { usePostDeletion } from '../hooks/usePostDeletion';
 import { usePostMenu } from '../hooks/usePostMenu';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';

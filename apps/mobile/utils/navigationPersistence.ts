@@ -178,7 +178,8 @@ export const loadNavigationState = async (
     // Remove metadata if present (it's not part of NavigationState type)
     const metadata = (state as any)._metadata;
     if (metadata) {
-      const { _metadata: __metadata, ...stateWithoutMetadata } = state as any;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to omit _metadata
+    const { _metadata: _, ...stateWithoutMetadata } = state as any;
       state = stateWithoutMetadata as NavigationState;
     }
 

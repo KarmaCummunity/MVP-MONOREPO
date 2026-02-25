@@ -3,7 +3,7 @@
 // ===================================
 
 import React, { memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 

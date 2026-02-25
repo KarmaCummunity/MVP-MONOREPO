@@ -27,7 +27,7 @@ export class NotificationsController {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly redisCache: RedisCacheService,
-  ) { }
+  ) {}
 
   /**
    * Ensure user_notifications table exists
@@ -101,7 +101,9 @@ export class NotificationsController {
       authUser.roles?.includes("admin") ||
       authUser.roles?.includes("super_admin");
     if (!isOwner && !isAdmin) {
-      this.logger.warn(`🚫 Access denied: User ${authUser.userId} tried to access notifications of user ${userId}`);
+      this.logger.warn(
+        `🚫 Access denied: User ${authUser.userId} tried to access notifications of user ${userId}`,
+      );
       throw new ForbiddenException(
         "You can only access your own notifications",
       );

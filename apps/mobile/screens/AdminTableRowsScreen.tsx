@@ -9,7 +9,6 @@ import {
   TextInput,
   Alert,
   ScrollView,
-  RefreshControl,
   ActivityIndicator,
   FlatList,
   Platform,

@@ -4,7 +4,7 @@ import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
-import { biDiTextAlign, isLandscape, scaleSize } from '../globals/responsive';
+import { biDiTextAlign, isLandscape } from '../globals/responsive';
 import { useTranslation } from 'react-i18next';
 import { donationResources } from '../utils/donationResources';
 import ScrollContainer from '../components/ScrollContainer';

@@ -183,9 +183,8 @@ class PostsService {
    * @param targetUserId - The ID of the user whose posts to fetch
    * @param viewerId - The ID of the current viewer (to check likes)
    * @param limit
-   * @param offset
    */
-  async getUserPosts(targetUserId: string, viewerId?: string, limit = 20, _offset = 0): Promise<PostsApiResponse<any[]>> {
+  async getUserPosts(targetUserId: string, viewerId?: string, limit = 20): Promise<PostsApiResponse<any[]>> {
     let url = `/api/posts/user/${targetUserId}?limit=${limit}`;
     if (viewerId) {
       url += `&viewer_id=${viewerId}`;

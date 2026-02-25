@@ -1,6 +1,6 @@
 // Challenge Details Screen
 // Shows full challenge information, join button, and entry tracking
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Alert,
   TextInput,
   Modal,
-  Image,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +37,7 @@ interface ChallengeDetailsScreenProps {
 
 export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsScreenProps) {
   const route = useRoute<ChallengeDetailsScreenRouteProp>();
-  const { challengeId } = route.params;
+  const { challengeId = '', openEntryForm } = route.params || {};
   const { selectedUser: user } = useUser();
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
@@ -55,7 +54,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [entryNotes, setEntryNotes] = useState('');
   const [submittingEntry, setSubmittingEntry] = useState(false);
   const [showEntryModal, setShowEntryModal] = useState(false);
-  
+
   // Comments state
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [challengePostId, setChallengePostId] = useState<string | null>(null);
@@ -178,7 +177,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
       if (response.success) {
         const streak = response.data?.current_streak || 0;
         showToast(`${t('challenges:entryAdded')} ${t('challenges:stats.streakDays', { count: streak })}`, 'success');
-        
+
         // Reset form
         setEntryValue('');
         setEntryNotes('');
@@ -266,7 +265,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
             style={styles.backIcon}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('challenges:details.title')}</Text>
           <View style={{ width: 24 }} />

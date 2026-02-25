@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { scaleSize } from '../globals/responsive';
-import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,14 +36,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load all links when component mounts or screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      loadAllLinks();
-    }, [category])
-  );
-
-  const loadAllLinks = async () => {
+  const loadAllLinks = React.useCallback(async () => {
     setIsLoading(true);
     try {
       // NOTE: Links functionality has been removed - links table was deleted
@@ -52,10 +44,10 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       // TODO: Implement alternative storage if links functionality is still needed
       const allLinksData: any[] = []; // db.listAllLinks() is no longer available
       console.log('⚠️ Links functionality has been removed');
-      
+
       // Filter by category if provided
       const filteredLinks: any[] = [];
-      
+
       setAllLinks(filteredLinks);
     } catch (error) {
       console.error('Error loading links:', error);
@@ -63,7 +55,14 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [category]);
+
+  // Load all links when component mounts or screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAllLinks();
+    }, [loadAllLinks])
+  );
 
   const handleOpenModal = () => {
     setModalVisible(true);
@@ -121,7 +120,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       const uid = selectedUser?.id || 'guest';
       const linkId = `link_${Date.now()}`;
       const formattedUrl = formatUrl(linkUrl);
-      
+
       const linkData = {
         id: linkId,
         url: formattedUrl,
@@ -191,13 +190,13 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     >
       <View style={styles.linkCardContent}>
         <View style={styles.linkCardHeader}>
-          <Ionicons 
-            name={link.type === 'group' ? 'people' : 'business'} 
-            size={scaleSize(20)} 
-            color={colors.buttonPrimary} 
+          <Ionicons
+            name={link.type === 'group' ? 'people' : 'business'}
+            size={scaleSize(20)}
+            color={colors.buttonPrimary}
           />
           <Text style={styles.linkCardType}>
-            {link.type === 'group' 
+            {link.type === 'group'
               ? t('trump:addLink.group', { defaultValue: 'קבוצה' })
               : t('trump:addLink.organization', { defaultValue: 'עמותה' })}
           </Text>
@@ -464,7 +463,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlayMedium,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {

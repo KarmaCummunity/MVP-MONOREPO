@@ -1,18 +1,9 @@
-import { StyleSheet, Dimensions, Platform } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 import colors from "./colors";
 import { 
   biDiTextAlign, 
   rowDirection, 
-  scaleSize, 
-  getScreenInfo, 
-  getResponsiveButtonStyles,
-  getResponsiveContainerStyles,
-  getResponsiveModalStyles,
-  getResponsiveMenuStyles,
-  responsiveSpacing,
-  responsiveFontSize,
-  responsiveWidth,
-  BREAKPOINTS
+  scaleSize
 } from "./responsive";
 import { FontSizes, LAYOUT_CONSTANTS } from "./constants";
 

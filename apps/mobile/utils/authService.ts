@@ -27,10 +27,8 @@ import {
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
-  inMemoryPersistence,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let authInstance: any = null;
 

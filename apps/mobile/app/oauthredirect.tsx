@@ -135,7 +135,7 @@ export default function OAuthRedirect() {
     if (typeof window !== 'undefined') {
       processAuth();
     }
-  }, []);
+  }, [router, setSelectedUserWithMode]);
 
   return (
     <View style={styles.container}>

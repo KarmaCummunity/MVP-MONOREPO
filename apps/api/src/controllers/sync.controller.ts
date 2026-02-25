@@ -58,6 +58,30 @@ export class SyncController {
     }
   }
 
+  private async getFirebaseUser(
+    firebase_uid?: string,
+    email?: string,
+  ): Promise<
+    { ok: true; user: admin.auth.UserRecord } | { ok: false; error: string }
+  > {
+    if (!firebase_uid && !email) {
+      return { ok: false, error: "Must provide firebase_uid or email" };
+    }
+    try {
+      const user = firebase_uid
+        ? await admin.auth().getUser(firebase_uid)
+        : await admin.auth().getUserByEmail(email ?? "");
+      if (!user.email) {
+        return { ok: false, error: "User has no email" };
+      }
+      return { ok: true, user };
+    } catch (error_: unknown) {
+      const error = error_ as Error;
+      this.logger.error("❌ Error fetching user from Firebase:", error);
+      return { ok: false, error: "User not found in Firebase" };
+    }
+  }
+
   /**
    * Sync a single user from Firebase to user_profiles
    * Can be called from Firebase Cloud Function when a new user is created
@@ -72,51 +96,21 @@ export class SyncController {
     @Body() body: { firebase_uid?: string; email?: string },
     @Headers("x-api-key") apiKey?: string,
   ) {
-    // Check API key (optional - can be disabled for internal use)
     if (this.SYNC_API_KEY !== "change-me-in-production") {
       this.checkApiKey(apiKey);
     }
-    const { firebase_uid, email } = body;
-
-    if (!firebase_uid && !email) {
-      return { success: false, error: "Must provide firebase_uid or email" };
+    const fbResult = await this.getFirebaseUser(body.firebase_uid, body.email);
+    if (!fbResult.ok) {
+      return { success: false, error: fbResult.error };
     }
+    const firebaseUser = fbResult.user;
+    const normalizedEmail = (firebaseUser.email ?? "").toLowerCase().trim();
+    const googleProvider = firebaseUser.providerData?.find(
+      (p) => p.providerId === "google.com",
+    );
+    const googleId = googleProvider?.uid ?? null;
 
     try {
-      // Get user from Firebase
-      let firebaseUser: admin.auth.UserRecord;
-      try {
-        if (firebase_uid) {
-          firebaseUser = await admin.auth().getUser(firebase_uid);
-        } else if (email) {
-          firebaseUser = await admin.auth().getUserByEmail(email);
-        } else {
-          return {
-            success: false,
-            error: "Must provide firebase_uid or email",
-          };
-        }
-      } catch (error_: unknown) {
-        const error = error_ as Error;
-        this.logger.error("❌ Error fetching user from Firebase:", error);
-        return { success: false, error: "User not found in Firebase" };
-      }
-
-      if (!firebaseUser.email) {
-        return { success: false, error: "User has no email" };
-      }
-
-      const normalizedEmail = firebaseUser.email.toLowerCase().trim();
-
-      // Extract Google ID from provider data if available
-      let googleId: string | null = null;
-      const googleProvider = firebaseUser.providerData?.find(
-        (p) => p.providerId === "google.com",
-      );
-      if (googleProvider?.uid) {
-        googleId = googleProvider.uid;
-      }
-
       const client = await this.pool.connect();
       try {
         await client.query("BEGIN");

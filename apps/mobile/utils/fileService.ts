@@ -1,7 +1,6 @@
 // utils/fileService.ts
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
 
 export interface FileData {

@@ -1,19 +1,16 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
-  Image,
   Alert,
   ScrollView,
   TextInput,
   Platform,
   Modal,
   Linking,
-  PanResponder,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { FontSizes } from '../globals/constants';
@@ -53,7 +50,6 @@ const dummyRecentDonationsBase = donations.slice(0, 5).map((donation, index) => 
 }));
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
-import { Ionicons as Icon } from '@expo/vector-icons';
 import { Slider } from '@miblanchard/react-native-slider';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';

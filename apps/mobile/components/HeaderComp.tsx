@@ -6,7 +6,7 @@ import MenuComp from "../components/MenuComp";
 import ModeToggleButton from "../components/ModeToggleButton";
 import GuestModeNotice from "../components/GuestModeNotice";
 import colors from "../globals/colors";
-import { getScreenInfo, scaleSize, rowDirection, responsiveSpacing, responsiveFontSize, BREAKPOINTS, getScreenInfo as getScreen } from "../globals/responsive";
+import { getScreenInfo, scaleSize, rowDirection, responsiveSpacing, responsiveFontSize, BREAKPOINTS } from "../globals/responsive";
 import { FontSizes } from "../globals/constants";
 import { useUser } from "../stores/userStore";
 import { useTranslation } from 'react-i18next';

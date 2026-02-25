@@ -7,10 +7,8 @@ import React, { memo } from 'react' // Import memo here
 import colors from '../globals/colors'
 import { FontSizes } from '../globals/constants';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
-import { Ionicons as Icon } from '@expo/vector-icons';
-import styles from '../globals/styles';
 import ScreenWrapper from '../components/ScreenWrapper';
 
 // Changed this line to use const and wrap with memo
@@ -40,10 +38,10 @@ const AboutKarmaCommunityScreen = memo(() => {
           <Text style={localStyles.paragraph}>
             קהילת קארמה היא פלטפורמה דיגיטלית נגישה ונוחה שתשמש כחברה שיתופית.
             בפלטפורמה זו, כל אחד יוכל לתת ולקבל - החל מזמן וכסף, דרך אפשרויות
-            תחבורה נוספות, ועד לחפצים וידע. ה"פיד" של הרשת החברתית הזו יורכב אך
+            תחבורה נוספות, ועד לחפצים וידע. ה{'"'}פיד{'"'} של הרשת החברתית הזו יורכב אך
             ורק מעשייה בקהילה. אנו שואפים לבנות קהילה חדשה ומיוחדת מאפס, ובמקביל
             לאגד קהילות קיימות, גדולות כקטנות, שכבר פועלות רבות למען הקהילה אך
-            בנפרד. המוטו שלנו הוא ש"לתת זה גם לקבל".
+            בנפרד. המוטו שלנו הוא ש{'"'}לתת זה גם לקבל{'"'}.
           </Text>
 
           {/* Our Aspirations */}
@@ -128,7 +126,7 @@ const AboutKarmaCommunityScreen = memo(() => {
           </Text>
           <Text style={localStyles.paragraph}>
             דווקא בעידן של רשתות חברתיות המונעות מאינטרסים של כסף ופרסומות, אנו
-            רואים את הפוטנציאל והצורך האמיתי שיש לנו כבני אדם ב"רשתות" האלה.
+            רואים את הפוטנציאל והצורך האמיתי שיש לנו כבני אדם ב{'"'}רשתות{'"'} האלה.
           </Text>
           <Text style={localStyles.paragraph}>
             KC באה להציע רשת חברתית ללא פרסומות וללא תוכן חומרי/פוגעני. פלטפורמה
@@ -162,7 +160,7 @@ const AboutKarmaCommunityScreen = memo(() => {
           <View style={localStyles.bulletPointContainer}>
             <Text style={localStyles.bulletPoint}>•</Text>
             <Text style={localStyles.bulletText}>
-              "מניות": גורמים בעלי השפעה יהיו מעוניינים בהשפעה רחבה שתוחזר. עם
+              {'"מניות"'}: גורמים בעלי השפעה יהיו מעוניינים בהשפעה רחבה שתוחזר. עם
               זאת, נשאיר את רוב השליטה בידי העמותה.
             </Text>
           </View>
@@ -176,7 +174,7 @@ const AboutKarmaCommunityScreen = memo(() => {
           <View style={localStyles.bulletPointContainer}>
             <Text style={localStyles.bulletPoint}>•</Text>
             <Text style={localStyles.bulletText}>
-              צוות קטן ומקצועי: צוות מצומצם של עובדים שיהיו "מנהלי הפרויקט" אשר
+              צוות קטן ומקצועי: צוות מצומצם של עובדים שיהיו {'"מנהלי הפרויקט"'} אשר
               ינהלו את התהליך, יובילו ויכוונו את מערך המתנדבים המבוזר.
             </Text>
           </View>

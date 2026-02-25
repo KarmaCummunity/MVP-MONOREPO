@@ -22,6 +22,11 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   user?: any; // For resolveUserId endpoint compatibility
+  tokens?: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  };
   error?: string;
   message?: string;
   version?: string;
@@ -289,10 +294,10 @@ class ApiService {
         // Handle 401 Unauthorized - try to refresh token and retry
         if (response.status === 401 && retryOn401 && authToken) {
           logger.warn('API', 'Received 401, attempting token refresh and retry', { endpoint });
-          
+
           // Try to refresh token
           const refreshedToken = await this.validateAndRefreshToken();
-          
+
           if (refreshedToken) {
             // Retry request with new token (only once to prevent infinite loops)
             logger.info('API', 'Retrying request with refreshed token', { endpoint });
@@ -306,7 +311,7 @@ class ApiService {
               'jwt_token_expires_at',
               'jwt_refresh_token',
             ]);
-            
+
             return {
               success: false,
               error: 'Session expired. Please log in again.',

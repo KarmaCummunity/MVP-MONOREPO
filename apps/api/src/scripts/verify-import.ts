@@ -1,5 +1,6 @@
 import { Client } from "pg";
 import * as dotenv from "dotenv";
+import { format } from "../database/query-builder";
 
 dotenv.config();
 
@@ -25,11 +26,17 @@ async function verify() {
 
     console.log("📊 Database Statistics:\n");
 
+    // Validate table names to prevent SQL injection via pg-format identifier quoting.
+    const safeTableNamePattern = /^[a-zA-Z0-9_]+$/;
     let totalRows = 0;
     for (const row of tablesResult.rows) {
-      const tableName = row.table_name;
+      const tableName = row.table_name as string;
+      if (!safeTableNamePattern.test(tableName)) {
+        console.warn(`⚠️  Skipping table with unsafe name: "${tableName}"`);
+        continue;
+      }
       const countResult = await client.query(
-        `SELECT COUNT(*) FROM "${tableName}"`,
+        format(`SELECT COUNT(*) FROM %I`, tableName),
       );
       const count = parseInt(countResult.rows[0].count);
 

@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Platform,
-  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import colors from '../globals/colors';

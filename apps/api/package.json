@@ -57,6 +57,7 @@
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
     "pg": "^8.11.3",
+    "pg-format": "^1.0.4",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^5.0.7",
     "rxjs": "^7.8.2"

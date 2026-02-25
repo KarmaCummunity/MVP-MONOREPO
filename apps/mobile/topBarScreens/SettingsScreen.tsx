@@ -18,14 +18,13 @@
  * @version 2.0.0
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   Platform,
   Dimensions,
@@ -35,7 +34,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import { biDiTextAlign, rowDirection, getScreenInfo, scaleSize } from '../globals/responsive';
+import { biDiTextAlign, rowDirection } from '../globals/responsive';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import { useWebMode } from '../stores/webModeStore';
@@ -50,7 +49,6 @@ import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import { logger } from '../utils/loggerService';
 import { apiService } from '../utils/apiService';
-import { createConversation, sendMessage } from '../utils/chatService';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -404,11 +402,23 @@ export default function SettingsScreen() {
     console.log('🧪 SettingsScreen - Testing scroll functionality');
     if (scrollViewRef.current) {
       console.log('🧪 SettingsScreen - ScrollView ref exists, attempting to scroll');
-      scrollViewRef.current.scrollTo({ y: 200, animated: true });
-      setTimeout(() => {
-        console.log('🧪 SettingsScreen - Scrolling back to top');
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }, 2000);
+      if ('scrollTo' in scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 200, animated: true });
+        setTimeout(() => {
+          console.log('🧪 SettingsScreen - Scrolling back to top');
+          if (scrollViewRef.current && 'scrollTo' in scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ y: 0, animated: true });
+          }
+        }, 2000);
+      } else if ('scrollToOffset' in scrollViewRef.current) {
+        (scrollViewRef.current as any).scrollToOffset({ offset: 200, animated: true });
+        setTimeout(() => {
+          console.log('🧪 SettingsScreen - Scrolling back to top');
+          if (scrollViewRef.current && 'scrollToOffset' in scrollViewRef.current) {
+            (scrollViewRef.current as any).scrollToOffset({ offset: 0, animated: true });
+          }
+        }, 2000);
+      }
     } else {
       console.log('🧪 SettingsScreen - ScrollView ref is null!');
     }
@@ -656,7 +666,7 @@ export default function SettingsScreen() {
       ) : (
         // Native: Standard ScrollView for iOS/Android
         <ScrollView
-          ref={scrollViewRef}
+          ref={scrollViewRef as React.RefObject<ScrollView>}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}

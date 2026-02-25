@@ -7,7 +7,7 @@
 // - External deps/services: `followService` (stats and sample), `chatService` (sample chats), `apiService` (load user data), i18n translations.
 // - Notes: Hides or adapts certain demo-only features when `isRealAuth` is true. Shows different UI elements based on whether viewing own profile or other user's profile.
 // screens/ProfileScreen.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,9 +24,9 @@ import {
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
+import { TabView } from 'react-native-tab-view';
 import type { SceneRendererProps, NavigationState } from 'react-native-tab-view';
-import { useNavigation, useFocusEffect, useRoute, useNavigationState } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
@@ -42,12 +42,12 @@ import { enhancedDB } from '../utils/enhancedDatabaseService';
 import { apiService } from '../utils/apiService';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { UserPreview as CharacterType } from '../globals/types';
-import { useToast, toastService } from '../utils/toastService';
+import { useToast } from '../utils/toastService';
 import PostReelItem from '../components/Feed/PostReelItem';
-import { FeedItem, FeedUser } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
+import { sanitiseAvatarUrl } from '../utils/urlValidator';
 
 // --- Type Definitions ---
 type TabRoute = {
@@ -96,7 +96,7 @@ const formatRideTime = (dateIso: string) => {
 
 // --- Tab Components ---
 // Helper function to check if status is "open"
-const isOpenStatus = (status: string, type: string): boolean => {
+const _isOpenStatus = (status: string, type: string): boolean => {
   if (type === 'item') {
     return status === 'available' || status === 'reserved';
   } else if (type === 'ride') {
@@ -110,7 +110,7 @@ const isOpenStatus = (status: string, type: string): boolean => {
 };
 
 // Helper function to check if status is "closed"
-const isClosedStatus = (status: string, type: string): boolean => {
+const _isClosedStatus = (status: string, type: string): boolean => {
   if (type === 'item') {
     return status === 'delivered' || status === 'completed';
   } else if (type === 'ride') {
@@ -144,7 +144,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
   } = usePostMenu();
 
   // Report submit handler
-  const handleReportSubmit = async (reason: string) => {
+  const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
     // Report functionality can be implemented here if needed
     setReportModalVisible(false);
@@ -592,7 +592,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
   } = usePostMenu();
 
   // Report submit handler
-  const handleReportSubmit = async (reason: string) => {
+  const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
     // Report functionality can be implemented here if needed
     setReportModalVisible(false);
@@ -1036,7 +1036,7 @@ function ProfileScreenContent({
 }) {
   const route = useRoute();
   const { t } = useTranslation(['profile', 'common']);
-  const { selectedUser, setSelectedUserWithMode, isRealAuth } = useUser();
+  const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth } = useUser();
   const navigation = useNavigation();
   const { ToastComponent } = useToast();
   const defaultLogo = require('../assets/images/android-chrome-192x192.png');
@@ -1133,7 +1133,7 @@ function ProfileScreenContent({
   // State for viewing other user's profile
   const [viewingUser, setViewingUser] = useState<CharacterType | null>(externalCharacterData || null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0, isFollowing: false });
+  const [_followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0, isFollowing: false });
   const [updatedCounts, setUpdatedCounts] = useState({ followersCount: 0, followingCount: 0 });
   const [loadingUser, setLoadingUser] = useState(!isOwnProfile && !externalCharacterData);
 
@@ -1145,7 +1145,7 @@ function ProfileScreenContent({
     if (isOwnProfile && Platform.OS === 'web' && typeof window !== 'undefined') {
       try {
         localStorage.removeItem(STORAGE_KEY);
-      } catch (error) {
+      } catch (_err) {
         // Ignore errors
       }
     }
@@ -1189,7 +1189,7 @@ function ProfileScreenContent({
                   userId: externalUserId,
                   userName: mappedUser.name,
                 }));
-              } catch (error) {
+              } catch (_err) {
                 // Ignore errors
               }
             }
@@ -1197,8 +1197,8 @@ function ProfileScreenContent({
             console.warn('User not found:', externalUserId);
             setViewingUser(null);
           }
-        } catch (error) {
-          console.error('❌ Load user error:', error);
+        } catch (err) {
+          console.error('❌ Load user error:', err);
           if (externalUserName && externalUserName !== 'משתמש לא ידוע') {
             setViewingUser({
               id: externalUserId,
@@ -1653,7 +1653,8 @@ function ProfileScreenContent({
   // Recent Activities are now loaded from database (see loadRecentActivities function)
 
   // Derived display values
-  const avatarSource = displayUser?.avatar ? { uri: displayUser.avatar } : defaultLogo;
+  const safeAvatarUri = sanitiseAvatarUrl(displayUser?.avatar);
+  const avatarSource = safeAvatarUri ? { uri: safeAvatarUri } : defaultLogo;
 
   // Show error if viewing other user's profile and user not found
   if (!isOwnProfile && !loadingUser && !viewingUser) {

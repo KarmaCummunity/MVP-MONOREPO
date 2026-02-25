@@ -11,8 +11,7 @@ import {
   ActivityIndicator,
   View,
   Platform,
-  Text, // Needed for loading message on web
-  TouchableOpacity // Added for retry button
+  Text // Added for retry button
 } from 'react-native';
 
 // Re-import WebView for native platforms (iOS/Android)
@@ -25,10 +24,7 @@ import { FontSizes } from '../globals/constants';
 // WebBrowser is no longer needed as we are using WebView for native.
 // import * as WebBrowser from 'expo-web-browser';
 
-interface WebViewScreenProps {
-  // If you want to pass the URL as a prop, you would define it here
-  // For example: route: { params?: { url?: string } };
-}
+type WebViewScreenProps = Record<string, never>; // Props replaced
 
 const J_GIVE_URL = "https://www.jgive.com/"; // The URL you want to open
 
@@ -132,12 +128,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-     retryButton: {
-     backgroundColor: colors.secondary,
-     paddingVertical: 10,
-     paddingHorizontal: 20,
-     borderRadius: 8,
-   },
+  retryButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
   retryButtonText: {
     color: colors.white,
     fontSize: FontSizes.medium,

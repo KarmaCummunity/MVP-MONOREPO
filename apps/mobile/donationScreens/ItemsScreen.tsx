@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Modal, FlatList, Dimensions, Platform } from 'react-native';
-import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList, Dimensions, Platform } from 'react-native';
+import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';

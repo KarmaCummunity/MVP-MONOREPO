@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import {
   Modal,
-  View,
   Text,
   TouchableOpacity,
   StyleSheet,

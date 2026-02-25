@@ -20,7 +20,7 @@
 // TODO: Implement proper deep linking support for tab navigation
 'use strict';
 import React from "react";
-import { Platform, Animated, Easing, View, StyleSheet } from "react-native";
+import { Animated, Easing, View, StyleSheet } from "react-native";
 import { createBottomTabNavigator, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation, CommonActions } from "@react-navigation/native";
@@ -29,11 +29,6 @@ import SearchTabStack from "./SearchTabStack";
 import ProfileTabStack from "./ProfileTabStack";
 import DonationsStack from "./DonationsStack";
 import AdminStack from "./AdminStack";
-import BookmarksScreen from "../screens/BookmarksScreen";
-import SettingsScreen from "../topBarScreens/SettingsScreen";
-import ChatListScreen from "../topBarScreens/ChatListScreen";
-import AboutKarmaCommunityScreen from "../topBarScreens/AboutKarmaCommunityScreen";
-import NotificationsScreen from "../screens/NotificationsScreen";
 import colors from "../globals/colors"; // Adjust path if needed
 import { vw, getScreenInfo, isLandscape } from "../globals/responsive";
 import { LAYOUT_CONSTANTS } from "../globals/constants";

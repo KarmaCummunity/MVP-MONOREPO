@@ -1,12 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 // Safe import for expo-localization to avoid native module crash on platforms/builds where it's not linked
-let Localization: any;
+let _Localization: any;
 try {
-   
-  Localization = require('expo-localization');
-} catch (error) {
-  Localization = null;
+  _Localization = require('expo-localization');
+} catch (_err) {
+  _Localization = null;
 }
 import { I18nManager } from 'react-native';
 

@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import DonationStatsFooter from '../components/DonationStatsFooter';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';

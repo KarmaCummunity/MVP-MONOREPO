@@ -7,8 +7,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Platform,
-  Alert, // Use Alert for messages instead of alert()
+  Platform, // Use Alert for messages instead of alert()
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // Ensure @expo/vector-icons is installed
 import colors from "../globals/colors"; // Ensure this path is correct
