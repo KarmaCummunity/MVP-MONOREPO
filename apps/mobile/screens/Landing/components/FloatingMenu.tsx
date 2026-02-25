@@ -29,9 +29,9 @@ import { styles } from '../styles';
  * />
  * ```
  */
-export const FloatingMenu: React.FC<FloatingMenuProps> = ({ 
-  onNavigate, 
-  activeSection 
+export const FloatingMenu: React.FC<FloatingMenuProps> = ({
+  onNavigate,
+  activeSection
 }) => {
   const { t } = useTranslation('landing');
   const [isMinimized, setIsMinimized] = useState(false);
@@ -47,10 +47,10 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
           accessibilityLabel={t('menu.accessibility.open')}
           accessibilityRole="button"
         >
-          <Ionicons 
-            name="menu-outline" 
-            size={menuSizes.iconSize * 1.2} 
-            color={colors.info} 
+          <Ionicons
+            name="menu-outline"
+            size={menuSizes.iconSize * 1.2}
+            color={colors.info}
           />
         </TouchableOpacity>
       </View>
@@ -68,7 +68,7 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
         accessibilityLabel={t('menu.accessibility.close')}
         accessibilityRole="button"
       />
-      
+
       {/* Floating menu container */}
       <View style={styles.floatingMenu}>
         {/* Menu header with title and close button */}
@@ -82,16 +82,16 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
           <Text style={[styles.menuTitle, { fontSize: menuSizes.titleSize }]}>
             {t('menu.title')}
           </Text>
-          <Ionicons 
-            name="chevron-forward-outline" 
-            size={menuSizes.iconSize * 0.9} 
-            color={colors.textSecondary} 
+          <Ionicons
+            name="chevron-forward-outline"
+            size={menuSizes.iconSize * 0.9}
+            color={colors.textSecondary}
           />
         </TouchableOpacity>
-        
+
         {/* Scrollable menu items */}
-        <ScrollView 
-          style={styles.menuItems} 
+        <ScrollView
+          style={styles.menuItems}
           showsVerticalScrollIndicator={false}
         >
           {MENU_ITEMS.map((item) => (
@@ -99,9 +99,9 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
               key={item.id}
               style={[
                 styles.menuItem,
-                { 
-                  paddingVertical: menuSizes.padding, 
-                  paddingHorizontal: menuSizes.padding * 1.5 
+                {
+                  paddingVertical: menuSizes.padding,
+                  paddingHorizontal: menuSizes.padding * 1.5
                 },
                 activeSection === item.id && styles.menuItemActive,
               ]}
@@ -114,12 +114,12 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
               accessibilityRole="button"
             >
               <Ionicons
-                name={item.icon as any}
+                name={item.icon as never}
                 size={menuSizes.iconSize}
                 color={activeSection === item.id ? colors.info : colors.textSecondary}
                 style={styles.menuItemIcon}
               />
-              <Text 
+              <Text
                 style={[
                   styles.menuItemText,
                   { fontSize: menuSizes.fontSize },

@@ -46,7 +46,8 @@ import Animated, {
   runOnJS,
   Easing,
 } from "react-native-reanimated";
-import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused, useNavigation, type NavigationProp } from "@react-navigation/native";
+import type { HomeTabStackParamList } from "../globals/types";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import colors from "../globals/colors";
@@ -91,7 +92,8 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
   const opacity = useSharedValue(0.8);
 
   useEffect(() => {
-    // Floating up and down animation
+    /* Reanimated shared values are mutable by design; driving them in effect is the standard API. */
+    /* eslint-disable react-hooks/immutability */
     translateY.value = withDelay(
       delay,
       withRepeat(
@@ -100,8 +102,6 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
         true
       )
     );
-
-    // Scale animation
     scale.value = withDelay(
       delay + 500,
       withRepeat(
@@ -110,8 +110,6 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
         true
       )
     );
-
-    // Opacity animation
     opacity.value = withDelay(
       delay + 1000,
       withRepeat(
@@ -120,6 +118,7 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
         true
       )
     );
+    /* eslint-enable react-hooks/immutability */
   }, [delay, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -127,7 +126,7 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
       transform: [
         { translateY: translateY.value },
         { scale: scale.value }
-      ] as any,
+      ],
       opacity: opacity.value,
     };
   });
@@ -141,6 +140,10 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
   );
 };
 
+type HomeScreenNavigation = NavigationProp<HomeTabStackParamList> & {
+  setParams?: (params: { hideTopBar?: boolean; showPosts?: boolean }) => void;
+};
+
 export default function HomeScreen() {
   // TODO: Extract all hook logic to custom hooks (useHomeScreenState, useHomeScreenAnimations)
   // TODO: Implement proper state management with useReducer instead of multiple useState
@@ -148,7 +151,7 @@ export default function HomeScreen() {
   // TODO: Memoize expensive calculations and objects
   const _tabBarHeight = useBottomTabBarHeight();
   const isFocused = useIsFocused();
-  const navigation = useNavigation();
+  const navigation = useNavigation() as HomeScreenNavigation;
   const { selectedUser, setSelectedUser: _setSelectedUser, isGuestMode, resetHomeScreenTrigger, isRealAuth: _isRealAuth, isAuthenticated } = useUser();
   const [showPosts, setShowPosts] = useState(false);
   const [_refreshKey, setRefreshKey] = useState(0);
@@ -222,7 +225,7 @@ export default function HomeScreen() {
         await markAboutScreenSeen();
         // Navigate to About screen after a short delay
         setTimeout(() => {
-          (navigation as any).navigate('AboutKarmaCommunityScreen');
+          navigation.navigate('AboutKarmaCommunityScreen');
         }, 500);
       } else {
         // Mark as checked even if not opening to prevent re-checking
@@ -261,7 +264,7 @@ export default function HomeScreen() {
   // Update hideTopBar and showPosts in route params
   useEffect(() => {
     console.log('🏠 HomeScreen - Updating route params with hideTopBar:', hideTopBar, 'showPosts:', showPosts);
-    (navigation as any).setParams({ hideTopBar, showPosts });
+    navigation.setParams?.({ hideTopBar, showPosts });
   }, [hideTopBar, showPosts, navigation]);
 
   useFocusEffect(
@@ -295,7 +298,7 @@ export default function HomeScreen() {
   /** Animated style for the posts screen */
   const _postsAnimatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateY: postsTranslateY.value }] as any,
+      transform: [{ translateY: postsTranslateY.value }],
     };
   });
 
@@ -305,7 +308,7 @@ export default function HomeScreen() {
       opacity: interpolate(panelHeight.value, [0, HALF_THRESHOLD], [1, 0.2], Extrapolation.CLAMP),
       transform: [
         { scale: interpolate(panelHeight.value, [0, HALF_THRESHOLD], [1, 0.98], Extrapolation.CLAMP) }
-      ] as any,
+      ],
     };
   });
 
@@ -313,7 +316,7 @@ export default function HomeScreen() {
   const panelAnimatedStyle = useAnimatedStyle(() => {
     return {
       height: panelHeight.value,
-    } as any;
+    };
   });
 
   // Drag gesture for opening the posts panel
@@ -692,19 +695,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: scaleSize(100),
   },
-  // Web-specific scroll wrappers
+  // Web-specific scroll wrappers (web-only keys typed as ViewStyle extension)
   webScrollContainer: {
     flex: 1,
-    ...(Platform.OS === 'web' && {
-      overflow: 'auto' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      overscrollBehavior: 'contain' as any,
-      height: SCREEN_HEIGHT as any,
-      maxHeight: SCREEN_HEIGHT as any,
-      width: '100%' as any,
-      touchAction: 'auto' as any,
-    }),
-  } as any,
+    ...(Platform.OS === 'web' && ({
+      overflow: 'auto',
+      height: SCREEN_HEIGHT,
+      maxHeight: SCREEN_HEIGHT,
+      width: '100%',
+    } as unknown as ViewStyle)),
+  } as ViewStyle,
   webScrollContent: {
     minHeight: SCREEN_HEIGHT * 1.2,
   },

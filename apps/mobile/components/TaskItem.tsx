@@ -121,7 +121,7 @@ const TaskItem: React.FC<TaskItemProps> = memo((props) => {
 
           {/* Priority Badge */}
           <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) + '20' }]}>
-            <Ionicons name={getPriorityIcon(task.priority) as any} size={12} color={getPriorityColor(task.priority)} />
+            <Ionicons name={getPriorityIcon(task.priority) as keyof typeof Ionicons.glyphMap} size={12} color={getPriorityColor(task.priority)} />
             <Text style={[styles.priorityText, { color: getPriorityColor(task.priority) }]}>
               {task.priority}
             </Text>

@@ -63,9 +63,10 @@ export async function uploadFileWithProgress(
       }
       blob = await response.blob();
     }
-  } catch (fetchError: any) {
+  } catch (fetchError: unknown) {
     console.error('❌ Error fetching file for upload:', fetchError);
-    throw new Error(`Failed to read file: ${fetchError.message || 'Unknown error'}`);
+    const msg = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+    throw new Error(`Failed to read file: ${msg}`);
   }
 
   const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
@@ -115,7 +116,7 @@ export function sanitizeFileName(fileName: string): string {
 
   // Remove non-ASCII characters (Hebrew, Arabic, etc.) and replace with underscore
   // Keep only ASCII letters, numbers, underscores, hyphens, and dots
-  sanitized = sanitized.replace(/[^\u0000-\u007F]/g, '_');
+  sanitized = sanitized.replace(/[\u0080-\uFFFF]/g, '_');
 
   // Remove multiple consecutive underscores
   sanitized = sanitized.replace(/_+/g, '_');
@@ -157,7 +158,7 @@ export function buildAdminFilePath(folderPath: string, fileId: string, fileName:
     .replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
     .replace(/[<>:"/\\|?*]/g, '_') // Remove special characters
     .replace(/\s+/g, '_') // Replace spaces with underscores
-    .replace(/[^\u0000-\u007F]/g, '_'); // Remove non-ASCII characters (Hebrew, etc.)
+    .replace(/[\u0080-\uFFFF]/g, '_'); // Remove non-ASCII characters (Hebrew, etc.)
 
   // Remove multiple consecutive underscores
   sanitizedFolder = sanitizedFolder.replace(/_+/g, '_');
@@ -171,7 +172,7 @@ export function buildAdminFilePath(folderPath: string, fileId: string, fileName:
   }
 
   // Sanitize fileId to ensure it's safe
-  const sanitizedFileId = fileId.replace(/[<>:"/\\|?*\s]/g, '_').replace(/[^\u0000-\u007F]/g, '_');
+  const sanitizedFileId = fileId.replace(/[<>:"/\\|?*\s]/g, '_').replace(/[\u0080-\uFFFF]/g, '_');
 
   const sanitizedFileName = sanitizeFileName(fileName);
   const prefix = IS_DEVELOPMENT ? 'dev-' : '';

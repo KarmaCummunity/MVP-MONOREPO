@@ -16,6 +16,11 @@
   },
   "error": "שגיאה",
   "errorTitle": "שגיאה",
+  "errors": {
+    "backendEmptyStats": "השרת החזיר נתוני סטטיסטיקה ריקים",
+    "fetchStatsFailed": "טעינת סטטיסטיקות הקהילה מהשרת נכשלה",
+    "fetchStatsFailedGeneric": "טעינת סטטיסטיקות הקהילה נכשלה"
+  },
   "success": "הצלחה",
   "reportSent": "הדיווח נשלח בהצלחה",
   "reportFailed": "שליחת הדיווח נכשלה",
@@ -49,6 +54,10 @@
   "appName": "Karma Community",
   "freeAppNotice": "האפליקציה חינמית לחלוטין ללא מטרות רווח",
   "genericTryAgain": "אירעה שגיאה. נסו שוב.",
+  "versionCheck": {
+    "newVersionAvailable": "גרסה חדשה זמינה!",
+    "tapToRefresh": "לחץ כאן כדי לרענן ולקבל את העדכון האחרון"
+  },
   "labels": {
     "countryIsrael": "ישראל"
   },
@@ -70,6 +79,7 @@
       "friends": "חברים",
       "discovery": "גילוי"
     },
+    "taskCreated": "משימה חדשה: {{title}}",
     "empty_title": "אין פוסטים עדיין",
     "empty_friends": "הוסף חברים כדי לראות פוסטים!",
     "empty_discovery": "היה הראשון לפרסם!"

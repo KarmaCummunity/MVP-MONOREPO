@@ -83,12 +83,12 @@ export default function ChatDetailScreen() {
     setIsLoadingProfile(true);
     try {
       const response = await apiService.getUserById(otherUserId);
-      const data = response.data as any;
+      const data = response.data as Record<string, unknown>;
       if (response.success && data) {
         const userData = data;
         // Only update if we got valid data and the initial name was "unknown user"
-        const newName = userData.name || initialUserName || t('chat:unknownUser');
-        const newAvatar = userData.avatar_url || userData.avatar || initialUserAvatar || '';
+        const newName = (userData.name as string) || initialUserName || t('chat:unknownUser');
+        const newAvatar = (userData.avatar_url as string) || (userData.avatar as string) || initialUserAvatar || '';
 
         // Always update, but prioritize loaded data
         setUserName(newName);
@@ -311,7 +311,8 @@ export default function ChatDetailScreen() {
           }
         );
         uploadedUrl = uploadResult.url;
-      } catch (uploadError: any) {
+      } catch (err: unknown) {
+        const uploadError = err as { message?: string; code?: string };
         logger.error('ChatDetailScreen', 'Upload file error', {
           error: uploadError,
           fullPath,
@@ -574,7 +575,7 @@ export default function ChatDetailScreen() {
         <View
           style={(() => {
             const inputStyle = {
-              position: 'fixed' as any,
+              position: 'fixed' as never,
               left: 0,
               right: 0,
               bottom: tabBarHeight,

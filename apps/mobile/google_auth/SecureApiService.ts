@@ -111,16 +111,16 @@ const API_CONFIG = {
  * In-memory cache for performance optimization
  */
 class ApiCache {
-  private cache: Map<string, { data: any; expiry: number }> = new Map();
-  
-  set(key: string, data: any, duration: number): void {
+  private cache: Map<string, { data: unknown; expiry: number }> = new Map();
+
+  set(key: string, data: unknown, duration: number): void {
     this.cache.set(key, {
       data,
       expiry: Date.now() + duration
     });
   }
-  
-  get(key: string): any | null {
+
+  get(key: string): unknown | null {
     const item = this.cache.get(key);
     if (!item) return null;
     
@@ -138,6 +138,16 @@ class ApiCache {
   
   size(): number {
     return this.cache.size;
+  }
+
+  /** Clear entries whose key includes the given pattern; returns count cleared */
+  clearByPattern(pattern: string): number {
+    const keysToDelete: string[] = [];
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) keysToDelete.push(key);
+    }
+    keysToDelete.forEach(key => this.cache.delete(key));
+    return keysToDelete.length;
   }
 }
 
@@ -287,7 +297,7 @@ class SecureApiService {
         
         return {
           success: true,
-          data: cachedResponse,
+          data: cachedResponse as T,
           metadata: {
             requestId: `${requestId}`,
             timestamp: new Date().toISOString(),
@@ -578,7 +588,7 @@ class SecureApiService {
    * @param endpoint The endpoint that failed
    * @returns Categorized error information
    */
-  private categorizeError(error: any, _endpoint: string): ApiError {
+  private categorizeError(error: unknown, _endpoint: string): ApiError {
     // Network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return {
@@ -598,7 +608,8 @@ class SecureApiService {
     }
 
     // Authentication errors
-    if (error.status === 401) {
+    const err = error as { status?: number; statusCode?: number; message?: string; headers?: Record<string, string> };
+    if (err.status === 401 || err.statusCode === 401) {
       return {
         type: 'AUTHENTICATION_ERROR',
         message: 'יש להתחבר מחדש למערכת.', // Please log in to the system again.
@@ -607,26 +618,27 @@ class SecureApiService {
     }
 
     // Rate limiting errors
-    if (error.status === 429) {
+    if (err.status === 429 || err.statusCode === 429) {
       return {
         type: 'RATE_LIMIT_ERROR',
         message: 'יותר מדי בקשות. אנא המתן מספר דקות.', // Too many requests. Please wait a few minutes.
         retryable: true,
-        retryAfter: parseInt(error.headers?.['Retry-After'] || '60', 10) * 1000
+        retryAfter: parseInt(err.headers?.['Retry-After'] || '60', 10) * 1000
       };
     }
 
     // Validation errors
-    if (error.status === 400) {
+    if (err.status === 400 || err.statusCode === 400) {
       return {
         type: 'VALIDATION_ERROR',
-        message: error.message || 'נתונים שגויים נשלחו לשרת.', // Invalid data sent to server.
+        message: err.message || 'נתונים שגויים נשלחו לשרת.', // Invalid data sent to server.
         retryable: false
       };
     }
 
     // Server errors
-    if (error.status >= 500) {
+    const status = err.status ?? err.statusCode ?? 0;
+    if (status >= 500) {
       return {
         type: 'SERVER_ERROR',
         message: 'שגיאת שרת פנימית. אנא נסה שוב מאוחר יותר.', // Internal server error. Please try again later.
@@ -670,7 +682,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async post<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -686,7 +698,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async put<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
@@ -702,7 +714,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async patch<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async patch<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
@@ -734,7 +746,7 @@ class SecureApiService {
    * 
    * @returns Promise resolving to user profile data
    */
-  async getCurrentUser(): Promise<ApiResponse<any>> {
+  async getCurrentUser(): Promise<ApiResponse<unknown>> {
     const user = googleAuthService.getCurrentUser();
     if (!user) {
       return {
@@ -753,7 +765,7 @@ class SecureApiService {
    * @param updateData Profile data to update
    * @returns Promise resolving to updated profile
    */
-  async updateCurrentUserProfile(updateData: any): Promise<ApiResponse<any>> {
+  async updateCurrentUserProfile(updateData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     const user = googleAuthService.getCurrentUser();
     if (!user) {
       return {
@@ -774,7 +786,7 @@ class SecureApiService {
    * 
    * @returns Promise resolving to list of active sessions
    */
-  async getUserSessions(): Promise<ApiResponse<any[]>> {
+  async getUserSessions(): Promise<ApiResponse<unknown[]>> {
     return this.get('/auth/sessions');
   }
 
@@ -797,7 +809,7 @@ class SecureApiService {
     limit?: number;
     offset?: number;
     search?: string;
-  } = {}): Promise<ApiResponse<any[]>> {
+  } = {}): Promise<ApiResponse<unknown[]>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -823,7 +835,7 @@ class SecureApiService {
    * @param donationData Donation details
    * @returns Promise resolving to created donation
    */
-  async createDonation(donationData: any): Promise<ApiResponse<any>> {
+  async createDonation(donationData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     // Clear donations cache since we're adding a new item
     this.clearCacheByPattern('/api/donations');
     
@@ -837,7 +849,7 @@ class SecureApiService {
    * @param donationId Donation identifier
    * @returns Promise resolving to donation details
    */
-  async getDonationById(donationId: string): Promise<ApiResponse<any>> {
+  async getDonationById(donationId: string): Promise<ApiResponse<unknown>> {
     return this.get(`/api/donations/${donationId}`, {
       authenticated: false,
       enableCache: true
@@ -862,7 +874,7 @@ class SecureApiService {
     status?: string;
     limit?: number;
     offset?: number;
-  } = {}): Promise<ApiResponse<any[]>> {
+  } = {}): Promise<ApiResponse<unknown[]>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -888,7 +900,7 @@ class SecureApiService {
    * @param rideData Ride details
    * @returns Promise resolving to created ride
    */
-  async createRide(rideData: any): Promise<ApiResponse<any>> {
+  async createRide(rideData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     // Clear rides cache since we're adding a new item
     this.clearCacheByPattern('/api/rides');
     
@@ -909,7 +921,7 @@ class SecureApiService {
   async getCommunityStats(filters: {
     city?: string;
     period?: string;
-  } = {}): Promise<ApiResponse<any>> {
+  } = {}): Promise<ApiResponse<unknown>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -986,22 +998,11 @@ class SecureApiService {
    * @param pattern URL pattern to match
    */
   private clearCacheByPattern(pattern: string): void {
-    const keysToDelete: string[] = [];
-    
-    for (const [key] of (this.cache as any).cache) {
-      if (key.includes(pattern)) {
-        keysToDelete.push(key);
-      }
-    }
-    
-    keysToDelete.forEach(key => {
-      (this.cache as any).cache.delete(key);
-    });
-    
-    if (keysToDelete.length > 0) {
+    const cleared = this.cache.clearByPattern(pattern);
+    if (cleared > 0) {
       logger.debug('SecureApiService', 'Cache cleared by pattern', {
         pattern,
-        clearedItems: keysToDelete.length
+        clearedItems: cleared
       });
     }
   }
@@ -1058,9 +1059,9 @@ class SecureApiService {
   public getServiceInfo(): {
     baseUrl: string;
     totalRequests: number;
-    cacheStats: any;
+    cacheStats: unknown;
     isAuthenticated: boolean;
-    currentUser: any;
+    currentUser: unknown;
   } {
     return {
       baseUrl: this.baseUrl,

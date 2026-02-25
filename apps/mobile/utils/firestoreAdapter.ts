@@ -30,7 +30,7 @@ export class FirestoreAdapter implements DatabaseAdapter {
     const { db } = getFirebase();
     const id = `${userId}_${itemId}`;
     const ref = doc(collection(db, collectionName), id);
-    await setDoc(ref, { ...data, _userId: userId, _id: itemId, _createdAt: Timestamp.now() } as any, { merge: true });
+    await setDoc(ref, { ...(data as Record<string, unknown>), _userId: userId, _id: itemId, _createdAt: Timestamp.now() }, { merge: true });
   }
 
   async read<T>(collectionName: string, userId: string, itemId: string): Promise<T | null> {
@@ -45,7 +45,7 @@ export class FirestoreAdapter implements DatabaseAdapter {
     const { db } = getFirebase();
     const id = `${userId}_${itemId}`;
     const ref = doc(collection(db, collectionName), id);
-    await updateDoc(ref, { ...(data as any), _updatedAt: Timestamp.now() } as any);
+    await updateDoc(ref, { ...(data as Record<string, unknown>), _updatedAt: Timestamp.now() });
   }
 
   async delete(collectionName: string, userId: string, itemId: string): Promise<void> {
@@ -76,7 +76,7 @@ export class FirestoreAdapter implements DatabaseAdapter {
     const col = collection(db, collectionName);
     for (const { id, data } of items) {
       const docId = `${userId}_${id}`;
-      batch.set(doc(col, docId), { ...data, _userId: userId, _id: id, _createdAt: Timestamp.now() } as any, { merge: true });
+      batch.set(doc(col, docId), { ...(data as Record<string, unknown>), _userId: userId, _id: id, _createdAt: Timestamp.now() }, { merge: true });
     }
     await batch.commit();
   }

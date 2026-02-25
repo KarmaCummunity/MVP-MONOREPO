@@ -36,7 +36,7 @@ const LocationSearchComp: React.FC<LocationSearchCompProps> = ({
   const { t } = useTranslation(['search', 'common']);
   const [query, setQuery] = useState<string>("");
   const [results, setResults] = useState<PlacePrediction[]>([]);
-  const [debounceTimer, setDebounceTimer] = useState<any>(null);
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const searchGooglePlaces = async (inputText: string) => {
     const startTime = Date.now();

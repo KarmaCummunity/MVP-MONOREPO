@@ -48,7 +48,7 @@ interface HoursReport {
 
 export default function AdminTimeManagementScreen({ navigation }: AdminTimeManagementScreenProps) {
   const route = useRoute();
-  const routeParams = (route.params as any) || {};
+  const routeParams = (route.params as { viewOnly?: boolean }) || {};
   const _viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser } = useUser();

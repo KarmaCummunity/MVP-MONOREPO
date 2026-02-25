@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { NavigationProp } from '@react-navigation/native';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AdminReviewScreenProps {
-  navigation: NavigationProp<any>;
+  navigation: NavigationProp<ParamListBase>;
 }
 
 import { useAdminProtection } from '../hooks/useAdminProtection';

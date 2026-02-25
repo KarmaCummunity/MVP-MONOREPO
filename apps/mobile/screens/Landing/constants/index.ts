@@ -33,6 +33,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: 'how', icon: 'help-circle-outline' },
   { id: 'who', icon: 'people-outline' },
   { id: 'values', icon: 'heart-outline' },
+  { id: 'core-mottos', icon: 'sparkles-outline' },
   { id: 'hierarchy', icon: 'git-network-outline' },
   { id: 'roadmap', icon: 'map-outline' },
   { id: 'contact', icon: 'mail-outline' },
@@ -53,6 +54,26 @@ export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_CONTACT}`;
  * Instagram profile URL
  */
 export const INSTAGRAM_URL = 'https://www.instagram.com/karmacommunity.il';
+
+/**
+ * Instagram karma community URL (alternate handle)
+ */
+export const INSTAGRAM_KARMA_URL = 'https://www.instagram.com/karma_community_/';
+
+/**
+ * GitHub organization URL
+ */
+export const GITHUB_ORG_URL = 'https://github.com/KarmaCummunity';
+
+/**
+ * WhatsApp group invite URL
+ */
+export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Hi2TpFcO5huKVKarvecz00';
+
+/**
+ * Contact email address
+ */
+export const CONTACT_EMAIL = 'navesarussi@gmail.com';
 
 /**
  * Default statistics fallback values

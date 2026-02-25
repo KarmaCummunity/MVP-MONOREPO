@@ -32,6 +32,11 @@
     "createFirstPost": "הפוסטים שלך יופיעו כאן"
   },
   "alerts": {
+    "disabledOnRealAuth": "פונקציה זו אינה זמינה במצב התחברות אמיתי",
+    "noUserSelected": "יש לבחור משתמש",
+    "sampleDataTitle": "נתוני דמו",
+    "sampleDataCreated": "נתוני דמו נוצרו בהצלחה",
+    "highlight": "היילייט",
     "post": "פוסט",
     "postNumber": "פוסט מספר {{number}}",
     "newUser": "משתמש חדש",
@@ -131,6 +136,75 @@
   "recent": {
     "taskCompleted": "השלמת משימה: {{task}}",
     "donated": "תרמת {{amount}} ל{{purpose}}",
-    "joinedEvent": "הצטרפת לאירוע: {{event}}"
-  }
+    "joinedEvent": "הצטרפת לאירוע: {{event}}",
+    "noActivityYet": "אין פעילויות עדיין",
+    "startCreating": "התחל ליצור תוכן כדי לראות את הפעילויות שלך כאן"
+  },
+  "roles": {
+    "user": "משתמש",
+    "donor": "תורם",
+    "volunteer": "מתנדב",
+    "recipient": "מקבל עזרה",
+    "organization": "עמותה",
+    "student": "סטודנט"
+  },
+  "fallbacks": {
+    "noName": "ללא שם",
+    "israel": "ישראל",
+    "unknownUser": "משתמש לא ידוע",
+    "notSpecified": "לא צויין"
+  },
+  "contentTabs": {
+    "open": "פתוח",
+    "closed": "סגור"
+  },
+  "openContent": {
+    "loading": "טוען תוכן פתוח...",
+    "empty": "אין תוכן פתוח עדיין",
+    "emptySubtext": "התוכן הפתוח שלך יופיע כאן"
+  },
+  "closedContent": {
+    "loading": "טוען תוכן סגור...",
+    "empty": "אין תוכן סגור עדיין",
+    "emptySubtext": "התוכן הסגור שלך יופיע כאן"
+  },
+  "taggedComingSoon": "תיוגים יהיה פעיל בהמשך",
+  "backToHome": "חזרה לעמוד הבית",
+  "verified": "מאומת",
+  "message": "הודעה",
+  "requestTask": "בקש משימה",
+  "content": {
+    "donationMoneyFormat": "תרומה: {{amount}} ₪",
+    "volunteeringFormat": "התנדבות: {{title}}",
+    "rideFormat": "טרמפ: {{title}}",
+    "newPost": "פוסט חדש",
+    "newItem": "פריט חדש",
+    "newDonation": "תרומה חדשה",
+    "newTask": "משימה חדשה",
+    "taskCompleted": "משימה הושלמה",
+    "justNow": "לפני רגע"
+  },
+  "ride": {
+    "fromToFormat": "טרמפ: {{from}} ➝ {{to}}"
+  },
+  "alertsProfile": {
+    "unfollowTitle": "ביטול עקיבה",
+    "openOptions": "פתיחת אפשרויות",
+    "loginRequired": "יש להתחבר תחילה",
+    "userNotFound": "משתמש לא נמצא",
+    "unfollowSuccess": "ביטלת את העקיבה בהצלחה",
+    "followSuccess": "התחלת לעקוב בהצלחה",
+    "actionFailed": "אירעה שגיאה בביצוע הפעולה",
+    "selectUserFirst": "יש לבחור יוזר תחילה",
+    "chatError": "שגיאה ביצירת השיחה",
+    "taskRequestTitle": "בקשת משימה",
+    "taskRequest": "האם לשלוח בקשת משימה למנהל זה?",
+    "willingToHelp": "אשמח לעזור במה שצריך"
+  },
+  "follow": {
+    "following": "עוקב",
+    "follow": "עקוב"
+  },
+  "interestsSectionTitle": "תחומי עניין:",
+  "joinedDatePrefix": "הצטרף ב-"
 }

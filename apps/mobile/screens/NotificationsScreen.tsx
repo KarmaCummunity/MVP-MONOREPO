@@ -250,7 +250,7 @@ export default function NotificationsScreen() {
     try {
       await markNotificationAsRead(item.id, selectedUser.id);
       if (item.type === 'message' && item.data?.conversationId) {
-        (navigation as any).navigate('ChatDetailScreen', { conversationId: item.data.conversationId });
+        (navigation as NavigationProp<ParamListBase>).navigate('ChatDetailScreen', { conversationId: item.data.conversationId });
       }
     } catch (error) {
       console.error('❌ Open notification error:', error);
@@ -315,18 +315,18 @@ export default function NotificationsScreen() {
         <View style={styles.additionalHeaderSection}>
           {[
             unreadCount > 0 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key="mark-all-read"
-                onPress={handleMarkAllAsRead} 
+                onPress={handleMarkAllAsRead}
                 style={styles.headerButton}
               >
                 <Icon name="checkmark-done" size={24} color={colors.primary} />
               </TouchableOpacity>
             ),
             notifications.length > 0 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key="clear-all"
-                onPress={handleClearAllNotifications} 
+                onPress={handleClearAllNotifications}
                 style={styles.headerButton}
               >
                 <Icon name="trash-outline" size={24} color={colors.error} />

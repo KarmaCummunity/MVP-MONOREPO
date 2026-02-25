@@ -16,7 +16,7 @@ import {
     StatusBar,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { NavigationProp, useRoute } from '@react-navigation/native';
+import { NavigationProp, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
@@ -55,8 +55,8 @@ interface ContactFormData {
 const LOG_SOURCE = 'AdminCRMScreen';
 
 export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScreenProps) {
-    const route = useRoute();
-    const routeParams = (route.params as any) || {};
+    const route = useRoute<RouteProp<AdminStackParamList, 'AdminCRM'>>();
+    const routeParams = (route.params ?? {}) as { viewOnly?: boolean };
     const viewOnly = routeParams?.viewOnly === true;
     useAdminProtection(true);
     const { selectedUser } = useUser();
@@ -243,7 +243,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                         <TouchableOpacity
                             key={s}
                             style={[styles.filterButton, statusFilter === s && styles.filterButtonActive]}
-                            onPress={() => setStatusFilter(s as any)}
+                            onPress={() => setStatusFilter(s as 'all' | 'active' | 'inactive')}
                         >
                             <Text style={[styles.filterButtonText, statusFilter === s && styles.filterButtonTextActive]}>
                                 {s === 'all' ? 'הכל' : s === 'active' ? 'פעיל' : 'לא פעיל'}
@@ -359,7 +359,14 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
     );
 }
 
-const FormInput = ({ label, value, onChange, multiline = false }: any) => (
+interface FormInputProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+}
+
+const FormInput = ({ label, value, onChange, multiline = false }: FormInputProps) => (
     <View style={styles.formGroup}>
         <Text style={styles.label}>{label}</Text>
         <TextInput

@@ -1,4 +1,5 @@
-// Deprecated: HomeStack הוחלף על ידי Tab stacks. 
+// Deprecated: HomeStack replaced by Tab stacks.
+import React from 'react';
 export default function HomeStack() {
-  return null as any;
+  return null as unknown as React.ReactElement;
 }

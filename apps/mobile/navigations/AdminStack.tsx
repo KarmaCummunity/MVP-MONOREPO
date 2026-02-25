@@ -28,6 +28,7 @@ import LandingSiteScreen from "../screens/Landing/LandingSiteScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
 import TopBarNavigator from "./TopBarNavigator";
 import { AdminStackParamList } from "../globals/types";
+import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { logger } from "../utils/loggerService";
 
 const Stack = createStackNavigator<AdminStackParamList>();
@@ -48,8 +49,8 @@ export default function AdminStack() {
         headerShown: true,
         header: () => (
           <TopBarNavigator
-            navigation={navigation as any}
-            hideTopBar={(route?.params as any)?.hideTopBar === true}
+            navigation={navigation as NavigationProp<ParamListBase>}
+            hideTopBar={(route?.params as { hideTopBar?: boolean })?.hideTopBar === true}
           />
         ),
         // Fix for aria-hidden warning: prevent focus on inactive screens

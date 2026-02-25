@@ -23,6 +23,7 @@ import { AdminStackParamList } from '../globals/types';
 import { useTranslation } from 'react-i18next';
 import { apiService, ApiResponse } from '../src/api/api.service';
 import { useAdminProtection } from '../hooks/useAdminProtection';
+import { logger } from '../utils/loggerService';
 
 interface AdminTableRowsScreenProps {
   route: RouteProp<AdminStackParamList, 'AdminTableRows'>;
@@ -39,7 +40,7 @@ interface TableColumn {
 interface TableRow {
   id: string;
   table_id: string;
-  data: Record<string, any>;
+  data: Record<string, string | number | null>;
   created_by?: string;
   created_at: string;
   updated_at?: string;
@@ -68,7 +69,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, string | number | null>>({});
   const [dateValues, setDateValues] = useState<Record<string, Date>>({});
 
   const fetchTable = useCallback(async () => {
@@ -82,7 +83,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
         Alert.alert(t('common:error'), res.error || t('admin:tables.loadError'));
       }
     } catch (error) {
-      console.error('Error fetching table:', error);
+      logger.error('AdminTableRowsScreen', 'Error fetching table', { error });
       Alert.alert(t('common:error'), t('admin:tables.fetchError'));
     } finally {
       setLoading(false);
@@ -95,7 +96,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
 
   const resetForm = () => {
     if (table) {
-      const initialData: Record<string, any> = {};
+      const initialData: Record<string, string | number | null> = {};
       const initialDates: Record<string, Date> = {};
       table.columns.forEach((col) => {
         initialData[col.name] = '';
@@ -120,8 +121,9 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
 
     if (table) {
       table.columns.forEach((col) => {
-        if (col.data_type === 'date' && rowData[col.name]) {
-          dates[col.name] = new Date(rowData[col.name]);
+        if (col.data_type === 'date') {
+          const v = rowData[col.name];
+          if (v != null) dates[col.name] = new Date(v);
         }
       });
     }
@@ -132,7 +134,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     setShowRowModal(true);
   };
 
-  const updateFormField = (columnName: string, value: any) => {
+  const updateFormField = (columnName: string, value: string | number | null) => {
     setFormData({ ...formData, [columnName]: value });
   };
 
@@ -151,7 +153,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     }
 
     // Prepare data
-    const rowData: Record<string, any> = {};
+    const rowData: Record<string, string | number | null> = {};
     table.columns.forEach((col) => {
       const value = formData[col.name];
       if (value !== undefined && value !== null && value !== '') {
@@ -201,7 +203,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
         setCreating(false);
       }
     } catch (error) {
-      console.error('Error saving row:', error);
+      logger.error('AdminTableRowsScreen', 'Error saving row', { error });
       Alert.alert(t('common:error'), t('admin:tables.saveFailed'));
       if (editingRowId) {
         setUpdating(null);
@@ -228,7 +230,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
               Alert.alert(t('common:error'), res.error || t('admin:tables.deleteFailed'));
             }
           } catch (error) {
-            console.error('Error deleting row:', error);
+            logger.error('AdminTableRowsScreen', 'Error deleting row', { error });
             Alert.alert(t('common:error'), t('admin:tables.deleteFailed'));
           } finally {
             setDeleting(null);
@@ -238,7 +240,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     ]);
   };
 
-  const renderCell = (value: any, dataType: string) => {
+  const renderCell = (value: string | number | null | undefined, dataType: string) => {
     if (value === null || value === undefined || value === '') {
       return <Text style={styles.cellEmpty}>-</Text>;
     }
@@ -380,7 +382,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                   {col.data_type === 'date' ? (
                     Platform.OS === 'web' ? (
                       <DatePicker
-                        value={dateValues[col.name] || (formData[col.name] ? new Date(formData[col.name]) : null)}
+                        value={dateValues[col.name] || (formData[col.name] != null ? new Date(formData[col.name] as string | number) : null)}
                         onChange={(date) => {
                           if (date) {
                             setDateValues({ ...dateValues, [col.name]: date });
@@ -397,8 +399,8 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                         <Text style={styles.dateText}>
                           {dateValues[col.name]
                             ? dateValues[col.name].toLocaleDateString('he-IL')
-                            : formData[col.name]
-                              ? new Date(formData[col.name]).toLocaleDateString('he-IL')
+                            : formData[col.name] != null
+                              ? new Date(formData[col.name] as string | number).toLocaleDateString('he-IL')
                               : t('admin:tables.selectDate')}
                         </Text>
                         <Ionicons name="calendar-outline" size={20} color={colors.primary} />

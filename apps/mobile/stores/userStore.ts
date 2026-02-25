@@ -6,6 +6,7 @@
 // - Advantage: Can be used outside React components (in services) without circular dependencies
 
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
@@ -15,6 +16,46 @@ import { logger } from '../utils/loggerService';
 export type AuthMode = 'guest' | 'demo' | 'real';
 // Simplified role model for the app
 export type Role = 'guest' | 'user' | 'admin';
+
+/** Org application from db.listOrgApplications */
+interface OrgApplicationRecord {
+  id?: string;
+  orgName?: string;
+  status?: string;
+}
+
+/** API user record shape from getUserById / resolveUserId */
+interface ApiUserRecord {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  avatar_url?: string;
+  avatar?: string;
+  bio?: string;
+  karma_points?: number;
+  karmaPoints?: number;
+  join_date?: string;
+  created_at?: string;
+  joinDate?: string;
+  createdAt?: string;
+  is_active?: boolean;
+  isActive?: boolean;
+  last_active?: string;
+  lastActive?: string;
+  city?: string;
+  country?: string;
+  location?: { city: string; country: string };
+  interests?: string[];
+  roles?: string[];
+  posts_count?: number;
+  followers_count?: number;
+  following_count?: number;
+  postsCount?: number;
+  followersCount?: number;
+  followingCount?: number;
+  settings?: { language: string; darkMode: boolean; notificationsEnabled: boolean };
+}
 
 export interface User {
   id: string;
@@ -71,6 +112,32 @@ const computeRole = (user: User | null, mode: AuthMode): Role => {
   return (roles.includes('admin') || roles.includes('super_admin') || roles.includes('org_admin')) ? 'admin' : 'user';
 };
 
+const mapApiUserToUser = (
+  record: ApiUserRecord,
+  fallbacks: { displayName?: string; email?: string; photoURL?: string }
+): User => {
+  const nowIso = new Date().toISOString();
+  return {
+    id: record.id ?? '',
+    name: record.name ?? fallbacks.displayName ?? fallbacks.email?.split('@')[0] ?? 'User',
+    email: record.email ?? fallbacks.email ?? '',
+    phone: record.phone ?? '+9720000000',
+    avatar: record.avatar_url ?? record.avatar ?? fallbacks.photoURL ?? 'https://i.pravatar.cc/150?img=1',
+    bio: record.bio ?? '',
+    karmaPoints: (record.karma_points ?? record.karmaPoints ?? 0) as number,
+    joinDate: record.join_date ?? record.created_at ?? record.joinDate ?? record.createdAt ?? nowIso,
+    isActive: record.is_active !== false && record.isActive !== false,
+    lastActive: record.last_active ?? record.lastActive ?? nowIso,
+    location: record.location ?? { city: record.city ?? 'ישראל', country: record.country ?? 'IL' },
+    interests: Array.isArray(record.interests) ? record.interests : [],
+    roles: Array.isArray(record.roles) ? record.roles : ['user'],
+    postsCount: (record.posts_count ?? record.postsCount ?? 0) as number,
+    followersCount: (record.followers_count ?? record.followersCount ?? 0) as number,
+    followingCount: (record.following_count ?? record.followingCount ?? 0) as number,
+    notifications: [],
+    settings: record.settings ?? { language: 'he', darkMode: false, notificationsEnabled: true },
+  };
+};
 
 const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
   try {
@@ -96,7 +163,7 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
           const response = await Promise.race([
             apiService.getUserById(user.id),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching user data')), 4000))
-          ]) as any;
+          ]) as { success?: boolean; data?: { roles?: string[] } };
 
           if (response.success && response.data) {
             return response.data.roles || [];
@@ -113,7 +180,7 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
           const apps = await Promise.race([
             db.listOrgApplications(emailKey),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching org apps')), 4000))
-          ]) as any[];
+          ]) as OrgApplicationRecord[];
           return apps;
         } catch (err) {
           console.warn('🔐 enrichUserWithOrgRoles - Org apps fetch warning:', err);
@@ -130,7 +197,7 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
     }
 
     // Process Org Applications
-    let approved: any = undefined;
+    let approved: OrgApplicationRecord | undefined = undefined;
     if (applicationsFetchResult.status === 'fulfilled' && Array.isArray(applicationsFetchResult.value)) {
       approved = applicationsFetchResult.value.find((a) => a.status === 'approved');
       console.log('🔐 enrichUserWithOrgRoles - Found approved org:', !!approved);
@@ -515,12 +582,12 @@ export const useUserStore = create<UserState>((set, get) => ({
   refreshUserRoles: async () => {
     const currentUser = get().selectedUser;
     if (!currentUser) {
-      console.log('🔐 userStore - refreshUserRoles - No user to refresh');
+      logger.debug('Auth', 'refreshUserRoles - No user to refresh');
       return;
     }
 
     try {
-      console.log('🔐 userStore - refreshUserRoles - Refreshing roles for user:', currentUser.email);
+      logger.debug('Auth', 'refreshUserRoles - Refreshing roles', { email: currentUser.email });
       const enrichedUser = await enrichUserWithOrgRoles(currentUser);
 
       // Only update if roles actually changed to prevent infinite loops
@@ -528,17 +595,15 @@ export const useUserStore = create<UserState>((set, get) => ({
       const newRoles = JSON.stringify((enrichedUser.roles || []).sort((a, b) => a.localeCompare(b)));
 
       if (currentRoles !== newRoles) {
-        console.log('🔐 userStore - refreshUserRoles - Roles changed!', {
+        logger.info('Auth', 'refreshUserRoles - Roles changed', {
           email: enrichedUser.email,
-          oldRoles: currentUser.roles,
-          newRoles: enrichedUser.roles
+          newRoles: enrichedUser.roles,
         });
-
         set({ selectedUser: enrichedUser });
         await AsyncStorage.setItem('current_user', JSON.stringify(enrichedUser));
       }
     } catch (error) {
-      console.error('🔐 userStore - refreshUserRoles - Error:', error);
+      logger.error('Auth', 'refreshUserRoles - Error', { error });
     }
   },
 
@@ -607,34 +672,19 @@ export const useUserStore = create<UserState>((set, get) => ({
                 email: firebaseUser.email || undefined
               });
 
-              if (!resolveResponse.success || !(resolveResponse as any).user) {
+              const respWithUser = resolveResponse as { success?: boolean; user?: Record<string, unknown> };
+              if (!resolveResponse.success || !respWithUser.user) {
                 logger.warn('Auth', 'Failed to resolve user ID from server, using fallback');
                 // Fallback: try to get user by email
                 if (firebaseUser.email) {
                   const userResponse = await apiService.getUserById(firebaseUser.email);
                   if (userResponse.success && userResponse.data) {
-                    const serverUser = userResponse.data;
-                    const nowIso = new Date().toISOString();
-                    const userData: User = {
-                      id: serverUser.id, // UUID from database
-                      name: serverUser.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                      email: serverUser.email || firebaseUser.email || '',
-                      phone: serverUser.phone || firebaseUser.phoneNumber || '+9720000000',
-                      avatar: serverUser.avatar_url || firebaseUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-                      bio: serverUser.bio || '',
-                      karmaPoints: serverUser.karma_points || 0,
-                      joinDate: serverUser.join_date || serverUser.created_at || nowIso,
-                      isActive: serverUser.is_active !== false,
-                      lastActive: serverUser.last_active || nowIso,
-                      location: { city: serverUser.city || 'ישראל', country: serverUser.country || 'IL' },
-                      interests: serverUser.interests || [],
-                      roles: serverUser.roles || ['user'],
-                      postsCount: serverUser.posts_count || 0,
-                      followersCount: serverUser.followers_count || 0,
-                      followingCount: serverUser.following_count || 0,
-                      notifications: [],
-                      settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                    };
+                    const serverUser = userResponse.data as ApiUserRecord;
+                    const userData = mapApiUserToUser(serverUser, {
+                      displayName: firebaseUser.displayName ?? undefined,
+                      email: firebaseUser.email ?? undefined,
+                      photoURL: firebaseUser.photoURL ?? undefined,
+                    });
 
                     await AsyncStorage.setItem('current_user', JSON.stringify(userData));
                     await AsyncStorage.setItem('auth_mode', 'real');
@@ -657,28 +707,12 @@ export const useUserStore = create<UserState>((set, get) => ({
               // Removing the check ensures we always sync with server.
 
               // Use UUID from server
-              const serverUser = (resolveResponse as any).user;
-              const nowIso = new Date().toISOString();
-              const userData: User = {
-                id: serverUser.id, // UUID from database - this is the primary identifier
-                name: serverUser.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                email: serverUser.email || firebaseUser.email || '',
-                phone: serverUser.phone || firebaseUser.phoneNumber || '+9720000000',
-                avatar: serverUser.avatar_url || serverUser.avatar || firebaseUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-                bio: serverUser.bio || '',
-                karmaPoints: serverUser.karmaPoints || 0,
-                joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                isActive: serverUser.isActive !== false,
-                lastActive: serverUser.lastActive || nowIso,
-                location: serverUser.location || { city: 'ישראל', country: 'IL' },
-                interests: serverUser.interests || [],
-                roles: serverUser.roles || ['user'],
-                postsCount: serverUser.postsCount || 0,
-                followersCount: serverUser.followersCount || 0,
-                followingCount: serverUser.followingCount || 0,
-                notifications: [],
-                settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-              };
+              const serverUser = (resolveResponse as { user: ApiUserRecord }).user;
+              const userData = mapApiUserToUser(serverUser, {
+                displayName: firebaseUser.displayName ?? undefined,
+                email: firebaseUser.email ?? undefined,
+                photoURL: firebaseUser.photoURL ?? undefined,
+              });
 
               // Save to AsyncStorage for persistence
               await AsyncStorage.setItem('current_user', JSON.stringify(userData));
@@ -739,36 +773,39 @@ export const useUserStore = create<UserState>((set, get) => ({
 }));
 
 // Computed selectors (for better performance)
-export const useUser = () => {
-  const store = useUserStore();
-  return {
-    selectedUser: store.selectedUser,
-    setSelectedUser: store.setSelectedUser,
-    setSelectedUserWithMode: store.setSelectedUserWithMode,
-    role: computeRole(store.selectedUser, store.authMode),
-    setCurrentPrincipal: store.setCurrentPrincipal,
-    isUserSelected: store.selectedUser !== null,
-    isLoading: store.isLoading,
-    signOut: store.signOut,
-    isAuthenticated: store.isAuthenticated,
-    isGuestMode: store.isGuestMode,
-    isRealAuth: store.authMode === 'real',
-    isAdmin: (() => {
+// Uses useShallow to prevent "Maximum update depth exceeded" - avoids re-render cascade
+// when returning new object references on each store update
+export const useUser = () =>
+  useUserStore(
+    useShallow((store) => {
       const user = store.selectedUser;
-      if (!user) return false;
-      // Super admin email check (fallback if roles not updated in DB)
-      if (user.email === 'navesarussi@gmail.com') return true;
-      const roles = Array.isArray(user.roles) ? user.roles : [];
-      return roles.includes('admin') || roles.includes('super_admin');
-    })(),
-    setGuestMode: store.setGuestMode,
-    setDemoUser: store.setDemoUser,
-    resetHomeScreen: store.resetHomeScreen,
-    resetHomeScreenTrigger: store.resetHomeScreenTrigger,
-    lastHomeTabScreen: store.lastHomeTabScreen,
-    setLastHomeTabScreen: store.setLastHomeTabScreen,
-    clearLastHomeTabScreen: store.clearLastHomeTabScreen,
-    refreshUserRoles: store.refreshUserRoles,
-  };
-};
+      const isAdmin =
+        user &&
+        (user.email === 'navesarussi@gmail.com' ||
+          (Array.isArray(user.roles) &&
+            (user.roles.includes('admin') || user.roles.includes('super_admin'))));
+      return {
+        selectedUser: user,
+        setSelectedUser: store.setSelectedUser,
+        setSelectedUserWithMode: store.setSelectedUserWithMode,
+        role: computeRole(user, store.authMode),
+        setCurrentPrincipal: store.setCurrentPrincipal,
+        isUserSelected: user !== null,
+        isLoading: store.isLoading,
+        signOut: store.signOut,
+        isAuthenticated: store.isAuthenticated,
+        isGuestMode: store.isGuestMode,
+        isRealAuth: store.authMode === 'real',
+        isAdmin: !!isAdmin,
+        setGuestMode: store.setGuestMode,
+        setDemoUser: store.setDemoUser,
+        resetHomeScreen: store.resetHomeScreen,
+        resetHomeScreenTrigger: store.resetHomeScreenTrigger,
+        lastHomeTabScreen: store.lastHomeTabScreen,
+        setLastHomeTabScreen: store.setLastHomeTabScreen,
+        clearLastHomeTabScreen: store.clearLastHomeTabScreen,
+        refreshUserRoles: store.refreshUserRoles,
+      };
+    })
+  );
 

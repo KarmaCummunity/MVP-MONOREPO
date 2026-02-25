@@ -12,7 +12,7 @@
 // - External deps: react-navigation stack, i18n for titles, shared colors/styles.
 
 import React, { useEffect, useMemo } from 'react';
-import { View, ActivityIndicator, Text, Platform } from 'react-native';
+import { View, ActivityIndicator, Text, Platform, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { createStackNavigator } from "@react-navigation/stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -78,9 +78,9 @@ export default function MainNavigator() {
   if (isLoading) {
     logger.debug('MainNavigator', 'Showing loading screen');
     return (
-      <View style={styles.centeredScreen as any}>
+      <View style={styles.centeredScreen as StyleProp<ViewStyle>}>
         <ActivityIndicator size="large" color={colors.info} />
-        <Text style={styles.loadingText as any}>{t('common:loading')}</Text>
+        <Text style={styles.loadingText as StyleProp<TextStyle>}>{t('common:loading')}</Text>
       </View>
     );
   }
@@ -94,8 +94,8 @@ export default function MainNavigator() {
         headerShown: route.name === 'AdminDashboard' ? true : false,
         header: route.name === 'AdminDashboard' ? () => (
           <TopBarNavigator
-            navigation={navigation as any}
-            hideTopBar={(route?.params as any)?.hideTopBar === true}
+            navigation={navigation}
+            hideTopBar={route.params?.hideTopBar === true}
           />
         ) : undefined,
         // Fix for aria-hidden warning: prevent focus on inactive screens

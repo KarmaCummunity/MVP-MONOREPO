@@ -32,6 +32,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { getBookmarks, removeBookmark, Bookmark } from '../utils/bookmarksService';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
 import { FontSizes, IconSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 
@@ -57,14 +58,28 @@ export default function BookmarksScreen() {
       const userBookmarks = await getBookmarks(selectedUser.id);
       setBookmarks(userBookmarks);
     } catch (error) {
-      console.error('❌ Load bookmarks error:', error);
+      logger.error('BookmarksScreen', 'Load bookmarks error', { error });
       Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
     }
   }, [selectedUser, t]);
 
   useEffect(() => {
-    loadBookmarks();
-  }, [loadBookmarks]);
+    let cancelled = false;
+    const load = async () => {
+      if (!selectedUser) return;
+      try {
+        const userBookmarks = await getBookmarks(selectedUser.id);
+        if (!cancelled) setBookmarks(userBookmarks);
+      } catch (error) {
+        if (!cancelled) {
+          logger.error('BookmarksScreen', 'Load bookmarks error', { error });
+          Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
+        }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [selectedUser, t]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -95,9 +110,9 @@ export default function BookmarksScreen() {
             try {
               await removeBookmark(selectedUser.id, bookmark.postId);
               setBookmarks(prev => prev.filter(b => b.id !== bookmark.id));
-              console.log('✅ Bookmark removed');
+              logger.info('BookmarksScreen', 'Bookmark removed');
             } catch (error) {
-              console.error('❌ Remove bookmark error:', error);
+              logger.error('BookmarksScreen', 'Remove bookmark error', { error });
               Alert.alert(t('common:errorTitle'), t('bookmarks:removeError'));
             }
           }

@@ -5,9 +5,18 @@ import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import { db } from '../src/infrastructure/database.service';
 
+interface Organization {
+  id: string;
+  name: string;
+  city?: string;
+  type?: string;
+  activityAreas?: string[];
+  status?: string;
+}
+
 export default function OrgDashboardScreen() {
   const { selectedUser } = useUser();
-  const [orgs, setOrgs] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<Organization[]>([]);
   const isOrgAdmin = (selectedUser?.roles || []).includes('org_admin');
 
   useEffect(() => {
@@ -15,7 +24,7 @@ export default function OrgDashboardScreen() {
       if (!isOrgAdmin) return;
       const partition = (selectedUser?.email || '').toLowerCase();
       const data = await db.listOrganizations(partition);
-      setOrgs(data as any[]);
+      setOrgs(data as Organization[]);
     })();
   }, [isOrgAdmin, selectedUser?.email]);
 

@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         minHeight: isMobile ? 280 : 380, // Smaller height for mobile web
         borderWidth: isMobile ? 1 : 2,
-        borderColor: '#E8F5E9',
+        borderColor: colors.successSurfaceLight,
         ...Platform.select({
             ios: {
                 shadowColor: colors.success,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
             web: {
-                boxShadow: '0 4px 16px rgba(0, 200, 83, 0.1)'
+                boxShadow: `0 4px 16px ${colors.successTintBackground}`
             }
         }),
     },
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
         padding: isMobile ? 10 : 16,
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceLight,
     },
     headerRight: {
         alignItems: 'center',
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#F1F8E9',
+        backgroundColor: colors.successSurfaceLighter,
     },
     contentContainer: {
         padding: isMobile ? 20 : 32,
@@ -254,12 +254,12 @@ const styles = StyleSheet.create({
         color: colors.success,
     },
     taskReference: {
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backgroundColor: colors.surfaceOverlay,
         padding: isMobile ? 12 : 16,
         borderRadius: isMobile ? 10 : 12,
         width: '100%',
         borderWidth: 1,
-        borderColor: 'rgba(0, 200, 83, 0.1)',
+        borderColor: colors.successTintBackground,
     },
     taskReferenceText: {
         fontSize: isMobile ? FontSizes.small : 16,

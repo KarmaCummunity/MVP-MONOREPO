@@ -6,9 +6,9 @@ import { logger } from '../utils/loggerService';
 
 export function useAdminProtection(allowViewOnly?: boolean) {
     const { isAdmin, isLoading, selectedUser, refreshUserRoles, isAuthenticated, isGuestMode } = useUser();
-    const navigation = useNavigation<any>();
+    const navigation = useNavigation();
     const route = useRoute();
-    const routeParams = (route.params as any) || {};
+    const routeParams = (route.params as { viewOnly?: boolean }) || {};
     const isViewOnly = routeParams?.viewOnly === true;
     const isVerifyingRef = useRef(false);
     const lastCheckRef = useRef<number>(0);

@@ -38,7 +38,7 @@ export default function AdminOrgApprovalsScreen() {
     try {
       setRefreshing(true);
       const data = await db.listOrgApplications('admin_org_queue');
-      setItems((data as any[]) as OrgApplication[]);
+      setItems((data as OrgApplication[]));
     } catch (e) {
        
       console.error('admin load error', e);

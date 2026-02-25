@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
+import { createShadowStyle } from '../../../globals/styles';
 import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 
@@ -118,7 +119,7 @@ const TaskAssignmentCard: React.FC<BaseCardProps> = ({
                             <Text style={styles.detailText}>
                                 {t('task.performer', 'מבצע')}: {
                                     item.taskData?.assignees && item.taskData.assignees.length > 0
-                                        ? item.taskData.assignees.map((a: any) => a.name).join(', ')
+                                        ? item.taskData.assignees.map((a: { name?: string }) => a.name).join(', ')
                                         : t('task.unassigned', 'טרם שובץ')
                                 }
                             </Text>
@@ -217,9 +218,7 @@ const styles = StyleSheet.create({
             android: {
                 elevation: 4,
             },
-            web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
-            }
+            default: createShadowStyle(colors.black, { width: 0, height: 4 }, 0.1, 16),
         }),
     },
     gridContainer: {
@@ -284,7 +283,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: colors.offWhite,
     },
     contentContainer: {
         padding: isMobile ? 16 : 24,
@@ -300,7 +299,7 @@ const styles = StyleSheet.create({
         width: isMobile ? 60 : 80,
         height: isMobile ? 60 : 80,
         borderRadius: isMobile ? 30 : 40,
-        backgroundColor: '#E6E8EB',
+        backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
     },

@@ -1,6 +1,6 @@
 // Challenge Statistics Screen
 // Shows user's personal statistics across all community challenges with interactive charts
-import React, { useCallback, useState, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart, ProgressChart, PieChart } from 'react-native-chart-kit';
 import colors from '../globals/colors';
@@ -27,8 +27,8 @@ const screenWidth = Dimensions.get('window').width;
 
 // Animated Card Component
 const AnimatedCard: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [slideAnim] = useState(() => new Animated.Value(30));
 
   useEffect(() => {
     Animated.parallel([
@@ -59,8 +59,13 @@ const AnimatedCard: React.FC<{ children: React.ReactNode; delay?: number }> = ({
   );
 };
 
+type ChallengesNavParamList = {
+  MyChallengesScreen: undefined;
+  CommunityChallengesScreen: { mode?: string } | undefined;
+  MyCreatedChallengesScreen: undefined;
+};
 interface ChallengeStatisticsScreenProps {
-  navigation: NavigationProp<ParamListBase>;
+  navigation: NavigationProp<ChallengesNavParamList>;
 }
 
 export default function ChallengeStatisticsScreen({ navigation }: ChallengeStatisticsScreenProps) {
@@ -239,11 +244,11 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
         onToggleMode={() => navigation.goBack()}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:myChallenges', 'האתגרים שלי')) {
-            (navigation as any).navigate('MyChallengesScreen');
+            navigation.navigate('MyChallengesScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
+            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')) {
-            (navigation as any).navigate('MyCreatedChallengesScreen');
+            navigation.navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('challenges:statistics')}

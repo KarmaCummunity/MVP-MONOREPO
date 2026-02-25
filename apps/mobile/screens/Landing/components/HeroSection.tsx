@@ -4,7 +4,7 @@
  * @module Landing/Components
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import { logger } from '../../../utils/loggerService';
 import type { HeroSectionProps } from '../types';
 import { IS_MOBILE_WEB, ANIMATION_DURATION, WHATSAPP_URL } from '../constants';
 import { styles } from '../styles';
+import logoImage from '../../../assets/images/new_logo_black.png';
 
 /**
  * HeroSection Component
@@ -28,8 +29,8 @@ import { styles } from '../styles';
 export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
   const { t } = useTranslation('landing');
   // Animation setup for fade-in and slide-up effect
-  const heroAnimation = useRef(new Animated.Value(0)).current;
-  
+  const [heroAnimation] = useState(() => new Animated.Value(0));
+
   useEffect(() => {
     Animated.timing(heroAnimation, {
       toValue: 1,
@@ -83,7 +84,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
           <View style={styles.logoContainer}>
             <View style={styles.logoBackground}>
               <Image 
-                source={require('../../../assets/images/new_logo_black.png')} 
+                source={logoImage} 
                 style={styles.logo} 
                 resizeMode="contain"
                 accessible={true}
@@ -93,7 +94,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
           </View>
           
           {/* App title */}
-          <Text style={styles.title}>Karma Community</Text>
+          <Text style={styles.title}>{t('appName')}</Text>
           
           {/* Core values row */}
           <View style={styles.subtitlesRow}>

@@ -1,0 +1,33 @@
+{
+  "tabs": {
+    "suggestions": "Suggestions",
+    "popular": "Popular"
+  },
+  "empty": {
+    "noSuggestions": "No suggestions at the moment",
+    "tryLater": "Try again later or search for specific users"
+  },
+  "actions": {
+    "follow": "Follow",
+    "following": "Following",
+    "message": "Message"
+  },
+  "stats": {
+    "karmaPoints": "karma points",
+    "tasksCompleted": "tasks completed"
+  },
+  "alerts": {
+    "error": "Error",
+    "errorLoadingUsers": "Error loading users",
+    "pleaseLogin": "Please log in first",
+    "unfollowTitle": "Unfollow",
+    "unfollowMessage": "You have unfollowed successfully",
+    "followTitle": "Following",
+    "followMessage": "You are now following",
+    "errorGeneric": "An error occurred while performing the action",
+    "errorCreatingChat": "Error creating conversation",
+    "info": "Info",
+    "mockUserNoMessage": "This is a test user. Cannot send a message to a test user."
+  },
+  "noName": "No name"
+}

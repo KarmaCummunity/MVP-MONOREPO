@@ -39,7 +39,8 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
   const activeRouteName = useNavigationState(state => {
     if (!state) return 'HomeMain';
 
-    const findActiveRoute = (routes: any[], index: number): string => {
+    type RouteWithNested = { name: string; state?: { routes: RouteWithNested[]; index?: number } };
+    const findActiveRoute = (routes: RouteWithNested[], index: number): string => {
       const currentRoute = routes[index];
       if (currentRoute?.state?.routes) {
         // This route has nested navigation, go deeper
@@ -48,7 +49,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
       return currentRoute?.name || 'HomeMain';
     };
 
-    return findActiveRoute(state.routes, state.index || 0);
+    return findActiveRoute(state.routes as RouteWithNested[], state.index || 0);
   });
 
   // List of top bar screens that should be mutually exclusive
@@ -101,7 +102,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
   ////console.log('🔝 TopBarNavigator - hideTopBar prop:', hideTopBar);
 
-  const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
+  const shouldHideTopBar = hideTopBar || (route?.params as { hideTopBar?: boolean } | undefined)?.hideTopBar === true;
 
   // translateY is a Reanimated shared value (ref-like); including it in deps is unnecessary
   React.useEffect(() => {
@@ -219,8 +220,8 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
             <View style={{ position: 'relative' }}>
               <Icon name="notifications-circle-outline" size={24} color={colors.black} />
               {unreadCount > 0 && (
-                <View style={(styles as any).notificationBadge as StyleProp<ViewStyle>}>
-                  <Text style={(styles as any).notificationBadgeText as StyleProp<TextStyle>}>
+                <View style={(styles as { notificationBadge?: ViewStyle }).notificationBadge as StyleProp<ViewStyle>}>
+                  <Text style={(styles as { notificationBadgeText?: TextStyle }).notificationBadgeText as StyleProp<TextStyle>}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Text>
                 </View>

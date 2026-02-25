@@ -58,9 +58,9 @@ const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
 // TODO: Implement proper animation performance optimization
 // TODO: Add proper accessibility for animated elements
 const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, size }) => {
-  const ring1 = React.useRef(new Animated.Value(0)).current;
-  const ring2 = React.useRef(new Animated.Value(0)).current;
-  const ring3 = React.useRef(new Animated.Value(0)).current;
+  const [ring1] = React.useState(() => new Animated.Value(0));
+  const [ring2] = React.useState(() => new Animated.Value(0));
+  const [ring3] = React.useState(() => new Animated.Value(0));
 
   const runPulse = React.useCallback((anim: Animated.Value, delayMs: number) => {
     return Animated.loop(
@@ -145,19 +145,27 @@ const styles = StyleSheet.create({
  *
  * @returns {React.FC} A React component rendering the Bottom Tab Navigator.
  */
+const REFRESH_ROLES_DEBOUNCE_MS = 3000;
+
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
   const { mode } = useWebMode();
   const _navigation = useNavigation();
+  const lastRefreshRef = React.useRef<number>(0);
 
-  // Refresh data when navigator comes into focus
+  // Refresh data when navigator comes into focus (debounced to prevent update loops)
   useFocusEffect(
     React.useCallback(() => {
       logger.debug('BottomNavigator', 'Navigator focused');
-      // Refresh user roles when navigator comes into focus to detect admin changes
-      if (isAuthenticated && !isGuestMode) {
-        refreshUserRoles();
+      if (!isAuthenticated || isGuestMode) return;
+
+      const now = Date.now();
+      if (now - lastRefreshRef.current < REFRESH_ROLES_DEBOUNCE_MS) {
+        logger.debug('BottomNavigator', 'Skipping refreshUserRoles (debounced)');
+        return;
       }
+      lastRefreshRef.current = now;
+      refreshUserRoles();
     }, [isAuthenticated, isGuestMode, refreshUserRoles])
   );
 
@@ -186,12 +194,13 @@ export default function BottomNavigator(): React.ReactElement {
     }
   };
 
-  const getActiveNestedParams = (route: any): Record<string, any> | undefined => {
-    const state = route.state ?? route.params?.state;
-    if (!state) return route.params;
+  type NestedRouteLike = { state?: { routes?: NestedRouteLike[]; index?: number }; params?: Record<string, unknown> };
+  const getActiveNestedParams = (route: NestedRouteLike): Record<string, unknown> | undefined => {
+    const state = route.state ?? (route.params as { state?: NestedRouteLike['state'] } | undefined)?.state;
+    if (!state) return route.params as Record<string, unknown> | undefined;
     const nestedRoute = state.routes?.[state.index ?? 0];
     if (nestedRoute) return getActiveNestedParams(nestedRoute);
-    return route.params;
+    return route.params as Record<string, unknown> | undefined;
   };
 
   // Map tab route names to their initial stack route names
@@ -203,7 +212,11 @@ export default function BottomNavigator(): React.ReactElement {
     AdminTab: 'AdminDashboard',
   };
 
-  const handleTabPress = (e: any, navigation: any, routeName: string) => {
+  const handleTabPress = (
+    e: { preventDefault: () => void },
+    navigation: import('@react-navigation/bottom-tabs').BottomTabNavigationProp<BottomTabNavigatorParamList, keyof BottomTabNavigatorParamList>,
+    routeName: string
+  ) => {
     // Only act if the tab is already focused
     if (navigation.isFocused()) {
       const initialRoute = TAB_INITIAL_ROUTES[routeName];
@@ -237,7 +250,7 @@ export default function BottomNavigator(): React.ReactElement {
       id={undefined}
       initialRouteName="HomeScreen"
       screenOptions={({ route }): BottomTabNavigationOptions => {
-        const activeParams = getActiveNestedParams(route as any) || {};
+        const activeParams = getActiveNestedParams(route as NestedRouteLike) || {};
         const hideBottomBar = activeParams.hideBottomBar === true;
         const hideDueToSiteMode = (typeof window !== 'undefined' && mode === 'site');
         const shouldHideTabBar = hideBottomBar || hideDueToSiteMode;

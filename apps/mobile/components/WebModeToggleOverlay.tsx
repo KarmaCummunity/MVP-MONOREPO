@@ -41,7 +41,7 @@ const WebModeToggleOverlay: React.FC = () => {
   const { t } = useTranslation('webOverlay'); // Use specific namespace
   const { mode, setMode } = useWebMode();
   const { isAuthenticated, isGuestMode, selectedUser, isAdmin } = useUser();
-  const _navigation: any = useNavigation<NavigationProp<ParamListBase>>();
+  useNavigation<NavigationProp<ParamListBase>>();
 
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,11 +53,11 @@ const WebModeToggleOverlay: React.FC = () => {
     return () => subscription.remove();
   }, []);
 
-  if (Platform.OS !== 'web') return null as any;
+  if (Platform.OS !== 'web') return null;
 
   // Hide top bar if user is authenticated (not guest mode) - standard app user
   if (isAuthenticated && !isGuestMode && selectedUser) {
-    return null as any;
+    return null;
   }
 
   const handleToggle = async () => {
@@ -153,7 +153,7 @@ const WebModeToggleOverlay: React.FC = () => {
           {/* Left Side: Logo */}
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/images/new_logo_black.png')}
+              source={require('../assets/images/new_logo_black.png')} // eslint-disable-line @typescript-eslint/no-require-imports -- React Native requires require() for image assets
               style={styles.logo}
               resizeMode="contain"
             />
@@ -175,7 +175,7 @@ const WebModeToggleOverlay: React.FC = () => {
             <ScrollView style={styles.mobileMenuItems}>
               {MENU_ITEMS.map((item) => (
                 <TouchableOpacity key={item.id} onPress={() => scrollToSection(item.id)} style={styles.mobileMenuItem}>
-                  <Ionicons name={item.icon as any} size={20} color={colors.textSecondary} style={{ marginLeft: 10 }} />
+                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={20} color={colors.textSecondary} style={{ marginLeft: 10 }} />
                   <Text style={styles.mobileMenuText}>{t(item.id)}</Text>
                 </TouchableOpacity>
               ))}
@@ -205,8 +205,8 @@ const styles = StyleSheet.create({
     elevation: 4,
     justifyContent: 'center',
     paddingHorizontal: 16,
-    // Add backdrop filter for glass effect if supported
-    ...((Platform.OS === 'web') ? { backdropFilter: 'blur(10px)' } : {}) as any,
+    // Add backdrop filter for glass effect if supported (web)
+    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(10px)' as const } : {}),
   },
   topBarContent: {
     flexDirection: 'row',

@@ -25,7 +25,7 @@ import {
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { getFollowing, getFollowers, getFollowSuggestions } from '../src/services/follow.service';
 import { createConversation, getAllConversations, conversationExists, sendMessage } from '../src/services/chat.service';
@@ -239,7 +239,7 @@ export default function NewChatScreen() {
         console.log('💬 Sent welcome message');
       }
 
-      (navigation as any).navigate('ChatDetailScreen', {
+      (navigation as NavigationProp<ParamListBase>).navigate('ChatDetailScreen', {
         conversationId,
         userName: friend.name,
         userAvatar: friend.avatar,
@@ -322,7 +322,7 @@ export default function NewChatScreen() {
       </Text>
       <TouchableOpacity
         style={styles.exploreButton}
-        onPress={() => (navigation as any).navigate('DiscoverPeopleScreen')}
+        onPress={() => (navigation as NavigationProp<ParamListBase>).navigate('DiscoverPeopleScreen')}
       >
         <Text style={styles.exploreButtonText}>{t('discoverNewPeople')}</Text>
       </TouchableOpacity>
@@ -345,7 +345,7 @@ export default function NewChatScreen() {
           <Icon name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => (navigation as any).navigate('DiscoverPeopleScreen')}
+          onPress={() => (navigation as NavigationProp<ParamListBase>).navigate('DiscoverPeopleScreen')}
           style={styles.headerButton}
         >
           <Icon name="people-outline" size={24} color={colors.primary} />

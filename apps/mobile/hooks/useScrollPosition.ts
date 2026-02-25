@@ -4,7 +4,7 @@
 // Session-only persistence - position is cleared when app closes
 
 import { useEffect, useRef, useCallback } from 'react';
-import { Platform, ScrollView, FlatList } from 'react-native';
+import { Platform, ScrollView, FlatList, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../stores/userStore';
@@ -53,10 +53,10 @@ interface UseScrollPositionOptions {
 export const useScrollPosition = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
-): React.MutableRefObject<ScrollView | FlatList<any> | null> => {
+): React.MutableRefObject<ScrollView | FlatList<unknown> | null> => {
   const { enabled = true, debounceDelay = 200 } = options;
   const { selectedUser } = useUser();
-  const scrollRef = useRef<ScrollView | FlatList>(null);
+  const scrollRef = useRef<ScrollView | FlatList<unknown>>(null);
   const debounce = useRef(createDebouncer()).current;
   const isRestoringRef = useRef(false);
   const lastSavedPositionRef = useRef<number>(0);
@@ -97,7 +97,7 @@ export const useScrollPosition = (
                       scrollRef.current.scrollTo({ y: position, animated: false });
                     } else if ('scrollToOffset' in scrollRef.current) {
                       // FlatList
-                      (scrollRef.current as FlatList<any>).scrollToOffset({
+                      (scrollRef.current as FlatList<unknown>).scrollToOffset({
                         offset: position,
                         animated: false,
                       });
@@ -124,7 +124,7 @@ export const useScrollPosition = (
       };
 
       restorePosition();
-    }, [screenKey, selectedUser?.id, enabled])
+    }, [screenKey, selectedUser, enabled])
   );
 
   // Save position when scrolling
@@ -203,10 +203,10 @@ export const useScrollPosition = (
 
         savePosition();
       };
-    }, [screenKey, selectedUser?.id, enabled, debounceDelay, debounce])
+    }, [screenKey, selectedUser, enabled, debounceDelay, debounce])
   );
 
-  return scrollRef as React.MutableRefObject<FlatList<any> | null>;
+  return scrollRef as React.MutableRefObject<FlatList<unknown> | null>;
 };
 
 /**
@@ -221,17 +221,17 @@ export const useScrollPositionWithHandler = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
 ): {
-  ref: React.MutableRefObject<ScrollView | FlatList<any> | null>;
-  onScroll: (event: any) => void;
+  ref: React.MutableRefObject<ScrollView | FlatList<unknown> | null>;
+  onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 } => {
   const { enabled = true, debounceDelay = 200 } = options;
   const { selectedUser } = useUser();
-  const scrollRef = useRef<ScrollView | FlatList>(null);
+  const scrollRef = useRef<ScrollView | FlatList<unknown>>(null);
   const debounce = useRef(createDebouncer()).current;
   const lastSavedPositionRef = useRef<number>(0);
 
   const handleScroll = useCallback(
-    (event: any) => {
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!enabled) {
         return;
       }
@@ -270,7 +270,7 @@ export const useScrollPositionWithHandler = (
         }
       }, debounceDelay);
     },
-    [screenKey, selectedUser?.id, enabled, debounceDelay, debounce]
+    [screenKey, selectedUser, enabled, debounceDelay, debounce]
   );
 
   // Load saved position when screen gains focus
@@ -302,7 +302,7 @@ export const useScrollPositionWithHandler = (
                     if ('scrollTo' in scrollRef.current) {
                       scrollRef.current.scrollTo({ y: position, animated: false });
                     } else if ('scrollToOffset' in scrollRef.current) {
-                      (scrollRef.current as FlatList<any>).scrollToOffset({
+                      (scrollRef.current as FlatList<unknown>).scrollToOffset({
                         offset: position,
                         animated: false,
                       });
@@ -324,7 +324,7 @@ export const useScrollPositionWithHandler = (
       };
 
       restorePosition();
-    }, [screenKey, selectedUser?.id, enabled])
+    }, [screenKey, selectedUser, enabled])
   );
 
   return {

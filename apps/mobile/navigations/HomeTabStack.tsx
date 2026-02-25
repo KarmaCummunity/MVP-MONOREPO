@@ -9,6 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useNavigation, CommonActions } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import HomeScreen from '../bottomBarScreens/HomeScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
@@ -45,8 +46,6 @@ export default function HomeTabStack(): React.ReactElement {
   const initialRouteName = (typeof window !== 'undefined' && mode === 'site')
     ? "LandingSiteScreen"
     : "HomeMain";
-
-  logger.debug('HomeTabStack', 'Rendering with initial route', { initialRouteName, mode, resetHomeScreenTrigger });
 
   // Listen to resetHomeScreenTrigger and reset navigation to HomeMain
   useEffect(() => {
@@ -89,13 +88,16 @@ export default function HomeTabStack(): React.ReactElement {
       id="HomeTabStack"
       initialRouteName={initialRouteName as keyof HomeTabStackParamList}
       detachInactiveScreens={true}
-      screenOptions={({ navigation, route }) => ({
+      screenOptions={({ navigation, route }) => {
+        type Params = { hideTopBar?: boolean; showPosts?: boolean };
+        const params = (route?.params ?? {}) as Params;
+        return {
         headerShown: true,
         header: () => (
           <TopBarNavigator
-            navigation={navigation as any}
-            hideTopBar={(route?.params as any)?.hideTopBar === true}
-            showPosts={(route?.params as any)?.showPosts === true}
+            navigation={navigation as StackNavigationProp<HomeTabStackParamList>}
+            hideTopBar={params.hideTopBar === true}
+            showPosts={params.showPosts === true}
           />
         ),
         // Fix for aria-hidden warning: prevent focus on inactive screens
@@ -104,7 +106,8 @@ export default function HomeTabStack(): React.ReactElement {
           // On web, ensure inactive screens don't interfere with focus
           // This prevents elements in hidden screens from receiving focus
         } : undefined,
-      })}
+      };
+      }}
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />

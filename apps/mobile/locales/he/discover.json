@@ -1,0 +1,33 @@
+{
+  "tabs": {
+    "suggestions": "המלצות",
+    "popular": "פופולריים"
+  },
+  "empty": {
+    "noSuggestions": "אין המלצות כרגע",
+    "tryLater": "נסה שוב מאוחר יותר או חפש משתמשים ספציפיים"
+  },
+  "actions": {
+    "follow": "עקוב",
+    "following": "עוקב",
+    "message": "הודעה"
+  },
+  "stats": {
+    "karmaPoints": "נקודות קארמה",
+    "tasksCompleted": "משימות הושלמו"
+  },
+  "alerts": {
+    "error": "שגיאה",
+    "errorLoadingUsers": "שגיאה בטעינת המשתמשים",
+    "pleaseLogin": "יש להתחבר תחילה",
+    "unfollowTitle": "ביטול עקיבה",
+    "unfollowMessage": "ביטלת את העקיבה בהצלחה",
+    "followTitle": "עקיבה",
+    "followMessage": "התחלת לעקוב בהצלחה",
+    "errorGeneric": "אירעה שגיאה בביצוע הפעולה",
+    "errorCreatingChat": "שגיאה ביצירת השיחה",
+    "info": "מידע",
+    "mockUserNoMessage": "זהו משתמש בדיקה. לא ניתן לשלוח הודעה למשתמש בדיקה."
+  },
+  "noName": "ללא שם"
+}

@@ -13,6 +13,10 @@ import {
   Platform,
   StatusBar,
   Dimensions,
+  type ViewStyle,
+  type TextStyle,
+  type ImageStyle,
+  type StyleProp,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import {
@@ -21,14 +25,21 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 import colors from "../globals/colors";
-import { FontSizes, LAYOUT_CONSTANTS } from "../globals/constants";
+import { FontSizes, IconSizes, LAYOUT_CONSTANTS } from "../globals/constants";
 import { Ionicons } from "@expo/vector-icons";
 import apiService, { ApiResponse } from "../src/api/api.service";
 import { useUser } from "../stores/userStore";
 import { logger } from "../utils/loggerService";
 import { useAdminProtection } from "../hooks/useAdminProtection";
+import { useTranslation } from "react-i18next";
 import UserSelector from "../components/UserSelector";
 import TaskHoursModal from "../components/TaskHoursModal";
+import type { AdminStackParamList } from "../globals/types";
+
+/** Cast shared StyleSheet entry to TextStyle for use on Text/TextInput (RN style types are incompatible in strict mode). */
+const asTextStyle = (s: StyleProp<ViewStyle>): StyleProp<TextStyle> => s as StyleProp<TextStyle>;
+/** Cast shared StyleSheet entry to ImageStyle for use on Image. */
+const asImageStyle = (s: ViewStyle): ImageStyle => s as ImageStyle;
 
 type TaskStatus =
   | "open"
@@ -71,9 +82,10 @@ type AdminTask = {
 };
 
 export default function AdminTasksScreen() {
+  const { t } = useTranslation("admin");
   const route = useRoute();
-  const navigation = useNavigation<any>();
-  const routeParams = (route.params as any) || {};
+  const navigation = useNavigation();
+  const routeParams = (route.params as { viewOnly?: boolean } | undefined) ?? {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser } = useUser();
@@ -82,7 +94,7 @@ export default function AdminTasksScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (viewOnly) {
-        navigation.setParams({
+        (navigation as import('@react-navigation/native').NavigationProp<AdminStackParamList> & { setParams(p: { hideTopBar?: boolean; hideBottomBar?: boolean }): void }).setParams({
           hideTopBar: false,
           hideBottomBar: false,
         });
@@ -190,13 +202,13 @@ export default function AdminTasksScreen() {
         count: res.data?.length,
       });
       if (!res.success) {
-        setError(res.error || "שגיאה בטעינת משימות");
+        setError(res.error || t("tasks.loadError"));
       } else {
         setTasks(res.data || []);
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error fetching tasks", { err });
-      setError("שגיאה בטעינת משימות - נסה שוב");
+      setError(t("tasks.loadError"));
     } finally {
       setLoading(false);
     }
@@ -207,6 +219,7 @@ export default function AdminTasksScreen() {
     filterCategory,
     filterAssignee,
     selectedUser,
+    t,
   ]);
 
   useEffect(() => {
@@ -322,7 +335,7 @@ export default function AdminTasksScreen() {
   const validateCreateTask = (): boolean => {
     if (!formData.title.trim()) return false;
     if (!selectedUser?.id) {
-      setError("שגיאה: לא ניתן לזהות את המשתמש הנוכחי. נסה להתחבר מחדש.");
+      setError(t("tasks.errorIdentifyUser"));
       return false;
     }
     return true;
@@ -332,7 +345,7 @@ export default function AdminTasksScreen() {
     if (!formData.due_date.trim()) return null;
     const date = new Date(formData.due_date);
     if (isNaN(date.getTime())) {
-      setError("תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD");
+      setError(t("tasks.errorInvalidDate"));
       return null;
     }
     return date.toISOString();
@@ -388,11 +401,9 @@ export default function AdminTasksScreen() {
 
       if (!res.success) {
         if (res.error?.includes("הרשאה")) {
-          setError(
-            "אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.",
-          );
+          setError(t("tasks.errorPermissionAssign"));
         } else {
-          setError(res.error || "שגיאה ביצירת משימה");
+          setError(res.error || t("tasks.errorCreate"));
         }
       } else if (res.data) {
         if (formData.parent_task_id) {
@@ -404,7 +415,7 @@ export default function AdminTasksScreen() {
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error creating task", { err });
-      setError("שגיאה ביצירת משימה - נסה שוב");
+      setError(t("tasks.errorCreateRetry"));
     } finally {
       setCreating(false);
     }
@@ -430,11 +441,11 @@ export default function AdminTasksScreen() {
       if (res.success && res.data) {
         await fetchTasks();
       } else {
-        setError(res.error || "שגיאה בעדכון סטטוס המשימה");
+        setError(res.error || t("tasks.errorUpdateStatus"));
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error toggling task status", { err });
-      setError("שגיאה בעדכון סטטוס המשימה - נסה שוב");
+      setError(t("tasks.errorUpdateStatusRetry"));
     } finally {
       setUpdating(null);
     }
@@ -442,7 +453,7 @@ export default function AdminTasksScreen() {
 
   const handleSaveHours = async (hours: number) => {
     if (!pendingTaskId || !selectedUser?.id) {
-      throw new Error("משתמש לא זוהה");
+      throw new Error(t("tasks.userNotIdentified"));
     }
 
     // Log hours first
@@ -452,7 +463,7 @@ export default function AdminTasksScreen() {
       selectedUser.id,
     );
     if (!logRes.success) {
-      throw new Error(logRes.error || "שגיאה ברישום שעות");
+      throw new Error(logRes.error || t("tasks.errorRegisterHours"));
     }
 
     // Then update status to done
@@ -460,7 +471,7 @@ export default function AdminTasksScreen() {
       status: "done",
     });
     if (!updateRes.success) {
-      throw new Error(updateRes.error || "שגיאה בעדכון סטטוס המשימה");
+      throw new Error(updateRes.error || t("tasks.errorUpdateTaskStatus"));
     }
 
     // Refresh tasks
@@ -505,7 +516,7 @@ export default function AdminTasksScreen() {
                 size={16}
                 color={colors.info}
               />
-              <Text style={styles.levelText}>דרגה {taskLevel}</Text>
+              <Text style={asTextStyle(styles.levelText)}>{t("tasks.levelLabel", { n: taskLevel })}</Text>
             </View>
           )}
 
@@ -533,20 +544,20 @@ export default function AdminTasksScreen() {
                   size={12}
                   color={colors.info}
                 />
-                <Text style={styles.parentText}>
-                  תת-משימה של: {item.parent_task_details.title}
+                <Text style={asTextStyle(styles.parentText)}>
+                  {t("tasks.subtaskOf", { title: item.parent_task_details.title })}
                 </Text>
               </View>
             )}
 
             <Text
-              style={[styles.taskTitle, isDone && styles.taskTitleDone]}
+              style={asTextStyle([styles.taskTitle, isDone && styles.taskTitleDone])}
               numberOfLines={2}
             >
               {item.title}
             </Text>
             {item.description ? (
-              <Text style={styles.description} numberOfLines={2}>
+              <Text style={asTextStyle(styles.description)} numberOfLines={2}>
                 {item.description}
               </Text>
             ) : null}
@@ -559,12 +570,12 @@ export default function AdminTasksScreen() {
                   styles[`priority_${item.priority}` as const],
                 ]}
               >
-                <Text style={styles.badgeText}>
+                <Text style={asTextStyle(styles.badgeText)}>
                   {item.priority === "high"
-                    ? "גבוהה"
+                    ? t("tasks.high")
                     : item.priority === "medium"
-                      ? "בינונית"
-                      : "נמוכה"}
+                      ? t("tasks.medium")
+                      : t("tasks.low")}
                 </Text>
               </View>
 
@@ -572,18 +583,18 @@ export default function AdminTasksScreen() {
               <View
                 style={[styles.badge, styles[`status_${item.status}` as const]]}
               >
-                <Text style={styles.badgeText}>
+                <Text style={asTextStyle(styles.badgeText)}>
                   {item.status === "open"
-                    ? "פתוחה"
+                    ? t("tasks.open")
                     : item.status === "in_progress"
-                      ? "בתהליך"
+                      ? t("tasks.in_progress")
                       : item.status === "stuck"
-                        ? "תקוע"
+                        ? t("tasks.stuck")
                         : item.status === "testing"
-                          ? "בבדיקה"
+                          ? t("tasks.testing")
                           : item.status === "done"
-                            ? "בוצעה"
-                            : "בארכיון"}
+                            ? t("tasks.done")
+                            : t("tasks.archived")}
                 </Text>
               </View>
 
@@ -602,8 +613,8 @@ export default function AdminTasksScreen() {
                         size={12}
                         color={colors.info}
                       />
-                      <Text style={styles.subtaskBadgeText}>
-                        {item.subtask_count} תת-משימות
+                      <Text style={asTextStyle(styles.subtaskBadgeText)}>
+                        {t("tasks.subtasksCount", { count: item.subtask_count })}
                       </Text>
                     </>
                   )}
@@ -614,8 +625,8 @@ export default function AdminTasksScreen() {
               <View style={styles.assigneesContainer}>
                 {item.assignees_details && item.assignees_details.length > 0 ? (
                   <View style={styles.assigneesContent}>
-                    <Text style={styles.assigneeText} numberOfLines={1}>
-                      משוייך ל:{" "}
+                    <Text style={asTextStyle(styles.assigneeText)} numberOfLines={1}>
+                      {t("tasks.assignedTo")}{" "}
                       {item.assignees_details.map((u) => u.name).join(", ")}
                     </Text>
                     <View style={styles.avatarsRow}>
@@ -628,14 +639,14 @@ export default function AdminTasksScreen() {
                               `https://ui-avatars.com/api/?name=${u.name}`,
                           }}
                           style={[
-                            styles.avatarSmall,
+                            asImageStyle(styles.avatarSmall),
                             { marginRight: i > 0 ? -10 : 0, zIndex: 3 - i },
                           ]}
                         />
                       ))}
                       {item.assignees_details.length > 3 && (
                         <View style={[styles.avatarSmall, styles.moreAvatar]}>
-                          <Text style={styles.moreAvatarText}>
+                          <Text style={asTextStyle(styles.moreAvatarText)}>
                             +{item.assignees_details.length - 3}
                           </Text>
                         </View>
@@ -643,8 +654,8 @@ export default function AdminTasksScreen() {
                     </View>
                   </View>
                 ) : (
-                  <Text style={styles.unassignedText}>
-                    ⚠️ המשימה לא שוייכה לאף אחד
+                  <Text style={asTextStyle(styles.unassignedText)}>
+                    {t("tasks.unassigned")}
                   </Text>
                 )}
               </View>
@@ -664,10 +675,8 @@ export default function AdminTasksScreen() {
                         size={12}
                         color={colors.info}
                       />
-                      <Text style={styles.hoursText}>
-                        מוערך:{" "}
-                        {parseFloat(String(item.estimated_hours)).toFixed(1)}{" "}
-                        שעות
+                      <Text style={asTextStyle(styles.hoursText)}>
+                        {t("tasks.estimatedHours", { hours: parseFloat(String(item.estimated_hours)).toFixed(1) })}
                       </Text>
                     </View>
                   )}
@@ -686,10 +695,9 @@ export default function AdminTasksScreen() {
                         color={colors.success}
                       />
                       <Text
-                        style={[styles.hoursText, { color: colors.success }]}
+                        style={asTextStyle([styles.hoursText, { color: colors.success }] as StyleProp<ViewStyle>)}
                       >
-                        בוצע: {parseFloat(String(item.actual_hours)).toFixed(1)}{" "}
-                        שעות
+                        {t("tasks.actualHours", { hours: parseFloat(String(item.actual_hours)).toFixed(1) })}
                       </Text>
                     </View>
                   )}
@@ -697,8 +705,8 @@ export default function AdminTasksScreen() {
             )}
 
             {item.creator_details && (
-              <Text style={styles.creatorText}>
-                {'נוצר ע"י'} {item.creator_details.name}
+              <Text style={asTextStyle(styles.creatorText)}>
+                {t("tasks.createdBy")} {item.creator_details.name}
               </Text>
             )}
 
@@ -713,7 +721,7 @@ export default function AdminTasksScreen() {
                     size={18}
                     color={colors.textPrimary}
                   />
-                  <Text style={styles.actionText}>ערוך</Text>
+                  <Text style={asTextStyle(styles.actionText)}>{t("tasks.edit")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionBtn}
@@ -724,8 +732,8 @@ export default function AdminTasksScreen() {
                     size={18}
                     color={colors.info}
                   />
-                  <Text style={[styles.actionText, { color: colors.info }]}>
-                    תת-משימה
+                  <Text style={asTextStyle([styles.actionText, { color: colors.info }] as StyleProp<ViewStyle>)}>
+                    {t("tasks.subtask")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -743,9 +751,9 @@ export default function AdminTasksScreen() {
                         color={colors.error}
                       />
                       <Text
-                        style={[styles.actionText, { color: colors.error }]}
+                        style={asTextStyle([styles.actionText, { color: colors.error }] as StyleProp<ViewStyle>)}
                       >
-                        מחק
+                        {t("tasks.delete")}
                       </Text>
                     </>
                   )}
@@ -806,7 +814,7 @@ export default function AdminTasksScreen() {
       if (formData.due_date.trim()) {
         const date = new Date(formData.due_date);
         if (isNaN(date.getTime())) {
-          setError("תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD");
+          setError(t("tasks.errorInvalidDate"));
           setUpdating(null);
           return;
         }
@@ -822,7 +830,17 @@ export default function AdminTasksScreen() {
         }
       }
 
-      const body: any = {
+      const body: {
+        title: string;
+        description: string | null;
+        priority: TaskPriority;
+        status: TaskStatus;
+        category: string | null;
+        due_date: string | null;
+        tags: string[];
+        assignees: string[];
+        estimated_hours?: number;
+      } = {
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         priority: formData.priority,
@@ -836,7 +854,7 @@ export default function AdminTasksScreen() {
               .filter(Boolean)
           : [],
         assignees: formData.assignees.map((u) => u.id),
-        estimated_hours: parsedEstimatedHours,
+        estimated_hours: parsedEstimatedHours ?? undefined,
       };
 
       const res = await apiService.updateTask(editingId, body);
@@ -848,16 +866,14 @@ export default function AdminTasksScreen() {
       } else {
         // Handle specific permission error
         if (res.error?.includes("הרשאה")) {
-          setError(
-            "אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.",
-          );
+          setError(t("tasks.errorPermissionAssign"));
         } else {
-          setError(res.error || "שגיאה בעדכון משימה");
+          setError(res.error || t("tasks.errorUpdateTask"));
         }
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error updating task", { err });
-      setError("שגיאה בעדכון משימה - נסה שוב");
+      setError(t("tasks.errorUpdateTaskRetry"));
     } finally {
       setUpdating(null);
     }
@@ -871,11 +887,11 @@ export default function AdminTasksScreen() {
       if (res.success) {
         await fetchTasks();
       } else {
-        setError(res.error || "שגיאה במחיקת משימה");
+        setError(res.error || t("tasks.errorDeleteTask"));
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error deleting task", { err });
-      setError("שגיאה במחיקת משימה - נסה שוב");
+      setError(t("tasks.errorDeleteTaskRetry"));
     } finally {
       setDeleting(null);
     }
@@ -890,18 +906,18 @@ export default function AdminTasksScreen() {
         }
       }}
     >
-      <Text style={styles.header}>ניהול משימות וצוות</Text>
+      <Text style={asTextStyle(styles.header)}>{t("tasks.headerTitle")}</Text>
 
       <View style={styles.filtersRow}>
         <TextInput
-          style={styles.input}
-          placeholder="חיפוש משימות..."
+          style={asTextStyle(styles.input)}
+          placeholder={t("tasks.searchPlaceholder")}
           placeholderTextColor={colors.textSecondary}
           value={query}
           onChangeText={setQuery}
         />
         <TouchableOpacity style={styles.refreshBtn} onPress={fetchTasks}>
-          <Ionicons name="search-outline" size={22} color={colors.white} />
+          <Ionicons name="search-outline" size={IconSizes.xsmall} color={colors.white} />
         </TouchableOpacity>
       </View>
 
@@ -920,35 +936,35 @@ export default function AdminTasksScreen() {
 
       <View style={styles.chipsRow}>
         <FilterChip
-          label="למי מוקצה"
+          label={t("tasks.assigneeLabel")}
           value={filterAssignee}
-          setValue={setFilterAssignee}
+          setValue={(v) => setFilterAssignee(v as "all" | "me")}
           options={[
-            { value: "all", label: "כולם" },
-            { value: "me", label: "רק שלי" },
+            { value: "all", label: t("tasks.assigneeAll") },
+            { value: "me", label: t("tasks.assigneeMe") },
           ]}
         />
         <FilterChip
-          label="סטטוס"
+          label={t("tasks.statusLabel")}
           value={filterStatus}
-          setValue={setFilterStatus}
+          setValue={(v) => setFilterStatus(v as "" | TaskStatus)}
           options={[
-            { value: "", label: "הכל" },
-            { value: "open", label: "פתוחה" },
-            { value: "in_progress", label: "בתהליך" },
-            { value: "stuck", label: "תקוע" },
-            { value: "testing", label: "בבדיקה" },
-            { value: "done", label: "בוצעה" },
+            { value: "", label: t("tasks.statusAll") },
+            { value: "open", label: t("tasks.open") },
+            { value: "in_progress", label: t("tasks.in_progress") },
+            { value: "stuck", label: t("tasks.stuck") },
+            { value: "testing", label: t("tasks.testing") },
+            { value: "done", label: t("tasks.done") },
           ]}
         />
         <FilterChip
-          label="עדיפות"
+          label={t("tasks.priorityLabel")}
           value={filterPriority}
-          setValue={setFilterPriority}
+          setValue={(v) => setFilterPriority(v as "" | TaskPriority)}
           options={[
-            { value: "", label: "הכל" },
-            { value: "high", label: "גבוהה" },
-            { value: "medium", label: "בינונית" },
+            { value: "", label: t("tasks.statusAll") },
+            { value: "high", label: t("tasks.high") },
+            { value: "medium", label: t("tasks.medium") },
           ]}
         />
       </View>
@@ -987,7 +1003,7 @@ export default function AdminTasksScreen() {
           ]}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>אין משימות כרגע</Text>
+            <Text style={asTextStyle(styles.emptyText)}>{t("tasks.emptyText")}</Text>
           }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === "web" ? true : undefined}
@@ -1001,19 +1017,19 @@ export default function AdminTasksScreen() {
       <Modal visible={showForm} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {editingId ? "עריכת משימה" : "משימה חדשה"}
+            <Text style={asTextStyle(styles.modalTitle)}>
+              {editingId ? t("tasks.modalTitleEdit") : t("tasks.modalTitleNew")}
             </Text>
 
             <TextInput
-              style={styles.modalInput}
-              placeholder="כותרת"
+              style={asTextStyle(styles.modalInput)}
+              placeholder={t("tasks.placeholderTitle")}
               value={formData.title}
               onChangeText={(v) => setFormData({ ...formData, title: v })}
             />
             <TextInput
-              style={[styles.modalInput, { height: 60 }]}
-              placeholder="תיאור"
+              style={asTextStyle([styles.modalInput, { height: 60 }])}
+              placeholder={t("tasks.placeholderDescription")}
               multiline
               value={formData.description}
               onChangeText={(v) => setFormData({ ...formData, description: v })}
@@ -1021,29 +1037,29 @@ export default function AdminTasksScreen() {
 
             <View style={styles.row2}>
               <PickerField
-                label="עדיפות"
+                label={t("tasks.priorityLabel")}
                 value={formData.priority}
                 onChange={(v: string) =>
                   setFormData({ ...formData, priority: v as TaskPriority })
                 }
                 options={[
-                  { value: "high", label: "גבוהה" },
-                  { value: "medium", label: "בינונית" },
-                  { value: "low", label: "נמוכה" },
+                  { value: "high", label: t("tasks.high") },
+                  { value: "medium", label: t("tasks.medium") },
+                  { value: "low", label: t("tasks.low") },
                 ]}
               />
               <PickerField
-                label="סטטוס"
+                label={t("tasks.statusLabel")}
                 value={formData.status}
                 onChange={(v: string) =>
                   setFormData({ ...formData, status: v as TaskStatus })
                 }
                 options={[
-                  { value: "open", label: "פתוחה" },
-                  { value: "in_progress", label: "בתהליך" },
-                  { value: "stuck", label: "תקוע" },
-                  { value: "testing", label: "בבדיקה" },
-                  { value: "done", label: "בוצעה" },
+                  { value: "open", label: t("tasks.open") },
+                  { value: "in_progress", label: t("tasks.in_progress") },
+                  { value: "stuck", label: t("tasks.stuck") },
+                  { value: "testing", label: t("tasks.testing") },
+                  { value: "done", label: t("tasks.done") },
                 ]}
               />
             </View>
@@ -1066,15 +1082,15 @@ export default function AdminTasksScreen() {
             />
 
             <TextInput
-              style={styles.modalInput}
-              placeholder="תגיות (מופרדות אות)"
+              style={asTextStyle(styles.modalInput)}
+              placeholder={t("tasks.placeholderTags")}
               value={formData.tagsText}
               onChangeText={(v) => setFormData({ ...formData, tagsText: v })}
             />
 
             <TextInput
-              style={styles.modalInput}
-              placeholder="זמן עבודה מוערך בשעות (אופציונלי)"
+              style={asTextStyle(styles.modalInput)}
+              placeholder={t("tasks.placeholderEstimatedHours")}
               value={formData.estimated_hours}
               onChangeText={(v) =>
                 setFormData({ ...formData, estimated_hours: v })
@@ -1090,14 +1106,14 @@ export default function AdminTasksScreen() {
                   resetForm();
                 }}
               >
-                <Text style={styles.modalBtnText}>ביטול</Text>
+                <Text style={asTextStyle(styles.modalBtnText)}>{t("tasks.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalSave]}
                 onPress={editingId ? saveEdit : createTask}
               >
-                <Text style={styles.modalBtnText}>
-                  {editingId ? "שמור" : "צור"}
+                <Text style={asTextStyle(styles.modalBtnText)}>
+                  {editingId ? t("tasks.save") : t("tasks.create")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1132,23 +1148,23 @@ export default function AdminTasksScreen() {
   );
 }
 
-// Sub-components
-function PickerField({ label, value, onChange, options }: any) {
+type PickerOption = { value: string; label: string };
+function PickerField({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: PickerOption[] }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.pickerLabel}>{label}</Text>
+      <Text style={asTextStyle(styles.pickerLabel)}>{label}</Text>
       <View style={styles.pickerOptions}>
-        {options.map((opt: any) => (
+        {options.map((opt: PickerOption) => (
           <TouchableOpacity
             key={opt.value}
             onPress={() => onChange(opt.value)}
             style={[styles.chip, value === opt.value && styles.chipActive]}
           >
             <Text
-              style={[
+              style={asTextStyle([
                 styles.chipText,
                 value === opt.value && styles.chipTextActive,
-              ]}
+              ])}
             >
               {opt.label}
             </Text>
@@ -1159,22 +1175,22 @@ function PickerField({ label, value, onChange, options }: any) {
   );
 }
 
-function FilterChip({ label, value, setValue, options }: any) {
+function FilterChip({ label, value, setValue, options }: { label: string; value: string; setValue: (v: string) => void; options: PickerOption[] }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={{ color: colors.textSecondary }}>{label}:</Text>
       <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-        {options.map((opt: any) => (
+        {options.map((opt: PickerOption) => (
           <TouchableOpacity
             key={`${label}-${opt.value}`}
             onPress={() => setValue(opt.value)}
             style={[styles.chip, value === opt.value && styles.chipActive]}
           >
             <Text
-              style={[
+              style={asTextStyle([
                 styles.chipText,
                 value === opt.value && styles.chipTextActive,
-              ]}
+              ])}
             >
               {opt.label}
             </Text>
@@ -1191,9 +1207,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     position: "relative",
     ...(Platform.OS === "web"
-      ? {
-          height: "100vh" as any,
-        }
+      ? ({ height: "100vh" } as unknown as ViewStyle)
       : {
           padding: LAYOUT_CONSTANTS.SPACING.LG,
         }),
@@ -1428,14 +1442,14 @@ const styles = StyleSheet.create({
   flatList: {
     flex: 1,
     ...(Platform.OS === "web" && {
-      overflowY: "auto" as any,
-      WebkitOverflowScrolling: "touch" as any,
+      overflowY: "auto" as const,
+      WebkitOverflowScrolling: "touch" as const,
     }),
   },
   addButton: {
     ...(Platform.OS === "web"
-      ? { position: "fixed" as any }
-      : { position: "absolute" }),
+      ? { position: "fixed" as const }
+      : { position: "absolute" as const }),
     left: 20,
     bottom: 20,
     width: 56,
@@ -1515,7 +1529,7 @@ const styles = StyleSheet.create({
   },
   modalSave: { backgroundColor: colors.primary },
   modalBtnText: { color: colors.white, fontWeight: "bold" },
-});
+}) as Record<string, ViewStyle>;
 
 // Define listContent outside StyleSheet.create() because it needs dynamic Platform check
 const listContentStyle =

@@ -17,16 +17,16 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect, NavigationProp, ParamListBase } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { UserPreview as CharacterType } from '../globals/types';
-import { 
-  getFollowers, 
-  getFollowing, 
-  followUser, 
+import {
+  getFollowers,
+  getFollowing,
+  followUser,
   unfollowUser,
-  getFollowStats 
+  getFollowStats
 } from '../src/services/follow.service';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
@@ -51,25 +51,25 @@ export default function FollowersScreen() {
     setLoading(true);
     try {
       let userList: CharacterType[] = [];
-      
+
       if (type === 'followers') {
         userList = await getFollowers(userId);
       } else {
         userList = await getFollowing(userId);
       }
-      
+
       setUsers(userList);
-      
+
       // Load follow stats for all users
       const stats: Record<string, { isFollowing: boolean }> = {};
-      
+
       for (const user of userList) {
         if (selectedUser) {
           const userStats = await getFollowStats(user.id, selectedUser.id);
           stats[user.id] = { isFollowing: userStats.isFollowing };
         }
       }
-      
+
       setFollowStats(stats);
     } catch (error) {
       logger.error('FollowersScreen', 'Error loading users', { error });
@@ -98,7 +98,7 @@ export default function FollowersScreen() {
 
     try {
       const currentStats = followStats[targetUserId] || { isFollowing: false };
-      
+
       if (currentStats.isFollowing) {
         const success = await unfollowUser(selectedUser.id, targetUserId);
         if (success) {
@@ -130,10 +130,10 @@ export default function FollowersScreen() {
 
     return (
       <View style={styles.userItem}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.userInfo}
           onPress={() => {
-            (navigation as any).navigate('UserProfileScreen', {
+            (navigation as NavigationProp<ParamListBase>).navigate('UserProfileScreen', {
               userId: item.id,
               userName: item.name,
               characterData: item
@@ -179,16 +179,16 @@ export default function FollowersScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons 
-        name={type === 'followers' ? 'people-outline' : 'person-add-outline'} 
-        size={60} 
-        color={colors.textSecondary} 
+      <Ionicons
+        name={type === 'followers' ? 'people-outline' : 'person-add-outline'}
+        size={60}
+        color={colors.textSecondary}
       />
       <Text style={styles.emptyStateTitle}>
         {type === 'followers' ? 'אין עוקבים עדיין' : 'לא עוקב אחרי אף אחד עדיין'}
       </Text>
       <Text style={styles.emptyStateSubtitle}>
-        {type === 'followers' 
+        {type === 'followers'
           ? 'כאשר אנשים יתחילו לעקוב אחריך, הם יופיעו כאן'
           : 'התחל לעקוב אחרי אנשים כדי לראות את הפעילות שלהם'
         }
@@ -200,7 +200,7 @@ export default function FollowersScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >

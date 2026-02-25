@@ -10,10 +10,55 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
-
-type NavigationPropType = NavigationProp<ParamListBase> | any;
 import { Ionicons as Icon } from '@expo/vector-icons';
+
+/** Minimal nav shape for modal: navigate + optional parent/state for nested navigator traversal */
+interface NavState {
+  routes?: { name: string }[];
+  index?: number;
+  routeNames?: string[];
+}
+export interface NavForItemDetailsModal {
+  navigate: (screen: string, params?: Record<string, unknown>) => void;
+  getParent?: () => NavForItemDetailsModal | undefined;
+  getState?: () => NavState | undefined;
+}
+
+/** Item or ride record for modal display */
+export interface ItemOrRideRecord {
+  ownerId?: string;
+  owner_id?: string;
+  driverId?: string;
+  driver_id?: string;
+  createdBy?: string;
+  created_by?: string;
+  title?: string;
+  description?: string;
+  image_base64?: string;
+  category?: string;
+  condition?: string;
+  qty?: number;
+  quantity?: number;
+  city?: string;
+  address?: string;
+  timestamp?: string;
+  created_at?: string;
+  createdAt?: string;
+  from?: string;
+  to?: string;
+  from_location?: { name?: string };
+  to_location?: { name?: string };
+  price?: number;
+  price_per_seat?: number;
+  date?: string;
+  time?: string;
+  departure_time?: string;
+  seats?: number;
+  available_seats?: number;
+  noSmoking?: boolean;
+  petsAllowed?: boolean;
+  kidsFriendly?: boolean;
+}
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
@@ -28,9 +73,9 @@ import { useTranslation } from 'react-i18next';
 export interface ItemDetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  item: any | null;
+  item: ItemOrRideRecord | null;
   type: 'item' | 'ride';
-  navigation: NavigationPropType;
+  navigation: NavForItemDetailsModal;
   showOwnerInfo?: boolean; // Default true - hide owner info when viewing from own profile
 }
 
@@ -60,12 +105,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setLoadingOwner(true);
     try {
       const response = await apiService.getUserById(ownerId);
-      const data = response.data as any;
+      const data = response.data as { name?: string; avatar_url?: string; avatar?: string; id?: string } | undefined;
       if (response.success && data) {
         setItemOwner({
-          name: data.name || t('common:unknownUser'),
-          avatar: data.avatar_url || data.avatar || '',
-          id: data.id || ownerId,
+          name: data.name ?? t('common:unknownUser'),
+          avatar: data.avatar_url ?? data.avatar ?? '',
+          id: data.id ?? ownerId,
         });
       } else {
         setItemOwner({
@@ -75,7 +120,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         });
       }
     } catch (error) {
-      console.error('❌ Error loading owner details:', error);
+      logger.error('ItemDetailsModal', 'Error loading owner details', { error });
       setItemOwner({
         name: t('common:unknownUser'),
         avatar: '',
@@ -115,10 +160,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         // and navigate to ProfileScreen tab through it
 
         // First, get the parent (HomeTabStack)
-        const homeTabStack = (navigation as any).getParent();
+        const homeTabStack = navigation.getParent?.();
         if (homeTabStack) {
           // Then get the parent of HomeTabStack (BottomNavigator)
-          const bottomNavigator = homeTabStack.getParent();
+          const bottomNavigator = homeTabStack.getParent?.();
           if (bottomNavigator) {
             // Navigate to ProfileScreen tab in BottomNavigator
             bottomNavigator.navigate('ProfileScreen');
@@ -128,7 +173,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         }
 
         // Fallback: try to find BottomNavigator by traversing up
-        let currentNav = (navigation as any).getParent();
+        let currentNav = navigation.getParent?.();
         let depth = 0;
         const maxDepth = 5; // Safety limit
 
@@ -153,7 +198,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
         // If we couldn't find BottomNavigator, fall back to UserProfileScreen
         logger.warn('ItemDetailsModal', 'Could not find BottomNavigator, falling back to UserProfileScreen');
-        const parentNavigator = (navigation as any).getParent();
+        const parentNavigator = navigation.getParent?.();
         if (parentNavigator) {
           parentNavigator.navigate('UserProfileScreen', {
             userId: itemOwner.id,
@@ -161,7 +206,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             characterData: null
           });
         } else {
-          (navigation as any).navigate('UserProfileScreen', {
+          navigation.navigate('UserProfileScreen', {
             userId: itemOwner.id,
             userName: itemOwner.name,
             characterData: null
@@ -171,7 +216,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         logger.error('ItemDetailsModal', 'Error navigating to ProfileScreen tab', { error });
         // Fallback: navigate to UserProfileScreen
         try {
-          const parentNavigator = (navigation as any).getParent();
+          const parentNavigator = navigation.getParent?.();
           if (parentNavigator) {
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,
@@ -179,7 +224,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               characterData: null
             });
           } else {
-            (navigation as any).navigate('UserProfileScreen', {
+            navigation.navigate('UserProfileScreen', {
               userId: itemOwner.id,
               userName: itemOwner.name,
               characterData: null
@@ -194,12 +239,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       // Try to navigate through HomeScreen first (which is part of BottomNavigator)
       try {
         // Check if we're already in HomeTabStack context
-        const currentState = (navigation as any).getState?.();
-        const _currentRouteName = currentState?.routes?.[currentState?.index]?.name;
+        const currentState = navigation.getState?.();
+        const _currentRouteName = currentState?.routes?.[currentState?.index ?? 0]?.name;
 
         // Try to find BottomNavigator
-        let bottomNavigator = null;
-        let currentNav = navigation as any;
+        let bottomNavigator: NavForItemDetailsModal | null = null;
+        let currentNav: NavForItemDetailsModal | undefined = navigation;
         let depth = 0;
         const maxDepth = 5;
 
@@ -209,7 +254,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             bottomNavigator = currentNav;
             break;
           }
-          const parent = currentNav.getParent?.();
+          const parent: NavForItemDetailsModal | undefined = currentNav.getParent?.();
           if (parent) {
             currentNav = parent;
             depth++;
@@ -233,7 +278,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         }
 
         // Fallback: try direct navigation to HomeScreen if available
-        const parentNavigator = (navigation as any).getParent();
+        const parentNavigator = navigation.getParent?.();
         if (parentNavigator) {
           try {
             parentNavigator.navigate('HomeScreen', {
@@ -243,7 +288,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 userName: itemOwner.name,
                 characterData: null
               }
-            });
+            } as { screen: string; params: Record<string, unknown> });
             return;
           } catch (_e) {
             // If that fails, try UserProfileScreen directly as fallback
@@ -255,7 +300,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           }
         } else {
           // Last resort: direct navigation
-          (navigation as any).navigate('UserProfileScreen', {
+          navigation.navigate('UserProfileScreen', {
             userId: itemOwner.id,
             userName: itemOwner.name,
             characterData: null
@@ -265,7 +310,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         logger.error('ItemDetailsModal', 'Error navigating to UserProfileScreen via HomeTabStack', { error });
         // Fallback to direct navigation
         try {
-          const parentNavigator = (navigation as any).getParent();
+          const parentNavigator = navigation.getParent?.();
           if (parentNavigator) {
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,
@@ -273,7 +318,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               characterData: null
             });
           } else {
-            (navigation as any).navigate('UserProfileScreen', {
+            navigation.navigate('UserProfileScreen', {
               userId: itemOwner.id,
               userName: itemOwner.name,
               characterData: null
@@ -385,10 +430,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           )}
 
           {/* Quantity */}
-          {(item.qty || item.quantity) && (item.qty || item.quantity) > 1 && (
+          {(item.qty ?? item.quantity) != null && (item.qty ?? item.quantity)! > 1 && (
             <View style={styles.modalSection}>
               <Text style={styles.modalLabel}>{t('donations:details.quantity')}</Text>
-              <Text style={styles.modalText}>{item.qty || item.quantity}</Text>
+              <Text style={styles.modalText}>{item.qty ?? item.quantity}</Text>
             </View>
           )}
 
@@ -408,7 +453,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <Text style={styles.modalLabel}>{t('donations:details.dateTime')}</Text>
               <Text style={styles.modalText}>
                 📅 {(() => {
-                  const dateStr = item.timestamp || item.created_at || item.createdAt;
+                  const dateStr = item.timestamp || item.created_at || item.createdAt || '';
                   const date = new Date(dateStr);
                   return date.toLocaleDateString(t('common:locale') === 'en' ? 'en-US' : 'he-IL') + ' ' + date.toLocaleTimeString(t('common:locale') === 'en' ? 'en-US' : 'he-IL', { hour: '2-digit', minute: '2-digit' });
                 })()}

@@ -24,7 +24,7 @@ const getMissingFields = (user: User | null) => {
 };
 
 export default function ProfileCompletionBanner() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation();
   const { selectedUser, isGuestMode, isAuthenticated } = useUser();
   const { t } = useTranslation(['profile']);
 

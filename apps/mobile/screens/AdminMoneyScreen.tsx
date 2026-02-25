@@ -53,33 +53,21 @@ interface DonationFormData {
   isRecurring: boolean;
 }
 
-const DONATION_CATEGORIES = [
-  'כסף',
-  'אוכל',
-  'בגדים',
-  'ספרים',
-  'רהיטים',
-  'רפואי',
-  'בעלי חיים',
-  'דיור',
-  'תמיכה',
-  'חינוך',
-  'סביבה',
-  'טכנולוגיה',
-  'מוזיקה',
-  'משחקים',
-  'אמנות',
-  'ספורט',
-  'כללי',
-];
-
 const LOG_SOURCE = 'AdminMoneyScreen';
 
 import { useAdminProtection } from '../hooks/useAdminProtection';
+import { useTranslation } from 'react-i18next';
+
+const DONATION_CATEGORY_KEYS = [
+  'money', 'food', 'clothes', 'books', 'furniture', 'medical', 'animals',
+  'housing', 'support', 'education', 'environment', 'technology', 'music',
+  'games', 'art', 'sports', 'general',
+] as const;
 
 export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) {
+  const { t } = useTranslation('admin');
   const route = useRoute();
-  const routeParams = (route.params as any) || {};
+  const routeParams = (route.params as { viewOnly?: boolean } | undefined) ?? {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { isAdmin } = useUser();
@@ -88,7 +76,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
   useFocusEffect(
     React.useCallback(() => {
       if (viewOnly) {
-        (navigation as any).setParams({
+        (navigation as NavigationProp<AdminStackParamList> & { setParams(p: { hideTopBar?: boolean; hideBottomBar?: boolean }): void }).setParams({
           hideTopBar: false,
           hideBottomBar: false,
         });
@@ -100,7 +88,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
   const [formData, setFormData] = useState<DonationFormData>({
     donorName: '',
     amount: '',
-    category: 'כסף',
+    category: 'money',
     date: new Date().toISOString().split('T')[0],
     notes: '',
     isRecurring: false,
@@ -195,7 +183,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
     setFormData({
       donorName: '',
       amount: '',
-      category: 'כסף',
+      category: 'money',
       date: new Date().toISOString().split('T')[0],
       notes: '',
       isRecurring: false,
@@ -238,7 +226,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
     setFormData({
       donorName: donorFromTitle,
       amount: donation.amount ? String(donation.amount) : '',
-      category: donation.category || 'כללי',
+      category: donation.category || 'general',
       date: normalizedDate,
       notes: donation.description || '',
       isRecurring: Boolean(donation.is_recurring ?? donation.isRecurring ?? false),
@@ -348,7 +336,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
       setFormData({
         donorName: '',
         amount: '',
-        category: 'כסף',
+        category: 'money',
         date: new Date().toISOString().split('T')[0],
         notes: '',
         isRecurring: false,
@@ -472,7 +460,11 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
       <View style={styles.donationHeader}>
         <View style={styles.donationInfo}>
           <Text style={styles.donationTitle}>{item.title}</Text>
-          <Text style={styles.donationCategory}>{item.category}</Text>
+          <Text style={styles.donationCategory}>
+                {(DONATION_CATEGORY_KEYS as readonly string[]).includes(item.category ?? '')
+                  ? t('admin:moneyDonations.categories.' + (item.category ?? 'general'))
+                  : item.category}
+              </Text>
         </View>
         {!viewOnly && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: LAYOUT_CONSTANTS.SPACING.XS }}>
@@ -609,24 +601,24 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>קטגוריה</Text>
+                <Text style={styles.label}>{t('admin:moneyDonations.categoryLabel')}</Text>
                 <View style={styles.categoryContainer}>
-                  {DONATION_CATEGORIES.map((category) => (
+                  {DONATION_CATEGORY_KEYS.map((categoryKey) => (
                     <TouchableOpacity
-                      key={category}
+                      key={categoryKey}
                       style={[
                         styles.categoryChip,
-                        formData.category === category && styles.categoryChipSelected,
+                        formData.category === categoryKey && styles.categoryChipSelected,
                       ]}
-                      onPress={() => setFormData({ ...formData, category })}
+                      onPress={() => setFormData({ ...formData, category: categoryKey })}
                     >
                       <Text
                         style={[
                           styles.categoryChipText,
-                          formData.category === category && styles.categoryChipTextSelected,
+                          formData.category === categoryKey && styles.categoryChipTextSelected,
                         ]}
                       >
-                        {category}
+                        {t('admin:moneyDonations.categories.' + categoryKey)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -780,7 +772,7 @@ const styles = StyleSheet.create({
     gap: LAYOUT_CONSTANTS.SPACING.XS,
   },
   addButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },
@@ -789,7 +781,7 @@ const styles = StyleSheet.create({
     marginLeft: LAYOUT_CONSTANTS.SPACING.SM,
   },
   listContent: {
-    paddingBottom: 120, // מקום לכפתור FAB + מרווח נוסף
+    paddingBottom: 120, // Space for FAB + extra padding
   },
   donationCard: {
     backgroundColor: colors.background,
@@ -869,7 +861,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.dropdownModalOverlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -958,7 +950,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   categoryChipTextSelected: {
-    color: 'white',
+    color: colors.buttonText,
     fontWeight: '600',
   },
   modalFooter: {
@@ -987,13 +979,13 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: FontSizes.medium,
-    color: 'white',
+    color: colors.buttonText,
     fontWeight: '600',
   },
   fabButton: {
-    ...(Platform.OS === 'web' ? { position: 'fixed' as any } : { position: 'absolute' }),
+    ...(Platform.OS === 'web' ? { position: 'fixed' as const } : { position: 'absolute' as const }),
     right: LAYOUT_CONSTANTS.SPACING.XL,
-    bottom: 200, // מרווח מה-bottom bar
+    bottom: 200, // Offset from bottom bar
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1012,7 +1004,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   fabButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },

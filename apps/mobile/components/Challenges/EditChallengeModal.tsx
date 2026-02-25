@@ -128,9 +128,9 @@ export default function EditChallengeModal({
       } else {
         showToast(t('messages.errorUpdating'), 'error');
       }
-    } catch (error: any) {
-      console.error('Error updating challenge:', error);
-      showToast(error.message || t('messages.errorUpdating'), 'error');
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      showToast(err?.message || t('messages.errorUpdating'), 'error');
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export default function EditChallengeModal({
                   onPress={() => setDifficulty(option.id as ChallengeDifficulty)}
                 >
                   <Ionicons
-                    name={option.icon as any}
+                    name={option.icon as keyof typeof Ionicons.glyphMap}
                     size={20}
                     color={difficulty === option.id ? colors.white : option.color}
                   />

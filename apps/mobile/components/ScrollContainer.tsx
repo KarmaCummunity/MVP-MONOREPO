@@ -12,6 +12,8 @@ import {
   StyleSheet,
   ViewStyle,
   StyleProp,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
@@ -28,6 +30,23 @@ interface ScrollContainerProps extends Omit<ScrollViewProps, 'style' | 'contentC
   /** Enable/disable scroll position preservation. Default: true */
   preserveScrollPosition?: boolean;
 }
+
+/** Web-only: View ref may expose DOM node for scroll persistence */
+interface WebViewWithNativeNode extends View {
+  _nativeNode?: HTMLElement;
+  firstElementChild?: HTMLElement;
+}
+
+/** Web-only scroll container style extensions */
+type WebScrollViewStyle = ViewStyle & {
+  overflowY?: 'auto';
+  overflowX?: 'hidden';
+  WebkitOverflowScrolling?: 'touch';
+  scrollBehavior?: 'smooth';
+  maxHeight?: string;
+  maxWidth?: string;
+  minHeight?: string;
+};
 
 /**
  * ScrollContainer - Universal scrolling component
@@ -73,7 +92,7 @@ export default function ScrollContainer({
 
   // Combine scroll handlers - call both preserved and external handlers
   const handleScroll = React.useCallback(
-    (event: any) => {
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (preserveScrollPosition) {
         preservedOnScroll(event);
       }
@@ -110,8 +129,8 @@ export default function ScrollContainer({
                 setTimeout(() => {
                   try {
                     // Find the scrollable element in the DOM
-                    const element = (webScrollRef.current as any)?._nativeNode ||
-                      (webScrollRef.current as any)?.firstElementChild;
+                    const current = webScrollRef.current as WebViewWithNativeNode | null;
+                    const element = current?._nativeNode ?? current?.firstElementChild;
 
                     if (element) {
                       if (typeof element.scrollTo === 'function') {
@@ -145,7 +164,7 @@ export default function ScrollContainer({
     let cleanupFn: (() => void) | null = null;
     // Wait a bit for DOM to be ready
     const timeoutId = setTimeout(() => {
-      const element = (webScrollRef.current as any)?._nativeNode;
+      const element = (webScrollRef.current as WebViewWithNativeNode | null)?._nativeNode;
 
       if (!element) return;
 
@@ -208,7 +227,7 @@ export default function ScrollContainer({
       <View
         ref={webScrollRef}
         style={[styles.webScrollContainer, style]}
-        {...{ "data-scroll-container": "true" } as any}
+        {...({ 'data-scroll-container': 'true' } as Record<string, string>)}
       >
         <View style={[styles.webScrollContent, contentStyle]}>
           {children || null}
@@ -244,23 +263,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     ...(Platform.OS === 'web' && {
-      overflowY: 'auto' as any,
-      overflowX: 'hidden' as any,
-      // Better mobile web scrolling
-      WebkitOverflowScrolling: 'touch' as any,
-      scrollBehavior: 'smooth' as any,
-    }),
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      WebkitOverflowScrolling: 'touch',
+      scrollBehavior: 'smooth',
+    } as WebScrollViewStyle),
     height: '100%',
-    // Remove restrictive maxHeight for mobile web
-    maxHeight: '100vh' as any,
+    maxHeight: Platform.OS === 'web' ? '100vh' : undefined,
     width: '100%',
-    maxWidth: '100vw' as any,
-  } as any,
+    maxWidth: Platform.OS === 'web' ? '100vw' : undefined,
+  } as ViewStyle & Partial<WebScrollViewStyle>,
   webScrollContent: {
-    // Much less padding on mobile web to reduce dead space
     paddingBottom: Dimensions.get('window').width <= 768 ? 20 : 40,
-    // Better height calculation for mobile web
-    minHeight: '100%' as any,
+    minHeight: Platform.OS === 'web' ? '100%' : undefined,
     width: '100%',
   },
 

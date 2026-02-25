@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -34,7 +34,49 @@ import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
-import { FeedItem } from '../types/feed';
+import { FeedItem, type PostType } from '../types/feed';
+
+/** API post shape from posts service */
+interface ApiPost {
+  id: string;
+  post_type?: string;
+  ride_data?: {
+    from_location?: string | { name?: string; city?: string };
+    to_location?: string | { name?: string; city?: string };
+    departure_time?: string;
+    available_seats?: number;
+    price_per_seat?: number;
+  };
+  metadata?: string | Record<string, unknown>;
+  author?: { id?: string; name?: string; avatar_url?: string };
+  author_id?: string;
+  title?: string;
+  description?: string;
+  images?: string[];
+  likes?: string | number;
+  comments?: string | number;
+  is_liked?: boolean;
+  created_at?: string;
+  ride_id?: string;
+}
+
+/** Ride record from db.listRides / getUserRides */
+interface RideRecord {
+  id: string;
+  driverId?: string;
+  driverName?: string;
+  from?: string;
+  to?: string;
+  time?: string;
+  date?: string;
+  seats?: number;
+  price?: number;
+  status?: string;
+  category?: string;
+  noSmoking?: boolean;
+  petsAllowed?: boolean;
+  kidsFriendly?: boolean;
+}
 
 export default function TrumpScreen({
   navigation,
@@ -46,6 +88,7 @@ export default function TrumpScreen({
   const { ToastComponent } = useToast();
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
+  const navWithParams = navigation as NavigationProp<ParamListBase> & { setParams?: (p: { mode?: string }) => void };
 
   // Get initial mode from URL (deep link) or default to search mode
   // mode: false = Offer Mode (Driver), true = Search Mode (Passenger)
@@ -87,23 +130,32 @@ export default function TrumpScreen({
     }
   }, [routeParams?.mode, mode]);
 
+  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
+  const hasSetInitialModeRef = useRef(false);
+  const navigationRef = useRef(navWithParams);
+  navigationRef.current = navWithParams;
+
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
+  // NOTE: navigation excluded from deps - it can change on every nav state update, causing effect loops
   useEffect(() => {
+    const nav = navigationRef.current;
     const newMode = mode ? 'search' : 'offer';
     const currentMode = routeParams?.mode;
 
-    // If no mode in URL, set it to search (default)
+    // If no mode in URL, set it to search (default) - only once to avoid infinite loop
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      // Set initial mode to search in URL
-      (navigation as any).setParams({ mode: 'search' });
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        nav.setParams?.({ mode: 'search' });
+      }
       return;
     }
 
     // Only update URL if mode actually changed
     if (newMode !== currentMode) {
-      (navigation as any).setParams({ mode: newMode });
+      nav.setParams?.({ mode: newMode });
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [mode, routeParams?.mode]);
 
   // === Shared State ===
   const { selectedUser } = useUser();
@@ -116,9 +168,9 @@ export default function TrumpScreen({
   }, []);
 
   // === Data State ===
-  const [allRides, setAllRides] = useState<any[]>([]);
-  const [_filteredRides, setFilteredRides] = useState<any[]>([]);
-  const [_recentRides, setRecentRides] = useState<any[]>([]);
+  const [allRides, setAllRides] = useState<RideRecord[]>([]);
+  const [_filteredRides, setFilteredRides] = useState<RideRecord[]>([]);
+  const [_recentRides, setRecentRides] = useState<RideRecord[]>([]);
   // Posts state for search mode
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
@@ -126,7 +178,7 @@ export default function TrumpScreen({
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
 
   // === Modal State ===
-  const [selectedRide, setSelectedRide] = useState<any | null>(null);
+  const [selectedRide, setSelectedRide] = useState<RideRecord | null>(null);
   const [showRideModal, setShowRideModal] = useState(false);
 
   // === Search Mode State ===
@@ -259,9 +311,9 @@ export default function TrumpScreen({
   // placeholder={mode ? t('trump:ui.searchPlaceholder.offer') : t('trump:ui.searchPlaceholder.seek')}
 
   // Helper to map API post to FeedItem (same as useFeedData.mapPostToItem)
-  const mapPostToFeedItem = (post: any): FeedItem => {
+  const mapPostToFeedItem = (post: ApiPost): FeedItem => {
     // For ride posts, extract ride-specific data (same logic as useFeedData)
-    let rideData: any = {};
+    let rideData: Record<string, string | number | undefined> = {};
     const formatRideTime = (dateIso: string) => {
       if (!dateIso) return { time: '', date: '' };
       const dep = new Date(dateIso);
@@ -283,7 +335,7 @@ export default function TrumpScreen({
     // 1. Try ride_data from DB Join (same as useFeedData)
     if (post.ride_data) {
       const rd = post.ride_data;
-      const { time, date } = formatRideTime(rd.departure_time);
+      const { time, date } = formatRideTime(rd.departure_time ?? '');
 
       rideData = {
         from: typeof rd.from_location === 'string' ? rd.from_location : (rd.from_location?.name || rd.from_location?.city || ''),
@@ -327,7 +379,7 @@ export default function TrumpScreen({
 
     return {
       id: post.id,
-      type: post.post_type || 'post',
+      type: (post.post_type || 'post') as PostType,
       subtype: post.post_type, // Same as useFeedData - e.g. 'ride', 'ride_offered'
       title: post.title || 'post.noTitle', // Same as useFeedData
       description: post.description || '',
@@ -337,8 +389,8 @@ export default function TrumpScreen({
         name: userName,
         avatar: userAvatar,
       },
-      likes: parseInt(post.likes || '0'),
-      comments: parseInt(post.comments || '0'),
+      likes: parseInt(String(post.likes ?? '0'), 10),
+      comments: parseInt(String(post.comments ?? '0'), 10),
       isLiked: post.is_liked || false,
       timestamp: (post.created_at && !isNaN(new Date(post.created_at).getTime()))
         ? new Date(post.created_at).toISOString()
@@ -358,7 +410,7 @@ export default function TrumpScreen({
         try {
           const postsResponse = await postsService.getPosts(100, 0, uid, 'ride');
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
-            const mappedPosts = postsResponse.data.map(mapPostToFeedItem);
+            const mappedPosts = (postsResponse.data as ApiPost[]).map(mapPostToFeedItem);
             setAllPosts(mappedPosts);
             setFilteredPosts(mappedPosts);
           } else {
@@ -377,12 +429,12 @@ export default function TrumpScreen({
         const postsResponse = await apiService.getUserPosts(uid, 50, uid);
 
         if (postsResponse.success && Array.isArray(postsResponse.data)) {
-          const ridePosts = postsResponse.data.filter((post: any) =>
+          const data = postsResponse.data as ApiPost[];
+          const ridePosts = data.filter((post: ApiPost) =>
             post.post_type === 'ride' || post.post_type === 'ride_offered' || post.ride_id
           );
 
-          const mappedPosts = ridePosts
-            .map(mapPostToFeedItem)
+          const mappedPosts = ridePosts.map(mapPostToFeedItem)
             .filter((post: FeedItem | null): post is FeedItem =>
               !!(post !== null && post !== undefined && post.user && post.user.id && post.user.name)
             );
@@ -405,18 +457,25 @@ export default function TrumpScreen({
         selectedUser?.id ? db.getUserRides(selectedUser.id, 'driver') : Promise.resolve([])
       ]);
 
+      const activeRidesList = (activeRides || []) as RideRecord[];
+      const myHistoryList = (myHistory || []) as RideRecord[];
+
       // Enrich activeRides with real user names
-      const enrichedRides = await Promise.all((activeRides || []).map(async (ride: any) => {
+      const enrichedRides = await Promise.all(activeRidesList.map(async (ride: RideRecord) => {
         const driverId = ride.driverId;
         const needsFetch = !ride.driverName || ride.driverName === driverId || ride.driverName === 'Driver';
 
         if (needsFetch && driverId) {
           try {
-            const user = await db.getUser(driverId) as any;
-            if (user && user.name && user.name !== driverId) {
-              return { ...ride, driverName: user.name };
+            const user = await db.getUser(driverId);
+            const userName = user && typeof user === 'object' && 'name' in user && typeof (user as { name?: string }).name === 'string'
+              ? (user as { name: string }).name
+              : null;
+            if (userName && userName !== driverId) {
+              return { ...ride, driverName: userName };
             }
-          } catch (_e) {
+          } catch {
+            // Ignore user lookup errors, fall back to ride without driver name
           }
         }
         return ride;
@@ -424,7 +483,7 @@ export default function TrumpScreen({
 
       setAllRides(enrichedRides);
 
-      const userRecent = (myHistory || []).map((r: any) => ({
+      const userRecent = myHistoryList.map((r: RideRecord) => ({
         ...r,
         status: r.status || 'active',
         price: r.price || 0,
@@ -544,7 +603,7 @@ export default function TrumpScreen({
     if (mode) {
       setFilteredPosts(getFilteredRides() as FeedItem[]);
     } else {
-      setFilteredRides(getFilteredRides() as any[]);
+      setFilteredRides(getFilteredRides() as RideRecord[]);
     }
   }, [getFilteredRides, mode]);
 
@@ -749,7 +808,7 @@ export default function TrumpScreen({
   };
 
   // --- 4. History Actions ---
-  const _handleDeleteRide = async (ride: any) => {
+  const _handleDeleteRide = async (ride: RideRecord) => {
     Alert.alert(
       t('trump:alerts.deleteRideTitle') || 'מחיקת טרמפ',
       t('trump:alerts.deleteRideBody') || 'האם למחוק טרמפ זה?',
@@ -773,7 +832,7 @@ export default function TrumpScreen({
     );
   };
 
-  const _handleRestoreRide = (ride: any) => {
+  const _handleRestoreRide = (ride: RideRecord) => {
     // Populate form with ride data
     setToLocation(ride.to || '');
     setFromLocation(ride.from || '');
@@ -796,7 +855,7 @@ export default function TrumpScreen({
   // --- Render Helpers ---
   const handleToggleMode = () => setMode(!mode);
 
-  const _handleSelectRide = (ride: any) => {
+  const _handleSelectRide = (ride: RideRecord) => {
     setSelectedRide(ride);
     setShowRideModal(true);
   };
@@ -861,7 +920,7 @@ export default function TrumpScreen({
     </View>
   ), [t]);
 
-  const _handleSelectRideOld = (ride: any) => {
+  const _handleSelectRideOld = (ride: RideRecord) => {
     // In Search Mode: Show join details/contact
     Alert.alert(
       t('trump:rideOf', { name: ride.driverName }) as string,

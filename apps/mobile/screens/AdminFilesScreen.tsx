@@ -39,7 +39,7 @@ interface GeneralFile {
 
 export default function AdminFilesScreen({ navigation: _navigation }: AdminFilesScreenProps) {
     const route = useRoute();
-    const routeParams = (route.params as any) || {};
+    const routeParams = (route.params as { viewOnly?: boolean }) || {};
     const viewOnly = routeParams?.viewOnly === true;
     useAdminProtection(true);
     const { selectedUser } = useUser();
@@ -138,10 +138,11 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                     }
                 );
                 uploadedUrl = uploadResult.url;
-            } catch (uploadError: any) {
-                const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
+            } catch (uploadError: unknown) {
+                const err = uploadError as { message?: string; code?: string };
+                const errorMessage = err?.message || err?.code || 'שגיאה לא ידועה';
                 logger.error('AdminFilesScreen', 'Upload file error', {
-                    error: uploadError?.message,
+                    error: err?.message,
                     fullPath,
                     fileName: selectedFile.name,
                     fileSize: selectedFile.size,

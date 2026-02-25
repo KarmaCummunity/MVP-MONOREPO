@@ -137,7 +137,7 @@ function AppContent() {
             try {
               logger.info('App', 'Importing version checker');
               const { initVersionChecker } = await import('./utils/versionChecker');
-              initVersionChecker();
+              initVersionChecker({ getText: (key) => i18n.t(key) });
               logger.info('App', 'Version checker initialized');
             } catch (versionError) {
               logger.warn('App', 'Version checker failed to initialize (non-critical)', { error: versionError });
@@ -220,8 +220,6 @@ function AppContent() {
       }
     };
   }, []);
-
-  logger.info('App', 'App component mounted');
 
   // TODO: Move notification setup to dedicated notification service/hook
   // TODO: Add proper error handling for notification permission failures

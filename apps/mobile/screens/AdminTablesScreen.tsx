@@ -113,7 +113,7 @@ export default function AdminTablesScreen({ navigation }: AdminTablesScreenProps
     });
   };
 
-  const updateColumn = (index: number, field: keyof ColumnForm, value: any) => {
+  const updateColumn = (index: number, field: keyof ColumnForm, value: string | number | boolean) => {
     const newColumns = [...formData.columns];
     newColumns[index] = { ...newColumns[index], [field]: value };
     setFormData({ ...formData, columns: newColumns });
@@ -202,7 +202,7 @@ export default function AdminTablesScreen({ navigation }: AdminTablesScreenProps
   };
 
   const handleTablePress = (table: AdminTable) => {
-    (navigation as any).navigate('AdminTableRows', { tableId: table.id, tableName: table.name });
+    navigation.navigate('AdminTableRows', { tableId: table.id, tableName: table.name });
   };
 
   const renderTableItem = ({ item }: { item: AdminTable }) => (

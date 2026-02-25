@@ -416,8 +416,8 @@ const styles = StyleSheet.create({
   tableScroll: {
     marginBottom: 8,
     ...(Platform.OS === 'web' && {
-      overflowX: 'auto' as any,
-      WebkitOverflowScrolling: 'touch' as any,
+      overflowX: 'auto' as const,
+      WebkitOverflowScrolling: 'touch' as const,
     }),
   },
   tableWrapper: {

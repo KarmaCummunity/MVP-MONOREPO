@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
+import { createShadowStyle } from '../../../globals/styles';
 import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 
@@ -243,9 +244,7 @@ const styles = StyleSheet.create({
             android: {
                 elevation: 4,
             },
-            web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
-            }
+            default: createShadowStyle(colors.black, { width: 0, height: 4 }, 0.1, 16),
         }),
     },
     gridContainer: {
@@ -310,7 +309,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#E3F2FD',
+        backgroundColor: colors.legacyLightBlue,
     },
     contentContainer: {
         padding: isMobile ? 16 : 24,
@@ -397,9 +396,7 @@ const styles = StyleSheet.create({
             android: {
                 elevation: 2,
             },
-            web: {
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
-            }
+            default: createShadowStyle(colors.black, { width: 0, height: 2 }, 0.08, 4),
         }),
     },
     detailCardGrid: {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -27,13 +27,15 @@ const Toast: React.FC<ToastProps> = ({
   duration = 2000,
   onHide,
 }) => {
-  const translateY = useRef(new Animated.Value(100)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const [shouldRender, setShouldRender] = React.useState(visible);
+  const [translateY] = useState(() => new Animated.Value(100));
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [isAnimatingOut, setIsAnimatingOut] = React.useState(false);
+  const shouldRender = visible || isAnimatingOut;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Toast exit animation requires keeping mounted until animation completes */
   useEffect(() => {
     if (visible) {
-      setShouldRender(true);
+      setIsAnimatingOut(false);
       // Show animation
       Animated.parallel([
         Animated.timing(translateY, {
@@ -62,13 +64,15 @@ const Toast: React.FC<ToastProps> = ({
             useNativeDriver: false,
           }),
         ]).start(() => {
-          setShouldRender(false);
+          setIsAnimatingOut(false);
           onHide?.();
         });
       }, duration);
 
       return () => clearTimeout(timer);
     } else {
+      /* Exit animation: must keep mounted until animation completes */
+      setIsAnimatingOut(true);
       // Hide immediately
       Animated.parallel([
         Animated.timing(translateY, {
@@ -82,7 +86,7 @@ const Toast: React.FC<ToastProps> = ({
           useNativeDriver: false,
         }),
       ]).start(() => {
-        setShouldRender(false);
+        setIsAnimatingOut(false);
       });
     }
   }, [visible, duration, translateY, opacity, onHide]);

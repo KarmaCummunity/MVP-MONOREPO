@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList, Dimensions, Platform } from 'react-native';
-import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
-import { FontSizes } from '../globals/constants';
+import { FontSizes, LAYOUT_CONSTANTS, COMPONENT_SIZES } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import ScrollContainer from '../components/ScrollContainer';
@@ -13,7 +13,6 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 import { biDiTextAlign, rowDirection, isLandscape, marginStartEnd, getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
-import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
 import { useToast } from '../utils/toastService';
 import VerticalGridSlider from '../components/VerticalGridSlider';
 import { postsService } from '../src/services/posts.service';
@@ -21,35 +20,31 @@ import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
+import type { SearchableItem } from '../components/SearchBar';
 import ReportPostModal from '../components/Feed/ReportPostModal';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/loggerService';
 
 type ItemType = 'furniture' | 'clothes' | 'general' | 'books' | 'dry_food' | 'games' | 'electronics' | 'toys' | 'sports' | 'art' | 'kitchen' | 'bathroom' | 'garden' | 'tools' | 'baby' | 'pet' | 'other';
 
-// רשימת קטגוריות לפרסום פריטים
-const ITEM_CATEGORIES = [
-  { id: 'clothes', label: 'בגדים', icon: 'shirt-outline' },
-  { id: 'books', label: 'ספרים', icon: 'library-outline' },
-  { id: 'furniture', label: 'רהיטים', icon: 'bed-outline' },
-  { id: 'dry_food', label: 'אוכל יבש', icon: 'restaurant-outline' },
-  { id: 'games', label: 'משחקים', icon: 'game-controller-outline' },
-  { id: 'electronics', label: 'חשמל ואלקטרוניקה', icon: 'phone-portrait-outline' },
-  { id: 'toys', label: 'צעצועים', icon: 'happy-outline' },
-  { id: 'sports', label: 'ספורט', icon: 'football-outline' },
-  { id: 'art', label: 'אמנות', icon: 'color-palette-outline' },
-  { id: 'kitchen', label: 'מטבח', icon: 'cafe-outline' },
-  { id: 'bathroom', label: 'אמבטיה', icon: 'water-outline' },
-  { id: 'garden', label: 'גינה', icon: 'leaf-outline' },
-  { id: 'tools', label: 'כלים', icon: 'construct-outline' },
-  { id: 'baby', label: 'תינוקות', icon: 'baby-outline' },
-  { id: 'pet', label: 'חיות מחמד', icon: 'paw-outline' },
-  { id: 'other', label: 'אחר', icon: 'cube-outline' },
+const ITEM_CATEGORY_IDS = [
+  'clothes', 'books', 'furniture', 'dry_food', 'games', 'electronics',
+  'toys', 'sports', 'art', 'kitchen', 'bathroom', 'garden', 'tools', 'baby', 'pet', 'other',
 ] as const;
+const ITEM_CATEGORY_ICONS: Record<string, string> = {
+  clothes: 'shirt-outline', books: 'library-outline', furniture: 'bed-outline',
+  dry_food: 'restaurant-outline', games: 'game-controller-outline', electronics: 'phone-portrait-outline',
+  toys: 'happy-outline', sports: 'football-outline', art: 'color-palette-outline',
+  kitchen: 'cafe-outline', bathroom: 'water-outline', garden: 'leaf-outline',
+  tools: 'construct-outline', baby: 'baby-outline', pet: 'paw-outline', other: 'cube-outline',
+};
+
+/** Route params for ItemsScreen (itemType and mode for deep linking) */
+export type ItemsScreenRouteParams = { itemType?: ItemType; mode?: string } | undefined;
 
 export interface ItemsScreenProps {
-  navigation: NavigationProp<ParamListBase>;
-  route?: any;
+  navigation: NavigationProp<ParamListBase> & { setParams?: (params: { mode?: string }) => void };
+  route?: RouteProp<{ ItemsScreen: ItemsScreenRouteParams }, 'ItemsScreen'> | { params?: ItemsScreenRouteParams };
 }
 
 interface DonationItem {
@@ -77,23 +72,24 @@ interface DonationItem {
   deletedAt?: string;
 }
 
-const itemsFilterOptionsBase = [
-  'בחינם',
-  'כמו חדש',
-  'משומש',
-  'לחלפים',
-  'עם איסוף עצמי',
-  'משלוח בתשלום',
-  'נגישות',
-];
+const ITEM_FILTER_KEYS = ['free', 'likeNew', 'used', 'forParts', 'selfPickup', 'paidDelivery', 'accessibility'] as const;
+const ITEM_SORT_KEYS = ['alphabetical', 'byLocation', 'byDate', 'byRating', 'byRelevance'] as const;
 
-const itemsSortOptions = [
-  'אלפביתי',
-  'לפי מיקום',
-  'לפי תאריך',
-  'לפי דירוג',
-  'לפי רלוונטיות',
-];
+const { SPACING, BORDER_RADIUS, BOTTOM_NAV_HEIGHT } = LAYOUT_CONSTANTS;
+const SCROLL_BOTTOM_PADDING = BOTTOM_NAV_HEIGHT + SPACING.LG;
+const ITEM_CARD_IMAGE_HEIGHT = COMPONENT_SIZES.AVATAR.XLARGE;
+const PREVIEW_IMAGE_SIZE = COMPONENT_SIZES.AVATAR.LARGE;
+const DROPDOWN_MAX_HEIGHT = 400;
+const INPUT_PADDING = 12;
+const TAG_PADDING_H = 10;
+const TAG_PADDING_V = 6;
+const HIT_SLOP = SPACING.SM;
+const INPUT_ADORNMENT_OFFSET = 30;
+const PILL_BORDER_RADIUS = 999;
+const BUTTON_PADDING_V = 14;
+const EMPTY_STATE_PADDING = 40;
+const CLEAR_BUTTON_PADDING_H = 20;
+const TAGS_GAP = SPACING.XS - 1;
 
 export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const { ToastComponent } = useToast();
@@ -101,8 +97,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const itemType: ItemType = (route?.params?.itemType as ItemType) || 'general';
   const routeParams = route?.params as { mode?: string } | undefined;
 
-  // Get initial mode from URL (deep link) or default to search mode (מחפש)
-  // mode: false = מציע, true = מחפש
+  // Get initial mode from URL (deep link) or default to search mode
   // URL mode: 'offer' = false, 'search' = true
   // Default is search mode (true)
   const initialMode = routeParams?.mode === 'offer' ? false : true;
@@ -129,6 +124,11 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setSelectedPostForReport(null);
   };
 
+  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
+  const hasSetInitialModeRef = useRef(false);
+  const navigationRef = useRef(navigation);
+  navigationRef.current = navigation;
+
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
     if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
@@ -140,22 +140,27 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
+  // NOTE: navigation excluded from deps - it can change on every nav state update, causing
+  // effect loops. We use a ref to always have the latest navigation.
   useEffect(() => {
+    const nav = navigationRef.current;
     const newMode = mode ? 'search' : 'offer';
     const currentMode = routeParams?.mode;
 
-    // If no mode in URL, set it to search (default)
+    // If no mode in URL, set it to search (default) - only once to avoid infinite loop
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      // Set initial mode to search in URL
-      (navigation as any).setParams({ mode: 'search' });
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        nav.setParams?.({ mode: 'search' });
+      }
       return;
     }
 
     // Only update URL if mode actually changed
     if (newMode !== currentMode) {
-      (navigation as any).setParams({ mode: newMode });
+      nav.setParams?.({ mode: newMode });
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [mode, routeParams?.mode]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
@@ -244,93 +249,97 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   };
 
   const filterOptions = useMemo(() => {
-    // כל הקטגוריות האפשריות לפריטים
-    const allCategories = ITEM_CATEGORIES.map(cat => cat.label);
+    const allCategories = ITEM_CATEGORY_IDS.map(id => t(`items:categories.${id}`));
+    const typeSpecific = itemType === 'furniture'
+      ? [t('items:typeSpecific.sofas'), t('items:typeSpecific.wardrobes'), t('items:typeSpecific.beds')]
+      : itemType === 'clothes'
+        ? [t('items:typeSpecific.men'), t('items:typeSpecific.women'), t('items:typeSpecific.kids')]
+        : [t('items:categories.kitchen'), t('items:categories.electronics'), t('items:categories.toys')];
+    const filterLabels = ITEM_FILTER_KEYS.map(k => t(`items:filterOptions.${k}`));
+    return [...allCategories, ...typeSpecific, ...filterLabels];
+  }, [itemType, t]);
 
-    const typeSpecific = itemType === 'furniture' ? ['ספות', 'ארונות', 'מיטות']
-      : itemType === 'clothes' ? ['גברים', 'נשים', 'ילדים']
-        : ['מטבח', 'חשמל', 'צעצועים'];
-
-    // מחזיר: קטגוריות כלליות + פילטרים ספציפיים לסוג + פילטרים בסיסיים
-    return [...allCategories, ...typeSpecific, ...itemsFilterOptionsBase];
-  }, [itemType]);
-
+  // Author shape from API (may be empty object or full)
+  type AuthorLike = { id?: unknown; name?: string | null; avatar_url?: string | null };
   // Helper to map API post to FeedItem (same as useFeedData.mapPostToItem)
-  const mapPostToFeedItem = useCallback((post: any): FeedItem | null => {
-    // הגנה מפני post null/undefined
-    if (!post || !post.id) {
+  const mapPostToFeedItem = useCallback((post: Record<string, unknown>): FeedItem | null => {
+    if (!post || post.id == null) {
       logger.warn('ItemsScreen', 'mapPostToFeedItem: post is null or missing id', { post });
       return null;
     }
 
-    // Extract item data if available
-    const itemData = post.item_data || {};
-    let _metadata = {};
+    const itemData = (post.item_data as Record<string, unknown> | undefined) || {};
+    let _metadata: Record<string, unknown> = {};
     try {
-      _metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : (post.metadata || {});
+      _metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : (post.metadata as Record<string, unknown>) || {};
     } catch (e) {
       logger.warn('ItemsScreen', 'Failed to parse metadata', { error: e });
     }
 
-    // Ensure user is always defined (same format as useFeedData)
-    // בדיקה מפורטת יותר
-    let author = null;
-    if (post.author) {
-      author = post.author;
-    } else if (post.author_id) {
-      // אם אין author object, ניצור אחד בסיסי
+    let author: AuthorLike | null = null;
+    if (post.author && typeof post.author === 'object' && 'id' in (post.author as object)) {
+      author = post.author as AuthorLike;
+    } else if (post.author_id != null) {
       author = { id: post.author_id, name: null, avatar_url: null };
     }
 
-    const userId = author?.id || post.author_id || 'unknown';
-    const userName = author?.name || t('common.unknownUser') || 'משתמש';
-    const userAvatar = author?.avatar_url || undefined;
+    const userId = author?.id != null ? String(author.id) : (post.author_id != null ? String(post.author_id) : 'unknown');
+    const userName = (author?.name != null && author.name !== '') ? String(author.name) : t('common:unknownUser');
+    const userAvatar = author?.avatar_url != null && author.avatar_url !== '' ? String(author.avatar_url) : undefined;
 
-    // וידוא שה-user תמיד מוגדר
     if (!userId || userId === 'unknown') {
       logger.warn('ItemsScreen', 'mapPostToFeedItem: post without valid user', { postId: post.id, author_id: post.author_id });
     }
 
-    // Get status from item_data or ride_data
-    let itemStatus: string | undefined;
-    if (post.item_data) {
-      itemStatus = post.item_data.status;
-    } else if (post.ride_data) {
-      itemStatus = post.ride_data.status;
-    }
+    const itemDataObj = post.item_data as Record<string, unknown> | undefined;
+    const rideDataObj = post.ride_data as Record<string, unknown> | undefined;
+    const itemStatus: string | undefined = itemDataObj?.status != null ? String(itemDataObj.status) : (rideDataObj?.status != null ? String(rideDataObj.status) : undefined);
+
+    const postId = String(post.id);
+    const postType = (post.post_type as FeedItem['type']) || 'post';
+    const title = post.title != null ? String(post.title) : t('common:post.noTitle');
+    const desc = post.description != null ? String(post.description) : '';
+    const images = post.images as unknown[] | undefined;
+    const thumb = images && images.length > 0 && images[0] != null ? String(images[0]) : null;
+    const likesVal = post.likes != null ? String(post.likes) : '0';
+    const commentsVal = post.comments != null ? String(post.comments) : '0';
+    const createdAt = post.created_at;
+    const createdTime = (typeof createdAt === 'string' || typeof createdAt === 'number') && !isNaN(new Date(createdAt).getTime())
+      ? new Date(createdAt).toISOString()
+      : new Date().toISOString();
+    const categoryVal = (itemData?.category != null ? String(itemData.category) : undefined) ?? ((_metadata?.category != null) ? String(_metadata.category) : undefined);
+    const itemId = itemDataObj?.id != null
+      ? String(itemDataObj.id)
+      : (post.item_id != null && !/^\d{10,13}$/.test(String(post.item_id)) ? String(post.item_id) : undefined);
+    const rideId = (post.ride_id != null ? String(post.ride_id) : undefined) ?? (rideDataObj?.id != null ? String(rideDataObj.id) : undefined);
+    const taskObj = post.task as Record<string, unknown> | undefined;
+    const taskId = (post.task_id != null ? String(post.task_id) : undefined) ?? (taskObj?.id != null ? String(taskObj.id) : undefined);
 
     return {
-      id: post.id,
-      type: post.post_type || 'post',
-      subtype: post.post_type, // Same as useFeedData - e.g. 'item', 'donation', 'ride'
-      title: post.title || t('common.post.noTitle') || 'פוסט ללא כותרת', // Same as useFeedData
-      description: post.description || '',
-      thumbnail: post.images && post.images.length > 0 ? post.images[0] : null, // Same as useFeedData
+      id: postId,
+      type: postType,
+      subtype: post.post_type as FeedItem['subtype'],
+      title,
+      description: desc,
+      thumbnail: thumb,
       user: {
         id: userId,
         name: userName,
         avatar: userAvatar,
       },
-      likes: parseInt(post.likes || '0'),
-      comments: parseInt(post.comments || '0'),
-      isLiked: post.is_liked || false,
-      timestamp: (post.created_at && !isNaN(new Date(post.created_at).getTime()))
-        ? new Date(post.created_at).toISOString()
-        : new Date().toISOString(),
-      // Item-specific fields
-      category: itemData?.category || (_metadata as any)?.category,
-      // Add status for items and donations
+      likes: parseInt(likesVal, 10),
+      comments: parseInt(commentsVal, 10),
+      isLiked: Boolean(post.is_liked),
+      timestamp: createdTime,
+      category: categoryVal,
       status: itemStatus,
-      // Add IDs for updating posts
-      // IMPORTANT: For items, ALWAYS prefer item_data.id (from JOIN) - this is the most reliable source
-      // item_id column might be a timestamp if post was created incorrectly
-      itemId: post.item_data?.id || (post.item_id && !/^\d{10,13}$/.test(post.item_id) ? post.item_id : undefined),
-      rideId: post.ride_id || post.ride_data?.id,
-      taskId: post.task_id || post.task?.id,
+      itemId,
+      rideId,
+      taskId,
     };
   }, [t]);
 
-  // פונקציה נפרדת לטעינת פריטים/פוסטים שנוכל לקרוא לה גם אחרי שמירה
+  // Dedicated loader for items/posts, callable after save
   const loadItems = useCallback(async () => {
     try {
       logger.debug('ItemsScreen', 'Loading items/posts from server', { mode, itemType });
@@ -339,22 +348,21 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       if (mode) {
         logger.debug('ItemsScreen', 'Seeker mode: loading item posts');
         try {
-          // טוען את כל הפוסטים ואז מסנן לפי post_type
+          // Load all posts then filter by post_type
           const postsResponse = await postsService.getPosts(200, 0, uid);
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
-            // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) =>
+            const posts = postsResponse.data as Record<string, unknown>[];
+            const itemPosts = posts.filter((post) =>
               post.post_type === 'item' || post.post_type === 'donation' || post.item_id
             );
 
-            logger.debug('ItemsScreen', 'Posts loaded', { total: postsResponse.data.length, itemPosts: itemPosts.length });
+            logger.debug('ItemsScreen', 'Posts loaded', { total: posts.length, itemPosts: itemPosts.length });
 
-            // ממפה את הפוסטים עם הגנה מפני user undefined
             const mappedPosts = itemPosts
               .map(mapPostToFeedItem)
-              .filter((post: FeedItem | null): post is FeedItem =>
+              .filter((post): post is FeedItem =>
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
-              ); // מסנן פוסטים ללא user תקין
+              );
 
             setAllPosts(mappedPosts);
             setFilteredPosts(mappedPosts);
@@ -377,20 +385,19 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       } else {
         logger.debug('ItemsScreen', 'Offerer mode: loading user posts for history', { uid });
         try {
-          // טוען את הפוסטים של המשתמש
+          // Load user's posts
           const { apiService } = await import('../src/api/api.service');
           const postsResponse = await apiService.getUserPosts(uid, 50, uid);
 
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
-            // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) =>
+            const posts = postsResponse.data as Record<string, unknown>[];
+            const itemPosts = posts.filter((post) =>
               post.post_type === 'item' || post.post_type === 'donation' || post.item_id
             );
 
-            // ממפה את הפוסטים
             const mappedPosts = itemPosts
               .map(mapPostToFeedItem)
-              .filter((post: FeedItem | null): post is FeedItem =>
+              .filter((post): post is FeedItem =>
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
               );
 
@@ -405,34 +412,39 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           setRecentPosts([]);
         }
 
-        // עדיין טוען פריטים לצורך יצירה/עריכה (אם צריך)
+        // Still loading items for create/edit if needed
         const serverItems = await db.getDedicatedItemsByOwner(uid);
+        type ServerItem = Record<string, unknown>;
+        type LocationLike = Record<string, unknown>;
         const displayItems: DonationItem[] = (serverItems || [])
-          .filter((item: any) => {
+          .filter((item: ServerItem) => {
             const isDeleted = item.is_deleted || item.isDeleted;
             return !isDeleted;
           })
-          .map((item: any) => ({
-            id: item.id,
-            ownerId: item.owner_id || item.ownerId,
-            title: item.title,
-            description: item.description,
-            category: item.category,
-            condition: item.condition,
-            city: item.city || (item.location && typeof item.location === 'object' ? item.location.city : null),
-            address: item.address || (item.location && typeof item.location === 'object' ? item.location.address : null),
-            coordinates: item.coordinates || (item.location && typeof item.location === 'object' ? item.location.coordinates : null),
-            price: item.price,
-            image_base64: item.image_base64,
-            rating: item.rating,
-            timestamp: item.created_at || item.timestamp,
-            tags: item.tags,
-            qty: item.quantity || item.qty,
-            delivery_method: item.delivery_method,
-            status: item.status,
-            isDeleted: item.is_deleted || item.isDeleted,
-            deletedAt: item.deleted_at || item.deletedAt,
-          }));
+          .map((item: ServerItem) => {
+            const loc = item.location && typeof item.location === 'object' ? (item.location as LocationLike) : null;
+            return {
+              id: String(item.id),
+              ownerId: String(item.owner_id ?? item.ownerId ?? ''),
+              title: String(item.title ?? ''),
+              description: item.description != null ? String(item.description) : undefined,
+              category: (item.category as ItemType) ?? itemType,
+              condition: item.condition as DonationItem['condition'],
+              city: (item.city != null ? String(item.city) : undefined) ?? (loc?.city != null ? String(loc.city) : undefined),
+              address: (item.address != null ? String(item.address) : undefined) ?? (loc?.address != null ? String(loc.address) : undefined),
+              coordinates: (item.coordinates != null ? String(item.coordinates) : undefined) ?? (loc?.coordinates != null ? String(loc.coordinates) : undefined),
+              price: typeof item.price === 'number' ? item.price : undefined,
+              image_base64: item.image_base64 != null ? String(item.image_base64) : undefined,
+              rating: typeof item.rating === 'number' ? item.rating : undefined,
+              timestamp: String(item.created_at ?? item.timestamp ?? ''),
+              tags: item.tags != null ? String(item.tags) : undefined,
+              qty: typeof item.quantity === 'number' ? item.quantity : (typeof item.qty === 'number' ? item.qty : undefined),
+              delivery_method: item.delivery_method != null ? String(item.delivery_method) : undefined,
+              status: item.status != null ? String(item.status) : undefined,
+              isDeleted: Boolean(item.is_deleted || item.isDeleted),
+              deletedAt: item.deleted_at != null ? String(item.deleted_at) : (item.deletedAt != null ? String(item.deletedAt) : undefined),
+            };
+          });
 
         const forType = displayItems.filter(i => itemType === 'general' ? true : i.category === itemType);
         setAllItems(forType);
@@ -471,9 +483,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       if (selectedFilters.length > 0) {
         selectedFilters.forEach(f => {
           // Filter by category
-          const matchingCategory = ITEM_CATEGORIES.find(cat => cat.label === f);
-          if (matchingCategory) {
-            filtered = filtered.filter(post => post.category === matchingCategory.id);
+          const matchingCategoryId = ITEM_CATEGORY_IDS.find(id => t(`items:categories.${id}`) === f);
+          if (matchingCategoryId) {
+            filtered = filtered.filter(post => post.category === matchingCategoryId);
           }
         });
       }
@@ -481,16 +493,16 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       // Sorting
       const selectedSort = selectedSorts[0];
       switch (selectedSort) {
-        case 'אלפביתי':
+        case t('items:sortOptions.alphabetical'):
           filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
           break;
-        case 'לפי תאריך':
+        case t('items:sortOptions.byDate'):
           filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           break;
-        case 'לפי דירוג':
+        case t('items:sortOptions.byRating'):
           filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
           break;
-        case 'לפי רלוונטיות':
+        case t('items:sortOptions.byRelevance'):
           filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
           break;
       }
@@ -499,7 +511,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     }
 
     return []; // Return empty in offer mode as we don't use filteredItems state anymore
-  }, [mode, allPosts, searchQuery, selectedFilters, selectedSorts]);
+  }, [mode, allPosts, searchQuery, selectedFilters, selectedSorts, t]);
 
   // Update filtered items/posts whenever search/filter/sort changes
   useEffect(() => {
@@ -518,11 +530,11 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const [numColumns, setNumColumns] = useState(() => (isTablet || isDesktop || isDesktopWeb) ? 3 : 2);
 
   // Use same padding values as PostsReelsScreen for consistency
-  const HORIZONTAL_PADDING = isMobile ? 8 : 16;
-  const _COLUMN_GAP = isMobile ? 8 : 16;
+  const HORIZONTAL_PADDING = isMobile ? SPACING.SM : SPACING.MD;
+  const _COLUMN_GAP = isMobile ? SPACING.SM : SPACING.MD;
   const screenPadding = HORIZONTAL_PADDING;
 
-  const handleSearch = useCallback((query: string, filters: string[] = [], sorts: string[] = [], _results?: any[]) => {
+  const handleSearch = useCallback((query: string, filters: string[] = [], sorts: string[] = [], _results?: unknown[]) => {
     setSearchQuery(query);
     setSelectedFilters(filters);
     setSelectedSorts(sorts);
@@ -536,14 +548,14 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
   const pickImage = async () => {
     try {
-      // בקשת הרשאה
+      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אין הרשאה', 'נדרשת הרשאה לגשת לגלריה');
+        Alert.alert(t('items:permissionDenied'), t('items:galleryPermissionRequired'));
         return;
       }
 
-      // פתיחת הגלריה
+      // Open gallery
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -557,7 +569,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       }
     } catch (e) {
       logger.error('ItemsScreen', 'Error selecting image', { error: e });
-      Alert.alert('שגיאה', 'לא הצלחנו לטעון את התמונה');
+      Alert.alert(t('common:error'), t('items:convertImageError'));
     }
   };
 
@@ -565,32 +577,33 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     logger.warn('ItemsScreen', 'Soft delete item', { itemId: item.id, title: item.title });
 
     Alert.alert(
-      '🗑️ מחיקת פריט',
-      `האם אתה בטוח שברצונך למחוק את:\n"${item.title}"?`,
+      t('items:deleteConfirmTitle'),
+      t('items:deleteConfirmMessage', { title: item.title }),
       [
         {
-          text: 'ביטול',
+          text: t('common:cancel'),
           style: 'cancel'
         },
         {
-          text: 'מחק',
+          text: t('common:delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               logger.debug('ItemsScreen', 'Deleting item', { itemId: item.id });
 
-              // Soft Delete דרך ה-API החדש
+              // Soft delete via API
               await db.deleteDedicatedItem(item.id);
 
               logger.debug('ItemsScreen', 'Item deleted on server');
 
-              // הסרה מה-UI
+              // Remove from UI
               setAllItems((prev: DonationItem[]) => prev.filter(i => i.id !== item.id));
 
-              Alert.alert('✅ הצלחה', 'הפריט נמחק!');
-            } catch (error: any) {
+              Alert.alert(t('common:success'), t('items:itemDeleted'));
+            } catch (error: unknown) {
               logger.error('ItemsScreen', 'Error deleting item', { error });
-              Alert.alert('שגיאה', `לא הצלחנו למחוק את הפריט:\n${error.message || 'שגיאה לא ידועה'}`);
+              const msg = error instanceof Error ? error.message : t('items:unknownError');
+              Alert.alert(t('common:error'), `${t('items:deleteError')}\n${msg}`);
             }
           }
         }
@@ -601,7 +614,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const handleCreateItem = async () => {
     try {
       if (!title.trim()) {
-        Alert.alert('שגיאה', 'נא למלא כותרת');
+        Alert.alert(t('common:error'), t('items:fillTitleRequired'));
         titleInputRef.current?.focus();
         return;
       }
@@ -610,14 +623,14 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
       // Ensure we have a valid UUID - guests cannot create items
       if (!selectedUser?.id) {
-        Alert.alert('שגיאה', 'נא להתחבר כדי ליצור פריט');
+        Alert.alert(t('common:error'), t('items:loginRequiredToCreate'));
         return;
       }
       const uid = selectedUser.id; // This is already a UUID from the server
       // Note: We don't send 'id' to the server - the backend will generate it
       // This is similar to how rides work - the backend creates the ID
 
-      // המרת תמונה ל-base64
+      // Convert image to base64
       let imageBase64 = null;
       if (imageUri) {
         logger.debug('ItemsScreen', 'Converting image to base64');
@@ -627,10 +640,10 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         }
       }
 
-      // הכנת אובייקט עם כל השדות הנפרדים
+      // Build payload with all fields
       // Note: We don't include 'id' - the backend will generate it
       // For optional fields, send undefined instead of empty string to avoid validation issues
-      const itemData: any = {
+      const itemData: Record<string, unknown> = {
         owner_id: uid,
         title: title.trim(),
         category: selectedCategory || itemType,
@@ -675,31 +688,32 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         tagsCount: selectedFilters.length,
       });
 
-      // שליחה לשרת דרך API החדש
+      // Send to server via API
       const savedItem = await db.createDedicatedItem(itemData);
 
       logger.debug('ItemsScreen', 'Item saved successfully on server', { savedItem });
 
-      // Optimistic Update: Add to local state immediately
-      // Use the ID returned from the server (savedItem.id) - this is the proper ID generated by backend
+      const saved = savedItem as Record<string, unknown>;
+      const savedData = saved?.data as Record<string, unknown> | undefined;
+      const savedId = saved?.id ?? savedData?.id;
       const newItemForState: DonationItem = {
-        id: savedItem.id || savedItem.data?.id,
-        ownerId: itemData.owner_id,
-        title: itemData.title,
-        description: itemData.description,
-        category: itemData.category,
-        condition: itemData.condition as any,
-        city: itemData.city,
-        address: itemData.address,
-        coordinates: itemData.coordinates,
-        price: itemData.price,
-        image_base64: itemData.image_base64 || undefined,
-        rating: itemData.rating,
+        id: savedId != null ? String(savedId) : '',
+        ownerId: itemData.owner_id != null ? String(itemData.owner_id) : '',
+        title: itemData.title != null ? String(itemData.title) : '',
+        description: itemData.description != null ? String(itemData.description) : undefined,
+        category: (itemData.category as ItemType) ?? 'general',
+        condition: (itemData.condition as DonationItem['condition']) ?? undefined,
+        city: itemData.city != null ? String(itemData.city) : undefined,
+        address: itemData.address != null ? String(itemData.address) : undefined,
+        coordinates: itemData.coordinates != null ? String(itemData.coordinates) : undefined,
+        price: typeof itemData.price === 'number' ? itemData.price : undefined,
+        image_base64: itemData.image_base64 != null ? String(itemData.image_base64) : undefined,
+        rating: typeof itemData.rating === 'number' ? itemData.rating : undefined,
         timestamp: new Date().toISOString(),
-        tags: itemData.tags,
-        qty: itemData.quantity,
-        delivery_method: itemData.delivery_method,
-        status: itemData.status,
+        tags: itemData.tags != null ? String(itemData.tags) : undefined,
+        qty: typeof itemData.quantity === 'number' ? itemData.quantity : undefined,
+        delivery_method: itemData.delivery_method != null ? String(itemData.delivery_method) : undefined,
+        status: itemData.status != null ? String(itemData.status) : undefined,
         isDeleted: false,
       };
 
@@ -709,7 +723,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       // But we can trigger it in background
       loadItems();
 
-      // איפוס כל השדות
+      // Reset all fields
       setTitle('');
       setDescription('');
       setPrice('0');
@@ -723,17 +737,18 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
       Alert.alert(
         t('items:saveSuccessTitle', { defaultValue: 'Saved successfully!' }),
-        t('items:saveSuccessBody', { defaultValue: 'Item "{{title}}" was saved.', title: savedItem.title }),
+        t('items:saveSuccessBody', { defaultValue: 'Item "{{title}}" was saved.', title: (savedData?.title as string) ?? (itemData.title as string) ?? '' }),
         [{ text: t('common:confirm'), style: 'default' }]
       );
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { status?: number; data?: { error?: string; message?: string } } };
       logger.error('ItemsScreen', 'Error saving item', {
-        message: error?.message,
-        status: error?.response?.status,
-        data: error?.response?.data,
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
       });
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || t('items:unknownError', { defaultValue: 'Unknown error' });
+      const errorMessage = err?.response?.data?.error || err?.response?.data?.message || err?.message || t('items:unknownError', { defaultValue: 'Unknown error' });
       Alert.alert(
         t('common:error'),
         t('items:saveErrorBody', { defaultValue: 'Failed to save item', errorMessage }),
@@ -742,7 +757,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     }
   };
 
-  const menuOptions = ['היסטוריית פריטים', 'הגדרות', 'עזרה', 'צור קשר'];
+  const menuOptions = [t('items:menuHistory'), t('items:menuSettings'), t('items:menuHelp'), t('items:menuContact')];
 
   const handleItemPress = (item: DonationItem) => {
     setSelectedItem(item);
@@ -804,23 +819,23 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const renderEmptyPosts = useCallback(() => (
     <View style={localStyles.emptyState}>
       <Icon name="search-outline" size={48} color={colors.textSecondary} />
-      <Text style={localStyles.emptyStateTitle}>לא נמצאו פוסטים</Text>
-      <Text style={localStyles.emptyStateText}>נסה לשנות את הפילטרים או החיפוש</Text>
+      <Text style={localStyles.emptyStateTitle}>{t('items:noPostsFound')}</Text>
+      <Text style={localStyles.emptyStateText}>{t('items:tryChangeFilters')}</Text>
       {(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
         <TouchableOpacity style={localStyles.emptyStateClearButton} onPress={handleClearAll}>
-          <Text style={localStyles.emptyStateClearButtonText}>נקה הכל</Text>
+          <Text style={localStyles.emptyStateClearButtonText}>{t('items:clearAll')}</Text>
         </TouchableOpacity>
       )}
     </View>
-  ), [searchQuery, selectedFilters, selectedSorts, handleClearAll]);
+  ), [searchQuery, selectedFilters, selectedSorts, handleClearAll, t]);
 
   const _renderItemCard = ({ item }: { item: DonationItem }) => (
     <TouchableOpacity style={localStyles.itemCard} onPress={() => handleItemPress(item)}>
-      {/* תמונה base64 */}
+      {/* Base64 image */}
       {item.image_base64 && (
         <Image
           source={{ uri: item.image_base64 }}
-          style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 8 }}
+          style={{ width: '100%', height: ITEM_CARD_IMAGE_HEIGHT, borderRadius: BORDER_RADIUS.SMALL, marginBottom: SPACING.SM }}
           resizeMode="cover"
         />
       )}
@@ -829,15 +844,15 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         <Text style={localStyles.itemTitle} numberOfLines={1}>{item.title}</Text>
         <View style={localStyles.itemBadge}>
           <Text style={localStyles.itemBadgeText}>
-            {getCategoryLabel(item.category)}
+            {item.category ? t(`items:categories.${item.category}`) : t('items:categories.general')}
           </Text>
         </View>
       </View>
 
-      {/* מיקום מפוצל */}
+      {/* Location row */}
       <View style={localStyles.itemRow}>
         <Text style={localStyles.itemMeta} numberOfLines={1}>
-          📍 {item.city || 'מיקום לא זמין'}{item.address ? `, ${item.address}` : ''}
+          📍 {item.city || t('items:locationNotAvailable')}{item.address ? `, ${item.address}` : ''}
         </Text>
       </View>
     </TouchableOpacity>
@@ -845,11 +860,11 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
   const _renderRecentCard = ({ item }: { item: DonationItem }) => (
     <View style={localStyles.itemCard}>
-      {/* תמונה base64 */}
+      {/* Base64 image */}
       {item.image_base64 && (
         <Image
           source={{ uri: item.image_base64 }}
-          style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 8 }}
+          style={{ width: '100%', height: ITEM_CARD_IMAGE_HEIGHT, borderRadius: BORDER_RADIUS.SMALL, marginBottom: SPACING.SM }}
           resizeMode="cover"
         />
       )}
@@ -860,7 +875,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           <TouchableOpacity
             onPress={() => handleDeleteItem(item)}
             style={localStyles.deleteButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: HIT_SLOP, bottom: HIT_SLOP, left: HIT_SLOP, right: HIT_SLOP }}
           >
             <Icon name="trash-outline" size={20} color={colors.error} />
           </TouchableOpacity>
@@ -868,24 +883,24 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         <Text style={localStyles.itemMeta}>📅 {new Date(item.timestamp).toLocaleDateString('he-IL')} {new Date(item.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</Text>
       </View>
 
-      {/* שורה נוספת עם מצב + כמות */}
+      {/* Condition and quantity row */}
       <View style={localStyles.itemRow}>
         <Text style={localStyles.itemMeta}>
-          {item.condition === 'new' ? '🆕 חדש' :
-            item.condition === 'like_new' ? '✨ כמו חדש' :
-              item.condition === 'used' ? '📦 משומש' : '🔧 לחלפים'}
+          {item.condition === 'new' ? `🆕 ${t('items:conditionNew')}` :
+            item.condition === 'like_new' ? `✨ ${t('items:conditionLikeNew')}` :
+              item.condition === 'used' ? `📦 ${t('items:conditionUsed')}` : `🔧 ${t('items:conditionForParts')}`}
           {' • '}
-          כמות: {item.qty || 1}
+          {t('items:quantityLabel')}: {item.qty || 1}
         </Text>
       </View>
 
       <View style={localStyles.itemRow}>
         <Text style={localStyles.itemMeta} numberOfLines={1}>
-          📍 {item.city || 'מיקום לא זמין'}{item.address ? `, ${item.address}` : ''}
+          📍 {item.city || t('items:locationNotAvailable')}{item.address ? `, ${item.address}` : ''}
         </Text>
         <View style={localStyles.itemBadge}>
           <Text style={localStyles.itemBadgeText}>
-            {getCategoryLabel(item.category)}
+            {item.category ? t(`items:categories.${item.category}`) : t('items:categories.general')}
           </Text>
         </View>
         <TouchableOpacity
@@ -903,7 +918,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             }
           }}
         >
-          <Text style={localStyles.restoreChipText}>שחזר</Text>
+          <Text style={localStyles.restoreChipText}>{t('items:restored')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -915,12 +930,12 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         mode={mode}
         menuOptions={menuOptions}
         onToggleMode={() => setMode(!mode)}
-        onSelectMenuItem={(o) => Alert.alert('תפריט', `נבחר: ${o}`)}
+        onSelectMenuItem={(o) => Alert.alert(t('items:menuTitle'), `${t('items:menuSelected')}: ${o}`)}
         title=""
-        placeholder={mode ? 'חפש פריטים זמינים' : 'שם הפריט'}
+        placeholder={mode ? t('items:searchPlaceholder') : t('items:itemNamePlaceholder')}
         filterOptions={filterOptions}
-        sortOptions={itemsSortOptions}
-        searchData={allItems}
+        sortOptions={ITEM_SORT_KEYS.map(k => t(`items:sortOptions.${k}`))}
+        searchData={allItems as unknown as SearchableItem[]}
         onSearch={handleSearch}
       />
 
@@ -930,25 +945,25 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             numColumns={numColumns}
             onNumColumnsChange={setNumColumns}
             style={{
-              top: 10, // Relative to container below header
-              left: 4,
+              top: TAG_PADDING_H,
+              left: SPACING.XS,
             }}
           />
           <ScrollContainer
             style={localStyles.container}
             contentStyle={[
               localStyles.scrollContent,
-              isLandscape() && { paddingHorizontal: 32 }
+              isLandscape() && { paddingHorizontal: SPACING.XL }
             ]}
           >
             {/* Header */}
             <View style={localStyles.headerRow}>
               <Text style={localStyles.sectionTitle}>
-                {searchQuery || selectedFilters.length > 0 ? 'פריטים זמינים' : 'פריטים מומלצים'}
+                {searchQuery || selectedFilters.length > 0 ? t('items:availableItems') : t('items:recommendedItems')}
               </Text>
               {(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
                 <TouchableOpacity style={localStyles.clearButton} onPress={handleClearAll}>
-                  <Text style={localStyles.clearButtonText}>נקה הכל</Text>
+                  <Text style={localStyles.clearButtonText}>{t('items:clearAll')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -972,16 +987,16 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             <View style={localStyles.section}>
               <DonationStatsFooter
                 stats={[
-                  { label: 'פוסטים שפורסמו', value: filteredPosts.length, icon: 'cube-outline' },
-                  { label: 'לייקים', value: filteredPosts.reduce((sum, p) => sum + (p.likes || 0), 0), icon: 'heart-outline' },
-                  { label: 'תגובות', value: filteredPosts.reduce((sum, p) => sum + (p.comments || 0), 0), icon: 'chatbubble-outline' },
+                  { label: t('items:postsPublished'), value: filteredPosts.length, icon: 'cube-outline' },
+                  { label: t('items:likes'), value: filteredPosts.reduce((sum, p) => sum + (p.likes || 0), 0), icon: 'heart-outline' },
+                  { label: t('items:comments'), value: filteredPosts.reduce((sum, p) => sum + (p.comments || 0), 0), icon: 'chatbubble-outline' },
                 ]}
               />
             </View>
 
             {/* Add Links Section */}
             <View style={localStyles.section}>
-              <Text style={localStyles.sectionTitle}>קישורים שימושיים</Text>
+              <Text style={localStyles.sectionTitle}>{t('items:usefulLinks')}</Text>
               <AddLinkComponent category="items" />
             </View>
           </ScrollContainer>
@@ -996,22 +1011,22 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           <View style={localStyles.formContainer}>
             <View style={localStyles.row}>
               <View style={localStyles.field}>
-                <Text style={localStyles.label}>כותרת הפריט</Text>
-                <TextInput ref={titleInputRef} style={localStyles.input} value={title} onChangeText={setTitle} placeholder="לדוגמה: ספה 3 מושבים" />
+                <Text style={localStyles.label}>{t('items:itemTitleLabel')}</Text>
+                <TextInput ref={titleInputRef} style={localStyles.input} value={title} onChangeText={setTitle} placeholder={t('items:titlePlaceholder')} />
               </View>
             </View>
 
             <View style={localStyles.row}>
               <View style={localStyles.field}>
-                <Text style={localStyles.label}>תיאור</Text>
-                <TextInput style={[localStyles.input, { height: 80 }]} value={description} onChangeText={setDescription} placeholder="מצב הפריט, מידות, הערות" multiline />
+                <Text style={localStyles.label}>{t('items:descriptionLabel')}</Text>
+                <TextInput style={[localStyles.input, { height: COMPONENT_SIZES.AVATAR.LARGE }]} value={description} onChangeText={setDescription} placeholder={t('items:descriptionPlaceholder')} multiline />
               </View>
             </View>
 
-            {/* בחירת קטגוריה - דרופדאון */}
+            {/* Category dropdown */}
             <View style={localStyles.row}>
               <View style={localStyles.field}>
-                <Text style={localStyles.label}>קטגוריה</Text>
+                <Text style={localStyles.label}>{t('items:categoryLabel')}</Text>
                 <TouchableOpacity
                   style={localStyles.dropdownButton}
                   onPress={() => setShowCategoryDropdown(true)}
@@ -1021,7 +1036,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
                     localStyles.dropdownButtonText,
                     !selectedCategory && localStyles.dropdownPlaceholder
                   ]}>
-                    {ITEM_CATEGORIES.find(c => c.id === selectedCategory)?.label || 'בחר קטגוריה'}
+                    {selectedCategory ? t(`items:categories.${selectedCategory}`) : t('items:selectCategory')}
                   </Text>
                   <Icon
                     name={showCategoryDropdown ? "chevron-up" : "chevron-down"}
@@ -1032,7 +1047,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
               </View>
             </View>
 
-            {/* Modal לבחירת קטגוריה */}
+            {/* Category selection modal */}
             <Modal
               visible={showCategoryDropdown}
               transparent
@@ -1046,7 +1061,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
               >
                 <View style={localStyles.modalContent} onStartShouldSetResponder={() => true}>
                   <View style={localStyles.modalHeader}>
-                    <Text style={localStyles.modalTitle}>בחר קטגוריה</Text>
+                    <Text style={localStyles.modalTitle}>{t('items:selectCategory')}</Text>
                     <TouchableOpacity
                       onPress={() => setShowCategoryDropdown(false)}
                       style={localStyles.modalCloseButton}
@@ -1055,32 +1070,32 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
                     </TouchableOpacity>
                   </View>
                   <FlatList
-                    data={ITEM_CATEGORIES}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
+                    data={ITEM_CATEGORY_IDS}
+                    keyExtractor={(id) => id}
+                    renderItem={({ item: catId }) => (
                       <TouchableOpacity
                         style={[
                           localStyles.dropdownItem,
-                          selectedCategory === item.id && localStyles.dropdownItemSelected
+                          selectedCategory === catId && localStyles.dropdownItemSelected
                         ]}
                         onPress={() => {
-                          setSelectedCategory(item.id as ItemType);
+                          setSelectedCategory(catId as ItemType);
                           setShowCategoryDropdown(false);
                         }}
                       >
                         <Icon
-                          name={item.icon as any}
+                          name={(ITEM_CATEGORY_ICONS[catId] ?? 'cube-outline') as React.ComponentProps<typeof Icon>['name']}
                           size={20}
-                          color={selectedCategory === item.id ? colors.primary : colors.textSecondary}
+                          color={selectedCategory === catId ? colors.primary : colors.textSecondary}
                           style={localStyles.dropdownItemIcon}
                         />
                         <Text style={[
                           localStyles.dropdownItemText,
-                          selectedCategory === item.id && localStyles.dropdownItemTextSelected
+                          selectedCategory === catId && localStyles.dropdownItemTextSelected
                         ]}>
-                          {item.label}
+                          {t(`items:categories.${catId}`)}
                         </Text>
-                        {selectedCategory === item.id && (
+                        {selectedCategory === catId && (
                           <Icon name="checkmark" size={20} color={colors.success} />
                         )}
                       </TouchableOpacity>
@@ -1094,21 +1109,21 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             {/* Location fields - split into city and address */}
             <View style={localStyles.row}>
               <View style={localStyles.fieldSmall}>
-                <Text style={localStyles.label}>עיר</Text>
+                <Text style={localStyles.label}>{t('items:cityLabel')}</Text>
                 <TextInput
                   style={localStyles.input}
                   value={city}
                   onChangeText={setCity}
-                  placeholder="תל אביב"
+                  placeholder={t('items:cityPlaceholder')}
                 />
               </View>
               <View style={localStyles.fieldSmall}>
-                <Text style={localStyles.label}>כתובת</Text>
+                <Text style={localStyles.label}>{t('items:addressLabel')}</Text>
                 <TextInput
                   style={localStyles.input}
                   value={address}
                   onChangeText={setAddress}
-                  placeholder="רחוב 123"
+                  placeholder={t('items:addressPlaceholder')}
                 />
               </View>
             </View>
@@ -1116,7 +1131,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             {/* Quantity field */}
             <View style={localStyles.row}>
               <View style={localStyles.fieldSmall}>
-                <Text style={localStyles.label}>כמות</Text>
+                <Text style={localStyles.label}>{t('items:quantityLabel')}</Text>
                 <View style={localStyles.counterRow}>
                   <TouchableOpacity style={localStyles.counterBtn} onPress={() => setQty(Math.max(1, qty - 1))}><Text style={localStyles.counterText}>-</Text></TouchableOpacity>
                   <Text style={localStyles.counterValue}>{qty}</Text>
@@ -1125,30 +1140,30 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
               </View>
             </View>
 
-            <Text style={localStyles.labelInline}>מצב</Text>
+            <Text style={localStyles.labelInline}>{t('items:conditionLabel')}</Text>
             <View style={localStyles.row}>
               <View style={localStyles.field}>
                 <View style={localStyles.tagsRow}>
                   {[
-                    { key: 'new', label: 'חדש' },
-                    { key: 'like_new', label: 'כמו חדש' },
-                    { key: 'used', label: 'משומש' },
-                    { key: 'for_parts', label: 'לחלפים' },
+                    { key: 'new', label: t('items:conditionNew') },
+                    { key: 'like_new', label: t('items:conditionLikeNew') },
+                    { key: 'used', label: t('items:conditionUsed') },
+                    { key: 'for_parts', label: t('items:conditionForParts') },
                   ].map(opt => (
                     <TouchableOpacity
                       key={opt.key}
                       style={[
                         localStyles.tag,
                         localStyles.tagSmall,
-                        condition === (opt.key as any) && localStyles.tagSelected,
+                        condition === (opt.key as DonationItem['condition']) && localStyles.tagSelected,
                       ]}
-                      onPress={() => setCondition(opt.key as any)}
+                      onPress={() => setCondition(opt.key as '' | 'new' | 'like_new' | 'used' | 'for_parts')}
                     >
                       <Text
                         style={[
                           localStyles.tagText,
                           localStyles.tagTextSm,
-                          condition === (opt.key as any) && localStyles.tagTextSelected,
+                          condition === (opt.key as DonationItem['condition']) && localStyles.tagTextSelected,
                         ]}
                       >
                         {opt.label}
@@ -1159,26 +1174,26 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
               </View>
             </View>
 
-            {/* כפתור העלאת תמונה */}
+            {/* Image upload button */}
             <View style={localStyles.imageSection}>
-              <Text style={localStyles.labelInline}>תמונה (אופציונלי)</Text>
+              <Text style={localStyles.labelInline}>{t('items:imageOptional')}</Text>
               <TouchableOpacity
                 style={localStyles.imagePickerButton}
                 onPress={pickImage}
               >
                 <Icon name="image-outline" size={24} color={colors.primary} />
                 <Text style={localStyles.imagePickerText}>
-                  {imageUri ? '✅ תמונה נבחרה' : 'בחר תמונה מהגלריה'}
+                  {imageUri ? t('items:imageSelected') : t('items:selectImage')}
                 </Text>
               </TouchableOpacity>
 
-              {/* תצוגה מקדימה של התמונה */}
+              {/* Image preview */}
               {imageUri && (
                 <View style={localStyles.imagePreview}>
                   <Image source={{ uri: imageUri }} style={localStyles.previewImage} />
                   <View style={localStyles.imageInfo}>
-                    <Text style={localStyles.imageInfoText}>✅ תמונה מוכנה</Text>
-                    <Text style={localStyles.imageInfoSubtext}>80×80 פיקסלים</Text>
+                    <Text style={localStyles.imageInfoText}>✅ {t('items:imageReady')}</Text>
+                    <Text style={localStyles.imageInfoSubtext}>{t('items:pixelsSize')}</Text>
                   </View>
                   <TouchableOpacity
                     style={localStyles.removeImageButton}
@@ -1191,21 +1206,21 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             </View>
 
             <TouchableOpacity style={[localStyles.offerButton, !title && { opacity: 0.5 }]} onPress={handleCreateItem} disabled={!title}>
-              <Text style={localStyles.offerButtonText}>פרסם פריט</Text>
+              <Text style={localStyles.offerButtonText}>{t('items:publishItem')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={localStyles.section}>
-            <Text style={localStyles.sectionTitle}>פריטים שפרסמת לאחרונה</Text>
+            <Text style={localStyles.sectionTitle}>{t('items:sectionRecentItems')}</Text>
             {recentPosts.length === 0 ? (
-              <Text style={localStyles.emptyStateText}>אין פוסטים שפורסמו עדיין</Text>
+              <Text style={localStyles.emptyStateText}>{t('items:noPostsPublished')}</Text>
             ) : (
               <View style={localStyles.recentContainer}>
                 {recentPosts.map((post) => {
                   // Container has paddingHorizontal: 16, scrollContent has paddingHorizontal: 16, 
                   // and recentContainer has paddingHorizontal: 8
                   // Total padding is 16 + 16 + 8 = 40 on each side
-                  const totalPadding = 16 + 16 + 8;
+                  const totalPadding = SPACING.MD + SPACING.MD + SPACING.SM;
                   const recentCardWidth = width - (totalPadding * 2);
                   return (
                     <View key={post.id} style={localStyles.recentItemWrapper}>
@@ -1231,7 +1246,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
           {/* Add Links Section */}
           <View style={localStyles.section}>
-            <Text style={localStyles.sectionTitle}>קישורים שימושיים</Text>
+            <Text style={localStyles.sectionTitle}>{t('items:usefulLinks')}</Text>
             <AddLinkComponent category="items" />
           </View>
         </ScrollContainer>
@@ -1251,7 +1266,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         visible={optionsModalVisible}
         onClose={() => setOptionsModalVisible(false)}
         options={modalOptions}
-        title={t('common.options') || 'Options'}
+        title={t('common:options')}
         anchorPosition={modalPosition}
       />
       <ReportPostModal
@@ -1267,74 +1282,74 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
 const localStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.backgroundTertiary },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 4 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120, flexGrow: 1 },
-  formContainer: { padding: 5, alignItems: 'center', borderRadius: 15, marginBottom: 15 },
-  row: { flexDirection: rowDirection('row-reverse'), gap: 10, width: '100%', paddingHorizontal: 8 },
+  container: { flex: 1, paddingHorizontal: SPACING.MD, paddingTop: SPACING.XS },
+  scrollContent: { paddingHorizontal: SPACING.MD, paddingTop: SPACING.XS, paddingBottom: SCROLL_BOTTOM_PADDING, flexGrow: 1 },
+  formContainer: { padding: SPACING.XS, alignItems: 'center', borderRadius: BORDER_RADIUS.MEDIUM, marginBottom: BORDER_RADIUS.MEDIUM },
+  row: { flexDirection: rowDirection('row-reverse'), gap: TAG_PADDING_H, width: '100%', paddingHorizontal: SPACING.SM },
   field: { flex: 1 },
   fieldSmall: { flex: 0.5 },
-  label: { fontSize: FontSizes.medium, fontWeight: '600', color: colors.textPrimary, marginBottom: 10, textAlign: 'center' },
-  labelInline: { marginTop: 3, flex: 1, fontSize: FontSizes.medium, fontWeight: '600', color: colors.textPrimary, ...marginStartEnd(6, 0) },
-  input: { backgroundColor: colors.white, borderRadius: 10, padding: 12, fontSize: FontSizes.body, textAlign: biDiTextAlign('right'), color: colors.textPrimary, borderWidth: 1, borderColor: colors.secondary },
+  label: { fontSize: FontSizes.medium, fontWeight: '600', color: colors.textPrimary, marginBottom: TAG_PADDING_H, textAlign: 'center' },
+  labelInline: { marginTop: 3, flex: 1, fontSize: FontSizes.medium, fontWeight: '600', color: colors.textPrimary, ...marginStartEnd(SPACING.SM - 2, 0) },
+  input: { backgroundColor: colors.white, borderRadius: BORDER_RADIUS.MEDIUM - 5, padding: INPUT_PADDING, fontSize: FontSizes.body, textAlign: biDiTextAlign('right'), color: colors.textPrimary, borderWidth: 1, borderColor: colors.secondary },
   inputWrapper: { position: 'relative', justifyContent: 'center' },
-  inputWithAdornment: { paddingRight: 30 },
-  inputAdornment: { position: 'absolute', right: 10, color: colors.textSecondary, fontSize: FontSizes.body },
-  counterRow: { flexDirection: rowDirection('row'), alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, borderRadius: 10, borderWidth: 1, borderColor: colors.secondary, paddingHorizontal: 8, paddingVertical: 6 },
-  counterBtn: { backgroundColor: colors.pinkLight, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  inputWithAdornment: { paddingRight: INPUT_ADORNMENT_OFFSET },
+  inputAdornment: { position: 'absolute', right: TAG_PADDING_H, color: colors.textSecondary, fontSize: FontSizes.body },
+  counterRow: { flexDirection: rowDirection('row'), alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, borderRadius: BORDER_RADIUS.MEDIUM - 5, borderWidth: 1, borderColor: colors.secondary, paddingHorizontal: SPACING.SM, paddingVertical: TAG_PADDING_V },
+  counterBtn: { backgroundColor: colors.pinkLight, paddingHorizontal: TAG_PADDING_H, paddingVertical: TAG_PADDING_V, borderRadius: BORDER_RADIUS.SMALL },
   counterText: { fontSize: FontSizes.medium, fontWeight: 'bold', color: colors.textPrimary },
   counterValue: { fontSize: FontSizes.medium, fontWeight: 'bold', color: colors.textPrimary, minWidth: 30, textAlign: 'center' },
-  tagsRow: { marginTop: 10, alignItems: 'stretch', flexDirection: rowDirection('row-reverse'), flexWrap: 'wrap', gap: 3 },
-  tag: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  tagSmall: { paddingHorizontal: 8, marginHorizontal: "4%", paddingVertical: 4 },
+  tagsRow: { marginTop: TAG_PADDING_H, alignItems: 'stretch', flexDirection: rowDirection('row-reverse'), flexWrap: 'wrap', gap: TAGS_GAP },
+  tag: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: PILL_BORDER_RADIUS, paddingHorizontal: TAG_PADDING_H, paddingVertical: TAG_PADDING_V },
+  tagSmall: { paddingHorizontal: SPACING.SM, marginHorizontal: '4%', paddingVertical: SPACING.XS },
   tagSelected: { backgroundColor: colors.backgroundSecondary, borderColor: colors.success },
   tagText: { fontSize: FontSizes.small, color: colors.textPrimary },
   tagTextSm: { fontSize: FontSizes.caption },
   tagTextSelected: { color: colors.success, fontWeight: '600' },
-  offerButton: { backgroundColor: colors.accent, padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+  offerButton: { backgroundColor: colors.accent, padding: BUTTON_PADDING_V, borderRadius: BORDER_RADIUS.MEDIUM - 3, alignItems: 'center', marginTop: TAG_PADDING_H },
   offerButtonText: { color: colors.background, fontSize: FontSizes.medium, fontWeight: 'bold' },
-  section: { marginBottom: 10 },
+  section: { marginBottom: TAG_PADDING_H },
   sectionTitle: { fontSize: FontSizes.body, fontWeight: 'bold', alignSelf: 'center', color: colors.textPrimary, textAlign: 'center' },
-  headerRow: { flexDirection: rowDirection('row-reverse'), justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingHorizontal: 4 },
-  clearButton: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  headerRow: { flexDirection: rowDirection('row-reverse'), justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.SM, paddingHorizontal: SPACING.XS },
+  clearButton: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: BORDER_RADIUS.SMALL, paddingHorizontal: INPUT_PADDING, paddingVertical: TAG_PADDING_V },
   clearButtonText: { fontSize: FontSizes.small, color: colors.textPrimary, fontWeight: '600' },
   noOuterScrollContainer: { flex: 1 },
-  sectionWithScroller: { flex: 1, backgroundColor: colors.pinkLight, borderRadius: 12, borderWidth: 1, borderColor: colors.secondary, paddingVertical: 8, paddingHorizontal: 8 },
+  sectionWithScroller: { flex: 1, backgroundColor: colors.pinkLight, borderRadius: INPUT_PADDING, borderWidth: 1, borderColor: colors.secondary, paddingVertical: SPACING.SM, paddingHorizontal: SPACING.SM },
   innerScroll: { flex: 1 },
   itemsGridContainer: {},
   columnWrapper: {
     justifyContent: 'space-between',
   },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
-  emptyStateTitle: { fontSize: FontSizes.body, fontWeight: 'bold', color: colors.textPrimary, marginTop: 16, marginBottom: 8 },
-  emptyStateText: { fontSize: FontSizes.small, color: colors.textSecondary, textAlign: 'center', marginBottom: 16 },
-  emptyStateClearButton: { backgroundColor: colors.accent, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 8 },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: EMPTY_STATE_PADDING },
+  emptyStateTitle: { fontSize: FontSizes.body, fontWeight: 'bold', color: colors.textPrimary, marginTop: SPACING.MD, marginBottom: SPACING.SM },
+  emptyStateText: { fontSize: FontSizes.small, color: colors.textSecondary, textAlign: 'center', marginBottom: SPACING.MD },
+  emptyStateClearButton: { backgroundColor: colors.accent, paddingHorizontal: CLEAR_BUTTON_PADDING_H, paddingVertical: TAG_PADDING_H, borderRadius: BORDER_RADIUS.SMALL, marginTop: SPACING.SM },
   emptyStateClearButtonText: { fontSize: FontSizes.small, color: colors.background, fontWeight: '600' },
-  itemCardWrapper: { marginBottom: 8, width: '100%' },
-  itemCard: { backgroundColor: colors.pinkLight, borderRadius: 10, padding: 8, borderWidth: 1, borderColor: colors.secondary },
-  itemRow: { flexDirection: rowDirection('row-reverse'), justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  itemTitle: { fontSize: FontSizes.small, fontWeight: 'bold', color: colors.textPrimary, textAlign: biDiTextAlign('right'), flex: 1, marginLeft: 6 },
+  itemCardWrapper: { marginBottom: SPACING.SM, width: '100%' },
+  itemCard: { backgroundColor: colors.pinkLight, borderRadius: BORDER_RADIUS.MEDIUM - 5, padding: SPACING.SM, borderWidth: 1, borderColor: colors.secondary },
+  itemRow: { flexDirection: rowDirection('row-reverse'), justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.XS },
+  itemTitle: { fontSize: FontSizes.small, fontWeight: 'bold', color: colors.textPrimary, textAlign: biDiTextAlign('right'), flex: 1, marginLeft: SPACING.SM - 2 },
   itemMeta: { fontSize: FontSizes.small, color: colors.textSecondary },
-  itemBadge: { backgroundColor: colors.backgroundSecondary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 },
+  itemBadge: { backgroundColor: colors.backgroundSecondary, paddingHorizontal: SPACING.SM - 2, paddingVertical: 2, borderRadius: SPACING.SM - 2, marginLeft: SPACING.SM - 2 },
   itemBadgeText: { fontSize: FontSizes.small, color: colors.success, fontWeight: 'bold' },
-  recentContainer: { paddingHorizontal: 8, paddingVertical: 8 },
-  recentItemWrapper: { marginBottom: 8, width: '100%' },
-  restoreChip: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  recentContainer: { paddingHorizontal: SPACING.SM, paddingVertical: SPACING.SM },
+  recentItemWrapper: { marginBottom: SPACING.SM, width: '100%' },
+  restoreChip: { backgroundColor: colors.pinkLight, borderWidth: 1, borderColor: colors.secondary, borderRadius: PILL_BORDER_RADIUS, paddingHorizontal: TAG_PADDING_H, paddingVertical: SPACING.XS },
   restoreChipText: { fontSize: FontSizes.small, color: colors.textPrimary, fontWeight: '600' },
   deleteButton: {
-    padding: 6,
-    marginLeft: 12,
+    padding: TAG_PADDING_V,
+    marginLeft: INPUT_PADDING,
     backgroundColor: colors.pinkLight,
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS.SMALL,
     borderWidth: 1,
     borderColor: colors.pinkLight,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 32,
-    minHeight: 32,
+    minWidth: SPACING.XL,
+    minHeight: SPACING.XL,
   },
   itemImageContainer: {
-    padding: 4,
-    marginBottom: 4,
+    padding: SPACING.XS,
+    marginBottom: SPACING.XS,
   },
   itemImageIndicator: {
     fontSize: FontSizes.small,
@@ -1343,8 +1358,8 @@ const localStyles = StyleSheet.create({
   },
   imageSection: {
     width: '100%',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: SPACING.SM,
+    marginBottom: SPACING.SM,
   },
   imagePickerButton: {
     flexDirection: 'row',
@@ -1353,10 +1368,10 @@ const localStyles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 2,
     borderColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-    marginTop: 4,
+    borderRadius: BORDER_RADIUS.MEDIUM - 3,
+    padding: SPACING.MD,
+    gap: SPACING.SM,
+    marginTop: SPACING.XS,
   },
   imagePickerText: {
     color: colors.primary,
@@ -1364,25 +1379,25 @@ const localStyles = StyleSheet.create({
     fontWeight: '600',
   },
   imagePreview: {
-    marginTop: 8,
+    marginTop: SPACING.SM,
     flexDirection: 'row',
     alignItems: 'center',
   },
   previewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: PREVIEW_IMAGE_SIZE,
+    height: PREVIEW_IMAGE_SIZE,
+    borderRadius: BORDER_RADIUS.SMALL,
     resizeMode: 'cover',
   },
   removeImageButton: {
     marginLeft: 'auto',
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 20,
-    padding: 4,
+    borderRadius: BORDER_RADIUS.LARGE,
+    padding: SPACING.XS,
   },
   imageInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: INPUT_PADDING,
     justifyContent: 'center',
   },
   imageInfoText: {
@@ -1395,17 +1410,16 @@ const localStyles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  // Dropdown styles
   dropdownButton: {
     backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
+    padding: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
     flexDirection: rowDirection('row-reverse'),
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 48,
+    minHeight: COMPONENT_SIZES.INPUT_HEIGHT.MEDIUM,
   },
   dropdownButtonText: {
     fontSize: FontSizes.body,
@@ -1424,7 +1438,7 @@ const localStyles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: SPACING.MD,
     width: '85%',
     maxHeight: '70%',
     overflow: 'hidden',
@@ -1433,8 +1447,8 @@ const localStyles = StyleSheet.create({
     flexDirection: rowDirection('row-reverse'),
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.MD,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -1444,16 +1458,16 @@ const localStyles = StyleSheet.create({
     color: colors.textPrimary,
   },
   modalCloseButton: {
-    padding: 4,
+    padding: SPACING.XS,
   },
   dropdownList: {
-    maxHeight: 400,
+    maxHeight: DROPDOWN_MAX_HEIGHT,
   },
   dropdownItem: {
     flexDirection: rowDirection('row-reverse'),
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: BUTTON_PADDING_V,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -1461,7 +1475,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: colors.pinkLight,
   },
   dropdownItemIcon: {
-    marginLeft: 12,
+    marginLeft: INPUT_PADDING,
   },
   dropdownItemText: {
     fontSize: FontSizes.body,

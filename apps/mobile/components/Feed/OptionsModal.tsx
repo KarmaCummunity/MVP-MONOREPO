@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
 
@@ -28,9 +29,11 @@ const OptionsModal: React.FC<OptionsModalProps> = ({
     onClose,
     options,
     title,
-    cancelText = 'ביטול',
+    cancelText: cancelTextProp,
     anchorPosition
 }) => {
+    const { t } = useTranslation(['common']);
+    const cancelText = cancelTextProp ?? t('common:cancel');
     if (!visible) return null;
 
     // Popover positioning logic
@@ -119,13 +122,13 @@ const OptionsModal: React.FC<OptionsModalProps> = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: colors.modalOverlay,
         justifyContent: 'flex-end',
         padding: 16,
         paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     },
     overlayClear: {
-        backgroundColor: 'rgba(0,0,0,0.2)', // Lighter dim for popover
+        backgroundColor: colors.overlayLight,
         justifyContent: 'flex-start', // Allow absolute positioning from top
         padding: 0,
     },
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     shadow: {
-        shadowColor: "#000",
+        shadowColor: colors.shadow,
         shadowOffset: {
             width: 0,
             height: 2,

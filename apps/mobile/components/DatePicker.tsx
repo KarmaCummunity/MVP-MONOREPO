@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
@@ -60,12 +60,6 @@ export default function DatePicker({
   const [selectedDate, setSelectedDate] = useState<Date>(() => ensureValidDate(value));
   const [showNativePicker, setShowNativePicker] = useState(false);
 
-  // Update selected date when value prop changes
-  useEffect(() => {
-    const validDate = ensureValidDate(value);
-    setSelectedDate(validDate);
-  }, [value]);
-
   const handleOpen = () => {
     if (disabled) return;
     const validDate = ensureValidDate(value);
@@ -89,7 +83,7 @@ export default function DatePicker({
     setShowNativePicker(false);
   };
 
-  const handleNativeDateChange = (event: any, date?: Date) => {
+  const handleNativeDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     setShowNativePicker(false);
     if (Platform.OS === 'android') {
       // Android closes automatically

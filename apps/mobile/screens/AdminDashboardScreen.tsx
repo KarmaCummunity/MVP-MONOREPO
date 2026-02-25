@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView
 } from 'react-native';
-import { NavigationProp, useRoute, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, useRoute, useFocusEffect, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
@@ -96,10 +96,12 @@ const adminButtons: AdminButton[] = [
 
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
+type AdminDashboardRouteProp = RouteProp<AdminStackParamList, 'AdminDashboard'>;
+
 export default function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps) {
   const { selectedUser } = useUser();
-  const route = useRoute();
-  const routeParams = (route.params as any) || {};
+  const route = useRoute<AdminDashboardRouteProp>();
+  const routeParams = route.params ?? {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
 
@@ -107,8 +109,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
   useFocusEffect(
     React.useCallback(() => {
       if (viewOnly) {
-        console.log('🔐 AdminDashboard - View-only mode: Ensuring bars are visible');
-        (navigation as any).setParams({
+        navigation.setParams({
           hideTopBar: false,
           hideBottomBar: false,
         });
@@ -121,7 +122,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
     if (button.route === 'AdminDashboard') {
       return;
     }
-    (navigation as any).navigate(button.route, viewOnly ? { viewOnly: true, hideTopBar: false, hideBottomBar: false } : undefined);
+    navigation.navigate(button.route, viewOnly ? { viewOnly: true, hideTopBar: false, hideBottomBar: false } : undefined);
   };
 
   return (
@@ -167,7 +168,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
             <TouchableOpacity
               key="admins"
               style={[styles.button, { backgroundColor: colors.errorLight }]}
-              onPress={() => (navigation as any).navigate('AdminAdmins')}
+              onPress={() => navigation.navigate('AdminAdmins')}
               activeOpacity={0.7}
             >
               <View style={[styles.iconContainer, { backgroundColor: colors.error }]}>

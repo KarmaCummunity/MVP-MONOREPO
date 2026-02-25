@@ -49,7 +49,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
     query: string,
     filters?: string[],
     sorts?: string[],
-    results?: any[]
+    results?: unknown[]
   ) => {
     console.log('Category search:', {
       query,
@@ -71,12 +71,12 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
       try {
         const timeout = setTimeout(() => controller.abort(), 5000);
         // Some servers block HEAD; try HEAD then GET fallback
-        const headResp = await fetch(url, { method: 'HEAD', signal: controller.signal } as any).catch(() => null);
+        const headResp = await fetch(url, { method: 'HEAD', signal: controller.signal } as RequestInit).catch(() => null);
         if (headResp && (headResp.ok || (headResp.status >= 200 && headResp.status < 400))) {
           clearTimeout(timeout);
           return true;
         }
-        const getResp = await fetch(url, { method: 'GET', signal: controller.signal } as any).catch(() => null);
+        const getResp = await fetch(url, { method: 'GET', signal: controller.signal } as RequestInit).catch(() => null);
         clearTimeout(timeout);
         return !!(getResp && (getResp.ok || (getResp.status >= 200 && getResp.status < 400)));
       } catch {
@@ -154,11 +154,11 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
                     }}
                   >
                     <View style={styles.linkButtonHeader}>
-                      <Text style={styles.linkButtonTitle}>{res.name}</Text>
+                      <Text style={styles.linkButtonTitle}>{t(res.nameKey)}</Text>
                       <Text style={[styles.linkPill, { borderColor: config.color, color: config.color }]}>{t('common:web')}</Text>
                     </View>
-                    {!!res.description && (
-                      <Text style={styles.linkButtonDesc}>{res.description}</Text>
+                    {!!res.descriptionKey && (
+                      <Text style={styles.linkButtonDesc}>{t(res.descriptionKey)}</Text>
                     )}
                     {isHealthy === false && (
                       <Text style={styles.linkWarningText}>{t('common:cannotOpenLink')}</Text>

@@ -14,6 +14,19 @@
   "weeklyDonations": "Donations this week",
   "activeCharities": "Active charities",
   "categoriesTitle": "Donation categories",
+  "visitWebsite": "Visit website",
+  "post": {
+    "defaultTitle": {
+      "money": "Money donation",
+      "time": "Time donation",
+      "rides": "Ride",
+      "item": "Item"
+    },
+    "descriptionDonatedMoney": "I donated {{amount}} {{currency}}",
+    "descriptionDonatedMoneyCategory": " to category: {{category}}",
+    "descriptionDonatedTime": "I donated my time {{description}}",
+    "descriptionDonatedRide": "I offered a ride {{description}}"
+  },
   "details": {
     "itemTitle": "Item Details",
     "rideTitle": "Ride Details",
@@ -84,7 +97,9 @@
     "knowledge": {
       "title": "Knowledge",
       "subtitle": "Mentoring and learning",
-      "description": "Mentoring, training and sharing knowledge"
+      "description": "Mentoring, training and sharing knowledge",
+      "recommendedOrgs": "Recommended organizations",
+      "recommendedOrgsDesc": "Leading organizations in Israel for mentoring, learning and educational support"
     },
     "time": {
       "title": "Time",

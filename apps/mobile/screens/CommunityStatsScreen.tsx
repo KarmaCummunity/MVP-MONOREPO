@@ -47,7 +47,7 @@ interface StatItemProps {
 
 const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color = colors.info }) => (
     <View style={styles.statItem}>
-        <Ionicons name={icon as any} size={isSmallScreen ? 28 : 32} color={color} />
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={isSmallScreen ? 28 : 32} color={color} />
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
     </View>
@@ -146,30 +146,32 @@ export default function CommunityStatsScreen() {
             const communityStats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
 
             // Extract values - handle both direct values and nested value objects
-            const getValue = (stat: any): number => {
+            const getValue = (stat: number | { value?: number } | null | undefined): number => {
                 if (typeof stat === 'number') return stat;
-                if (stat && typeof stat === 'object' && 'value' in stat) return stat.value || 0;
+                if (stat && typeof stat === 'object' && 'value' in stat) return stat.value ?? 0;
                 return 0;
             };
 
             // Load dashboard stats (tasks, users, volunteer hours)
             const dashboardRes = await apiService.getDashboardStats();
-            const dashboardStats = dashboardRes.success && dashboardRes.data ? (dashboardRes.data as any) : null;
+            interface DashboardMetrics { metrics?: Record<string, number> }
+            const dashboardStats: DashboardMetrics | null = dashboardRes.success && dashboardRes.data ? (dashboardRes.data as DashboardMetrics) : null;
 
             // Load legacy rides stats
-            const rides = await db.listRides(selectedUser?.id || '', { includePast: true }).catch(() => []);
+            interface RideRecord { from?: string; to?: string; driverId?: string }
+            const rides = (await db.listRides(selectedUser?.id || '', { includePast: true }).catch(() => [])) as RideRecord[];
             const totalRides = rides.length;
 
             // Calculate active cities from rides
             const cities = new Set<string>();
-            rides.forEach((ride: any) => {
+            rides.forEach((ride) => {
                 if (ride.from) cities.add(ride.from);
                 if (ride.to) cities.add(ride.to);
             });
 
             // Get unique drivers from rides as a proxy for users
             const drivers = new Set<string>();
-            rides.forEach((ride: any) => {
+            rides.forEach((ride) => {
                 if (ride.driverId) drivers.add(ride.driverId);
             });
 

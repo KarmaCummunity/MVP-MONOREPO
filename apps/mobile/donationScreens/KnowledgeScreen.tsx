@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import HeaderComp from '../components/HeaderComp';
 import { donationResources } from '../utils/donationResources';
 import AddLinkComponent from '../components/AddLinkComponent';
 import ScrollContainer from '../components/ScrollContainer';
+import { useTranslation } from 'react-i18next';
 
 // Mock data for educational content
 const educationalLinks = [
@@ -73,7 +75,7 @@ const educationalLinks = [
     description: 'שיעורי אמנות ויצירה לכל הגילאים',
     url: 'https://www.youtube.com/c/ArtForKidsHub',
     icon: 'brush-outline',
-    color: (colors as any).pinkDeep,
+    color: colors.pinkDeep,
     category: 'אמנות',
   },
 ];
@@ -132,7 +134,7 @@ export default function KnowledgeScreen({
 }) {
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
-
+  const { t } = useTranslation(['donations', 'common']);
   const { isRealAuth } = useUser();
 
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
@@ -142,30 +144,37 @@ export default function KnowledgeScreen({
   const initialMode = routeParams?.mode === 'offer' ? true : false;
   const [mode, setMode] = useState(initialMode);
 
-  // If no mode in URL, set it to search (default) and update URL
-  useEffect(() => {
-    if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null' || routeParams.mode === '') {
-      if (mode !== false) {
-        setMode(false);
-      }
-      (navigation as any).setParams({ mode: 'search' });
-    }
-  }, [routeParams?.mode, mode, navigation]);
-
+  type CommunityContentItem = (typeof communityContent)[number];
   const [_searchQuery, setSearchQuery] = useState("");
   const [_selectedFilter, setSelectedFilter] = useState("");
   const [_selectedSort, setSelectedSort] = useState("");
   const [filteredEducationalLinks, setFilteredEducationalLinks] = useState(educationalLinks);
   const [filteredCommunityContent, setFilteredCommunityContent] = useState(communityContent);
-  const [_selectedMentorship, setSelectedMentorship] = useState<any>(null);
+  const [_selectedMentorship, setSelectedMentorship] = useState<CommunityContentItem | null>(null);
   const [_refreshKey, setRefreshKey] = useState(0);
+
+  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
+  const hasSetInitialModeRef = useRef(false);
+
+  // If no mode in URL, set it to search (default) and update URL; sync local mode without synchronous setState in effect
+  useEffect(() => {
+    if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null' || routeParams.mode === '') {
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        (navigation as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>).setParams({ mode: 'search' });
+      }
+      queueMicrotask(() => {
+        if (mode !== false) setMode(false);
+      });
+    }
+  }, [routeParams?.mode, mode, navigation]);
 
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
     if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
       const newMode = routeParams.mode === 'offer' ? true : false;
       if (newMode !== mode) {
-        setMode(newMode);
+        queueMicrotask(() => setMode(newMode));
       }
     }
   }, [routeParams?.mode, mode]);
@@ -174,27 +183,25 @@ export default function KnowledgeScreen({
   useEffect(() => {
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
+    const nav = navigation as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>;
 
-    // If no mode in URL, set it to search (default)
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      // Set initial mode to search in URL
-      (navigation as any).setParams({ mode: 'search' });
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        nav.setParams({ mode: 'search' });
+      }
       return;
     }
-
-    // Only update URL if mode actually changed
     if (newMode !== currentMode) {
-      (navigation as any).setParams({ mode: newMode });
+      nav.setParams({ mode: newMode });
     }
   }, [mode, navigation, routeParams?.mode]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('📚 KnowledgeScreen - Screen focused, refreshing data...');
-      // Reset form when returning to screen
+      logger.debug('KnowledgeScreen', 'Screen focused, refreshing data');
       setSelectedMentorship(null);
-      // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
     }, [])
   );
@@ -223,7 +230,7 @@ export default function KnowledgeScreen({
     "לפי רלוונטיות",
   ];
   const handleLinkPress = async (url: string, title: string) => {
-    console.log('Opening educational link:', title);
+    logger.debug('KnowledgeScreen', 'Opening educational link', { title });
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
@@ -232,13 +239,13 @@ export default function KnowledgeScreen({
         Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
       }
     } catch (error) {
-      console.error('Error opening link:', error);
+      logger.error('KnowledgeScreen', 'Error opening link', { error });
       Alert.alert('שגיאה', 'שגיאה בפתיחת הקישור');
     }
   };
 
-  const handleCommunityContentPress = (content: any) => {
-    console.log('Community content pressed:', content.title);
+  const handleCommunityContentPress = (content: CommunityContentItem) => {
+    logger.debug('KnowledgeScreen', 'Community content pressed', { title: content.title });
     Alert.alert(
       'הצטרפות לקורס',
       `האם תרצה להצטרף לקורס "${content.title}" עם ${content.teacher}?`,
@@ -249,13 +256,16 @@ export default function KnowledgeScreen({
     );
   };
 
+  type EducationalLinkItem = (typeof educationalLinks)[number];
+  type SearchResultItem = EducationalLinkItem | CommunityContentItem;
+
   // Function to handle search results from HeaderComp
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('📚 KnowledgeScreen - Search received:', {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: SearchResultItem[]) => {
+    logger.debug('KnowledgeScreen', 'Search received', {
       query,
-      filters: filters || [],
-      sorts: sorts || [],
-      resultsCount: results?.length || 0
+      filters: filters ?? [],
+      sorts: sorts ?? [],
+      resultsCount: results?.length ?? 0,
     });
 
     // Update state with search results
@@ -265,9 +275,9 @@ export default function KnowledgeScreen({
 
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
-      // Split results between educational links and community content
-      const educationalResults = results.filter(item => item.url);
-      const communityResults = results.filter(item => item.teacher);
+      // Split results between educational links and community content (type guards for union)
+      const educationalResults = results.filter((item): item is EducationalLinkItem => 'url' in item);
+      const communityResults = results.filter((item): item is CommunityContentItem => 'teacher' in item);
 
       setFilteredEducationalLinks(educationalResults);
       setFilteredCommunityContent(communityResults);
@@ -335,7 +345,7 @@ export default function KnowledgeScreen({
               >
                 <View style={styles.linkHeader}>
                   <View style={[styles.linkIcon, { backgroundColor: link.color }]}>
-                    <Ionicons name={link.icon as any} size={20} color="white" />
+                    <Ionicons name={link.icon as keyof typeof Ionicons.glyphMap} size={20} color="white" />
                   </View>
                   <Text style={styles.linkTitle}>{link.title}</Text>
                   <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
@@ -352,29 +362,29 @@ export default function KnowledgeScreen({
         {/* Recommended Organizations Section */}
         {!!donationResources.knowledge && donationResources.knowledge.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{'עמותות מומלצות'}</Text>
+            <Text style={styles.sectionTitle}>{t('donations:categories.knowledge.recommendedOrgs')}</Text>
             <Text style={styles.sectionDescription}>
-              ארגונים מובילים בישראל לחונכות, לימוד ותמיכה חינוכית
+              {t('donations:categories.knowledge.recommendedOrgsDesc')}
             </Text>
             <View style={styles.linksGrid}>
               {donationResources.knowledge.map((org) => (
                 <TouchableOpacity
                   key={`knowledge-${org.url}`}
                   style={styles.linkCard}
-                  onPress={() => handleLinkPress(org.url, org.name)}
+                  onPress={() => handleLinkPress(org.url, t(org.nameKey))}
                 >
                   <View style={styles.linkHeader}>
                     <View style={[styles.linkIcon, { backgroundColor: colors.info }]}>
-                      <Ionicons name={'school-outline' as any} size={20} color="white" />
+                      <Ionicons name="school-outline" size={20} color="white" />
                     </View>
-                    <Text style={styles.linkTitle}>{org.name}</Text>
+                    <Text style={styles.linkTitle}>{t(org.nameKey)}</Text>
                     <View style={{ borderWidth: 1, borderColor: colors.info, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ color: colors.info, fontSize: FontSizes.caption }}>בקר באתר</Text>
+                      <Text style={{ color: colors.info, fontSize: FontSizes.caption }}>{t('donations:visitWebsite')}</Text>
                     </View>
                   </View>
                   <View style={styles.linkContent}>
-                    {!!org.description && (
-                      <Text style={styles.linkDescription}>{org.description}</Text>
+                    {!!org.descriptionKey && (
+                      <Text style={styles.linkDescription}>{t(org.descriptionKey)}</Text>
                     )}
                   </View>
                 </TouchableOpacity>

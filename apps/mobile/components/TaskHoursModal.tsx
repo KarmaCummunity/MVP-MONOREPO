@@ -52,8 +52,8 @@ export default function TaskHoursModal({
       await onSave(hoursNum);
       setHours('');
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'שגיאה בשמירת השעות');
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message || 'שגיאה בשמירת השעות');
     } finally {
       setSaving(false);
     }

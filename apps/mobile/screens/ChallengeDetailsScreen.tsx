@@ -186,9 +186,9 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         // Reload details
         await loadChallengeDetails();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding entry:', error);
-      if (error.message?.includes('already exists')) {
+      if (error instanceof Error && error.message?.includes('already exists')) {
         showToast(t('challenges:messages.alreadyCompletedToday'), 'info');
       } else {
         showToast(t('challenges:messages.errorAddingEntry'), 'error');
@@ -344,7 +344,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
             </View>
             <TouchableOpacity
               style={styles.viewStatsButton}
-              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
+              onPress={() => (navigation as NavigationProp<DonationsStackParamList>).navigate('ChallengeStatisticsScreen')}
             >
               <Ionicons name="stats-chart-outline" size={20} color={colors.primary} />
               <Text style={styles.viewStatsText}>{t('challenges:viewStatistics')}</Text>

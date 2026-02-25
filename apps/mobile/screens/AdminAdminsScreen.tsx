@@ -12,7 +12,10 @@ import {
     FlatList,
     Modal,
     SafeAreaView,
+    Dimensions,
+    type ViewStyle,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -29,28 +32,42 @@ interface AdminAdminsScreenProps {
 
 const LOG_SOURCE = 'AdminAdminsScreen';
 
+/** User shape returned by admin API (getUsers, getEligibleForPromotion, etc.) */
+interface AdminUser {
+    id: string;
+    email?: string;
+    name?: string;
+    roles?: string[];
+    parent_manager_id?: string | null;
+    manager_details?: { id: string; name?: string; email?: string; avatar_url?: string } | null;
+    hierarchy_level?: number | null;
+}
+
+type AdminAdminsRouteParams = { viewOnly?: boolean } | undefined;
+
 export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdminsScreenProps) {
+    const { t } = useTranslation();
     const route = useRoute();
-    const routeParams = (route.params as any) || {};
+    const routeParams = (route.params as AdminAdminsRouteParams) ?? {};
     const viewOnly = routeParams?.viewOnly === true;
     useAdminProtection(true);
     const { selectedUser } = useUser();
-    const [usersList, setUsersList] = useState<any[]>([]);
+    const [usersList, setUsersList] = useState<AdminUser[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'admins' | 'volunteers' | 'users'>('admins');
 
     // Manager Assignment State
     const [showManagerModal, setShowManagerModal] = useState(false);
-    const [selectedForManager, setSelectedForManager] = useState<any>(null);
-    const [newManager, setNewManager] = useState<any>(null);
+    const [selectedForManager, setSelectedForManager] = useState<AdminUser | null>(null);
+    const [newManager, setNewManager] = useState<{ id: string; name?: string; email?: string; avatar_url?: string } | null>(null);
     const [isRemovingManager, setIsRemovingManager] = useState(false);
 
     // Store eligible users separately
-    const [eligibleUsers, setEligibleUsers] = useState<any[]>([]);
+    const [eligibleUsers, setEligibleUsers] = useState<AdminUser[]>([]);
 
     // Store all managers for manager assignment
-    const [allManagers, setAllManagers] = useState<any[]>([]);
+    const [allManagers, setAllManagers] = useState<AdminUser[]>([]);
 
     const loadUsers = React.useCallback(async (forceRefresh: boolean = false) => {
         if (!selectedUser?.id) {
@@ -60,7 +77,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         try {
             setIsLoading(true);
-            const filters: any = { limit: 100 };
+            const filters: { limit: number; search?: string; forceRefresh?: boolean } = { limit: 100 };
             if (searchQuery.trim()) {
                 filters.search = searchQuery.trim();
             }
@@ -84,11 +101,11 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
             if (response.success && Array.isArray(response.data)) {
                 // Keep only other users (not current user)
-                const otherUsers = response.data.filter((u: any) => u.email !== selectedUser?.email);
+                const otherUsers = response.data.filter((u: AdminUser) => u.email !== selectedUser?.email);
                 setUsersList(otherUsers);
 
                 // Extract managers from the list (admins + super admin)
-                const managers = response.data.filter((u: any) => {
+                const managers = response.data.filter((u: AdminUser) => {
                     const roles = u.roles || [];
                     return roles.includes('admin') || roles.includes('super_admin') || u.email === 'navesarussi@gmail.com';
                 });
@@ -112,11 +129,11 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             }
         } catch (error) {
             logger.error(LOG_SOURCE, 'Error loading users', { error });
-            Alert.alert('שגיאה', 'לא ניתן היה לטעון את המשתמשים');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.loadUsersError'));
         } finally {
             setIsLoading(false);
         }
-    }, [searchQuery, selectedUser?.id, selectedUser?.email]);
+    }, [searchQuery, selectedUser?.id, selectedUser?.email, t]);
 
     useEffect(() => {
         loadUsers();
@@ -130,7 +147,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     logger.info(LOG_SOURCE, 'Current user check', { userId: selectedUser?.id, email: selectedUser?.email, roles: selectedUser?.roles, isAdmin: isCurrentUserSuperAdmin });
 
     // Check if a user can be promoted by current admin
-    const canPromote = (user: any): boolean => {
+    const canPromote = (user: AdminUser): boolean => {
         // Admin/super_admin can promote users who are not already admins
         if (isCurrentUserSuperAdmin) {
             const targetRoles = user.roles || [];
@@ -161,7 +178,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     // Check if current admin can demote a user
     // We simplify this - let the server do the full validation
     // Just check basic conditions on client side
-    const canDemote = (user: any): boolean => {
+    const canDemote = (user: AdminUser): boolean => {
         const isSameUser = user.id === selectedUser?.id;
 
         // Cannot demote yourself
@@ -194,7 +211,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         return true;
     };
 
-    const handleToggleAdmin = async (user: any) => {
+    const handleToggleAdmin = async (user: AdminUser) => {
         logger.debug(LOG_SOURCE, 'handleToggleAdmin called with', {
             userId: user?.id,
             userName: user?.name,
@@ -217,33 +234,32 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         if (isSuperAdmin) {
             logger.warn(LOG_SOURCE, 'Blocked: Super admin');
-            Alert.alert('שגיאה', 'לא ניתן לשנות הרשאות למנהל הראשי');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.cannotChangeRoot'));
             return;
         }
 
         if (!selectedUser?.id) {
             logger.warn(LOG_SOURCE, 'No selectedUser.id');
-            Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.cannotIdentifyUser'));
             return;
         }
 
-        const title = isAdmin ? 'הסרת הרשאות מנהל' : 'הפיכה למנהל';
-        const message = isAdmin
-            ? `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${user.name || user.email}?`
-            : `האם אתה בטוח שברצונך להפוך את ${user.name || user.email} למנהל תחתיך?`;
+        const name = user.name || user.email;
+        const title = isAdmin ? t('admin:admins.confirmDemoteTitle') : t('admin:admins.confirmPromoteToAdminTitle');
+        const message = isAdmin ? t('admin:admins.confirmDemoteAdminMessage', { name }) : t('admin:admins.confirmPromoteToAdminMessage', { name });
 
         logger.debug(LOG_SOURCE, 'Showing Alert.alert', { title, message });
 
         Alert.alert(title, message, [
-            { 
-                text: 'ביטול', 
+            {
+                text: t('common:cancel'), 
                 style: 'cancel',
                 onPress: () => {
                     logger.debug(LOG_SOURCE, 'User cancelled');
                 }
             },
             {
-                text: 'אישור',
+                text: t('common:confirm'),
                 style: isAdmin ? 'destructive' : 'default',
                 onPress: async () => {
                     logger.debug(LOG_SOURCE, 'User confirmed');
@@ -268,11 +284,11 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     logger.debug(LOG_SOURCE, `${isAdmin ? 'Demote' : 'Promote'} response`, { response: res });
 
                     if (res.success) {
-                        Alert.alert('הצלחה', res.message || 'העדכון בוצע בהצלחה');
+                        Alert.alert(t('admin:admins.success'), res.message || t('admin:admins.updateSuccess'));
                         logger.info(LOG_SOURCE, 'Operation successful, reloading users with force refresh');
                         await loadUsers(true); // Force refresh to bypass cache
                     } else {
-                        Alert.alert('שגיאה', res.error || 'נכשל בעדכון');
+                        Alert.alert(t('admin:admins.error'), res.error || t('admin:admins.updateFailed'));
                         logger.error(LOG_SOURCE, 'Operation failed', { error: res.error });
                     }
                 }
@@ -280,7 +296,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         ]);
     };
 
-    const openManagerModal = (user: any) => {
+    const openManagerModal = (user: AdminUser) => {
         setSelectedForManager(user);
         // Pre-select current manager if exists
         if (user.manager_details) {
@@ -315,17 +331,17 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             logger.debug(LOG_SOURCE, 'setManager response', { response: res });
 
             if (res.success) {
-                Alert.alert('הצלחה', managerId ? 'מנהל עודכן בהצלחה' : 'שיוך מנהל הוסר בהצלחה');
+                Alert.alert(t('admin:admins.success'), managerId ? t('admin:admins.managerUpdated') : t('admin:admins.managerRemoveSuccess'));
                 setShowManagerModal(false);
                 logger.info(LOG_SOURCE, 'Manager updated successfully, reloading users with force refresh');
                 await loadUsers(true); // Force refresh to bypass cache
             } else {
-                Alert.alert('שגיאה', res.error || 'נכשל בעדכון מנהל');
+                Alert.alert(t('admin:admins.error'), res.error || t('admin:admins.managerUpdateFailed'));
                 logger.error(LOG_SOURCE, 'Failed to update manager', { error: res.error });
             }
         } catch (e) {
             logger.error(LOG_SOURCE, 'Error saving manager', { error: e });
-            Alert.alert('שגיאה', 'אירעה שגיאה');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.genericError'));
         }
     };
 
@@ -345,16 +361,16 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             logger.debug(LOG_SOURCE, 'Response from setManager', { res });
 
             if (res.success) {
-                Alert.alert('הצלחה', 'שיוך מנהל הוסר בהצלחה');
+                Alert.alert(t('admin:admins.success'), t('admin:admins.managerRemoveSuccess'));
                 setShowManagerModal(false);
                 logger.debug(LOG_SOURCE, ' ✅ Manager removed successfully, reloading users with force refresh...');
                 await loadUsers(true); // Force refresh to bypass cache
             } else {
-                Alert.alert('שגיאה', res.error || 'נכשל בהסרת שיוך מנהל');
+                Alert.alert(t('admin:admins.error'), res.error || t('admin:admins.managerRemoveFailed'));
             }
         } catch (e) {
             logger.error(LOG_SOURCE, 'Error removing manager', { error: e });
-            Alert.alert('שגיאה', 'אירעה שגיאה בהסרת שיוך מנהל');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.managerRemoveError'));
         } finally {
             setIsRemovingManager(false);
         }
@@ -370,15 +386,15 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         logger.debug(LOG_SOURCE, 'removeManager called for', { target: selectedForManager.name || selectedForManager.email, selectedForManagerId: selectedForManager.id, selectedUserId: selectedUser?.id });
 
         if (Platform.OS === 'web') {
-            if (typeof window !== 'undefined' && window.confirm(`האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`)) {
+            if (typeof window !== 'undefined' && window.confirm(t('admin:admins.confirmRemoveManagerMessage', { name: selectedForManager.name || selectedForManager.email }))) {
                 await performRemoveManager();
             }
         } else {
             Alert.alert(
-                'הסרת שיוך מנהל',
-                `האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`,
+                t('admin:admins.confirmRemoveManagerTitle'),
+                t('admin:admins.confirmRemoveManagerMessage', { name: selectedForManager.name || selectedForManager.email }),
                 [
-                    { text: 'ביטול', style: 'cancel' },
+                    { text: t('common:cancel'), style: 'cancel' },
                     {
                         text: 'הסר',
                         style: 'destructive',
@@ -389,7 +405,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         }
     };
 
-    const handlePromoteToVolunteer = async (targetUser: any) => {
+    const handlePromoteToVolunteer = async (targetUser: AdminUser) => {
         logger.info(LOG_SOURCE, 'handlePromoteToVolunteer called', {
             targetUserId: targetUser.id,
             targetUserName: targetUser.name,
@@ -399,17 +415,17 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         if (!selectedUser?.id) {
             logger.warn(LOG_SOURCE, 'handlePromoteToVolunteer: No selectedUser.id', {});
-            Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.cannotIdentifyUser'));
             return;
         }
         
         Alert.alert(
-            'הפוך למתנדב',
-            `האם אתה בטוח שברצונך להפוך את ${targetUser.name || targetUser.email} למתנדב?`,
+            t('admin:admins.confirmDemoteTitle'),
+            t('admin:admins.confirmDemoteMessage', { name: targetUser.name || targetUser.email }),
             [
-                { text: 'ביטול', style: 'cancel' },
+                { text: t('common:cancel'), style: 'cancel' },
                 {
-                    text: 'אישור',
+                    text: t('common:confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -432,23 +448,24 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     targetUserId: targetUser.id,
                                     targetUserName: targetUser.name
                                 });
-                                Alert.alert('הצלחה', res.message || 'המשתמש הפך למתנדב');
+                                Alert.alert(t('admin:admins.success'), res.message || t('admin:admins.demoteSuccess'));
                                 await loadUsers(true);
                             } else {
                                 logger.error(LOG_SOURCE, 'Failed to promote user to volunteer', {
                                     targetUserId: targetUser.id,
                                     error: res.error
                                 });
-                                Alert.alert('שגיאה', res.error || 'נכשל בהפיכה למתנדב');
+                                Alert.alert(t('admin:admins.error'), res.error || t('admin:admins.demoteFailed'));
                             }
-                        } catch (e: any) {
+                        } catch (e: unknown) {
+                            const err = e as Error;
                             logger.error(LOG_SOURCE, 'Error promoting to volunteer', {
                                 targetUserId: targetUser.id,
-                                error: e?.message || String(e),
-                                stack: e?.stack
+                                error: err?.message || String(e),
+                                stack: err?.stack
                             });
                             logger.error(LOG_SOURCE, 'Error promoting to volunteer', { error: e });
-                            Alert.alert('שגיאה', 'נכשל בהפיכה למתנדב');
+                            Alert.alert(t('admin:admins.error'), t('admin:admins.demoteError'));
                         }
                     }
                 }
@@ -456,7 +473,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         );
     };
 
-    const handleDemoteToVolunteer = async (targetUser: any) => {
+    const handleDemoteToVolunteer = async (targetUser: AdminUser) => {
         logger.debug(LOG_SOURCE, ' 🎯 handleDemoteToVolunteer called with:', {
             targetUserId: targetUser?.id,
             targetUserName: targetUser?.name,
@@ -477,25 +494,25 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         if (!selectedUser?.id) {
             logger.warn(LOG_SOURCE, 'handleDemoteToVolunteer: No selectedUser.id', {});
             logger.warn(LOG_SOURCE, 'No selectedUser.id');
-            Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
+            Alert.alert(t('admin:admins.error'), t('admin:admins.cannotIdentifyUser'));
             return;
         }
 
         logger.debug(LOG_SOURCE, ' 📢 Showing Alert.alert for demote to volunteer');
         
         Alert.alert(
-            'הפוך למתנדב',
-            `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${targetUser.name || targetUser.email} ולהפוך אותו למתנדב?`,
+            t('admin:admins.confirmDemoteTitle'),
+            t('admin:admins.confirmDemoteAdminMessage', { name: targetUser.name || targetUser.email }),
             [
                 { 
-                    text: 'ביטול', 
+                    text: t('common:cancel'), 
                     style: 'cancel',
                     onPress: () => {
                         logger.debug(LOG_SOURCE, ' ❌ User cancelled demote to volunteer');
                     }
                 },
                 {
-                    text: 'אישור',
+                    text: t('common:confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         logger.debug(LOG_SOURCE, ' ✅ User confirmed demote to volunteer');
@@ -527,7 +544,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     targetUserName: targetUser.name
                                 });
                                 logger.debug(LOG_SOURCE, ' ✅ Success! Reloading users...');
-                                Alert.alert('הצלחה', demoteRes.message || 'המשתמש הוסר ממנהלים והפך למתנדב');
+                                Alert.alert(t('admin:admins.success'), demoteRes.message || t('admin:admins.demoteAdminSuccess'));
                                 await loadUsers(true);
                             } else {
                                 logger.error(LOG_SOURCE, 'Failed to demote admin to volunteer', {
@@ -535,16 +552,17 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     error: demoteRes.error
                                 });
                                 logger.error(LOG_SOURCE, 'Demote to volunteer failed', { error: demoteRes.error });
-                                Alert.alert('שגיאה', demoteRes.error || 'נכשל בהסרת הרשאות מנהל והפיכה למתנדב');
+                                Alert.alert(t('admin:admins.error'), demoteRes.error || t('admin:admins.demoteAdminFailed'));
                             }
-                        } catch (e: any) {
+                        } catch (e: unknown) {
+                            const err = e as Error;
                             logger.error(LOG_SOURCE, 'Error demoting admin to volunteer', {
                                 targetUserId: targetUser.id,
-                                error: e?.message || String(e),
-                                stack: e?.stack
+                                error: err?.message || String(e),
+                                stack: err?.stack
                             });
                             logger.error(LOG_SOURCE, 'Demote to volunteer exception', { error: e });
-                            Alert.alert('שגיאה', 'נכשל בהסרת הרשאות מנהל');
+                            Alert.alert(t('admin:admins.error'), t('admin:admins.demoteAdminError'));
                         }
                     }
                 }
@@ -553,10 +571,10 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     };
 
     // Get managers that can be assigned (exclude the user themselves and create cycle prevention)
-    const getEligibleManagersForUser = (user: any) => {
+    const getEligibleManagersForUser = (user: AdminUser | null | undefined) => {
         if (!user) return allManagers;
         // Filter out: the user themselves, and users who would create a cycle
-        return allManagers.filter((m: any) => m.id !== user.id);
+        return allManagers.filter((m: AdminUser) => m.id !== user.id);
     };
 
     const getFilteredUsers = () => {
@@ -567,10 +585,10 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             const isVolunteerRole = currentRoles.includes('volunteer');
 
             if (activeTab === 'admins') {
-                // מנהלים: משתמשים עם role admin/super_admin (גם אם אין להם manager)
+                // Admins: users with role admin/super_admin
                 return isAdminRole;
             } else if (activeTab === 'volunteers') {
-                // מתנדבים: משתמשים עם role volunteer (ללא admin)
+                // Volunteers: users with role volunteer (no admin)
                 return isVolunteerRole && !isAdminRole;
             } else {
                 // משתמשים רגילים: ללא manager וללא roles מיוחדים
@@ -584,14 +602,14 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     const renderHeader = () => (
         <>
             <View style={styles.header}>
-                <Text style={styles.title}>ניהול מנהלים</Text>
+                <Text style={styles.title}>{t('admin:admins.screenTitle')}</Text>
             </View>
             <View style={styles.tabsContainer}>
                 <TouchableOpacity style={[styles.tab, activeTab === 'admins' && styles.activeTab]} onPress={() => setActiveTab('admins')}>
-                    <Text style={[styles.tabText, activeTab === 'admins' && styles.activeTabText]}>מנהלים</Text>
+                    <Text style={[styles.tabText, activeTab === 'admins' && styles.activeTabText]}>{t('admin:admins.tabAdmins')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'volunteers' && styles.activeTab]} onPress={() => setActiveTab('volunteers')}>
-                    <Text style={[styles.tabText, activeTab === 'volunteers' && styles.activeTabText]}>מתנדבים</Text>
+                    <Text style={[styles.tabText, activeTab === 'volunteers' && styles.activeTabText]}>{t('admin:admins.tabVolunteers')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'users' && styles.activeTab]} onPress={() => setActiveTab('users')}>
                     <Text style={[styles.tabText, activeTab === 'users' && styles.activeTabText]}>משתמשים</Text>
@@ -603,7 +621,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     style={styles.searchInput}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    placeholder="חפש משתמש..."
+                    placeholder={t('admin:admins.searchPlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                 />
             </View>
@@ -631,7 +649,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
                     const _isSameUser = user.id === selectedUser?.id;
-                    const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com'; // המנהל הראשי - מוגן לחלוטין
+                    const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com';
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);
                     const hierarchyLevel = user.hierarchy_level;
@@ -639,17 +657,17 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     // Determine hierarchy level display
                     let levelText = '';
                     if (hierarchyLevel === 0) {
-                        levelText = 'דרגה 0 - מנהל ראשי 👑';
+                        levelText = t('admin:admins.level0');
                     } else if (hierarchyLevel === 1) {
-                        levelText = 'דרגה 1 - סופר מנהל';
+                        levelText = t('admin:admins.level1');
                     } else if (hierarchyLevel !== null && hierarchyLevel !== undefined) {
-                        levelText = `דרגה ${hierarchyLevel}`;
+                        levelText = t('admin:admins.level', { n: hierarchyLevel });
                     }
 
                     return (
                         <View style={styles.userCard}>
                             <View style={styles.userInfo}>
-                                <Text style={styles.userName}>{user.name || 'ללא שם'}</Text>
+                                <Text style={styles.userName}>{user.name || t('admin:admins.noName')}</Text>
                                 <Text style={styles.userEmail}>{user.email}</Text>
                                 
                                 {/* Display hierarchy level */}
@@ -664,19 +682,19 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                 {!isRootAdmin && user.manager_details && (
                                     <View style={styles.managerBadge}>
                                         <Ionicons name="people-outline" size={12} color={colors.primary} />
-                                        <Text style={styles.managerText}>מדווח ל- {user.manager_details.name}</Text>
+                                        <Text style={styles.managerText}>{t('admin:admins.reportsTo', { name: user.manager_details.name })}</Text>
                                     </View>
                                 )}
                                 {isAdmin && user.parent_manager_id === selectedUser?.id && (
                                     <View style={[styles.managerBadge, { backgroundColor: colors.success + '20' }]}>
                                         <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                                        <Text style={[styles.managerText, { color: colors.success }]}>מנהל תחתיך</Text>
+                                        <Text style={[styles.managerText, { color: colors.success }]}>{t('admin:admins.managerUnderYou')}</Text>
                                     </View>
                                 )}
                                 {isVolunteer && !isAdmin && (
                                     <View style={[styles.managerBadge, { backgroundColor: colors.warning + '20' }]}>
                                         <Ionicons name="heart-outline" size={12} color={colors.warning} />
-                                        <Text style={[styles.managerText, { color: colors.warning }]}>מתנדב</Text>
+                                        <Text style={[styles.managerText, { color: colors.warning }]}>{t('admin:admins.volunteer')}</Text>
                                     </View>
                                 )}
                             </View>
@@ -687,13 +705,12 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                         style={[styles.actionButton, styles.managerBtn]}
                                         onPress={() => openManagerModal(user)}
                                     >
-                                        <Text style={styles.actionBtnText}>שיוך מנהל</Text>
+                                        <Text style={styles.actionBtnText}>{t('admin:admins.assignManager')}</Text>
                                     </TouchableOpacity>
                                     
-                                    {/* In volunteers tab: Show "הפוך למנהל" button for volunteers who can be promoted */}
                                     {(() => {
                                         const shouldShow = activeTab === 'volunteers' && isVolunteer && !isAdmin && userCanBePromoted;
-                                        logger.debug(LOG_SOURCE, ' 🔍 Button visibility check:', {
+                                        logger.debug(LOG_SOURCE, 'Button visibility check', {
                                             userId: user.id,
                                             userName: user.name,
                                             activeTab,
@@ -707,31 +724,30 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                         <TouchableOpacity
                                             style={[styles.actionButton, { backgroundColor: colors.primary, marginTop: 8 }]}
                                             onPress={() => {
-                                                logger.debug(LOG_SOURCE, ' 🎯 "הפוך למנהל" button pressed for user:', user.id, user.name);
+                                                logger.debug(LOG_SOURCE, 'Promote to admin button pressed', { userId: user.id, userName: user.name });
                                                 handleToggleAdmin(user);
                                             }}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למנהל</Text>
+                                            <Text style={styles.actionBtnText}>{t('admin:admins.promoteToAdmin')}</Text>
                                         </TouchableOpacity>
                                     )}
                                     
-                                    {/* In admins tab: Show "הפוך למתנדב" button for admins who can be demoted */}
                                     {activeTab === 'admins' && isAdmin && userCanBeDemoted && (
                                         <TouchableOpacity
                                             style={[styles.actionButton, { backgroundColor: colors.warning, marginTop: 8 }]}
                                             onPress={() => handleDemoteToVolunteer(user)}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למתנדב</Text>
+                                            <Text style={styles.actionBtnText}>{t('admin:admins.demoteToVolunteer')}</Text>
                                         </TouchableOpacity>
                                     )}
                                     
-                                    {/* Show "Promote to Volunteer" button for non-volunteers in volunteers tab */}
+                                    {/* Show Promote to Volunteer button for non-volunteers in volunteers tab */}
                                     {activeTab === 'volunteers' && !isVolunteer && (
                                         <TouchableOpacity
                                             style={[styles.actionButton, { backgroundColor: colors.warning, marginTop: 8 }]}
                                             onPress={() => handlePromoteToVolunteer(user)}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למתנדב</Text>
+                                            <Text style={styles.actionBtnText}>{t('admin:admins.demoteToVolunteer')}</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -741,7 +757,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                             {isRootAdmin && (
                                 <View style={[styles.managerBadge, { backgroundColor: colors.error + '20', marginTop: 8 }]}>
                                     <Ionicons name="shield-checkmark" size={12} color={colors.error} />
-                                    <Text style={[styles.managerText, { color: colors.error }]}>מנהל ראשי</Text>
+                                    <Text style={[styles.managerText, { color: colors.error }]}>{t('admin:admins.rootAdmin')}</Text>
                                 </View>
                             )}
                         </View>
@@ -753,7 +769,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>הגדרת מנהל עבור {selectedForManager?.name || 'משתמש'}</Text>
+                            <Text style={styles.modalTitle}>{t('admin:admins.assignManagerFor', { name: selectedForManager?.name || t('admin:admins.user') })}</Text>
                             <TouchableOpacity onPress={() => setShowManagerModal(false)}>
                                 <Ionicons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
@@ -761,7 +777,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
                         {selectedForManager?.manager_details && (
                             <View style={styles.currentManagerBox}>
-                                <Text style={styles.currentManagerLabel}>מנהל נוכחי:</Text>
+                                <Text style={styles.currentManagerLabel}>{t('admin:admins.currentManager')}</Text>
                                 <Text style={styles.currentManagerName}>{selectedForManager.manager_details.name}</Text>
                                 <TouchableOpacity
                                     style={[styles.removeManagerBtn, isRemovingManager && { opacity: 0.5 }]}
@@ -785,7 +801,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                         )}
 
                         <Text style={styles.modalSubtitle}>
-                            {selectedForManager?.manager_details ? 'החלף למנהל אחר:' : 'בחר מנהל:'}
+                            {selectedForManager?.manager_details ? t('admin:admins.replaceManager') : t('admin:admins.selectManager')}
                         </Text>
 
                         <View style={styles.managersList}>
@@ -820,14 +836,14 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     );
                                 }}
                                 ListEmptyComponent={
-                                    <Text style={styles.emptyManagersText}>אין מנהלים זמינים</Text>
+                                    <Text style={styles.emptyManagersText}>{t('admin:admins.noManagersAvailable')}</Text>
                                 }
                             />
                         </View>
 
                         <View style={styles.modalActions}>
                             <TouchableOpacity style={[styles.modalBtn, styles.modalCancel]} onPress={() => setShowManagerModal(false)}>
-                                <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>ביטול</Text>
+                                <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>{t('common:cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[
@@ -838,7 +854,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                 onPress={viewOnly ? undefined : saveManager}
                                 disabled={viewOnly || !newManager || newManager.id === selectedForManager?.manager_details?.id}
                             >
-                                <Text style={styles.modalBtnText}>שמור</Text>
+                                <Text style={styles.modalBtnText}>{t('common:done')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -853,16 +869,16 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.backgroundSecondary,
         ...(Platform.OS === 'web' && {
-            position: 'relative' as any,
-            height: '100vh' as any,
-        }),
+            position: 'relative',
+            minHeight: Dimensions.get('window').height,
+        } as ViewStyle),
     },
     flatList: {
         flex: 1,
         ...(Platform.OS === 'web' && {
-            overflowY: 'auto' as any,
-            WebkitOverflowScrolling: 'touch' as any,
-        }),
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+        } as ViewStyle),
     },
     header: { padding: LAYOUT_CONSTANTS.SPACING.LG, backgroundColor: colors.background, alignItems: 'center' },
     title: { fontSize: FontSizes.heading1, fontWeight: 'bold', color: colors.textPrimary },
@@ -889,7 +905,7 @@ const styles = StyleSheet.create({
     addButton: { backgroundColor: colors.primary },
     removeButton: { backgroundColor: colors.error },
     lockedButton: { backgroundColor: colors.textTertiary },
-    actionBtnText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+    actionBtnText: { color: colors.buttonText, fontSize: 12, fontWeight: 'bold' },
 
     modalBackdrop: { flex: 1, backgroundColor: colors.modalOverlay, justifyContent: 'center', padding: 20 },
     modalCard: { backgroundColor: colors.background, borderRadius: 16, padding: 20, maxHeight: '80%' },
@@ -901,7 +917,7 @@ const styles = StyleSheet.create({
     modalCancel: { backgroundColor: colors.backgroundSecondary },
     modalSave: { backgroundColor: colors.primary },
     modalBtnDisabled: { backgroundColor: colors.textTertiary },
-    modalBtnText: { color: 'white', fontWeight: 'bold' },
+    modalBtnText: { color: colors.buttonText, fontWeight: 'bold' },
 
     // Current manager box
     currentManagerBox: {

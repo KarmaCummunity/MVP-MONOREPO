@@ -11,16 +11,13 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   Image,
   TouchableOpacity,
-  Dimensions,
   Alert,
   TouchableWithoutFeedback,
   Platform,
-  FlatList,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,1001 +25,34 @@ import { TabView } from 'react-native-tab-view';
 import type { SceneRendererProps, NavigationState } from 'react-native-tab-view';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import colors from '../globals/colors';
-import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 import ProfileCompletionBanner from '../components/ProfileCompletionBanner';
 import ItemDetailsModal from '../components/ItemDetailsModal';
-import { createShadowStyle } from '../globals/styles';
-import { scaleSize } from '../globals/responsive';
+import { scaleSize, getScreenInfo } from '../globals/responsive';
 import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUpdatedFollowCounts } from '../src/services/follow.service';
 import { createSampleChatData, createConversation, conversationExists } from '../src/services/chat.service';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
 import { apiService } from '../src/api/api.service';
 import { USE_BACKEND } from '../utils/dbConfig';
-import { UserPreview as CharacterType } from '../globals/types';
+import { db } from '../src/infrastructure/database.service';
 import { useToast } from '../utils/toastService';
-import PostReelItem from '../components/Feed/PostReelItem';
-import { usePostMenu } from '../hooks/usePostMenu';
-import OptionsModal from '../components/Feed/OptionsModal';
-import ReportPostModal from '../components/Feed/ReportPostModal';
 import { sanitiseAvatarUrl } from '../src/utils/validation/url-validator';
 import { logger } from '../utils/loggerService';
-
-// --- Type Definitions ---
-type TabRoute = {
-  key: string;
-  title: string;
-};
-
-type ProfileScreenRouteParams = {
-  userId?: string;
-  userName?: string;
-  characterData?: CharacterType;
-};
-
-// --- Helper Functions ---
-const getRoleDisplayName = (role: string): string => {
-  const roleTranslations: Record<string, string> = {
-    'user': 'משתמש',
-    'donor': 'תורם',
-    'volunteer': 'מתנדב',
-    'recipient': 'מקבל עזרה',
-    'organization': 'עמותה',
-    'student': 'סטודנט'
-  };
-  return roleTranslations[role] || role;
-};
-
-// Helper to format ride time safely
-const formatRideTime = (dateIso: string) => {
-  if (!dateIso) return { time: '', date: '' };
-  const dep = new Date(dateIso);
-  if (isNaN(dep.getTime())) return { time: '', date: '' };
-
-  const hours = dep.getHours().toString().padStart(2, '0');
-  const minutes = dep.getMinutes().toString().padStart(2, '0');
-
-  const day = dep.getDate().toString().padStart(2, '0');
-  const month = (dep.getMonth() + 1).toString().padStart(2, '0');
-  const year = dep.getFullYear();
-
-  return {
-    time: `${hours}:${minutes}`,
-    date: `${day}.${month}.${year}`
-  };
-};
-
-
-// --- Tab Components ---
-// Helper function to check if status is "open"
-const _isOpenStatus = (status: string, type: string): boolean => {
-  if (type === 'item') {
-    return status === 'available' || status === 'reserved';
-  } else if (type === 'ride') {
-    return status === 'active' || status === 'full';
-  } else if (type === 'task') {
-    return status === 'open' || status === 'in_progress';
-  } else if (type === 'donation') {
-    return status === 'active';
-  }
-  return true; // Posts are always shown
-};
-
-// Helper function to check if status is "closed"
-const _isClosedStatus = (status: string, type: string): boolean => {
-  if (type === 'item') {
-    return status === 'delivered' || status === 'completed';
-  } else if (type === 'ride') {
-    return status === 'completed';
-  } else if (type === 'task') {
-    return status === 'done' || status === 'archived';
-  } else if (type === 'donation') {
-    return status === 'completed';
-  }
-  return false; // Posts are not shown in closed
-};
-
-const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
-  const { t } = useTranslation(['profile']);
-  const { selectedUser } = useUser();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { db } = require('../src/infrastructure/database.service');
-
-  // Post menu hook
-  const {
-    handleMorePress,
-    optionsModalVisible,
-    setOptionsModalVisible,
-    modalOptions,
-    modalPosition,
-    reportModalVisible,
-    setReportModalVisible,
-    selectedPostForReport,
-    setSelectedPostForReport
-  } = usePostMenu();
-
-  // Report submit handler
-  const handleReportSubmit = async (_reason: string) => {
-    if (!selectedPostForReport) return;
-    // Report functionality can be implemented here if needed
-    setReportModalVisible(false);
-    setSelectedPostForReport(null);
-  };
-
-  // Use provided userId or fallback to selectedUser.id
-  const targetUserId = userId || selectedUser?.id;
-
-  useEffect(() => {
-    const loadOpenContent = async () => {
-      if (!targetUserId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        logger.debug('ProfileScreen', 'OpenRoute - Loading open content', { targetUserId });
-
-        const { USE_BACKEND, API_BASE_URL } = await import('../utils/dbConfig');
-        const allContent: any[] = [];
-        const existingRideIds = new Set<string>();
-        const existingItemIds = new Set<string>();
-
-        // Load posts from API - handle all types with status
-        try {
-          const res = await apiService.getUserPosts(targetUserId, 50, selectedUser?.id);
-          if (res.success && Array.isArray(res.data)) {
-            res.data.forEach((p: any) => {
-              let shouldInclude = false;
-              let status = 'active';
-              let type = 'post';
-              const subtype = p.post_type;
-
-              // Determine if post should be in OPEN tab
-              if (p.post_type === 'task_assignment' || p.post_type === 'task_completion') {
-                const taskStatus = p.task?.status;
-                shouldInclude = taskStatus === 'open' || taskStatus === 'in_progress';
-                status = taskStatus || 'open';
-                type = 'task';
-              } else if (p.ride_data || p.post_type === 'ride') {
-                const rideStatus = p.ride_data?.status || 'active';
-                shouldInclude = rideStatus === 'active' || rideStatus === 'full';
-                status = rideStatus;
-                type = 'ride';
-                if (shouldInclude && p.ride_data?.id) existingRideIds.add(p.ride_data.id);
-              } else if ((p.item_data || p.post_type === 'item') || p.post_type === 'donation') {
-                const itemStatus = p.item_data?.status || 'available';
-                shouldInclude = itemStatus === 'available' || itemStatus === 'reserved' || itemStatus === 'active';
-                status = itemStatus;
-                type = p.post_type === 'donation' ? 'donation' : 'item';
-                if (shouldInclude && p.item_data?.id) existingItemIds.add(p.item_data.id);
-              } else {
-                // Regular posts - always active
-                shouldInclude = true;
-              }
-
-              if (shouldInclude) {
-                let fromLocation = '';
-                let toLocation = '';
-
-                let seats = 0;
-                let price = 0;
-                let time = '';
-                let date = '';
-
-                if (type === 'ride') {
-                  const rData = p.ride_data;
-                  if (rData) {
-                    fromLocation = rData.from_location?.city || rData.from_location?.name || rData.from_location?.address || '';
-                    toLocation = rData.to_location?.city || rData.to_location?.name || rData.to_location?.address || '';
-
-                    seats = rData.available_seats || 0;
-                    price = rData.price_per_seat || 0;
-
-                    if (rData.departure_time) {
-                      const formatted = formatRideTime(rData.departure_time);
-                      time = formatted.time;
-                      date = formatted.date;
-                    }
-                  }
-                }
-
-                allContent.push({
-                  id: p.id,
-                  title: p.title || '',
-                  thumbnail: (p.images && p.images.length > 0) ? p.images[0] : null,
-                  likes: p.likes || 0,
-                  comments: p.comments || 0,
-                  isLiked: p.is_liked || false,
-                  type: type as any,
-                  subtype: subtype,
-                  description: p.description || '',
-                  timestamp: p.created_at,
-                  status: status,
-                  user: user ? {
-                    id: user.id,
-                    name: user.name,
-                    avatar: user.avatar,
-                    karmaPoints: user.karmaPoints
-                  } : { id: 'unknown' },
-                  taskData: p.task,
-                  rideData: p.ride_data,
-                  itemData: p.item_data,
-                  from: fromLocation,
-                  to: toLocation,
-                  seats,
-                  price,
-                  time,
-                  date,
-                  rawData: p,
-                  // Add IDs for updating posts (critical for delete/close functionality)
-                  rideId: p.ride_id || p.ride_data?.id,
-                  itemId: p.item_data?.id || (p.item_id && !/^\d{10,13}$/.test(p.item_id) ? p.item_id : undefined),
-                  taskId: p.task_id || p.task?.id
-                });
-              }
-            });
-            logger.debug('ProfileScreen', 'OpenRoute - Loaded posts from API', { count: res.data.length });
-          }
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading posts from API', { error });
-        }
-
-        // Load items from API (available, reserved)
-        let userItems: any[] = [];
-        if (USE_BACKEND && API_BASE_URL) {
-          try {
-            const axios = (await import('axios')).default;
-            // Load available items
-            const availableResponse = await axios.get(`${API_BASE_URL}/api/items-delivery/search`, {
-              params: { owner_id: targetUserId, status: 'available', limit: 50 }
-            });
-            if (availableResponse.data?.success && Array.isArray(availableResponse.data.data)) {
-              userItems.push(...availableResponse.data.data);
-            }
-            // Load reserved items
-            const reservedResponse = await axios.get(`${API_BASE_URL}/api/items-delivery/search`, {
-              params: { owner_id: targetUserId, status: 'reserved', limit: 50 }
-            });
-            if (reservedResponse.data?.success && Array.isArray(reservedResponse.data.data)) {
-              userItems.push(...reservedResponse.data.data);
-            }
-          } catch (error) {
-            logger.error('ProfileScreen', 'Error loading items from API', { error });
-          }
-        } else {
-          try {
-            const allItems = await db.getDedicatedItemsByOwner(targetUserId) || [];
-            userItems = allItems.filter((item: any) =>
-              item.status === 'available' || item.status === 'reserved'
-            );
-          } catch (error) {
-            logger.error('ProfileScreen', 'Error loading items from local DB', { error });
-          }
-        }
-
-        // Process items
-        userItems.forEach((item: any) => {
-          if (existingItemIds.has(item.id)) return;
-          let thumbnail = '';
-          if (item.image_base64) {
-            const imageData = item.image_base64;
-            if (imageData.startsWith('data:image') || imageData.startsWith('http')) {
-              thumbnail = imageData;
-            } else if (imageData.length > 100) {
-              thumbnail = `data:image/jpeg;base64,${imageData}`;
-            }
-          }
-          allContent.push({
-            id: `item_${item.id}`,
-            title: item.title,
-            description: item.description || '',
-            thumbnail: thumbnail || null,
-            likes: 0,
-            comments: 0,
-            isLiked: false,
-            timestamp: item.created_at || new Date().toISOString(),
-            type: 'post', // Items map to 'post' or 'item' subtype depending on implementation
-            subtype: 'item',
-            status: item.status,
-            user: user ? {
-              id: user.id,
-              name: user.name,
-              avatar: user.avatar,
-              karmaPoints: user.karmaPoints
-            } : { id: 'unknown' },
-            itemData: {
-              ...item,
-              price: item.price
-            },
-            price: item.price,
-            rawData: item
-          });
-        });
-
-        // Load rides (active, full)
-        try {
-          const allRides = await enhancedDB.getRides({});
-          logger.debug('ProfileScreen', 'Fetched rides', { count: allRides.length });
-
-          const userRides = allRides.filter((ride: any) => {
-            const driverId = ride.driver_id || ride.createdBy || ride.created_by || ride.driverId;
-            const status = ride.status || 'active';
-            const isUserRide = driverId === targetUserId && (status === 'active' || status === 'full');
-
-            if (isUserRide) {
-              logger.debug('ProfileScreen', 'Found user ride', { rideId: ride.id, driverId });
-            }
-
-            return isUserRide;
-          });
-
-          logger.debug('ProfileScreen', 'User rides count', { count: userRides.length });
-
-          userRides.forEach((ride: any) => {
-            if (existingRideIds.has(ride.id)) return;
-            const fromLocation = ride.from || ride.from_location?.name || ride.from_location?.city || '';
-            const toLocation = ride.to || ride.to_location?.name || ride.to_location?.city || '';
-
-            let time = '';
-            let date = '';
-            if (ride.departure_time) {
-              const formatted = formatRideTime(ride.departure_time);
-              time = formatted.time;
-              date = formatted.date;
-            } else if (ride.time) {
-              time = ride.time;
-              date = ride.date || '';
-            }
-
-            allContent.push({
-              id: `ride_${ride.id}`,
-              title: `טרמפ: ${fromLocation} ➝ ${toLocation}`,
-              description: ride.description || '',
-              thumbnail: ride.image || null,
-              likes: 0,
-              comments: 0,
-              isLiked: false,
-              timestamp: ride.created_at || new Date().toISOString(),
-              type: 'post',
-              subtype: 'ride',
-              status: ride.status || 'active',
-              from: fromLocation,
-              to: toLocation,
-              seats: ride.available_seats || ride.seats || 0,
-              price: ride.price_per_seat || ride.price || 0,
-              time,
-              date,
-              user: user ? {
-                id: user.id,
-                name: user.name,
-                avatar: user.avatar,
-                karmaPoints: user.karmaPoints
-              } : { id: 'unknown' },
-              rideData: ride,
-              rawData: ride,
-              // Add rideId for updating posts (critical for delete/close functionality)
-              rideId: ride.id
-            });
-          });
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading rides', { error });
-        }
-
-        // Load tasks (open, in_progress) - avoid duplicates with task posts
-        try {
-          // Get task IDs we already added from posts
-          const existingTaskIds = new Set(
-            allContent
-              .filter((c: any) => c.type === 'task' && c.taskData?.id)
-              .map((c: any) => c.taskData.id)
-          );
-
-          const openTasksRes = await apiService.getTasks({ assignee: targetUserId, status: 'open', limit: 50 });
-          const inProgressTasksRes = await apiService.getTasks({ assignee: targetUserId, status: 'in_progress', limit: 50 });
-          const tasks = [
-            ...(openTasksRes.success && Array.isArray(openTasksRes.data) ? openTasksRes.data : []),
-            ...(inProgressTasksRes.success && Array.isArray(inProgressTasksRes.data) ? inProgressTasksRes.data : [])
-          ];
-
-          tasks.forEach((task: any) => {
-            // Skip if already added via task posts
-            if (existingTaskIds.has(task.id)) {
-              logger.debug('ProfileScreen', 'Skipping duplicate task', { taskId: task.id });
-              return;
-            }
-
-            allContent.push({
-              id: `task_${task.id}`,
-              title: task.title,
-              description: task.description || '',
-              thumbnail: '',
-              likes: 0,
-              comments: 0,
-              isLiked: false,
-              timestamp: task.created_at || new Date().toISOString(),
-              type: 'task_post',
-              subtype: 'task_assignment',
-              status: task.status,
-              user: user ? {
-                id: user.id,
-                name: user.name,
-                avatar: user.avatar,
-                karmaPoints: user.karmaPoints
-              } : { id: 'unknown' },
-              taskData: {
-                id: task.id,
-                title: task.title,
-                status: task.status
-              },
-              rawData: task
-            });
-          });
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading tasks', { error });
-        }
-
-        // Load donations (active)
-        try {
-          const donationsRes = await apiService.getUserDonations(targetUserId);
-          if (donationsRes.success && Array.isArray(donationsRes.data)) {
-            const activeDonations = donationsRes.data.filter((donation: any) => donation.status === 'active');
-            activeDonations.forEach((donation: any) => {
-              allContent.push({
-                id: `donation_${donation.id}`,
-                title: donation.title,
-                description: donation.description || '',
-                thumbnail: (donation.images && donation.images.length > 0) ? donation.images[0] : null,
-                likes: 0,
-                comments: 0,
-                isLiked: false,
-                timestamp: donation.created_at || new Date().toISOString(),
-                type: 'post',
-                subtype: 'donation',
-                status: donation.status,
-                user: user ? {
-                  id: user.id,
-                  name: user.name,
-                  avatar: user.avatar,
-                  karmaPoints: user.karmaPoints
-                } : { id: 'unknown' },
-                rawData: donation
-              });
-            });
-          }
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading donations', { error });
-        }
-
-        logger.debug('ProfileScreen', 'Total open content', { count: allContent.length });
-        setPosts(allContent);
-      } catch (error) {
-        logger.error('ProfileScreen', 'Error loading open content', { error });
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
-
-  if (loading) {
-    return (
-      <View style={styles.tabContentPlaceholder}>
-        <Text style={styles.placeholderText}>טוען תוכן פתוח...</Text>
-      </View>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <View style={[styles.tabContentPlaceholder, { height: 400 }]} onLayout={(e) => onHeightChange && onHeightChange(Math.max(400, e.nativeEvent.layout.height))}>
-        <Ionicons name="folder-open-outline" size={60} color={colors.textSecondary} />
-        <Text style={styles.placeholderText}>אין תוכן פתוח עדיין</Text>
-        <Text style={styles.placeholderSubtext}>התוכן הפתוח שלך יופיע כאן</Text>
-      </View>
-    );
-  }
-
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth / 3;
-
-  return (
-    <View style={styles.tabContentContainer}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        key={3}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <PostReelItem
-            item={item}
-            numColumns={3}
-            cardWidth={cardWidth}
-            onPress={() => { }}
-            onMorePress={handleMorePress}
-          />
-        )}
-        onContentSizeChange={(w, h) => {
-          if (onHeightChange) onHeightChange(h);
-        }}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
-      {/* Modals */}
-      <OptionsModal
-        visible={optionsModalVisible}
-        onClose={() => setOptionsModalVisible(false)}
-        options={modalOptions}
-        title={t('common.options') || 'Options'}
-        anchorPosition={modalPosition}
-      />
-      <ReportPostModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-        onSubmit={handleReportSubmit}
-        isLoading={false}
-      />
-    </View>
-  );
-};
-
-const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
-  const { t } = useTranslation(['profile']);
-  const { selectedUser } = useUser();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { db } = require('../src/infrastructure/database.service');
-
-  // Post menu hook
-  const {
-    handleMorePress,
-    optionsModalVisible,
-    setOptionsModalVisible,
-    modalOptions,
-    modalPosition,
-    reportModalVisible,
-    setReportModalVisible,
-    selectedPostForReport,
-    setSelectedPostForReport
-  } = usePostMenu();
-
-  // Report submit handler
-  const handleReportSubmit = async (_reason: string) => {
-    if (!selectedPostForReport) return;
-    // Report functionality can be implemented here if needed
-    setReportModalVisible(false);
-    setSelectedPostForReport(null);
-  };
-
-  // Use provided userId or fallback to selectedUser.id
-  const targetUserId = userId || selectedUser?.id;
-
-  useEffect(() => {
-    const loadClosedContent = async () => {
-      if (!targetUserId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        logger.debug('ProfileScreen', 'ClosedRoute - Loading closed content', { targetUserId });
-
-        const { USE_BACKEND, API_BASE_URL } = await import('../utils/dbConfig');
-        const allContent: any[] = [];
-        const existingRideIds = new Set();
-        const existingItemIds = new Set();
-
-        // Load posts from API - handle all types with closed status
-        try {
-          const res = await apiService.getUserPosts(targetUserId, 50, selectedUser?.id);
-          if (res.success && Array.isArray(res.data)) {
-            res.data.forEach((p: any) => {
-              let shouldInclude = false;
-              let status = 'closed';
-              let type = 'post';
-              const subtype = p.post_type;
-
-              // Determine if post should be in CLOSED tab
-              if (p.post_type === 'task_assignment' || p.post_type === 'task_completion') {
-                const taskStatus = p.task?.status;
-                shouldInclude = taskStatus === 'done' || taskStatus === 'archived';
-                status = taskStatus || 'done';
-                type = 'task';
-              } else if (p.ride_data || p.post_type === 'ride') {
-                const rideStatus = p.ride_data?.status;
-                shouldInclude = rideStatus === 'completed' || rideStatus === 'cancelled';
-                status = rideStatus || 'completed';
-                type = 'ride';
-                if (shouldInclude && p.ride_data?.id) existingRideIds.add(p.ride_data.id);
-              } else if ((p.item_data || p.post_type === 'item') || p.post_type === 'donation') {
-                const itemStatus = p.item_data?.status;
-                shouldInclude = itemStatus === 'delivered' || itemStatus === 'completed' || itemStatus === 'expired';
-                status = itemStatus || 'completed';
-                type = p.post_type === 'donation' ? 'donation' : 'item';
-                if (shouldInclude && p.item_data?.id) existingItemIds.add(p.item_data.id);
-              } else {
-                // Regular posts - not shown in closed
-                shouldInclude = false;
-              }
-
-              let fromLocation = '';
-              let toLocation = '';
-
-              let seats = 0;
-              let price = 0;
-              let time = '';
-              let date = '';
-
-              if (type === 'ride') {
-                const rData = p.ride_data;
-                if (rData) {
-                  fromLocation = rData.from_location?.city || rData.from_location?.name || rData.from_location?.address || '';
-                  toLocation = rData.to_location?.city || rData.to_location?.name || rData.to_location?.address || '';
-
-                  seats = rData.available_seats || 0;
-                  price = rData.price_per_seat || 0;
-
-                  if (rData.departure_time) {
-                    const formatted = formatRideTime(rData.departure_time);
-                    time = formatted.time;
-                    date = formatted.date;
-                  }
-                }
-              }
-
-              if (shouldInclude) {
-                allContent.push({
-                  id: p.id,
-                  title: p.title || '',
-                  thumbnail: (p.images && p.images.length > 0) ? p.images[0] : null,
-                  likes: p.likes || 0,
-                  comments: p.comments || 0,
-                  isLiked: p.is_liked || false,
-                  type: type as any,
-                  subtype: subtype,
-                  description: p.description || '',
-                  timestamp: p.created_at,
-                  status: status,
-                  user: user ? {
-                    id: user.id,
-                    name: user.name,
-                    avatar: user.avatar,
-                    karmaPoints: user.karmaPoints
-                  } : { id: 'unknown' },
-                  taskData: p.task,
-                  rideData: p.ride_data,
-                  itemData: p.item_data,
-                  from: fromLocation,
-                  to: toLocation,
-                  seats,
-                  price,
-                  time,
-                  date,
-                  rawData: p,
-                  // Add IDs for updating posts (critical for delete/close functionality)
-                  rideId: p.ride_id || p.ride_data?.id,
-                  itemId: p.item_data?.id || (p.item_id && !/^\d{10,13}$/.test(p.item_id) ? p.item_id : undefined),
-                  taskId: p.task_id || p.task?.id
-                });
-              }
-            });
-            logger.debug('ProfileScreen', 'ClosedRoute - Loaded posts from API', { count: res.data.length });
-          }
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading posts from API', { error });
-        }
-
-        // Load items from API (delivered, completed)
-        let userItems: any[] = [];
-        if (USE_BACKEND && API_BASE_URL) {
-          try {
-            const axios = (await import('axios')).default;
-            // Load delivered items
-            const deliveredResponse = await axios.get(`${API_BASE_URL}/api/items-delivery/search`, {
-              params: { owner_id: targetUserId, status: 'delivered', limit: 50 }
-            });
-            if (deliveredResponse.data?.success && Array.isArray(deliveredResponse.data.data)) {
-              userItems.push(...deliveredResponse.data.data);
-            }
-            // Load completed items
-            const completedResponse = await axios.get(`${API_BASE_URL}/api/items-delivery/search`, {
-              params: { owner_id: targetUserId, status: 'completed', limit: 50 }
-            });
-            if (completedResponse.data?.success && Array.isArray(completedResponse.data.data)) {
-              userItems.push(...completedResponse.data.data);
-            }
-          } catch (error) {
-            logger.error('ProfileScreen', 'Error loading items from API', { error });
-          }
-        } else {
-          try {
-            const allItems = await db.getDedicatedItemsByOwner(targetUserId) || [];
-            userItems = allItems.filter((item: any) =>
-              item.status === 'delivered' || item.status === 'completed'
-            );
-          } catch (error) {
-            logger.error('ProfileScreen', 'Error loading items from local DB', { error });
-          }
-        }
-
-        // Process items
-        userItems.forEach((item: any) => {
-          if (existingItemIds.has(item.id)) return;
-          let thumbnail = '';
-          if (item.image_base64) {
-            const imageData = item.image_base64;
-            if (imageData.startsWith('data:image') || imageData.startsWith('http')) {
-              thumbnail = imageData;
-            } else if (imageData.length > 100) {
-              thumbnail = `data:image/jpeg;base64,${imageData}`;
-            }
-          }
-          allContent.push({
-            id: `item_${item.id}`,
-            title: item.title,
-            description: item.description || '',
-            thumbnail: thumbnail || null,
-            likes: 0,
-            comments: 0,
-            isLiked: false,
-            timestamp: item.created_at || new Date().toISOString(),
-            type: 'post', // Items map to 'post' or 'item' subtype
-            subtype: 'item',
-            status: item.status,
-            user: user ? {
-              id: user.id,
-              name: user.name,
-              avatar: user.avatar,
-              karmaPoints: user.karmaPoints
-            } : { id: 'unknown' },
-            itemData: {
-              ...item,
-              price: item.price
-            },
-            price: item.price,
-            rawData: item
-          });
-        });
-
-        // Load rides (completed)
-        try {
-          const allRides = await enhancedDB.getRides({});
-          const userRides = allRides.filter((ride: any) => {
-            const createdBy = ride.createdBy || ride.created_by || ride.driver_id || ride.driverId;
-            const status = ride.status || 'active';
-            return createdBy === targetUserId && status === 'completed';
-          });
-          userRides.forEach((ride: any) => {
-            if (existingRideIds.has(ride.id)) return;
-            const fromLocation = ride.from || ride.from_location?.name || ride.from_location?.city || '';
-            const toLocation = ride.to || ride.to_location?.name || ride.to_location?.city || '';
-
-            let time = '';
-            let date = '';
-            if (ride.departure_time) {
-              const formatted = formatRideTime(ride.departure_time);
-              time = formatted.time;
-              date = formatted.date;
-            } else if (ride.time) {
-              time = ride.time;
-              date = ride.date || '';
-            }
-
-            allContent.push({
-              id: `ride_${ride.id}`,
-              title: `טרמפ: ${fromLocation} ➝ ${toLocation}`,
-              description: ride.description || '',
-              thumbnail: ride.image || null,
-              likes: 0,
-              comments: 0,
-              isLiked: false,
-              timestamp: ride.created_at || new Date().toISOString(),
-              type: 'post',
-              subtype: 'ride',
-              status: ride.status || 'completed',
-              from: fromLocation,
-              to: toLocation,
-              seats: ride.available_seats || ride.seats || 0,
-              price: ride.price_per_seat || ride.price || 0,
-              time,
-              date,
-              user: user ? {
-                id: user.id,
-                name: user.name,
-                avatar: user.avatar,
-                karmaPoints: user.karmaPoints
-              } : { id: 'unknown' },
-              rideData: ride,
-              rawData: ride,
-              // Add rideId for updating posts (critical for delete/close functionality)
-              rideId: ride.id
-            });
-          });
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading rides', { error });
-        }
-
-        // Load tasks (done, archived) - avoid duplicates with task posts
-        try {
-          // Get task IDs we already added from posts
-          const existingTaskIds = new Set(
-            allContent
-              .filter((c: any) => c.type === 'task' && c.taskData?.id)
-              .map((c: any) => c.taskData.id)
-          );
-
-          const doneTasksRes = await apiService.getTasks({ assignee: targetUserId, status: 'done', limit: 50 });
-          const archivedTasksRes = await apiService.getTasks({ assignee: targetUserId, status: 'archived', limit: 50 });
-          const tasks = [
-            ...(doneTasksRes.success && Array.isArray(doneTasksRes.data) ? doneTasksRes.data : []),
-            ...(archivedTasksRes.success && Array.isArray(archivedTasksRes.data) ? archivedTasksRes.data : [])
-          ];
-
-          tasks.forEach((task: any) => {
-            // Skip if already added via task posts
-            if (existingTaskIds.has(task.id)) {
-              logger.debug('ProfileScreen', 'ClosedRoute - Skipping duplicate task', { taskId: task.id });
-              return;
-            }
-
-            allContent.push({
-              id: `task_${task.id}`,
-              title: task.title,
-              description: task.description || '',
-              thumbnail: '',
-              likes: 0,
-              comments: 0,
-              isLiked: false,
-              timestamp: task.created_at || new Date().toISOString(),
-              type: 'task_post',
-              subtype: 'task_assignment',
-              status: task.status,
-              user: user ? {
-                id: user.id,
-                name: user.name,
-                avatar: user.avatar,
-                karmaPoints: user.karmaPoints
-              } : { id: 'unknown' },
-              taskData: {
-                id: task.id,
-                title: task.title,
-                status: task.status
-              },
-              rawData: task
-            });
-          });
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading tasks', { error });
-        }
-
-        // Load donations (completed)
-        try {
-          const donationsRes = await apiService.getUserDonations(targetUserId);
-          if (donationsRes.success && Array.isArray(donationsRes.data)) {
-            const completedDonations = donationsRes.data.filter((donation: any) => donation.status === 'completed');
-            completedDonations.forEach((donation: any) => {
-              allContent.push({
-                id: `donation_${donation.id}`,
-                title: donation.title,
-                description: donation.description || '',
-                thumbnail: (donation.images && donation.images.length > 0) ? donation.images[0] : null,
-                likes: 0,
-                comments: 0,
-                isLiked: false,
-                timestamp: donation.created_at || new Date().toISOString(),
-                type: 'post',
-                subtype: 'donation',
-                status: donation.status,
-                user: user ? {
-                  id: user.id,
-                  name: user.name,
-                  avatar: user.avatar,
-                  karmaPoints: user.karmaPoints
-                } : { id: 'unknown' },
-                rawData: donation
-              });
-            });
-          }
-        } catch (error) {
-          logger.error('ProfileScreen', 'Error loading donations', { error });
-        }
-
-        logger.debug('ProfileScreen', 'Total closed content', { count: allContent.length });
-        setPosts(allContent);
-      } catch (error) {
-        logger.error('ProfileScreen', 'Error loading closed content', { error });
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadClosedContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
-
-  if (loading) {
-    return (
-      <View style={styles.tabContentPlaceholder}>
-        <Text style={styles.placeholderText}>טוען תוכן סגור...</Text>
-      </View>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <View style={[styles.tabContentPlaceholder, { height: 400 }]} onLayout={(e) => onHeightChange && onHeightChange(Math.max(400, e.nativeEvent.layout.height))}>
-        <Ionicons name="checkmark-done-circle-outline" size={60} color={colors.textSecondary} />
-        <Text style={styles.placeholderText}>אין תוכן סגור עדיין</Text>
-        <Text style={styles.placeholderSubtext}>התוכן הסגור שלך יופיע כאן</Text>
-      </View>
-    );
-  }
-
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth / 3;
-
-  return (
-    <View style={styles.tabContentContainer}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        key={3}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <PostReelItem
-            item={item}
-            numColumns={3}
-            cardWidth={cardWidth}
-            onPress={() => { }}
-            onMorePress={handleMorePress}
-          />
-        )}
-        onContentSizeChange={(w, h) => {
-          if (onHeightChange) onHeightChange(h);
-        }}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
-      {/* Modals */}
-      <OptionsModal
-        visible={optionsModalVisible}
-        onClose={() => setOptionsModalVisible(false)}
-        options={modalOptions}
-        title={t('common.options') || 'Options'}
-        anchorPosition={modalPosition}
-      />
-      <ReportPostModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-        onSubmit={handleReportSubmit}
-        isLoading={false}
-      />
-    </View>
-  );
-};
-
-const TaggedRoute = ({ onHeightChange }: { onHeightChange?: (height: number) => void }) => {
-  return (
-    <View
-      style={[styles.tabContentPlaceholder, { height: 400 }]}
-      onLayout={(e) => onHeightChange && onHeightChange(Math.max(400, e.nativeEvent.layout.height))}
-    >
-      <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
-      <Text style={styles.placeholderText}>תיוגים יהיה פעיל בהמשך</Text>
-    </View>
-  );
-};
+import type { CharacterType, ProfileActivity, ProfileFeedItem, ProfileScreenRouteParams, TabRoute } from '../components/Profile/types';
+import { getRoleDisplayName, safeStr, safeNum, getLocationName } from '../components/Profile/profileUtils';
+import { profileStyles } from '../components/Profile/profileStyles';
+import ProfileOpenTab from '../components/Profile/ProfileOpenTab';
+import ProfileClosedTab from '../components/Profile/ProfileClosedTab';
+import ProfileTaggedTab from '../components/Profile/ProfileTaggedTab';
+import type { ItemOrRideRecord } from '../components/ItemDetailsModal';
+
+export type { ProfileFeedItem, ProfileActivity };
 
 // --- Main Component ---
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = getScreenInfo();
+const styles = profileStyles;
 
 // Internal component that contains all the logic
 // It receives tabBarHeight as a prop so we can control it from outside
@@ -1040,6 +70,7 @@ function ProfileScreenContent({
   const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth } = useUser();
   const navigation = useNavigation();
   const { ToastComponent } = useToast();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- React Native asset require
   const defaultLogo = require('../assets/images/android-chrome-192x192.png');
 
   // Get route params for viewing other users' profiles
@@ -1127,8 +158,8 @@ function ProfileScreenContent({
     completedTasks: 0,
     totalDonations: 0,
   });
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
+  const [recentActivities, setRecentActivities] = useState<ProfileActivity[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<ProfileActivity | null>(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
 
   // State for viewing other user's profile
@@ -1164,23 +195,23 @@ function ProfileScreenContent({
           setLoadingUser(true);
           const response = await apiService.getUserById(externalUserId);
           if (response.success && response.data) {
-            const userData = response.data as any;
+            const userData = response.data as Record<string, unknown>;
             const mappedUser: CharacterType = {
-              id: userData.id,
-              name: userData.name || externalUserName || 'ללא שם',
-              avatar: userData.avatar_url || userData.avatar || 'https://i.pravatar.cc/150?img=1',
-              bio: userData.bio || '',
-              karmaPoints: userData.karma_points || 0,
+              id: safeStr(userData.id),
+              name: safeStr(userData.name || externalUserName || t('profile:fallbacks.noName')),
+              avatar: safeStr(userData.avatar_url || userData.avatar || 'https://i.pravatar.cc/150?img=1'),
+              bio: safeStr(userData.bio),
+              karmaPoints: safeNum(userData.karma_points),
               completedTasks: 0,
-              roles: userData.roles || ['user'],
-              isVerified: userData.is_verified || false,
+              roles: Array.isArray(userData.roles) ? (userData.roles as string[]) : ['user'],
+              isVerified: !!userData.is_verified,
               location: userData.city ? {
-                city: userData.city,
-                country: userData.country || 'ישראל'
-              } : { city: 'ישראל', country: 'IL' },
-              joinDate: userData.join_date || userData.created_at || new Date().toISOString(),
-              interests: userData.interests || [],
-              parentManagerId: userData.parent_manager_id || null,
+                city: safeStr(userData.city),
+                country: safeStr(userData.country || t('profile:fallbacks.israel'))
+              } : { city: t('profile:fallbacks.israel'), country: 'IL' },
+              joinDate: safeStr(userData.join_date || userData.created_at) || new Date().toISOString(),
+              interests: Array.isArray(userData.interests) ? (userData.interests as string[]) : [],
+              parentManagerId: userData.parent_manager_id != null ? safeStr(userData.parent_manager_id) : null,
             };
             setViewingUser(mappedUser);
             // Save userId to localStorage after successful load (Web only)
@@ -1200,19 +231,19 @@ function ProfileScreenContent({
           }
         } catch (err) {
           logger.error('ProfileScreen', 'Load user error', { error: err });
-          if (externalUserName && externalUserName !== 'משתמש לא ידוע') {
+          if (externalUserName && externalUserName !== t('profile:fallbacks.unknownUser')) {
             setViewingUser({
               id: externalUserId,
-              name: externalUserName || 'ללא שם',
+              name: externalUserName || t('profile:fallbacks.noName'),
               avatar: 'https://i.pravatar.cc/150?img=1',
               bio: '',
               karmaPoints: 0,
               completedTasks: 0,
               roles: ['user'],
               isVerified: false,
-              location: { city: 'ישראל', country: 'IL' },
+              location: { city: t('profile:fallbacks.israel'), country: 'IL' },
               joinDate: new Date().toISOString(),
-              interests: [],
+              interests: [] as string[],
             });
           } else {
             setViewingUser(null);
@@ -1226,23 +257,23 @@ function ProfileScreenContent({
       } else if (!USE_BACKEND && externalUserId && externalUserName) {
         setViewingUser({
           id: externalUserId,
-          name: externalUserName || 'ללא שם',
+          name: externalUserName || t('profile:fallbacks.noName'),
           avatar: 'https://i.pravatar.cc/150?img=1',
           bio: '',
           karmaPoints: 0,
           completedTasks: 0,
           roles: ['user'],
           isVerified: false,
-          location: { city: 'ישראל', country: 'IL' },
+          location: { city: t('profile:fallbacks.israel'), country: 'IL' },
           joinDate: new Date().toISOString(),
-          interests: [],
+          interests: [] as string[],
         });
         setLoadingUser(false);
       }
     };
 
     loadUser();
-  }, [externalUserId, externalUserName, externalCharacterData, isOwnProfile]);
+  }, [externalUserId, externalUserName, externalCharacterData, isOwnProfile, t]);
 
   // Load follow stats when viewing other user's profile
   useEffect(() => {
@@ -1277,12 +308,12 @@ function ProfileScreenContent({
       const userToUse = isOwnProfile ? selectedUser : viewingUser;
 
       setUserStats({
-        posts: (userToUse as any)?.postsCount || 0,
+        posts: (userToUse as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number }) | null)?.postsCount || 0,
         followers: currentUserStats.followersCount,
         following: currentUserStats.followingCount,
         karmaPoints: userToUse?.karmaPoints || 0,
-        completedTasks: (userToUse as any)?.completedTasks || 0,
-        totalDonations: (userToUse as any)?.totalDonations || 0,
+        completedTasks: (userToUse as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number }) | null)?.completedTasks || 0,
+        totalDonations: (userToUse as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number }) | null)?.totalDonations || 0,
       });
     } catch (error) {
       logger.error('ProfileScreen', 'Update user stats error', { error });
@@ -1302,19 +333,18 @@ function ProfileScreenContent({
         return;
       }
 
-      const activities: any[] = [];
+      const activities: ProfileActivity[] = [];
       const userId = selectedUser.id;
 
       // Load posts
       try {
-        const { db } = require('../src/infrastructure/database.service');
         const userPosts = await db.getUserPosts(userId) || [];
-        userPosts.forEach((post: any) => {
+        (userPosts as Record<string, unknown>[]).forEach((post: Record<string, unknown>) => {
           activities.push({
-            id: `post_${post.id}`,
+            id: `post_${safeStr(post.id)}`,
             type: 'post',
-            title: post.title || post.content || 'פוסט חדש',
-            time: post.created_at || post.createdAt || new Date().toISOString(),
+            title: safeStr(post.title || post.content) || t('profile:content.newPost'),
+            time: safeStr(post.created_at || post.createdAt) || new Date().toISOString(),
             icon: 'image-outline',
             color: colors.info,
             rawData: post
@@ -1327,7 +357,7 @@ function ProfileScreenContent({
       // Load items/donations
       try {
         const { USE_BACKEND, API_BASE_URL } = await import('../utils/dbConfig');
-        let userItems: any[] = [];
+        let userItems: Record<string, unknown>[] = [];
 
         if (USE_BACKEND && API_BASE_URL) {
           try {
@@ -1345,16 +375,15 @@ function ProfileScreenContent({
             logger.error('ProfileScreen', 'Error loading items from API', { error });
           }
         } else {
-          const { db } = require('../src/infrastructure/database.service');
           userItems = await db.getDedicatedItemsByOwner(userId) || [];
         }
 
-        userItems.forEach((item: any) => {
+        userItems.forEach((item: Record<string, unknown>) => {
           activities.push({
-            id: `item_${item.id}`,
+            id: `item_${safeStr(item.id)}`,
             type: 'item',
-            title: item.title || 'פריט חדש',
-            time: item.created_at || item.createdAt || new Date().toISOString(),
+            title: safeStr(item.title) || t('profile:content.newItem'),
+            time: safeStr(item.created_at || item.createdAt) || new Date().toISOString(),
             icon: 'cube-outline',
             color: colors.pink,
             rawData: item
@@ -1367,25 +396,25 @@ function ProfileScreenContent({
       // Load donations - filter by createdBy after loading
       try {
         const allDonations = await enhancedDB.getDonations({});
-        const userDonations = allDonations.filter((donation: any) => {
+        const userDonations = allDonations.filter((donation: Record<string, unknown>) => {
           const createdBy = donation.createdBy || donation.created_by || donation.donor_id || donation.donorId;
           return createdBy === userId;
         });
 
-        userDonations.forEach((donation: any) => {
-          const donationTitle = donation.type === 'money'
-            ? `תרומה: ${donation.amount || 0} ₪`
+        userDonations.forEach((donation: Record<string, unknown>) => {
+          const donationTitle: string = donation.type === 'money'
+            ? t('profile:content.donationMoneyFormat', { amount: safeNum(donation.amount) })
             : donation.type === 'time'
-              ? `התנדבות: ${donation.title || ''}`
+              ? t('profile:content.volunteeringFormat', { title: safeStr(donation.title) })
               : donation.type === 'trump'
-                ? `טרמפ: ${donation.title || ''}`
-                : donation.title || 'תרומה חדשה';
+                ? t('profile:content.rideFormat', { title: safeStr(donation.title) })
+                : safeStr(donation.title) || t('profile:content.newDonation');
 
           activities.push({
-            id: `donation_${donation.id}`,
+            id: `donation_${safeStr(donation.id)}`,
             type: 'donation',
             title: donationTitle,
-            time: donation.created_at || donation.createdAt || new Date().toISOString(),
+            time: safeStr(donation.created_at || donation.createdAt) || new Date().toISOString(),
             icon: 'heart-outline',
             color: colors.error,
             rawData: donation
@@ -1399,14 +428,14 @@ function ProfileScreenContent({
       try {
         const userRidesResponse = await apiService.getUserRides(userId, 'driver');
         if (userRidesResponse.success && Array.isArray(userRidesResponse.data)) {
-          userRidesResponse.data.forEach((ride: any) => {
-            const fromLocation = ride.from || ride.from_location?.name || ride.from_location?.city || 'לא צויין';
-            const toLocation = ride.to || ride.to_location?.name || ride.to_location?.city || 'לא צויין';
+          (userRidesResponse.data as Record<string, unknown>[]).forEach((ride: Record<string, unknown>) => {
+            const fromLocation = safeStr(ride.from) || getLocationName(ride.from_location) || t('profile:fallbacks.notSpecified');
+            const toLocation = safeStr(ride.to) || getLocationName(ride.to_location) || t('profile:fallbacks.notSpecified');
             activities.push({
-              id: `ride_${ride.id}`,
+              id: `ride_${safeStr(ride.id)}`,
               type: 'ride',
-              title: `טרמפ: ${fromLocation} ➝ ${toLocation}`,
-              time: ride.created_at || ride.createdAt || new Date().toISOString(),
+              title: t('profile:ride.fromToFormat', { from: fromLocation, to: toLocation }),
+              time: safeStr(ride.created_at || ride.createdAt) || new Date().toISOString(),
               icon: 'car-sport-outline',
               color: colors.info,
               rawData: ride
@@ -1421,7 +450,7 @@ function ProfileScreenContent({
       try {
         const taskPostsRes = await apiService.getUserPosts(userId, 50, selectedUser?.id);
         if (taskPostsRes.success && Array.isArray(taskPostsRes.data)) {
-          taskPostsRes.data.forEach((p: any) => {
+          (taskPostsRes.data as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => {
             if (p.post_type === 'task_assignment' || p.post_type === 'task_completion') {
               const icon = p.post_type === 'task_assignment'
                 ? 'add-circle-outline'
@@ -1430,18 +459,18 @@ function ProfileScreenContent({
                 ? colors.info
                 : colors.success;
               const typeLabel = p.post_type === 'task_assignment'
-                ? 'משימה חדשה'
-                : 'משימה הושלמה';
+                ? t('profile:content.newTask')
+                : t('profile:content.taskCompleted');
 
               activities.push({
-                id: `taskpost_${p.id}`,
+                id: `taskpost_${safeStr(p.id)}`,
                 type: 'task_post',
-                subtype: p.post_type,
-                title: p.title || typeLabel,
-                time: p.created_at || new Date().toISOString(),
+                subtype: safeStr(p.post_type),
+                title: safeStr(p.title) || typeLabel,
+                time: safeStr(p.created_at) || new Date().toISOString(),
                 icon,
                 color,
-                rawData: p
+                rawData: p as ProfileActivity['rawData']
               });
             }
           });
@@ -1455,26 +484,27 @@ function ProfileScreenContent({
         // Get task IDs we already added from posts
         const existingTaskIds = new Set(
           activities
-            .filter((a: any) => a.type === 'task_post' && a.rawData?.task?.id)
-            .map((a: any) => a.rawData.task.id)
+            .filter((a) => a.type === 'task_post' && a.rawData?.task?.id)
+            .map((a) => safeStr(a.rawData!.task!.id))
         );
 
         const tasksRes = await apiService.getTasks({ assignee: userId, limit: 50 });
         if (tasksRes.success && Array.isArray(tasksRes.data)) {
-          tasksRes.data.forEach((task: any) => {
+          tasksRes.data.forEach((task: Record<string, unknown>) => {
             // Skip if already added via task posts
-            if (existingTaskIds.has(task.id)) {
+            const taskId = safeStr(task.id);
+            if (existingTaskIds.has(taskId)) {
               return;
             }
 
             activities.push({
-              id: `task_${task.id}`,
+              id: `task_${taskId}`,
               type: 'task',
-              title: task.title || 'משימה חדשה',
-              time: task.created_at || new Date().toISOString(),
+              title: safeStr(task.title) || t('profile:content.newTask'),
+              time: safeStr(task.created_at) || new Date().toISOString(),
               icon: 'checkmark-circle-outline',
               color: colors.success,
-              rawData: task
+              rawData: task as ProfileActivity['rawData']
             });
           });
         }
@@ -1484,14 +514,14 @@ function ProfileScreenContent({
 
       // Sort by time (newest first) and limit to 10
       activities.sort((a, b) => {
-        const timeA = new Date(a.time).getTime();
-        const timeB = new Date(b.time).getTime();
+        const timeA = new Date(a.time as string | number | Date).getTime();
+        const timeB = new Date(b.time as string | number | Date).getTime();
         return timeB - timeA;
       });
 
       // Format time for display
       const formattedActivities = activities.slice(0, 10).map(activity => {
-        const activityTime = new Date(activity.time);
+        const activityTime = new Date(activity.time as string | number | Date);
         const now = new Date();
         const diffMs = now.getTime() - activityTime.getTime();
         const diffMins = Math.floor(diffMs / 60000);
@@ -1500,13 +530,13 @@ function ProfileScreenContent({
 
         let timeText = '';
         if (diffMins < 1) {
-          timeText = 'לפני רגע';
+          timeText = t('profile:content.justNow');
         } else if (diffMins < 60) {
-          timeText = `לפני ${diffMins} דקות`;
+          timeText = t('common:time.minutesAgo', { count: diffMins });
         } else if (diffHours < 24) {
-          timeText = `לפני ${diffHours} שעות`;
+          timeText = t('common:time.hoursAgo', { count: diffHours });
         } else if (diffDays < 7) {
-          timeText = `לפני ${diffDays} ימים`;
+          timeText = t('common:time.daysAgo', { count: diffDays });
         } else {
           timeText = activityTime.toLocaleDateString('he-IL');
         }
@@ -1522,7 +552,7 @@ function ProfileScreenContent({
       logger.error('ProfileScreen', 'Load recent activities error', { error });
       setRecentActivities([]);
     }
-  }, [isOwnProfile, selectedUser]);
+  }, [isOwnProfile, selectedUser, t]);
 
   // Function to select a random user (demo mode only - disabled)
   const selectRandomUser = () => {
@@ -1549,11 +579,11 @@ function ProfileScreenContent({
     updateUserStats();
     Alert.alert(t('profile:alerts.sampleDataTitle'), t('profile:alerts.sampleDataCreated'));
   };
-  const [routes] = useState<TabRoute[]>([
-    { key: 'open', title: 'פתוח' },
-    { key: 'closed', title: 'סגור' },
-    { key: 'tagged', title: 'תיוגים' },
-  ]);
+  const routes = React.useMemo<TabRoute[]>(() => [
+    { key: 'open', title: t('profile:contentTabs.open') },
+    { key: 'closed', title: t('profile:contentTabs.closed') },
+    { key: 'tagged', title: t('profile:tabs.tagged') },
+  ], [t]);
 
   // Update stats when user changes
   useEffect(() => {
@@ -1605,11 +635,11 @@ function ProfileScreenContent({
   const renderScene = ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
     switch (sceneRoute.key) {
       case 'open':
-        return <OpenRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('open', h)} />;
+        return <ProfileOpenTab userId={targetUserId} user={displayUser ?? undefined} onHeightChange={(h) => handleTabHeightChange('open', h)} />;
       case 'closed':
-        return <ClosedRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('closed', h)} />;
+        return <ProfileClosedTab userId={targetUserId} user={displayUser ?? undefined} onHeightChange={(h) => handleTabHeightChange('closed', h)} />;
       case 'tagged':
-        return <TaggedRoute onHeightChange={(h) => handleTabHeightChange('tagged', h)} />;
+        return <ProfileTaggedTab onHeightChange={(h) => handleTabHeightChange('tagged', h)} />;
       default:
         return null;
     }
@@ -1663,7 +693,7 @@ function ProfileScreenContent({
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>משתמש לא נמצא</Text>
+          <Text style={styles.errorText}>{t('profile:alertsProfile.userNotFound')}</Text>
           <Text style={styles.errorSubtext}>userId: {externalUserId}</Text>
           <TouchableOpacity
             style={styles.backButton}
@@ -1671,12 +701,12 @@ function ProfileScreenContent({
               if (navigation.canGoBack()) {
                 navigation.goBack();
               } else {
-                (navigation as any).navigate('HomeStack');
+                (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('HomeStack');
               }
             }}
           >
             <Ionicons name="home" size={20} color={colors.white} />
-            <Text style={styles.backButtonText}>חזרה לעמוד הבית</Text>
+            <Text style={styles.backButtonText}>{t('profile:backToHome')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1689,7 +719,7 @@ function ProfileScreenContent({
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="hourglass-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>טוען...</Text>
+          <Text style={styles.errorText}>{t('common:loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -1715,10 +745,10 @@ function ProfileScreenContent({
                 >
                   <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.username}>{displayUser?.name || externalUserName || 'ללא שם'}</Text>
+                <Text style={styles.username}>{displayUser?.name || externalUserName || t('profile:fallbacks.noName')}</Text>
                 <TouchableOpacity
                   style={styles.headerIcon}
-                  onPress={() => Alert.alert('אפשרויות', 'פתיחת אפשרויות')}
+                  onPress={() => Alert.alert(t('common:options'), t('profile:alertsProfile.openOptions'))}
                 >
                   <Ionicons name="ellipsis-horizontal" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
@@ -1751,7 +781,7 @@ function ProfileScreenContent({
                 )}
                 {!isOwnProfile && (
                   <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{(displayUser as any)?.postsCount || 0}</Text>
+                    <Text style={styles.statNumber}>{(displayUser as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number; parentManagerId?: string }) | null)?.postsCount || 0}</Text>
                     <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                   </View>
                 )}
@@ -1759,7 +789,7 @@ function ProfileScreenContent({
                   style={styles.statItem}
                   onPress={() => {
                     if (!targetUserId) return;
-                    (navigation as any).navigate('FollowersScreen', {
+                    (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('FollowersScreen', {
                       userId: targetUserId,
                       type: 'followers',
                       title: t('profile:followersTitle')
@@ -1773,7 +803,7 @@ function ProfileScreenContent({
                   style={styles.statItem}
                   onPress={() => {
                     if (!targetUserId) return;
-                    (navigation as any).navigate('FollowersScreen', {
+                    (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('FollowersScreen', {
                       userId: targetUserId,
                       type: 'following',
                       title: t('profile:followingTitle')
@@ -1829,7 +859,7 @@ function ProfileScreenContent({
                         style={styles.menuItem}
                         onPress={() => {
                           setShowMenu(false);
-                          (navigation as any).navigate('EditProfileScreen');
+                          (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('EditProfileScreen');
                         }}
                       >
                         <Ionicons name="create-outline" size={scaleSize(20)} color={colors.textPrimary} />
@@ -1914,7 +944,7 @@ function ProfileScreenContent({
                   {(displayUser as CharacterType).isVerified && (
                     <View style={styles.verificationBadge}>
                       <Ionicons name="checkmark-circle" size={16} color={colors.info} />
-                      <Text style={styles.verifiedText}>מאומת</Text>
+                      <Text style={styles.verifiedText}>{t('profile:verified')}</Text>
                     </View>
                   )}
 
@@ -1923,7 +953,7 @@ function ProfileScreenContent({
                     <View style={styles.rolesContainer}>
                       {displayUser.roles.map((role, index) => (
                         <View key={index} style={styles.roleTag}>
-                          <Text style={styles.roleText}>{getRoleDisplayName(role)}</Text>
+                          <Text style={styles.roleText}>{getRoleDisplayName(role, t)}</Text>
                         </View>
                       ))}
                     </View>
@@ -1932,7 +962,7 @@ function ProfileScreenContent({
                   {/* Interests */}
                   {displayUser.interests && displayUser.interests.length > 0 && (
                     <View style={styles.interestsContainer}>
-                      <Text style={styles.sectionTitle}>תחומי עניין:</Text>
+                      <Text style={styles.sectionTitle}>{t('profile:interestsSectionTitle')}</Text>
                       <View style={styles.interestsList}>
                         {displayUser.interests.slice(0, 4).map((interest, index) => (
                           <Text key={index} style={styles.interestTag}>#{interest}</Text>
@@ -1944,7 +974,7 @@ function ProfileScreenContent({
                   {/* Join date */}
                   {displayUser.joinDate && (
                     <Text style={styles.joinDate}>
-                      הצטרף ב-{new Date(displayUser.joinDate).toLocaleDateString('he-IL')}
+                      {t('profile:joinedDatePrefix')}{new Date(displayUser.joinDate).toLocaleDateString('he-IL')}
                     </Text>
                   )}
                 </View>
@@ -2011,13 +1041,13 @@ function ProfileScreenContent({
                         ]}
                         onPress={async () => {
                           if (!selectedUser) {
-                            Alert.alert('שגיאה', 'יש להתחבר תחילה');
+                            Alert.alert(t('common:error'), t('profile:alertsProfile.loginRequired'));
                             return;
                           }
 
                           try {
                             if (!displayUser?.id) {
-                              Alert.alert('שגיאה', 'משתמש לא נמצא');
+                              Alert.alert(t('common:error'), t('profile:alertsProfile.userNotFound'));
                               return;
                             }
 
@@ -2028,7 +1058,7 @@ function ProfileScreenContent({
                                 const newCounts = await getUpdatedFollowCounts(displayUser.id);
                                 setUpdatedCounts(newCounts);
                                 setFollowStats(prev => ({ ...prev, isFollowing: false }));
-                                Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+                                Alert.alert(t('profile:alertsProfile.unfollowTitle'), t('profile:alertsProfile.unfollowSuccess'));
                               }
                             } else {
                               const success = await followUser(selectedUser.id, displayUser.id);
@@ -2037,12 +1067,12 @@ function ProfileScreenContent({
                                 const newCounts = await getUpdatedFollowCounts(displayUser.id);
                                 setUpdatedCounts(newCounts);
                                 setFollowStats(prev => ({ ...prev, isFollowing: true }));
-                                Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
+                                Alert.alert(t('profile:follow.follow'), t('profile:alertsProfile.followSuccess'));
                               }
                             }
                           } catch (error) {
                             logger.error('ProfileScreen', 'Follow/Unfollow error', { error });
-                            Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
+                            Alert.alert(t('common:error'), t('profile:alertsProfile.actionFailed'));
                           }
                         }}
                       >
@@ -2050,20 +1080,20 @@ function ProfileScreenContent({
                           styles.followButtonText,
                           isFollowing && styles.followingButtonText
                         ]}>
-                          {isFollowing ? 'עוקב' : 'עקוב'}
+                          {isFollowing ? t('profile:follow.following') : t('profile:follow.follow')}
                         </Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={styles.messageButton}
                         onPress={async () => {
-                          if (!selectedUser) {
-                            Alert.alert('שגיאה', 'יש לבחור יוזר תחילה');
+                          if (!selectedUser || !displayUser) {
+                            Alert.alert(t('common:error'), t('profile:alertsProfile.selectUserFirst'));
                             return;
                           }
 
                           try {
-                            const existingConvId = await conversationExists(selectedUser.id, displayUser.id!);
+                            const existingConvId = await conversationExists(selectedUser.id, displayUser.id);
                             let conversationId: string;
 
                             if (existingConvId) {
@@ -2071,29 +1101,29 @@ function ProfileScreenContent({
                               conversationId = existingConvId;
                             } else {
                               logger.debug('ProfileScreen', 'Creating new conversation');
-                              conversationId = await createConversation([selectedUser.id, displayUser.id!]);
+                              conversationId = await createConversation([selectedUser.id, displayUser.id]);
                             }
 
-                            (navigation as any).navigate('ChatDetailScreen', {
+                            (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('ChatDetailScreen', {
                               conversationId,
                               otherUserId: displayUser.id,
-                              userName: displayUser.name || externalUserName || 'ללא שם',
+                              userName: displayUser.name || externalUserName || t('profile:fallbacks.noName'),
                               userAvatar: displayUser.avatar || 'https://i.pravatar.cc/150?img=1',
                             });
                           } catch (error) {
                             logger.error('ProfileScreen', 'Create chat error', { error });
-                            Alert.alert('שגיאה', 'שגיאה ביצירת השיחה');
+                            Alert.alert(t('common:error'), t('profile:alertsProfile.chatError'));
                           }
                         }}
                       >
                         <Ionicons name="chatbubble-outline" size={20} color={colors.textPrimary} />
-                        <Text style={styles.messageButtonText}>הודעה</Text>
+                        <Text style={styles.messageButtonText}>{t('profile:message')}</Text>
                       </TouchableOpacity>
 
                       {/* Hierarchy Management Button */}
                       {(() => {
-                        const isSubordinate = (displayUser as any).parentManagerId === selectedUser.id;
-                        const isMyManager = (selectedUser as any).parentManagerId === displayUser.id;
+                        const isSubordinate = (displayUser as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number; parentManagerId?: string }) | null)?.parentManagerId === selectedUser?.id;
+                        const isMyManager = (selectedUser as (CharacterType & { parentManagerId?: string }) | null)?.parentManagerId === displayUser?.id;
 
                         // If they are my manager -> Request Task
                         if (isMyManager) {
@@ -2101,26 +1131,27 @@ function ProfileScreenContent({
                             <TouchableOpacity
                               style={[styles.messageButton, { borderColor: colors.primary, backgroundColor: colors.primary + '10' }]}
                               onPress={() => {
-                                Alert.alert('בקשת משימה', 'האם לשלוח בקשת משימה למנהל זה?', [
-                                  { text: 'ביטול', style: 'cancel' },
+                                Alert.alert(t('profile:alertsProfile.taskRequestTitle'), t('profile:alertsProfile.taskRequest'), [
+                                  { text: t('common:cancel'), style: 'cancel' },
                                   {
-                                    text: 'שלח', onPress: async () => {
+                                    text: t('chat:send'), onPress: async () => {
                                       // Create conversation and send message
                                       try {
-                                        const existingConvId = await conversationExists(selectedUser.id, displayUser.id!);
+                                        if (!selectedUser?.id || !displayUser?.id) return;
+                                        const existingConvId = await conversationExists(selectedUser.id, displayUser.id);
                                         let conversationId = existingConvId;
                                         if (!conversationId) {
-                                          conversationId = await createConversation([selectedUser.id, displayUser.id!]);
+                                          conversationId = await createConversation([selectedUser.id, displayUser.id]);
                                         }
                                         // Send "I'd look to help" message
                                         // TODO: implement sendMessage in chatService or apiService
                                         // For now just navigate to chat
-                                        (navigation as any).navigate('ChatDetailScreen', {
+                                        (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('ChatDetailScreen', {
                                           conversationId,
                                           otherUserId: displayUser.id,
                                           userName: displayUser.name,
                                           userAvatar: displayUser.avatar,
-                                          initialMessage: 'אשמח לעזור במה שצריך' // Pass this if ChatDetail supports it, or handle locally
+                                          initialMessage: t('profile:alertsProfile.willingToHelp')
                                         });
                                       } catch (e) { logger.error('ProfileScreen', 'Manage hierarchy error', { error: e }); }
                                     }
@@ -2129,7 +1160,7 @@ function ProfileScreenContent({
                               }}
                             >
                               <Ionicons name="briefcase-outline" size={20} color={colors.primary} />
-                              <Text style={[styles.messageButtonText, { color: colors.primary }]}>בקש משימה</Text>
+                              <Text style={[styles.messageButtonText, { color: colors.primary }]}>{t('profile:requestTask')}</Text>
                             </TouchableOpacity>
                           );
                         }
@@ -2189,8 +1220,8 @@ function ProfileScreenContent({
                 {recentActivities.length === 0 ? (
                   <View style={styles.emptyActivitiesContainer}>
                     <Ionicons name="time-outline" size={scaleSize(40)} color={colors.textSecondary} />
-                    <Text style={styles.emptyActivitiesText}>{t('profile:recent.noActivityYet', 'אין פעילויות עדיין')}</Text>
-                    <Text style={styles.emptyActivitiesSubtext}>{t('profile:recent.startCreating', 'התחל ליצור תוכן כדי לראות את הפעילויות שלך כאן')}</Text>
+                    <Text style={styles.emptyActivitiesText}>{t('profile:recent.noActivityYet')}</Text>
+                    <Text style={styles.emptyActivitiesSubtext}>{t('profile:recent.startCreating')}</Text>
                   </View>
                 ) : (
                   recentActivities.map((activity) => (
@@ -2209,7 +1240,7 @@ function ProfileScreenContent({
                       }}
                     >
                       <View style={[styles.activityIcon, { backgroundColor: activity.color + '20' }]}>
-                        <Ionicons name={activity.icon as any} size={16} color={activity.color} />
+                        <Ionicons name={(activity.icon || 'document-outline') as keyof typeof Ionicons.glyphMap} size={16} color={activity.color} />
                       </View>
                       <View style={styles.activityContent}>
                         <Text style={styles.activityTitle}>{activity.title}</Text>
@@ -2267,7 +1298,7 @@ function ProfileScreenContent({
                 navigationState={{ index, routes }}
                 renderScene={renderScene}
                 onIndexChange={setIndex}
-                initialLayout={{ width: Dimensions.get('window').width }}
+                initialLayout={{ width: getScreenInfo().width }}
                 renderTabBar={renderTabBar}
               />
             </View>
@@ -2289,10 +1320,10 @@ function ProfileScreenContent({
               >
                 <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.username}>{displayUser?.name || externalUserName || 'ללא שם'}</Text>
+              <Text style={styles.username}>{displayUser?.name || externalUserName || t('profile:fallbacks.noName')}</Text>
               <TouchableOpacity
                 style={styles.headerIcon}
-                onPress={() => Alert.alert('אפשרויות', 'פתיחת אפשרויות')}
+                onPress={() => Alert.alert(t('common:options'), t('profile:alertsProfile.openOptions'))}
               >
                 <Ionicons name="ellipsis-horizontal" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -2325,7 +1356,7 @@ function ProfileScreenContent({
               )}
               {!isOwnProfile && (
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{(displayUser as any)?.postsCount || 0}</Text>
+                  <Text style={styles.statNumber}>{(displayUser as (CharacterType & { postsCount?: number; completedTasks?: number; totalDonations?: number; parentManagerId?: string }) | null)?.postsCount || 0}</Text>
                   <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                 </View>
               )}
@@ -2333,7 +1364,7 @@ function ProfileScreenContent({
                 style={styles.statItem}
                 onPress={() => {
                   if (!targetUserId) return;
-                  (navigation as any).navigate('FollowersScreen', {
+                  (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('FollowersScreen', {
                     userId: targetUserId,
                     type: 'followers',
                     title: t('profile:followersTitle')
@@ -2347,7 +1378,7 @@ function ProfileScreenContent({
                 style={styles.statItem}
                 onPress={() => {
                   if (!targetUserId) return;
-                  (navigation as any).navigate('FollowersScreen', {
+                  (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('FollowersScreen', {
                     userId: targetUserId,
                     type: 'following',
                     title: t('profile:followingTitle')
@@ -2403,7 +1434,7 @@ function ProfileScreenContent({
                       style={styles.menuItem}
                       onPress={() => {
                         setShowMenu(false);
-                        (navigation as any).navigate('EditProfileScreen');
+                        (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('EditProfileScreen');
                       }}
                     >
                       <Ionicons name="create-outline" size={scaleSize(20)} color={colors.textPrimary} />
@@ -2484,7 +1515,7 @@ function ProfileScreenContent({
                 {(displayUser as CharacterType).isVerified && (
                   <View style={styles.verificationBadge}>
                     <Ionicons name="checkmark-circle" size={16} color={colors.info} />
-                    <Text style={styles.verifiedText}>מאומת</Text>
+                    <Text style={styles.verifiedText}>{t('profile:verified')}</Text>
                   </View>
                 )}
 
@@ -2493,7 +1524,7 @@ function ProfileScreenContent({
                   <View style={styles.rolesContainer}>
                     {displayUser.roles.map((role, index) => (
                       <View key={index} style={styles.roleTag}>
-                        <Text style={styles.roleText}>{getRoleDisplayName(role)}</Text>
+                        <Text style={styles.roleText}>{getRoleDisplayName(role, t)}</Text>
                       </View>
                     ))}
                   </View>
@@ -2502,7 +1533,7 @@ function ProfileScreenContent({
                 {/* Interests */}
                 {displayUser.interests && displayUser.interests.length > 0 && (
                   <View style={styles.interestsContainer}>
-                    <Text style={styles.sectionTitle}>תחומי עניין:</Text>
+                    <Text style={styles.sectionTitle}>{t('profile:interestsSectionTitle')}</Text>
                     <View style={styles.interestsList}>
                       {displayUser.interests.slice(0, 4).map((interest, index) => (
                         <Text key={index} style={styles.interestTag}>#{interest}</Text>
@@ -2514,7 +1545,7 @@ function ProfileScreenContent({
                 {/* Join date */}
                 {displayUser.joinDate && (
                   <Text style={styles.joinDate}>
-                    הצטרף ב-{new Date(displayUser.joinDate).toLocaleDateString('he-IL')}
+                    {t('profile:joinedDatePrefix')}{new Date(displayUser.joinDate).toLocaleDateString('he-IL')}
                   </Text>
                 )}
               </View>
@@ -2590,13 +1621,13 @@ function ProfileScreenContent({
                       ]}
                       onPress={async () => {
                         if (!selectedUser) {
-                          Alert.alert('שגיאה', 'יש להתחבר תחילה');
+                          Alert.alert(t('common:error'), t('profile:alertsProfile.loginRequired'));
                           return;
                         }
 
                         try {
                           if (!displayUser?.id) {
-                            Alert.alert('שגיאה', 'משתמש לא נמצא');
+                            Alert.alert(t('common:error'), t('profile:alertsProfile.userNotFound'));
                             return;
                           }
 
@@ -2607,7 +1638,7 @@ function ProfileScreenContent({
                               const newCounts = await getUpdatedFollowCounts(displayUser.id);
                               setUpdatedCounts(newCounts);
                               setFollowStats(prev => ({ ...prev, isFollowing: false }));
-                              Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+                              Alert.alert(t('profile:alertsProfile.unfollowTitle'), t('profile:alertsProfile.unfollowSuccess'));
                             }
                           } else {
                             const success = await followUser(selectedUser.id, displayUser.id);
@@ -2616,12 +1647,12 @@ function ProfileScreenContent({
                               const newCounts = await getUpdatedFollowCounts(displayUser.id);
                               setUpdatedCounts(newCounts);
                               setFollowStats(prev => ({ ...prev, isFollowing: true }));
-                              Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
+                              Alert.alert(t('profile:follow.follow'), t('profile:alertsProfile.followSuccess'));
                             }
                           }
                         } catch (error) {
                           logger.error('ProfileScreen', 'Follow/Unfollow error', { error });
-                          Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
+                          Alert.alert(t('common:error'), t('profile:alertsProfile.actionFailed'));
                         }
                       }}
                     >
@@ -2629,7 +1660,7 @@ function ProfileScreenContent({
                         styles.followButtonText,
                         isFollowing && styles.followingButtonText
                       ]}>
-                        {isFollowing ? 'עוקב' : 'עקוב'}
+                        {isFollowing ? t('profile:follow.following') : t('profile:follow.follow')}
                       </Text>
                     </TouchableOpacity>
 
@@ -2637,12 +1668,13 @@ function ProfileScreenContent({
                       style={styles.messageButton}
                       onPress={async () => {
                         if (!selectedUser) {
-                          Alert.alert('שגיאה', 'יש לבחור יוזר תחילה');
+                          Alert.alert(t('common:error'), t('profile:alertsProfile.selectUserFirst'));
                           return;
                         }
 
+                        if (!selectedUser || !displayUser) return;
                         try {
-                          const existingConvId = await conversationExists(selectedUser.id, displayUser.id!);
+                          const existingConvId = await conversationExists(selectedUser.id, displayUser.id);
                           let conversationId: string;
 
                           if (existingConvId) {
@@ -2650,23 +1682,23 @@ function ProfileScreenContent({
                             conversationId = existingConvId;
                           } else {
                             logger.debug('ProfileScreen', 'Creating new conversation');
-                            conversationId = await createConversation([selectedUser.id, displayUser.id!]);
+                            conversationId = await createConversation([selectedUser.id, displayUser.id]);
                           }
 
-                          (navigation as any).navigate('ChatDetailScreen', {
+                          (navigation as { navigate: (screen: string, params?: Record<string, unknown>) => void }).navigate('ChatDetailScreen', {
                             conversationId,
                             otherUserId: displayUser.id,
-                            userName: displayUser.name || externalUserName || 'ללא שם',
+                            userName: displayUser.name || externalUserName || t('profile:fallbacks.noName'),
                             userAvatar: displayUser.avatar || 'https://i.pravatar.cc/150?img=1',
                           });
                         } catch (error) {
                           logger.error('ProfileScreen', 'Create chat error', { error });
-                          Alert.alert('שגיאה', 'שגיאה ביצירת השיחה');
+                          Alert.alert(t('common:error'), t('profile:alertsProfile.chatError'));
                         }
                       }}
                     >
                       <Ionicons name="chatbubble-outline" size={20} color={colors.textPrimary} />
-                      <Text style={styles.messageButtonText}>הודעה</Text>
+                      <Text style={styles.messageButtonText}>{t('profile:message')}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -2681,8 +1713,8 @@ function ProfileScreenContent({
               {recentActivities.length === 0 ? (
                 <View style={styles.emptyActivitiesContainer}>
                   <Ionicons name="time-outline" size={scaleSize(40)} color={colors.textSecondary} />
-                  <Text style={styles.emptyActivitiesText}>{t('profile:recent.noActivityYet', 'אין פעילויות עדיין')}</Text>
-                  <Text style={styles.emptyActivitiesSubtext}>{t('profile:recent.startCreating', 'התחל ליצור תוכן כדי לראות את הפעילויות שלך כאן')}</Text>
+                  <Text style={styles.emptyActivitiesText}>{t('profile:recent.noActivityYet')}</Text>
+                  <Text style={styles.emptyActivitiesSubtext}>{t('profile:recent.startCreating')}</Text>
                 </View>
               ) : (
                 recentActivities.map((activity) => (
@@ -2701,7 +1733,7 @@ function ProfileScreenContent({
                     }}
                   >
                     <View style={[styles.activityIcon, { backgroundColor: activity.color + '20' }]}>
-                      <Ionicons name={activity.icon as any} size={16} color={activity.color} />
+                      <Ionicons name={(activity.icon || 'document-outline') as keyof typeof Ionicons.glyphMap} size={16} color={activity.color} />
                     </View>
                     <View style={styles.activityContent}>
                       <Text style={styles.activityTitle}>{activity.title}</Text>
@@ -2753,7 +1785,7 @@ function ProfileScreenContent({
               navigationState={{ index, routes }}
               renderScene={renderScene}
               onIndexChange={setIndex}
-              initialLayout={{ width: Dimensions.get('window').width }}
+              initialLayout={{ width: getScreenInfo().width }}
               renderTabBar={renderTabBar}
             />
           </View>
@@ -2768,9 +1800,9 @@ function ProfileScreenContent({
             setShowActivityModal(false);
             setSelectedActivity(null);
           }}
-          item={selectedActivity.rawData}
+          item={(selectedActivity.rawData ?? null) as ItemOrRideRecord | null}
           type={selectedActivity.type}
-          navigation={navigation as any}
+          navigation={navigation}
           showOwnerInfo={false}
         />
       )}
@@ -2788,7 +1820,7 @@ function ProfileScreenWithTabBar() {
 
 // Main export - uses the hook for own profile
 // Main export - uses the hook for own profile
-export default function ProfileScreen(props: any) {
+export default function ProfileScreen(props: Record<string, unknown>) {
   const route = useRoute();
   let routeParams = route.params as ProfileScreenRouteParams | undefined;
 
@@ -2809,13 +1841,13 @@ export default function ProfileScreen(props: any) {
   }
 
   // Allow props to override route params (useful when used as a child component)
-  const propUserId = props?.userId;
-  const propUserName = props?.userName;
-  const propCharacterData = props?.characterData;
+  const propUserId = props?.userId as string | undefined;
+  const propUserName = props?.userName as string | undefined;
+  const propCharacterData = props?.characterData as CharacterType | undefined;
   const isExplicitOtherProfile = props?.isExplicitOtherProfile === true;
 
   // Use restored params if props are not provided
-  const externalUserId = propUserId || routeParams?.userId;
+  const externalUserId = propUserId ?? routeParams?.userId;
   const { selectedUser } = useUser();
 
   // Determine if viewing own profile or other user's profile
@@ -2852,9 +1884,9 @@ export default function ProfileScreen(props: any) {
   // If explicitly viewing other profile but no user ID, we need to handle it in Content
   // Pass params to Content
   const passedParams: ProfileScreenRouteParams = {
-    userId: externalUserId,
-    userName: propUserName || routeParams?.userName,
-    characterData: propCharacterData || routeParams?.characterData
+    userId: externalUserId ?? undefined,
+    userName: propUserName ?? routeParams?.userName,
+    characterData: propCharacterData ?? routeParams?.characterData
   };
 
   if (isViewingOtherUser) {
@@ -2872,575 +1904,3 @@ export default function ProfileScreen(props: any) {
   logger.debug('ProfileScreen', 'Using ProfileScreenWithTabBar (own profile)');
   return <ProfileScreenWithTabBar />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background
-  },
-  mainScrollView: {
-    flex: 1,
-  },
-  // Web-specific scroll wrappers
-  webScrollContainer: {
-    flex: 1,
-    ...(Platform.OS === 'web' && {
-      overflow: 'auto' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      overscrollBehavior: 'contain' as any,
-      height: SCREEN_HEIGHT as any,
-      maxHeight: SCREEN_HEIGHT as any,
-      width: '100%' as any,
-      touchAction: 'auto' as any,
-    }),
-  } as any,
-  webScrollContent: {
-    minHeight: SCREEN_HEIGHT * 1.2,
-  },
-  mainScrollContent: {
-    paddingBottom: 20,
-  },
-  profileInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.LG,
-  },
-  profileSection: {
-    position: 'relative',
-  },
-  profilePicture: {
-    width: scaleSize(80),
-    height: scaleSize(80),
-    borderRadius: scaleSize(80) / 2,
-    borderWidth: 3,
-    borderColor: colors.secondary,
-  },
-  menuIcon: {
-    position: 'absolute',
-    top: LAYOUT_CONSTANTS.SPACING.SM,
-    right: LAYOUT_CONSTANTS.SPACING.SM,
-    padding: LAYOUT_CONSTANTS.SPACING.SM,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    backgroundColor: colors.backgroundSecondary,
-    ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.1, 4),
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flex: 1,
-    justifyContent: 'space-around',
-    marginLeft: LAYOUT_CONSTANTS.SPACING.LG,
-  },
-  statItem: {
-    alignItems: 'center'
-  },
-  statNumber: {
-    fontSize: FontSizes.medium,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
-  },
-  statLabel: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-  },
-  bioSection: {
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.LG
-  },
-  fullName: {
-    fontSize: FontSizes.medium,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  bioText: {
-    fontSize: FontSizes.body,
-    color: colors.textSecondary,
-    lineHeight: Math.round(FontSizes.body * 1.4),
-    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  locationText: {
-    fontSize: FontSizes.body,
-    color: colors.textSecondary,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.MD,
-  },
-  karmaSection: {
-    marginBottom: LAYOUT_CONSTANTS.SPACING.MD,
-  },
-  karmaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    padding: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    alignSelf: 'flex-start',
-  },
-  karmaText: {
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginLeft: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  activityIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  activityIconItem: {
-    alignItems: 'center',
-    padding: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  activityIconText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    marginTop: LAYOUT_CONSTANTS.SPACING.XS,
-  },
-  actionButtonsContainer: {
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.LG,
-  },
-  discoverPeopleButton: {
-    backgroundColor: colors.secondary,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discoverPeopleText: {
-    color: colors.white,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    marginLeft: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  notificationsButton: {
-    backgroundColor: colors.primary,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  notificationsButtonText: {
-    color: colors.white,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    marginLeft: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  activitiesSection: {
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.LG,
-  },
-  sectionTitle: {
-    fontSize: FontSizes.heading3,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.MD,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    padding: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-    ...createShadowStyle(colors.shadow, { width: 0, height: 1 }, 0.1, 2),
-    elevation: 2,
-  },
-  activityIcon: {
-    width: scaleSize(32),
-    height: scaleSize(32),
-    borderRadius: scaleSize(16),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  activityTime: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-  },
-  emptyActivitiesContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.XL,
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-  },
-  emptyActivitiesText: {
-    fontSize: FontSizes.heading3,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginTop: LAYOUT_CONSTANTS.SPACING.MD,
-    textAlign: 'center',
-  },
-  emptyActivitiesSubtext: {
-    fontSize: FontSizes.body,
-    color: colors.textSecondary,
-    marginTop: LAYOUT_CONSTANTS.SPACING.SM,
-    textAlign: 'center',
-    lineHeight: Math.round(FontSizes.body * 1.4),
-  },
-  highlightsSection: {
-    marginBottom: 20,
-  },
-  storyHighlightsContentContainer: {
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  storyHighlightItem: {
-    alignItems: 'center',
-    marginHorizontal: LAYOUT_CONSTANTS.SPACING.XS
-  },
-  storyHighlightCircle: {
-    width: scaleSize(60),
-    height: scaleSize(60),
-    borderRadius: scaleSize(30),
-    borderWidth: 2,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-  },
-  highlightImage: {
-    width: scaleSize(56),
-    height: scaleSize(56),
-    borderRadius: scaleSize(28),
-  },
-  storyHighlightText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  tabViewContainer: {
-    // height: scaleSize(600), // Dynamic height now
-  },
-  tabBarContainer: {
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tabBarInner: {
-    flexDirection: 'row',
-    width: '100%',
-  },
-  tabBarIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.secondary,
-    height: scaleSize(2),
-  },
-  tabBarItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-    position: 'relative',
-  },
-  tabBarText: {
-    fontSize: FontSizes.body,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM + LAYOUT_CONSTANTS.SPACING.XS,
-  },
-  tabContentContainer: {
-    paddingBottom: 20,
-  },
-  postsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 2,
-    paddingTop: 10,
-  },
-  postContainer: {
-    width: '32%',
-    aspectRatio: 1,
-    margin: 2,
-    position: 'relative',
-  },
-  postImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  postOverlay: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-  },
-  postStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.overlayDark,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  postStatsText: {
-    color: colors.white,
-    fontSize: FontSizes.small,
-    marginLeft: 4,
-  },
-  ridePlaceholder: {
-    backgroundColor: colors.info + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: LAYOUT_CONSTANTS.SPACING.SM,
-    borderWidth: 1,
-    borderColor: colors.info + '30',
-  },
-  rideDetailsContainer: {
-    marginTop: LAYOUT_CONSTANTS.SPACING.XS + 2,
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 6,
-  },
-  rideDetailsText: {
-    fontSize: FontSizes.small - 1,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    textAlign: 'center',
-    maxWidth: '90%',
-  },
-  rideArrow: {
-    marginVertical: 3,
-  },
-  taskPlaceholder: {
-    backgroundColor: colors.primary + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: LAYOUT_CONSTANTS.SPACING.SM,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
-  },
-  taskDetailsContainer: {
-    marginTop: LAYOUT_CONSTANTS.SPACING.XS + 2,
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 8,
-  },
-  taskDetailsText: {
-    fontSize: FontSizes.small - 1,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    textAlign: 'center',
-    maxWidth: '95%',
-  },
-  tabContentPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 300,
-    padding: 20,
-  },
-  placeholderText: {
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginTop: 15,
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: FontSizes.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  createButton: {
-    backgroundColor: colors.secondary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  createButtonText: {
-    color: colors.white,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  menuBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.overlayLight,
-    zIndex: 1000,
-  },
-  menuOverlay: {
-    position: 'absolute',
-    top: 100,
-    left: 16,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 8,
-    ...createShadowStyle(colors.shadow, { width: 0, height: 4 }, 0.2, 8),
-    zIndex: 1001,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  menuItemText: {
-    fontSize: FontSizes.body,
-    color: colors.textPrimary,
-    marginLeft: 12,
-  },
-  // Styles for other user's profile
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerIcon: {
-    padding: 8,
-  },
-  username: {
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  followButton: {
-    flex: 1,
-    backgroundColor: colors.secondary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  followingButton: {
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followButtonText: {
-    color: colors.white,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-  },
-  followingButtonText: {
-    color: colors.textPrimary,
-  },
-  messageButton: {
-    flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  messageButtonText: {
-    color: colors.textPrimary,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  characterDetails: {
-    marginTop: 12,
-  },
-  verificationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  verifiedText: {
-    fontSize: FontSizes.small,
-    color: colors.info,
-    marginLeft: 4,
-    fontWeight: '600',
-  },
-  rolesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-    gap: 6,
-  },
-  roleTag: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  roleText: {
-    fontSize: FontSizes.small,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  interestsContainer: {
-    marginBottom: 12,
-  },
-  interestsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  interestTag: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    backgroundColor: colors.backgroundTertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  joinDate: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: FontSizes.medium,
-    color: colors.textSecondary,
-    marginTop: 16,
-  },
-  errorSubtext: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 24,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: FontSizes.body,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-});

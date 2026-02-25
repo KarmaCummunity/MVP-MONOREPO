@@ -19,6 +19,9 @@ export interface Bookmark {
   };
 }
 
+/** Minimal post shape required when adding a bookmark (id + fields stored in Bookmark.postData). */
+export type PostDataForBookmark = { id: string } & Bookmark['postData'];
+
 const getStoredBookmarks = async (): Promise<Bookmark[]> => {
   try {
     const data = await AsyncStorage.getItem(BOOKMARKS_KEY);
@@ -37,7 +40,7 @@ const setStoredBookmarks = async (bookmarks: Bookmark[]): Promise<void> => {
   }
 };
 
-export const addBookmark = async (userId: string, postData: any): Promise<boolean> => {
+export const addBookmark = async (userId: string, postData: PostDataForBookmark): Promise<boolean> => {
   try {
     const bookmarks = await getStoredBookmarks();
     

@@ -137,6 +137,7 @@ const STAT_LABELS: Partial<Record<keyof CommunityStats, string>> = {
 const FloatingBubbles = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
+  const animateFnRef = useRef<() => void>(() => {});
   const bubblesRef = useRef<Bubble[]>([]);
   const mouseRef = useRef<MouseState>({ x: 0, y: 0, isPressed: false });
   const rippleRef = useRef<Ripple[]>([]);
@@ -251,7 +252,7 @@ const FloatingBubbles = () => {
     });
 
     // הפקת רשימת סטטיסטיקות ממוינות לפי ערך יורד
-    const statList = statKeys.map(key => ({ key, value: Number((stats as any)[key] || 0) || 0 }));
+    const statList = statKeys.map(key => ({ key, value: Number(stats[key] ?? 0) || 0 }));
     statList.sort((a, b) => b.value - a.value);
 
     const candidates = [...bubblesRef.current]
@@ -643,8 +644,12 @@ const FloatingBubbles = () => {
       ctx.fill();
     }
 
-    animationRef.current = requestAnimationFrame(animate);
+    animationRef.current = requestAnimationFrame(() => animateFnRef.current?.());
   }, [applyMouseForces, drawBubble, drawRipples]);
+
+  useEffect(() => {
+    animateFnRef.current = animate;
+  }, [animate]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -669,7 +674,7 @@ const FloatingBubbles = () => {
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-    animate();
+    animateFnRef.current();
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);

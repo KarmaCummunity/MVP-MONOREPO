@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Platform, // Use Alert for messages instead of alert()
+  Platform,
+  type DimensionValue,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // Ensure @expo/vector-icons is installed
 import colors from "../globals/colors"; // Ensure this path is correct
@@ -16,14 +17,22 @@ import { useTranslation } from 'react-i18next';
 import { createShadowStyle } from "../globals/styles";
 import { biDiTextAlign, rowDirection, getResponsiveModalStyles, responsiveSpacing, responsiveFontSize, getScreenInfo, BREAKPOINTS, scaleSize } from "../globals/responsive";
 
+/** Minimal shape for searchable items (name, description, location) used in search/filter. */
+export interface SearchableItem {
+  name?: string;
+  description?: string;
+  location?: string;
+  [key: string]: unknown;
+}
+
 interface SearchBarProps {
   onHasActiveConditionsChange?: (isActive: boolean) => void;
-  onSearch?: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void;
+  onSearch?: (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => void;
   placeholder?: string;
   // New props for dynamic filter/sort options and search data (optional for backward compatibility)
   filterOptions?: string[];
   sortOptions?: string[];
-  searchData?: any[];
+  searchData?: SearchableItem[];
   // Props to expose selected filters/sorts to parent
   onFiltersChange?: (filters: string[]) => void;
   onSortsChange?: (sorts: string[]) => void;
@@ -56,19 +65,12 @@ const SearchBar = ({
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
-  // New state to track if SearchBar has active filters/sorts
-  const [_hasActiveConditions, setHasActiveConditions] = useState<boolean>(false);
 
-  const handleHasActiveConditionsChange = useCallback((isActive: boolean) => {
-    setHasActiveConditions(isActive);
-    onHasActiveConditionsChange?.(isActive);
-  }, [onHasActiveConditionsChange]);
-
-  // Effect to inform parent about active conditions
+  // Derive active conditions and notify parent when they change (no local state to avoid setState-in-effect)
+  const hasActiveConditions = selectedFilters.length > 0 || selectedSorts.length > 0;
   useEffect(() => {
-    const hasActive = selectedFilters.length > 0 || selectedSorts.length > 0;
-    handleHasActiveConditionsChange(hasActive);
-  }, [selectedFilters, selectedSorts, handleHasActiveConditionsChange]);
+    onHasActiveConditionsChange?.(hasActiveConditions);
+  }, [hasActiveConditions, onHasActiveConditionsChange]);
 
   // Function to perform search with given parameters
   const performSearch = useCallback((query: string, filters: string[], sorts: string[]) => {
@@ -83,53 +85,32 @@ const SearchBar = ({
 
     // Filter by search text if provided
     if (query.trim() !== "") {
+      const q = query.toLowerCase();
       results = results.filter(item => {
         // Enhanced search for charities - check specific fields first
-        if (item.name && item.name.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-        if (item.description && item.description.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-        if (item.location && item.location.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-        if (item.category && item.category.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-        if (item.organization && item.organization.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-        if (item.title && item.title.toLowerCase().includes(query.toLowerCase())) {
-          return true;
-        }
-
-        // Fallback to generic search for other properties
+        if (String(item.name ?? '').toLowerCase().includes(q)) return true;
+        if (String(item.description ?? '').toLowerCase().includes(q)) return true;
+        if (String(item.location ?? '').toLowerCase().includes(q)) return true;
+        if (String(item.category ?? '').toLowerCase().includes(q)) return true;
+        if (String(item.organization ?? '').toLowerCase().includes(q)) return true;
+        if (String(item.title ?? '').toLowerCase().includes(q)) return true;
         const itemStr = JSON.stringify(item).toLowerCase();
-        return itemStr.includes(query.toLowerCase());
+        return itemStr.includes(q);
       });
     }
 
     // Apply filters if any are selected
     if (filters.length > 0) {
       results = results.filter(item => {
-        // Enhanced filter logic for charities
         return filters.some(filter => {
-          // Check category field first
-          if (item.category && item.category.toLowerCase().includes(filter.toLowerCase())) {
-            return true;
-          }
-          // Check tags field if it exists
+          const f = filter.toLowerCase();
+          if (String(item.category ?? '').toLowerCase().includes(f)) return true;
           if (item.tags && Array.isArray(item.tags)) {
-            return item.tags.some((tag: string) => tag.toLowerCase().includes(filter.toLowerCase()));
+            return item.tags.some((tag: unknown) => String(tag ?? '').toLowerCase().includes(f));
           }
-          // Check organization field
-          if (item.organization && item.organization.toLowerCase().includes(filter.toLowerCase())) {
-            return true;
-          }
-          // Fallback to generic search
+          if (String(item.organization ?? '').toLowerCase().includes(f)) return true;
           const itemStr = JSON.stringify(item).toLowerCase();
-          return itemStr.includes(filter.toLowerCase());
+          return itemStr.includes(f);
         });
       });
     }
@@ -141,39 +122,32 @@ const SearchBar = ({
       // Enhanced sorting logic for charities
       if (sortOption === 'alphabetical') {
         results.sort((a, b) => {
-          const aName = (a.name || a.title || a.organization || '').toLowerCase();
-          const bName = (b.name || b.title || b.organization || '').toLowerCase();
+          const aName = String(a.name ?? a.title ?? a.organization ?? '').toLowerCase();
+          const bName = String(b.name ?? b.title ?? b.organization ?? '').toLowerCase();
           return aName.localeCompare(bName, 'he');
         });
       } else if (sortOption === 'byLocation') {
         results.sort((a, b) => {
-          const aLocation = (a.location || '').toLowerCase();
-          const bLocation = (b.location || '').toLowerCase();
+          const aLocation = String(a.location ?? '').toLowerCase();
+          const bLocation = String(b.location ?? '').toLowerCase();
           return aLocation.localeCompare(bLocation, 'he');
         });
       } else if (sortOption === 'byCategory') {
         results.sort((a, b) => {
-          const aCategory = (a.category || '').toLowerCase();
-          const bCategory = (b.category || '').toLowerCase();
+          const aCategory = String(a.category ?? '').toLowerCase();
+          const bCategory = String(b.category ?? '').toLowerCase();
           return aCategory.localeCompare(bCategory, 'he');
         });
       } else if (sortOption === 'byDonors') {
         results.sort((a, b) => {
-          const aDonors = a.donors || a.volunteers || 0;
-          const bDonors = b.donors || b.volunteers || 0;
+          const aDonors = Number(a.donors ?? a.volunteers ?? 0);
+          const bDonors = Number(b.donors ?? b.volunteers ?? 0);
           return bDonors - aDonors; // Descending order
         });
-      } else if (sortOption === 'byRating') {
+      } else if (sortOption === 'byRating' || sortOption === 'byRelevance') {
         results.sort((a, b) => {
-          const aRating = a.rating || 0;
-          const bRating = b.rating || 0;
-          return bRating - aRating; // Descending order
-        });
-      } else if (sortOption === 'byRelevance') {
-        // Default - by rating
-        results.sort((a, b) => {
-          const aRating = a.rating || 0;
-          const bRating = b.rating || 0;
+          const aRating = Number(a.rating ?? 0);
+          const bRating = Number(b.rating ?? 0);
           return bRating - aRating; // Descending order
         });
       }
@@ -330,9 +304,9 @@ const SearchBar = ({
             <View style={[
               localStyles.modalContent,
               {
-                width: modalStyles.width,
+                width: modalStyles.width as DimensionValue,
                 maxWidth: modalStyles.maxWidth,
-                maxHeight: modalStyles.maxHeight,
+                maxHeight: modalStyles.maxHeight as DimensionValue,
                 padding: modalStyles.padding,
                 borderRadius: modalStyles.borderRadius,
               }
@@ -393,9 +367,9 @@ const SearchBar = ({
             <View style={[
               localStyles.modalContent,
               {
-                width: modalStyles.width,
+                width: modalStyles.width as DimensionValue,
                 maxWidth: modalStyles.maxWidth,
-                maxHeight: modalStyles.maxHeight,
+                maxHeight: modalStyles.maxHeight as DimensionValue,
                 padding: modalStyles.padding,
                 borderRadius: modalStyles.borderRadius,
               }
@@ -502,7 +476,7 @@ const SearchBar = ({
 
 const localStyles = StyleSheet.create({
   container: {
-    backgroundColor: "transparent",
+    backgroundColor: colors.transparent,
     flex: 1, // Take available space instead of fixed 60%
     minWidth: 0, // Allow shrinking below content size
   },
@@ -563,10 +537,10 @@ const localStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.overlayDark,
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: colors.white,
     // Dynamic styles applied in JSX for responsive sizing
     ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.25, 4),
     elevation: 5,
@@ -615,7 +589,7 @@ const localStyles = StyleSheet.create({
     alignItems: "center",
   },
   modalCloseButtonText: {
-    color: "white",
+    color: colors.white,
     fontSize: responsiveFontSize(FontSizes.medium, 16, 18),
     fontWeight: "bold",
   },

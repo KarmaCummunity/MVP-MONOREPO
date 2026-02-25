@@ -1,0 +1,94 @@
+{
+  "food": {
+    "0": { "name": "Leket Israel (Table to Table)", "description": "Israel's largest food bank and food rescue network" },
+    "1": { "name": "Latet", "description": "Food aid for populations in need and poverty reduction" },
+    "2": { "name": "Beit Lechem Yehuda", "description": "Food and hygiene products for thousands of families" },
+    "3": { "name": "Food for Life", "description": "Food rescue, family adoption and feeding the needy" },
+    "4": { "name": "Yad Ezrah veShlomit", "description": "Food distribution for families in need and soldiers" }
+  },
+  "knowledge": {
+    "0": { "name": "Perach", "description": "Student mentoring for schoolchildren" },
+    "1": { "name": "Elem", "description": "Youth in distress and at risk" },
+    "2": { "name": "Telem", "description": "Mentoring for immigrant children" },
+    "3": { "name": "Avney Derech", "description": "Mentoring and guidance" },
+    "4": { "name": "Yad Lakol", "description": "Inclusion of people with disabilities" }
+  },
+  "clothes": {
+    "0": { "name": "Yad Sarah", "description": "Donations and clothing" },
+    "1": { "name": "Pitchon Lev", "description": "Assistance centers and clothing banks" },
+    "2": { "name": "WIZO", "description": "Clothing banks and community support" },
+    "3": { "name": "GoodWill", "description": "Clothing recycling" },
+    "4": { "name": "Chasdei Naomi", "description": "Clothing and food distribution" }
+  },
+  "books": {
+    "0": { "name": "Sifriyat Pijama", "description": "Promoting reading for children" },
+    "1": { "name": "Sipur Chozer", "description": "Book donations and social purchase" },
+    "2": { "name": "ORT Israel", "description": "Donations to schools" },
+    "3": { "name": "Book donations to hospitals", "description": "Book collection for hospitals" },
+    "4": { "name": "Library Association", "description": "Public libraries" }
+  },
+  "furniture": {
+    "0": { "name": "Yad Sarah", "description": "Furniture and medical equipment" },
+    "1": { "name": "Pitchon Lev", "description": "Assistance and furniture for families" },
+    "2": { "name": "Yesh Association", "description": "Furniture for the needy" },
+    "3": { "name": "Latet", "description": "Assistance and housing packages" }
+  },
+  "medical": {
+    "0": { "name": "Yad Sarah", "description": "Medical equipment lending" },
+    "1": { "name": "Chaverim leRefuah", "description": "Medicine and equipment assistance" },
+    "2": { "name": "Refuah veChaim", "description": "Medical support for families" },
+    "3": { "name": "Zichron Menachem", "description": "Support for cancer patients and families" },
+    "4": { "name": "Ezer Mizion", "description": "Bone marrow bank and medical services" }
+  },
+  "animals": {
+    "0": { "name": "SPCA Israel", "description": "Animal welfare organization" },
+    "1": { "name": "Let Animals Live", "description": "Rescue and adoption" },
+    "2": { "name": "SOS Pets", "description": "Rescue, adoption and care" },
+    "3": { "name": "Hakol Chai", "description": "Animal rights" }
+  },
+  "housing": {
+    "0": { "name": "Elem", "description": "Youth shelters" },
+    "1": { "name": "Bat Melech", "description": "Shelters for women and children" },
+    "2": { "name": "WIZO", "description": "Shelters and support for women" },
+    "3": { "name": "Latet", "description": "Assistance for families in need" },
+    "4": { "name": "Living with Dignity", "description": "Assistance for Holocaust survivors" }
+  },
+  "support": {
+    "0": { "name": "Eran", "description": "National hotline" },
+    "1": { "name": "Sahar", "description": "Support and suicide prevention" },
+    "2": { "name": "Natal", "description": "National trauma" },
+    "3": { "name": "Enosh", "description": "Mental health" },
+    "4": { "name": "Elem", "description": "Youth in distress" }
+  },
+  "education": {
+    "0": { "name": "Perach", "description": "Academic mentoring" },
+    "1": { "name": "Yadid leChinuch", "description": "Retiree volunteering in schools" },
+    "2": { "name": "ORT Israel", "description": "Educational support" },
+    "3": { "name": "Telem", "description": "Support for immigrants" },
+    "4": { "name": "Avney Derech", "description": "Educational accompaniment" }
+  },
+  "environment": {
+    "0": { "name": "Ministry of Environmental Protection", "description": "Information and programs" },
+    "1": { "name": "Society for the Protection of Nature", "description": "Nature and Israel Trail" },
+    "2": { "name": "Adam Teva v'Din", "description": "Law and environment" },
+    "3": { "name": "Greenpeace Israel", "description": "Environmental advocacy" },
+    "4": { "name": "Zalul", "description": "Marine environment quality" }
+  },
+  "technology": {
+    "0": { "name": "BeGifted", "description": "Technology volunteering" },
+    "1": { "name": "Digital Peace", "description": "Digital resilience" },
+    "2": { "name": "Tzofen", "description": "Advancing minorities in tech" },
+    "3": { "name": "Code for Good", "description": "Community projects" },
+    "4": { "name": "Tech Career", "description": "Technology training" }
+  },
+  "time": {
+    "0": { "name": "Ruach Tova", "description": "Volunteer opportunities database" },
+    "1": { "name": "Israeli Council for Volunteering", "description": "Volunteer projects and initiatives" },
+    "2": { "name": "Latet - Volunteering", "description": "Volunteering and humanitarian aid" },
+    "3": { "name": "MDA - Volunteers", "description": "Emergency and medical volunteering" },
+    "4": { "name": "IsraAID - Volunteering", "description": "International humanitarian aid" },
+    "5": { "name": "Rak Chiyuch", "description": "Support for children with cancer" },
+    "6": { "name": "National Service - Volunteering Association", "description": "Volunteering and community service" },
+    "7": { "name": "Gifted", "description": "Professional skills volunteering" }
+  }
+}

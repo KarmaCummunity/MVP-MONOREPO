@@ -54,7 +54,7 @@ export interface SecureAuthUser {
     language: string;
     darkMode: boolean;
     notificationsEnabled: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   /** Account verification status from Google */
   emailVerified?: boolean;
@@ -70,7 +70,7 @@ export interface SecureAuthUser {
  * Response format from authentication operations
  * Consistent response structure for all auth operations
  */
-export interface AuthResponse<T = any> {
+export interface AuthResponse<T = unknown> {
   /** Whether the operation was successful */
   success: boolean;
   /** Response data if successful */

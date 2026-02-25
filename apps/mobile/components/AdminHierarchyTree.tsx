@@ -232,7 +232,7 @@ const AdminHierarchyTree: React.FC<AdminHierarchyTreeProps> = ({ onError }) => {
       
       if (response.success && response.data) {
         setTreeData(response.data);
-        setTotalCount((response as any).totalCount || response.data.length);
+        setTotalCount((response as { totalCount?: number }).totalCount ?? response.data.length);
       } else {
         const errorMsg = response.error || t('hierarchy.loadError');
         setError(errorMsg);

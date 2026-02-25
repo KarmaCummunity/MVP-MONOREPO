@@ -14,6 +14,19 @@
   "weeklyDonations": "תרומות השבוע",
   "activeCharities": "עמותות פעילות",
   "categoriesTitle": "קטגוריות תרומות",
+  "visitWebsite": "בקר באתר",
+  "post": {
+    "defaultTitle": {
+      "money": "תרומה כספית",
+      "time": "תרומת זמן",
+      "rides": "טרמפ",
+      "item": "פריט"
+    },
+    "descriptionDonatedMoney": "תרמתי {{amount}} {{currency}}",
+    "descriptionDonatedMoneyCategory": " לקטגוריה: {{category}}",
+    "descriptionDonatedTime": "תרמתי מזמני {{description}}",
+    "descriptionDonatedRide": "הצעתי טרמפ {{description}}"
+  },
   "details": {
     "itemTitle": "פרטי הפריט",
     "rideTitle": "פרטי הטרמפ",
@@ -84,7 +97,9 @@
     "knowledge": {
       "title": "ידע",
       "subtitle": "חונכות ולימוד",
-      "description": "חונכות, הדרכה ושיתוף ידע"
+      "description": "חונכות, הדרכה ושיתוף ידע",
+      "recommendedOrgs": "עמותות מומלצות",
+      "recommendedOrgsDesc": "ארגונים מובילים בישראל לחונכות, לימוד ותמיכה חינוכית"
     },
     "time": {
       "title": "זמן",

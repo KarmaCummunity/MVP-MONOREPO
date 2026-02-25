@@ -19,8 +19,19 @@ import { useUser } from '../stores/userStore';
 import { Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
+/** Shape of a link record used in state and callbacks */
+export interface LinkRecord {
+  id: string;
+  url: string;
+  description?: string;
+  type: 'group' | 'organization';
+  category?: string;
+  createdAt?: string;
+  createdBy?: string;
+}
+
 interface AddLinkComponentProps {
-  onLinkAdded?: (link: any) => void;
+  onLinkAdded?: (link: LinkRecord) => void;
   category?: string; // Category to filter links (e.g., 'trump', 'items', 'knowledge')
 }
 
@@ -33,7 +44,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
   const [linkUrl, setLinkUrl] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
   const [linkType, setLinkType] = useState<LinkType>('group');
-  const [allLinks, setAllLinks] = useState<any[]>([]);
+  const [allLinks, setAllLinks] = useState<LinkRecord[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,7 +57,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       logger.warn('AddLinkComponent', 'Links functionality has been removed');
 
       // Filter by category if provided
-      const filteredLinks: any[] = [];
+      const filteredLinks: LinkRecord[] = [];
 
       setAllLinks(filteredLinks);
     } catch (error) {
@@ -161,7 +172,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     }
   };
 
-  const handleOpenLink = async (link: any) => {
+  const handleOpenLink = async (link: LinkRecord) => {
     if (!link?.url) return;
 
     try {
@@ -182,7 +193,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     }
   };
 
-  const renderLinkCard = (link: any) => (
+  const renderLinkCard = (link: LinkRecord) => (
     <TouchableOpacity
       key={link.id || `${link.createdBy}_${link.url}`}
       style={styles.linkCard}

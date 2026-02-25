@@ -5,7 +5,7 @@ export interface AuthTestResult {
   test: string;
   status: 'pass' | 'fail' | 'warning';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface AuthTestSuite {
@@ -124,7 +124,7 @@ export class AuthenticationTester {
   /**
    * Test client ID configuration
    */
-  private static testClientIdConfiguration(config?: any): AuthTestResult {
+  private static testClientIdConfiguration(config?: { webClientId?: string; iosClientId?: string; androidClientId?: string }): AuthTestResult {
     const { webClientId, iosClientId, androidClientId } = config || {};
     
     const issues = [];
@@ -223,7 +223,7 @@ export class AuthenticationTester {
   /**
    * Test platform-specific configuration
    */
-  private static testPlatformConfiguration(config?: any): AuthTestResult {
+  private static testPlatformConfiguration(config?: { webClientId?: string; iosClientId?: string; androidClientId?: string }): AuthTestResult {
     const platform = Platform.OS;
     const { webClientId, iosClientId, androidClientId } = config || {};
     
@@ -419,8 +419,7 @@ export class AuthenticationTester {
       const testKey = 'auth_test_key';
       const testValue = 'auth_test_value';
       
-      // Import AsyncStorage dynamically
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       
       await AsyncStorage.setItem(testKey, testValue);
       const retrievedValue = await AsyncStorage.getItem(testKey);
@@ -474,7 +473,7 @@ export class AuthenticationTester {
 /**
  * Run quick authentication diagnostics
  */
-export const runAuthDiagnostics = async (config?: any): Promise<AuthTestSuite> => {
+export const runAuthDiagnostics = async (config?: { webClientId?: string; iosClientId?: string; androidClientId?: string; redirectUri?: string }): Promise<AuthTestSuite> => {
   logger.info('AuthDiagnostics', 'Running authentication diagnostics...');
   
   const testSuite = await AuthenticationTester.runAuthTests(config);

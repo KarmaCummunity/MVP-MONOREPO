@@ -113,7 +113,7 @@ export type DonationsStackParamList = {
   MentalHealthScreen: undefined;
   GoldenAgeScreen: undefined;
   LanguagesScreen: undefined;
-  UserProfileScreen: { userId: string; userName?: string; characterData?: any } | undefined;
+  UserProfileScreen: { userId: string; userName?: string; characterData?: Record<string, unknown> } | undefined;
   FollowersScreen: { userId: string; type: 'followers' | 'following'; title: string } | undefined;
 };
 
@@ -130,7 +130,7 @@ export type HomeTabStackParamList = {
   PostsReelsScreen: undefined;
   CommunityStatsScreen: undefined;
   WebViewScreen: { url?: string } | undefined;
-  UserProfileScreen: { userId: string; userName: string; characterData?: any } | undefined;
+  UserProfileScreen: { userId: string; userName: string; characterData?: Record<string, unknown> } | undefined;
   FollowersScreen: { userId?: string } | undefined;
   DiscoverPeopleScreen: undefined;
 };

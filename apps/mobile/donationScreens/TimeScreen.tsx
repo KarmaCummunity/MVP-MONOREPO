@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -127,7 +127,8 @@ export default function TimeScreen({
   const [_selectedFilter, setSelectedFilter] = useState("");
   const [_selectedSort, setSelectedSort] = useState("");
   const [filteredOpportunities, setFilteredOpportunities] = useState(volunteerOpportunities);
-  const [_selectedTask, setSelectedTask] = useState<any>(null);
+  type VolunteerOpportunity = (typeof volunteerOpportunities)[number];
+  const [_selectedTask, setSelectedTask] = useState<VolunteerOpportunity | null>(null);
   const [_refreshKey, setRefreshKey] = useState(0);
 
   // Update mode when route params change (e.g., from deep link)
@@ -135,26 +136,31 @@ export default function TimeScreen({
     if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
       const newMode = routeParams.mode === 'offer' ? true : false;
       if (newMode !== mode) {
-        setMode(newMode);
+        queueMicrotask(() => setMode(newMode));
       }
     }
   }, [routeParams?.mode, mode]);
+
+  type TimeScreenParams = { TimeScreen: { mode?: string } };
+  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
+  const hasSetInitialModeRef = useRef(false);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
+    const nav = navigation as NavigationProp<ParamListBase & TimeScreenParams, 'TimeScreen'>;
+    if (!nav.setParams) return;
 
-    // If no mode in URL, set it to search (default)
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      // Set initial mode to search in URL
-      (navigation as any).setParams({ mode: 'search' });
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        nav.setParams({ mode: 'search' });
+      }
       return;
     }
-
-    // Only update URL if mode actually changed
     if (newMode !== currentMode) {
-      (navigation as any).setParams({ mode: newMode });
+      nav.setParams({ mode: newMode });
     }
   }, [mode, navigation, routeParams?.mode]);
 
@@ -200,7 +206,7 @@ export default function TimeScreen({
 
   const effectiveCategoryKey = selectedCategory ?? 'all';
 
-  const handleVolunteerPress = (opportunity: any) => {
+  const handleVolunteerPress = (opportunity: VolunteerOpportunity) => {
     logger.debug('TimeScreen', 'Volunteer opportunity pressed', { title: opportunity.title });
     Alert.alert(
       t('donations:timeScreen.joinVolunteerTitle'),
@@ -238,7 +244,7 @@ export default function TimeScreen({
   };
 
   // Function to handle search results from HeaderComp
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: VolunteerOpportunity[]) => {
     logger.debug('TimeScreen', 'Search received', {
       query,
       filters: filters || [],
@@ -428,7 +434,7 @@ export default function TimeScreen({
         </View>
 
         {/* Add Links Section */}
-        <View style={(styles as any).section}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('donations:timeScreen.usefulLinks')}</Text>
           <AddLinkComponent category="time" />
         </View>
@@ -447,6 +453,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  section: {
+    marginBottom: 24,
   },
   emergencySection: {
     marginTop: 20,

@@ -75,10 +75,10 @@ class LoggerService {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If we can't load logs (corrupted or quota exceeded), clear them
       if (this.enableConsoleOutput) {
-        console.warn('⚠️ Failed to load logs, clearing storage:', error?.message || error);
+        console.warn('⚠️ Failed to load logs, clearing storage:', error instanceof Error ? error.message : error);
       }
       this.logs = [];
       try {
@@ -103,9 +103,9 @@ class LoggerService {
       }
 
       await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle QuotaExceededError by clearing old logs and retrying with fewer logs
-      if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
+      if (error instanceof Error && (error.name === 'QuotaExceededError' || error.message?.includes('quota'))) {
         try {
           // Keep only the last 100 logs instead of MAX_LOGS
           this.logs = this.logs.slice(-100);
@@ -222,7 +222,7 @@ class LoggerService {
     });
   }
 
-  logUserAction(action: string, screen: string, data?: any, userId?: string) {
+  logUserAction(action: string, screen: string, data?: Record<string, unknown>, userId?: string) {
     this.info(screen, 'User action', {
       action,
       ...(typeof data === 'object' && data !== null ? data : { data }),
@@ -230,13 +230,13 @@ class LoggerService {
     });
   }
 
-  logError(error: any, context: string, screen?: string, userId?: string) {
+  logError(error: unknown, context: string, screen?: string, userId?: string) {
     this.error(screen || 'Error', 'Application error', {
       context,
       error: {
-        message: error?.message || String(error),
-        stack: error?.stack,
-        name: error?.name,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
       },
       userId,
     });

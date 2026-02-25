@@ -16,6 +16,11 @@
   },
   "error": "Error",
   "errorTitle": "Error",
+  "errors": {
+    "backendEmptyStats": "Backend returned empty stats data",
+    "fetchStatsFailed": "Failed to fetch community stats from backend",
+    "fetchStatsFailedGeneric": "Failed to fetch community stats"
+  },
   "success": "Success",
   "reportSent": "Report sent successfully",
   "reportFailed": "Failed to send report",
@@ -49,6 +54,10 @@
   "appName": "Karma Community",
   "freeAppNotice": "The app is completely free and non-profit",
   "genericTryAgain": "An error occurred. Please try again.",
+  "versionCheck": {
+    "newVersionAvailable": "New version available!",
+    "tapToRefresh": "Tap here to refresh and get the latest update"
+  },
   "labels": {
     "countryIsrael": "Israel"
   },
@@ -70,6 +79,7 @@
       "friends": "Friends",
       "discovery": "Discovery"
     },
+    "taskCreated": "New task: {{title}}",
     "empty_title": "No posts yet",
     "empty_friends": "Add friends to see posts!",
     "empty_discovery": "Be the first to post!"

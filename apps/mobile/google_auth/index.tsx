@@ -171,11 +171,12 @@ export const initializeGoogleAuth = async (): Promise<{
  */
 export const getAuthStatus = (): {
   isAuthenticated: boolean;
-  user: any | null;
-  state: any;
+  user: import('./GoogleAuthService').SecureAuthUser | null;
+  state: import('./GoogleAuthService').AuthState;
   hasValidTokens: boolean;
 } => {
   // Import services dynamically to avoid circular dependencies
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic import for circular dep avoidance
   const { googleAuthService } = require('./GoogleAuthService');
 
   return {

@@ -1,14 +1,14 @@
 /**
- * Version Checker - בדיקת עדכונים חדשים לאפליקציה
- * מטרה: להבטיח שמשתמשים תמיד יראו את הגרסה העדכנית ביותר
+ * Version Checker - Check for new app updates
+ * Ensures users see the latest version (web).
  */
 
-const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // בדיקה כל 5 דקות
-const CURRENT_VERSION = '2.3.0'; // תתעדכן אוטומטית מ-package.json
+import colors from '../globals/colors';
+import { logger } from './loggerService';
 
-/**
- * קריאת הגרסה הנוכחית מה-meta tag
- */
+const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+const CURRENT_VERSION = '2.3.0'; // Update from package.json as needed
+
 function getCurrentVersion(): string {
   if (typeof document === 'undefined') return CURRENT_VERSION;
   const metaTag = document.querySelector('meta[name="app-version"]');
@@ -33,7 +33,7 @@ async function checkForUpdates(): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.warn('Failed to check for updates');
+      logger.warn('versionChecker', 'Failed to check for updates');
       return false;
     }
 
@@ -54,20 +54,27 @@ async function checkForUpdates(): Promise<boolean> {
 
     return false;
   } catch (error) {
-    console.error('Error checking for updates:', error);
+    logger.error('versionChecker', 'Error checking for updates', { error });
     return false;
   }
 }
 
-function showUpdateNotification() {
+export type VersionCheckerOptions = {
+  getText?: (key: string) => string;
+};
+
+function showUpdateNotification(getText?: (key: string) => string) {
   const lastNotification = localStorage.getItem('last-update-notification');
   const now = Date.now();
 
-  if (lastNotification && now - parseInt(lastNotification) < VERSION_CHECK_INTERVAL) {
+  if (lastNotification && now - parseInt(lastNotification, 10) < VERSION_CHECK_INTERVAL) {
     return;
   }
 
   localStorage.setItem('last-update-notification', now.toString());
+
+  const title = getText ? getText('common:versionCheck.newVersionAvailable') : 'New version available!';
+  const subtitle = getText ? getText('common:versionCheck.tapToRefresh') : 'Tap here to refresh and get the latest update';
 
   const notification = document.createElement('div');
   notification.style.cssText = `
@@ -75,11 +82,11 @@ function showUpdateNotification() {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%);
+    color: ${colors.textInverse};
     padding: 16px 24px;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px ${colors.overlayLight};
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 15px;
@@ -93,10 +100,10 @@ function showUpdateNotification() {
 
   notification.innerHTML = `
     <div style="margin-bottom: 8px;">
-      🎉 גרסה חדשה זמינה!
+      ${title}
     </div>
     <div style="font-size: 13px; opacity: 0.9;">
-      לחץ כאן כדי לרענן ולקבל את העדכון האחרון
+      ${subtitle}
     </div>
   `;
 
@@ -137,70 +144,62 @@ async function clearBrowserCache() {
 
     localStorage.removeItem('last-update-notification');
 
-    console.log('Browser cache cleared successfully');
+    logger.info('versionChecker', 'Browser cache cleared successfully');
   } catch (error) {
-    console.error('Error clearing cache:', error);
+    logger.error('versionChecker', 'Error clearing cache', { error });
   }
 }
 
-export function initVersionChecker() {
+export function initVersionChecker(options?: VersionCheckerOptions) {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    console.log('Version checker: Not running on web platform');
+    logger.info('versionChecker', 'Not running on web platform');
     return;
   }
 
-  console.log(`KC App Version: ${getCurrentVersion()}`);
-  console.log(`Build Timestamp: ${getCurrentBuildTimestamp()}`);
+  const getText = options?.getText;
+
+  logger.info('versionChecker', 'KC App version', { version: getCurrentVersion(), buildTimestamp: getCurrentBuildTimestamp() });
 
   setTimeout(async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
-      showUpdateNotification();
+      showUpdateNotification(getText);
     }
   }, 10000);
 
   setInterval(async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
-      showUpdateNotification();
+      showUpdateNotification(getText);
     }
   }, VERSION_CHECK_INTERVAL);
 
-  // בדיקה כאשר המשתמש חוזר לטאב (focus)
   window.addEventListener('focus', async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
-      showUpdateNotification();
+      showUpdateNotification(getText);
     }
   });
 
-  // בדיקה כאשר המשתמש חוזר אונליין
   window.addEventListener('online', async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
-      showUpdateNotification();
+      showUpdateNotification(getText);
     }
   });
 }
 
-/**
- * כפיית רענון האפליקציה (שימושי לדפי אדמין)
- */
 export async function forceAppUpdate() {
   await clearBrowserCache();
   window.location.reload();
 }
 
-/**
- * קבלת מידע על הגרסה הנוכחית
- */
 export function getVersionInfo() {
   return {
     version: getCurrentVersion(),
     buildTimestamp: getCurrentBuildTimestamp(),
     buildDate: getCurrentBuildTimestamp()
-      ? new Date(parseInt(getCurrentBuildTimestamp()!) * 1000).toLocaleString('he-IL')
+      ? new Date(parseInt(getCurrentBuildTimestamp()!, 10) * 1000).toLocaleString('he-IL')
       : 'Unknown',
   };
 }
-

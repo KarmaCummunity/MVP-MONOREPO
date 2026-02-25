@@ -68,6 +68,11 @@ const colors = {
   // Status
   success: palette.tealDark, // Teal works as success
   successLight: palette.greyLight, // Light success background
+  /** Success tint for borders/shadows (e.g. task completion card) */
+  successTintBackground: 'rgba(0,200,83,0.1)',
+  /** Light success surface (e.g. #E8F5E9, #F1F8E9) */
+  successSurfaceLight: '#E8F5E9',
+  successSurfaceLighter: '#F1F8E9',
   error: palette.errorRed,   // Distinct error
   errorLight: palette.greyLight, // Light error background
   info: palette.tealLight,
@@ -215,6 +220,8 @@ const colors = {
   overlayImage: 'rgba(0,0,0,0.35)',
   /** Text shadow overlay for readability on images */
   textShadowOverlay: 'rgba(0,0,0,0.8)',
+  /** Light text shadow for subtle emphasis */
+  textShadowLight: 'rgba(0,0,0,0.1)',
   /** Light surface for headers/actions (e.g. #FAFAFA) */
   surfaceLight: '#FAFAFA',
   /** Lighter surface for placeholders (e.g. #F5F5F5) */

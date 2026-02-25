@@ -1,4 +1,4 @@
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet, Platform, type ViewStyle } from "react-native";
 import colors from "./colors";
 import {
   biDiTextAlign,
@@ -67,7 +67,7 @@ export const createShadowStyle = (
     const rgbaColor = colorToRgba(shadowColor, shadowOpacity);
     return {
       boxShadow: `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px ${rgbaColor}`,
-    } as any; // TODO: Replace any with proper web style type
+    } as ViewStyle;
   }
   return {
     shadowColor,
@@ -75,7 +75,7 @@ export const createShadowStyle = (
     shadowOpacity,
     shadowRadius,
     elevation: Math.max(1, Math.round(shadowRadius)),
-  } as any; // TODO: Replace any with proper native style type
+  } as ViewStyle;
 };
 
 

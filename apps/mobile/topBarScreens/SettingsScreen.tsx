@@ -23,6 +23,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ViewStyle,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -34,6 +35,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
+import { createShadowStyle } from '../globals/styles';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
@@ -397,10 +399,10 @@ export default function SettingsScreen() {
           }
         }, 2000);
       } else if ('scrollToOffset' in scrollViewRef.current) {
-        (scrollViewRef.current as any).scrollToOffset({ offset: 200, animated: true });
+        (scrollViewRef.current as { scrollToOffset: (opts: { offset: number; animated: boolean }) => void }).scrollToOffset({ offset: 200, animated: true });
         setTimeout(() => {
           if (scrollViewRef.current && 'scrollToOffset' in scrollViewRef.current) {
-            (scrollViewRef.current as any).scrollToOffset({ offset: 0, animated: true });
+            (scrollViewRef.current as { scrollToOffset: (opts: { offset: number; animated: boolean }) => void }).scrollToOffset({ offset: 0, animated: true });
           }
         }, 2000);
       }
@@ -434,7 +436,7 @@ export default function SettingsScreen() {
       <View style={styles.settingsItemLeft}>
         <View style={[styles.iconContainer, dangerous && styles.dangerousIconContainer]}>
           <Ionicons
-            name={icon as any}
+            name={icon as keyof typeof Ionicons.glyphMap}
             size={22}
             color={dangerous ? colors.error : colors.primary}
           />
@@ -737,7 +739,7 @@ export default function SettingsScreen() {
               icon="trophy-outline"
               title={t('challenges:myChallenges')}
               subtitle={t('settings:myChallengesDesc', 'עדכון מהיר של האתגרים שהצטרפת אליהם')}
-              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
+              onPress={() => navigation.navigate('ChallengeStatisticsScreen' as never)}
             />
           </View>
 
@@ -866,13 +868,12 @@ const styles = StyleSheet.create({
   webScrollContainer: {
     flex: 1,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && {
-      overflowY: 'auto' as any,
-      overflowX: 'hidden' as any,
-    }),
+    ...(Platform.OS === 'web'
+      ? { overflowY: 'auto' as const, overflowX: 'hidden' as const }
+      : {}),
     height: '100%',
     maxHeight: SCREEN_HEIGHT - 200, // Reserve space for header
-  } as any,
+  } as ViewStyle,
   webScrollContent: {
     paddingBottom: 40,
     minHeight: SCREEN_HEIGHT * 1.2, // Ensure content is scrollable
@@ -951,9 +952,9 @@ const styles = StyleSheet.create({
     width: 320,
     borderRadius: 16,
     padding: 24,
-    ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-    }),
+    ...(Platform.OS === 'web'
+      ? createShadowStyle(colors.black, { width: 0, height: 4 }, 0.15, 20)
+      : {}),
   },
   logoutModalTitle: {
     fontSize: FontSizes.heading2,
@@ -1004,9 +1005,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 16,
     padding: 24,
-    ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-    }),
+    ...(Platform.OS === 'web'
+      ? createShadowStyle(colors.black, { width: 0, height: 4 }, 0.15, 20)
+      : {}),
   },
   reportModalTitle: {
     fontSize: FontSizes.heading2,

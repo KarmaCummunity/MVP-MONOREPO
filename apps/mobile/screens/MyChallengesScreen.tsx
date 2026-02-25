@@ -52,7 +52,7 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
-  
+
   const [challenges, setChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -169,7 +169,7 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
             <Ionicons
-              name={typeOption?.icon as any || 'trophy-outline'}
+              name={(typeOption?.icon as never) || 'trophy-outline'}
               size={24}
               color={difficultyOption?.color || colors.primary}
             />

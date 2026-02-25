@@ -70,7 +70,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (onCommentPress) onCommentPress(item);
     }, [onCommentPress, item]);
 
-    const handleMorePressInternal = useCallback((itemOrMeasure?: any, _measure?: any) => {
+    const handleMorePressInternal = useCallback((itemOrMeasure?: unknown, _measure?: unknown) => {
         // Handle both (item) and (item, measure) signatures if cards call differently
         // But since we control call sites, we expect cards to call onMorePress(item, measure)?
         // Wait, BaseCardProps says onMorePress: (measure) => void.
@@ -165,7 +165,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
             const { apiService } = await import('../../src/api/api.service');
             const { toastService } = await import('../../utils/toastService');
 
-            let updateResult: any = { success: false };
+            let updateResult: { success: boolean; error?: string } = { success: false };
 
             // Helper to validate UUID format (for tasks and rides)
             const isValidUUID = (id: string | undefined): boolean => {

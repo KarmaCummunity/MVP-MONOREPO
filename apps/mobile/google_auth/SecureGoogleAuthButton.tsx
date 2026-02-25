@@ -39,9 +39,9 @@ if (Platform.OS === 'web') {
 
 export interface SecureGoogleAuthButtonProps {
     /** Callback fired on successful authentication */
-    onSuccess?: (user: any) => void;
+    onSuccess?: (user: unknown) => void;
     /** Callback fired on authentication error */
-    onError?: (error: any) => void;
+    onError?: (error: unknown) => void;
     /** Whether to show a small security indicator icon */
     showSecurityIndicator?: boolean;
     /** Custom styles for the button container */

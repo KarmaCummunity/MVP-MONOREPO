@@ -1,22 +1,75 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { postsService } from '../src/services/posts.service';
+import { apiService } from '../src/api/api.service';
 import { logger } from '../utils/loggerService';
-import { FeedItem } from '../types/feed';
+import { FeedItem, PostType } from '../types/feed';
 import { useUser } from '../stores/userStore';
 
 const NUM_ITEMS = 50; // Per page/batch
 
+/** Minimal shape of a post from the API (posts service / backend) */
+interface ApiPost {
+  id: string;
+  post_type?: string;
+  title?: string;
+  description?: string;
+  images?: string[];
+  author?: { id?: string; name?: string; avatar_url?: string };
+  author_id?: string;
+  likes?: string | number;
+  comments?: string | number;
+  is_liked?: boolean;
+  created_at?: string;
+  item_id?: string;
+  ride_id?: string;
+  task_id?: string;
+  task?: { id: string; title: string; status: string };
+  metadata?: string | Record<string, unknown>;
+  item_data?: { id?: string; status?: string };
+  ride_data?: {
+    id?: string;
+    departure_time?: string;
+    from_location?: string | { name?: string; city?: string };
+    to_location?: string | { name?: string; city?: string };
+    available_seats?: number;
+    price_per_seat?: number;
+    status?: string;
+  };
+}
+
+interface RideDataMap {
+  from?: string;
+  to?: string;
+  seats?: number;
+  price?: number;
+  time?: string;
+  date?: string;
+  status?: string;
+}
+
+interface ApiTask {
+  id: string;
+  title: string;
+  description?: string;
+  status?: string;
+  created_at?: string;
+  created_by?: string;
+  creator_details?: { id?: string; name?: string; avatar_url?: string };
+}
+
 export const useFeedData = (feedMode: 'friends' | 'discovery') => {
+    const { t } = useTranslation('common');
     const { selectedUser: currentUser } = useUser();
     const [feed, setFeed] = useState<FeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     // Helper to map API post to FeedItem
-    const mapPostToItem = (post: any): FeedItem => {
+    const mapPostToItem = (post: ApiPost): FeedItem => {
         // For ride posts, extract ride-specific data
         // Helper to format date/time safely
-        let rideData: any = {};
+        let rideData: RideDataMap = {};
         const formatRideTime = (dateIso: string) => {
             if (!dateIso) return { time: '', date: '' };
             const dep = new Date(dateIso);
@@ -38,7 +91,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         // 1. Try ride_data from DB Join
         if (post.ride_data) {
             const rd = post.ride_data;
-            const { time, date } = formatRideTime(rd.departure_time);
+            const { time, date } = formatRideTime(rd.departure_time ?? '');
 
             rideData = {
                 from: typeof rd.from_location === 'string' ? rd.from_location : (rd.from_location?.name || rd.from_location?.city || ''),
@@ -93,8 +146,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         let metadataItemId: string | undefined;
         try {
             if (post.metadata) {
-                const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : post.metadata;
-                metadataItemId = metadata?.item_id;
+                const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) as Record<string, unknown> : post.metadata;
+                metadataItemId = metadata?.item_id as string | undefined;
             }
         } catch (_e) {
             // Ignore parse errors
@@ -122,7 +175,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         // Debug log for item/donation posts to help diagnose issues
         if ((post.post_type === 'item' || post.post_type === 'donation')) {
             if (!finalItemId || /^\d{10,13}$/.test(finalItemId || '')) {
-                console.warn('⚠️ Invalid item ID for post:', {
+                logger.warn('useFeedData', 'Invalid item ID for post', {
                     postId: post.id,
                     postType: post.post_type,
                     finalItemId,
@@ -134,9 +187,10 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             }
         }
 
+        const postType: PostType = (post.post_type === 'reel' || post.post_type === 'task_post' ? post.post_type : 'post');
         return {
             id: post.id,
-            type: post.post_type || 'post',
+            type: postType,
             subtype: post.post_type, // e.g. 'task_assignment', 'ride'
             title: post.title || 'post.noTitle', // Use key or default in UI
             description: post.description || '',
@@ -146,8 +200,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 name: userName,
                 avatar: userAvatar,
             },
-            likes: parseInt(post.likes || '0'),
-            comments: parseInt(post.comments || '0'),
+            likes: parseInt(String(post.likes ?? '0'), 10),
+            comments: parseInt(String(post.comments ?? '0'), 10),
             isLiked: post.is_liked || false,
             timestamp: (post.created_at && !isNaN(new Date(post.created_at).getTime()))
                 ? new Date(post.created_at).toISOString()
@@ -180,7 +234,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
             // 1. Fetch Posts from Backend
             const postsResponse = await postsService.getPosts(NUM_ITEMS, 0, feedMode === 'friends' ? currentUser?.id : undefined);
-            const rawPosts = postsResponse.success ? (postsResponse.data || []) : [];
+            const rawPosts: ApiPost[] = postsResponse.success && Array.isArray(postsResponse.data) ? (postsResponse.data as ApiPost[]) : [];
             const mappedPosts = rawPosts.map(mapPostToItem);
 
             const allContent: FeedItem[] = [...mappedPosts];
@@ -189,8 +243,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             // Track IDs of tasks that already have a post to avoid duplicates
             const postedTaskIds = new Set(
                 rawPosts
-                    .filter((p: any) => p.task_id || p.task?.id)
-                    .map((p: any) => p.task_id || p.task?.id)
+                    .filter((p) => p.task_id || p.task?.id)
+                    .map((p) => p.task_id || p.task?.id)
             );
 
             // Note: Rides are now included in posts with post_type='ride', so no need to fetch separately
@@ -199,19 +253,18 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
             // 4. Fetch Tasks (Match ProfileScreen logic - independent tasks)
             try {
-                const { apiService } = require('../src/api/api.service');
                 const [openTasksRes, progressTasksRes] = await Promise.all([
                     apiService.getTasks({ status: 'open', limit: 20 }),
                     apiService.getTasks({ status: 'in_progress', limit: 20 })
                 ]);
 
-                const rawTasks = [
-                    ...(openTasksRes.success ? (openTasksRes.data || []) : []),
-                    ...(progressTasksRes.success ? (progressTasksRes.data || []) : [])
+                const rawTasks: ApiTask[] = [
+                    ...(openTasksRes.success && Array.isArray(openTasksRes.data) ? (openTasksRes.data as ApiTask[]) : []),
+                    ...(progressTasksRes.success && Array.isArray(progressTasksRes.data) ? (progressTasksRes.data as ApiTask[]) : [])
                 ];
 
                 // Map tasks to FeedItems
-                rawTasks.forEach((task: any) => {
+                rawTasks.forEach((task) => {
                     // Check if this task is already in a post
                     if (postedTaskIds.has(task.id)) {
                         return;
@@ -225,7 +278,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                             id: task.id, // Use actual task ID
                             type: 'post', // Show as post
                             subtype: 'task_assignment',
-                            title: `יצר/ה משימה חדשה: ${task.title}`,
+                            title: t('feed.taskCreated', { title: task.title }),
                             description: task.description || '',
                             thumbnail: null,
                             user: {
@@ -240,7 +293,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                             taskData: {
                                 id: task.id,
                                 title: task.title,
-                                status: task.status
+                                status: task.status ?? ''
                             }
                         };
                         allContent.push(taskItem);
@@ -265,7 +318,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [feedMode, currentUser?.id]);
+    }, [feedMode, currentUser?.id, t]);
 
     useEffect(() => {
         loadFeed();

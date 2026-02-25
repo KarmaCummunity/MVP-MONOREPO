@@ -699,7 +699,7 @@ export interface AuthEventData {
   context?: {
     sessionId?: string;
     operation?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
 }
 
@@ -947,7 +947,7 @@ export type { SecureAuthUser as AuthUser };
 /**
  * Type guard to check if a value is a valid user ID
  */
-export function isValidUserId(value: any): value is UserId {
+export function isValidUserId(value: unknown): value is UserId {
   return typeof value === 'string' && 
          value.length > 0 && 
          value.length <= 100 &&
@@ -957,7 +957,7 @@ export function isValidUserId(value: any): value is UserId {
 /**
  * Type guard to check if a value is a valid email
  */
-export function isValidEmail(value: any): value is VerifiedEmail {
+export function isValidEmail(value: unknown): value is VerifiedEmail {
   return typeof value === 'string' && 
          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) &&
          value.length <= 320; // RFC 5321 limit
@@ -966,12 +966,12 @@ export function isValidEmail(value: any): value is VerifiedEmail {
 /**
  * Type guard to check if a value is a valid auth state
  */
-export function isValidAuthState(value: any): value is AuthState {
+export function isValidAuthState(value: unknown): value is AuthState {
   const validStates: AuthState[] = [
     'initializing', 'unauthenticated', 'authenticating', 'verifying',
     'authenticated', 'refreshing', 'error', 'expired', 'logout'
   ];
-  return validStates.includes(value);
+  return (validStates as unknown[]).includes(value);
 }
 
 /**

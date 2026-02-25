@@ -14,7 +14,6 @@ import {
     ActivityIndicator,
     I18nManager,
     Animated,
-    Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +21,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
+import { getScreenInfo } from '../globals/responsive';
+import { logger } from '../utils/loggerService';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import {
@@ -33,7 +34,7 @@ import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
 import i18n from '../app/i18n';
 import { ServerUser } from '../src/api/api.service';
 
-const { height } = Dimensions.get('window');
+const { height } = getScreenInfo();
 
 export default function LoginScreen() {
     const { t } = useTranslation(['auth', 'common', 'settings', 'home']);
@@ -95,7 +96,7 @@ export default function LoginScreen() {
                 await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
             }
         } catch (error) {
-            console.error('Guest login failed', error);
+            logger.error('LoginScreen', 'Guest login failed', { error });
             Alert.alert(t('common:error'), t('common:genericTryAgain'));
         } finally {
             setIsLoading(false);
@@ -166,7 +167,7 @@ export default function LoginScreen() {
                     }
 
                     // Use UUID from server
-                    const serverUser = (resolveResponse as any).user as ServerUser;
+                    const serverUser = (resolveResponse as { user?: ServerUser }).user as ServerUser;
                     const userData = {
                         id: serverUser.id, // UUID from database - this is the primary identifier
                         name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -198,9 +199,9 @@ export default function LoginScreen() {
                     console.error('Failed to get user UUID from server:', error);
                     throw error;
                 }
-            } catch (signInError: any) {
+            } catch (signInError: unknown) {
                 // If sign in fails with user-not-found, try to register
-                if (signInError.code === 'auth/user-not-found') {
+                if (signInError instanceof Error && 'code' in signInError && signInError.code === 'auth/user-not-found') {
                     try {
                         // Try to register new user
                         const fbUser = await signUpWithEmail(email, password);
@@ -212,10 +213,10 @@ export default function LoginScreen() {
                             [{ text: t('common:confirm') }]
                         );
                         return;
-                    } catch (signUpError: any) {
+                    } catch (signUpError: unknown) {
                         // If sign up fails with email-already-in-use, try to sign in again
                         // This might happen if user was created between attempts
-                        if (signUpError.code === 'auth/email-already-in-use') {
+                        if (signUpError instanceof Error && 'code' in signUpError && signUpError.code === 'auth/email-already-in-use') {
                             const fbUser = await signInWithEmail(email, password);
                             // Get user data and proceed with login (same logic as above)
                             const { apiService } = await import('../src/api/api.service');
@@ -224,8 +225,9 @@ export default function LoginScreen() {
                                 email: email
                             });
 
-                            if (resolveResponse.success && (resolveResponse as any).user) {
-                                const serverUser = (resolveResponse as any).user as ServerUser;
+                            const respWithUser = resolveResponse as { success?: boolean; user?: ServerUser };
+                            if (resolveResponse.success && respWithUser.user) {
+                                const serverUser = respWithUser.user;
                                 const userData = {
                                     id: serverUser.id,
                                     name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -262,14 +264,15 @@ export default function LoginScreen() {
                     throw signInError;
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Auth action failed', error);
             let msg = t('common:genericTryAgain');
-            if (error.code === 'auth/wrong-password') {
+            const err = error as { code?: string };
+            if (err.code === 'auth/wrong-password') {
                 msg = t('auth:email.wrongPassword', 'סיסמה לא נכונה. אנא נסה שוב.');
-            } else if (error.code === 'auth/email-already-in-use') {
+            } else if (err.code === 'auth/email-already-in-use') {
                 msg = t('auth:email.emailAlreadyRegistered', 'המייל כבר רשום. אנא בדוק את הסיסמה.');
-            } else if (error.code === 'auth/user-not-found') {
+            } else if (err.code === 'auth/user-not-found') {
                 // This shouldn't happen in unified flow, but handle it gracefully
                 msg = t('common:genericTryAgain');
             }

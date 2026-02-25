@@ -15,7 +15,7 @@
 // TODO: Implement proper memory management for cache and queue
 // TODO: Add comprehensive logging and monitoring for all operations
 import { logger } from './loggerService';
-// Removed console.log statements - using proper logging service
+import i18n from '../app/i18n';
 // TODO: Add comprehensive unit tests for all service operations
 // TODO: Implement proper data encryption for sensitive cached data
 // TODO: Add comprehensive performance optimization and monitoring
@@ -480,18 +480,17 @@ export class EnhancedDatabaseService {
         } else {
           logger.warn('EnhancedDatabaseService', 'Backend returned empty stats data', { cacheKey, forceRefresh });
           // Throw error to trigger retry or fallback
-          throw new Error('Backend returned empty stats data');
+          throw new Error(i18n.t('common:errors.backendEmptyStats'));
         }
       }
 
       // If response was not successful, throw error to trigger retry
       logger.warn('EnhancedDatabaseService', 'Backend request failed', { cacheKey, forceRefresh, error: response.error });
-      throw new Error(response.error || 'Failed to fetch community stats from backend');
+      throw new Error(response.error || i18n.t('common:errors.fetchStatsFailed'));
     } catch (error) {
       logger.error('EnhancedDatabaseService', 'Get community stats error', { error });
-      // שינוי: זריקת שגיאה במקום החזרת אובייקט ריק כדי שהקוד יוכל לטפל בשגיאה
-      // Change: Throw error instead of returning empty object so code can handle the error
-      throw error instanceof Error ? error : new Error('Failed to fetch community stats');
+      // Throw error instead of returning empty object so code can handle the error
+      throw error instanceof Error ? error : new Error(i18n.t('common:errors.fetchStatsFailedGeneric'));
     }
   }
 
@@ -711,18 +710,21 @@ export class EnhancedDatabaseService {
         let success = false;
 
         switch (action.action) {
-          case 'create_donation':
+          case 'create_donation': {
             const donationResponse = await apiService.createDonation(action.data);
             success = donationResponse.success;
             break;
-          case 'create_ride':
+          }
+          case 'create_ride': {
             const rideResponse = await apiService.createRide(action.data);
             success = rideResponse.success;
             break;
-          case 'update_user_profile':
+          }
+          case 'update_user_profile': {
             const updateResponse = await apiService.updateUser(action.data.userId as string, action.data.updateData as Record<string, unknown>);
             success = updateResponse.success;
             break;
+          }
           case 'increment_stat':
             await apiService.incrementStat(action.data as { stat_type: string; value?: number; city?: string });
             success = true;
@@ -794,15 +796,22 @@ export class EnhancedDatabaseService {
       }
 
       const postId = `post_${donation.id || Date.now().toString()}`;
-      const postTitle = String(donation.title ?? '') || `תרומה ${donation.type === 'money' ? 'כספית' : donation.type === 'time' ? 'זמן' : donation.type === 'rides' ? 'טרמפ' : 'פריט'}`;
+      const titleKey = donation.type === 'money' ? 'money' : donation.type === 'time' ? 'time' : donation.type === 'rides' ? 'rides' : 'item';
+      const postTitle = String(donation.title ?? '') || i18n.t(`donations:post.defaultTitle.${titleKey}`);
 
       let postDescription: string = '';
       if (donation.type === 'money' && donation.amount) {
-        postDescription = `תרמתי ${donation.amount} ${donation.currency || '₪'} ${donation.category ? `לקטגוריה: ${donation.category}` : ''}`;
+        postDescription = i18n.t('donations:post.descriptionDonatedMoney', {
+          amount: donation.amount,
+          currency: donation.currency || '₪',
+        });
+        if (donation.category) {
+          postDescription += i18n.t('donations:post.descriptionDonatedMoneyCategory', { category: donation.category });
+        }
       } else if (donation.type === 'time') {
-        postDescription = `תרמתי מזמני ${String(donation.description ?? '')}`;
+        postDescription = i18n.t('donations:post.descriptionDonatedTime', { description: String(donation.description ?? '') });
       } else if (donation.type === 'rides') {
-        postDescription = `הצעתי טרמפ ${String(donation.description ?? '')}`;
+        postDescription = i18n.t('donations:post.descriptionDonatedRide', { description: String(donation.description ?? '') });
       } else {
         postDescription = (typeof donation.description === 'string' ? donation.description : '') || postTitle;
       }

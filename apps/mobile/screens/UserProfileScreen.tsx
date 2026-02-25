@@ -7,16 +7,17 @@
 //   ProfileScreen will automatically detect if it's viewing another user and use tabBarHeight = 0.
 import React from 'react';
 import ProfileScreen from '../bottomBarScreens/ProfileScreen';
+import { useRoute } from '@react-navigation/native';
+import type { ProfileScreenRouteParams } from '../components/Profile/types';
 
 // --- Main Component ---
 // This component is a wrapper that uses ProfileScreen
 // ProfileScreen will automatically detect that we're viewing another user's profile
 // and use tabBarHeight = 0 instead of calling useBottomTabBarHeight
-import { useRoute } from '@react-navigation/native';
 
 export default function UserProfileScreen() {
   const route = useRoute();
-  const params = route.params as any; // Using any for flexibility with route params
+  const params = route.params as ProfileScreenRouteParams | undefined;
 
   return (
     <ProfileScreen

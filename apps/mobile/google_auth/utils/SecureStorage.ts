@@ -36,7 +36,7 @@ import { logger } from '../../utils/loggerService';
 /**
  * Storage operation result
  */
-interface StorageResult<T = any> {
+interface StorageResult<T = unknown> {
   /** Whether the operation was successful */
   success: boolean;
   /** Retrieved data (for get operations) */
@@ -784,7 +784,7 @@ export const getAuthToken = async (
  */
 export const storeUserProfile = async (
   userId: string,
-  profile: any,
+  profile: Record<string, unknown>,
   ttl: number = 15 * 60 * 1000 // 15 minutes default
 ): Promise<StorageResult> => {
   return SecureStorageClass.setItem(`user_profile_${userId}`, profile, {
@@ -797,7 +797,7 @@ export const storeUserProfile = async (
 /**
  * Get user profile from cache
  */
-export const getUserProfile = async (userId: string): Promise<StorageResult<any>> => {
+export const getUserProfile = async (userId: string): Promise<StorageResult<Record<string, unknown>>> => {
   return SecureStorageClass.getItem(`user_profile_${userId}`, {
     allowFallback: true,
   });

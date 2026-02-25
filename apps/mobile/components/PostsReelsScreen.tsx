@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
+import type { HomeTabStackParamList } from '../globals/types';
 
 import colors from '../globals/colors';
 import { FeedItem } from '../types/feed';
@@ -50,7 +52,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   showTopBar: _showTopBar = false
 }) => {
   const { t } = useTranslation();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<HomeTabStackParamList>>();
   const { selectedUser } = useUser();
 
   // State
@@ -154,7 +156,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
       let adminId: string | null = null;
       try {
         const resolveRes = await apiService.resolveUserId({ email: adminEmail });
-        const data = resolveRes.data as any;
+        const data = resolveRes.data as { id?: string } | undefined;
         if (resolveRes.success && data?.id) {
           adminId = data.id;
         }
@@ -165,7 +167,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
         // For MVP we might need to assume a system user or fail gracefuly
         // Attempt search
         const searchRes = await apiService.getUsers({ search: adminEmail, limit: 1 });
-        const data = searchRes.data as any;
+        const data = searchRes.data as { id?: string }[] | undefined;
         if (searchRes.success && data?.[0]?.id) {
           adminId = data[0].id;
         }

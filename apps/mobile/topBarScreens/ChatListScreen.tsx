@@ -49,6 +49,15 @@ export default function ChatListScreen() {
     status?: string;
   }
 
+  /** Shape of user data returned by apiService.getUserById (response.data). */
+  interface UserProfileData {
+    name?: string;
+    avatar_url?: string;
+    avatar?: string;
+    last_active?: string;
+    bio?: string;
+  }
+
   // Update ref when usersMap changes
   useEffect(() => {
     usersMapRef.current = usersMap;
@@ -70,7 +79,7 @@ export default function ChatListScreen() {
         try {
           const response = await apiService.getUserById(userId);
           if (response.success && response.data) {
-            const userData = response.data;
+            const userData = response.data as UserProfileData;
             return {
               id: userId,
               name: userData.name || t('chat:unknownUser'),
@@ -265,9 +274,9 @@ export default function ChatListScreen() {
               id: chattingUser.id,
               name: chattingUser.name,
               avatar: chattingUser.avatar,
-              isOnline: Boolean((chattingUser as any).isOnline),
-              lastSeen: (chattingUser as any).lastActive || new Date().toISOString(),
-              status: (chattingUser as any).bio || '',
+              isOnline: Boolean(chattingUser.isOnline),
+              lastSeen: chattingUser.lastSeen ?? new Date().toISOString(),
+              status: chattingUser.status ?? '',
             };
             const chatConversation = {
               id: item.id,

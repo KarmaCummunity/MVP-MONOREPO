@@ -4,7 +4,16 @@ import { db, DB_COLLECTIONS, DatabaseService } from '../infrastructure/database.
 import colors from '../../globals/colors';
 
 // Import notifications only on supported platforms
-let Notifications: any = null;
+type ExpoNotificationsModule = {
+  setNotificationHandler: (handler: object) => void;
+  getPermissionsAsync: () => Promise<{ status: string }>;
+  requestPermissionsAsync: () => Promise<{ status: string }>;
+  scheduleNotificationAsync: (opts: { content: object; trigger: null }) => Promise<string>;
+  addNotificationReceivedListener: (cb: (n: NotificationData) => void) => { remove: () => void };
+  addNotificationResponseReceivedListener: (cb: (r: { notification: { request: { content: object } } }) => void) => { remove: () => void };
+  AndroidNotificationPriority?: { HIGH: string };
+};
+let Notifications: ExpoNotificationsModule | null = null;
 if (Platform.OS !== 'web') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -37,7 +46,7 @@ export interface NotificationData {
   id: string;
   title: string;
   body: string;
-  data?: any;
+  data?: Record<string, unknown>;
   type: 'message' | 'follow' | 'like' | 'comment' | 'system';
   timestamp: string;
   read: boolean;
@@ -162,7 +171,7 @@ export const checkNotificationPermissions = async (): Promise<{
 export const sendLocalNotification = async (
   title: string,
   body: string,
-  data?: any,
+  data?: Record<string, unknown>,
   type: NotificationData['type'] = 'system'
 ): Promise<string> => {
   try {
@@ -473,8 +482,9 @@ export const getNotificationSettings = async (userId?: string): Promise<Notifica
     }
 
     const settings = await db.getUserSettings(userId);
-    if (settings && (settings as any).notifications) {
-      return (settings as any).notifications;
+    const settingsWithNotifications = settings as { notifications?: NotificationSettings };
+    if (settings && settingsWithNotifications.notifications) {
+      return settingsWithNotifications.notifications;
     }
 
     const defaultSettings: NotificationSettings = {
@@ -629,7 +639,7 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
   }
 };
 
-export const setupNotificationListener = (callback: (notification: any) => void) => {
+export const setupNotificationListener = (callback: (notification: { request: { content: object } }) => void) => {
   if (!isNotificationsSupported() || !Notifications) {
     console.log('🔔 Notifications not supported on this platform');
     return null;
@@ -644,7 +654,7 @@ export const setupNotificationListener = (callback: (notification: any) => void)
   return subscription;
 };
 
-export const setupNotificationResponseListener = (callback: (response: any) => void) => {
+export const setupNotificationResponseListener = (callback: (response: { notification: { request: { content: object } } }) => void) => {
   if (!isNotificationsSupported()) {
     console.log('🔔 Notifications not supported on this platform');
     return null;
@@ -661,7 +671,7 @@ export const setupNotificationResponseListener = (callback: (response: any) => v
 
 // --- Global Notification Listener ---
 
-let notificationPollingInterval: any = null;
+let notificationPollingInterval: ReturnType<typeof setInterval> | null = null;
 const seenNotificationIds = new Set<string>();
 
 export const startNotificationListener = (userId: string) => {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import SearchBar from "../components/SearchBar";
+import SearchBar, { SearchableItem } from "../components/SearchBar";
 import MenuComp from "../components/MenuComp";
 import ModeToggleButton from "../components/ModeToggleButton";
 import GuestModeNotice from "../components/GuestModeNotice";
@@ -37,8 +37,8 @@ interface HeaderSectionProps {
   // New props for search functionality
   filterOptions: string[]; // Filter options specific to each screen
   sortOptions: string[]; // Sort options specific to each screen
-  searchData: any[]; // Data array to search through (charities, rides, etc.) - TODO: Replace any[] with proper types
-  onSearch: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void; // Search handler function - TODO: Improve typing
+  searchData: SearchableItem[]; // Data array to search through (charities, rides, etc.)
+  onSearch: (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => void;
   hideSortButton?: boolean;
 }
 

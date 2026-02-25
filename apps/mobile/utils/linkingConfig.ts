@@ -28,7 +28,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   
   // Custom function to handle paths that don't match exactly
   // Redirects paths without mode to include /search
-  getStateFromPath: (path: string, options?: any) => {
+  getStateFromPath: (path: string, options?: { path?: string }) => {
     // Remove query string and hash for matching
     const cleanPath = path.split('?')[0].split('#')[0];
     

@@ -12,7 +12,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { NavigationProp, useRoute } from '@react-navigation/native';
+import { NavigationProp, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
@@ -33,7 +33,7 @@ interface CommunityMember {
   contact_info?: {
     email?: string;
     phone?: string;
-    [key: string]: any;
+    [key: string]: string | undefined;
   };
   status: 'active' | 'inactive';
   created_by?: string;
@@ -55,8 +55,8 @@ const LOG_SOURCE = 'AdminPeopleScreen';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
 export default function AdminPeopleScreen({ navigation: _navigation }: AdminPeopleScreenProps) {
-  const route = useRoute();
-  const routeParams = (route.params as any) || {};
+  const route = useRoute<RouteProp<AdminStackParamList, 'AdminPeople'>>();
+  const routeParams = (route.params ?? {}) as { viewOnly?: boolean };
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser, isAdmin: _isAdmin } = useUser();
@@ -193,7 +193,14 @@ export default function AdminPeopleScreen({ navigation: _navigation }: AdminPeop
         memberId: editingMemberId,
       });
 
-      const memberData: any = {
+      const memberData: {
+        name: string;
+        role: string;
+        description?: string;
+        status: 'active' | 'inactive';
+        contact_info: { email?: string; phone?: string };
+        created_by?: string;
+      } = {
         name: formData.name.trim(),
         role: formData.role.trim(),
         description: formData.description.trim() || undefined,
@@ -583,7 +590,7 @@ const styles = StyleSheet.create({
     gap: LAYOUT_CONSTANTS.SPACING.XS,
   },
   addButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },
@@ -633,7 +640,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   filterButtonTextActive: {
-    color: 'white',
+    color: colors.buttonText,
     fontWeight: '600',
   },
   listContainer: {
@@ -754,7 +761,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.dropdownModalOverlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -828,7 +835,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statusOptionTextActive: {
-    color: 'white',
+    color: colors.buttonText,
   },
   saveButton: {
     backgroundColor: colors.primary,
@@ -841,7 +848,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: FontSizes.medium,
     fontWeight: 'bold',
   },

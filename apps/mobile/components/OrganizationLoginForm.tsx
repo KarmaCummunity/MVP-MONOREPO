@@ -11,7 +11,7 @@
  * @since 1.0.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,10 +23,22 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../src/infrastructure/database.service';
 import colors from '../globals/colors';
+import type { User } from '../stores/userStore';
+import { logger } from '../utils/loggerService';
+
+/** Org application row from db.listOrgApplications */
+interface OrgApplication {
+  id: string;
+  orgName?: string;
+  status?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  city?: string;
+}
 
 // TypeScript Interfaces
 interface OrganizationLoginFormProps {
@@ -35,7 +47,7 @@ interface OrganizationLoginFormProps {
   /** Callback to toggle the form open/closed state */
   onToggle: () => void;
   /** Callback when user successfully logs in as organization */
-  onLoginSuccess: (userData: any) => void;
+  onLoginSuccess: (userData: User) => void;
   /** Animation value for form expansion */
   animationValue: Animated.Value;
 }
@@ -48,7 +60,6 @@ interface OrganizationFormState {
 
 interface RecentEmailsState {
   emails: string[];
-  suggestions: string[];
 }
 
 const KNOWN_EMAILS_KEY = 'known_emails';
@@ -70,7 +81,7 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
   animationValue,
 }) => {
   const { t } = useTranslation(['auth', 'common']);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   // Form state management
   const [formState, setFormState] = useState<OrganizationFormState>({
@@ -81,81 +92,68 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
 
   const [recentEmails, setRecentEmails] = useState<RecentEmailsState>({
     emails: [],
-    suggestions: [],
   });
+  const [suggestionsVisible, setSuggestionsVisible] = useState(true);
 
-  // Reset form state when form is closed
-  useEffect(() => {
-    if (!isOpen) {
-      resetFormState();
-    }
-  }, [isOpen]);
-
-  // Update email suggestions based on current input
-  useEffect(() => {
-    if (!isOpen) {
-      setRecentEmails(prev => ({ ...prev, suggestions: [] }));
-      return;
-    }
-
-    const query = formState.query.trim().toLowerCase();
-    if (!query) {
-      setRecentEmails(prev => ({
-        ...prev,
-        suggestions: recentEmails.emails.slice(0, 5)
-      }));
-      return;
-    }
-
-    const filtered = recentEmails.emails
-      .filter(email => email.toLowerCase().includes(query))
-      .slice(0, 5);
-
-    setRecentEmails(prev => ({ ...prev, suggestions: filtered }));
-  }, [formState.query, isOpen, recentEmails.emails]);
-
-  // Load recent emails on component mount
-  useEffect(() => {
-    loadRecentEmails();
-  }, []);
-
-  /**
-   * Resets the form to its initial state
-   */
-  const resetFormState = () => {
+  const resetFormState = useCallback(() => {
     setFormState({
       query: '',
       isChecking: false,
       suggestions: [],
     });
-  };
+  }, []);
 
-  /**
-   * Loads recent emails from AsyncStorage
-   */
-  const loadRecentEmails = async () => {
-    try {
-      const raw = await AsyncStorage.getItem('recent_emails');
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          setRecentEmails(prev => ({ ...prev, emails: list }));
-          return;
-        }
-      }
-
-      // Fallback to known emails
-      const knownRaw = await AsyncStorage.getItem(KNOWN_EMAILS_KEY);
-      if (knownRaw) {
-        const list = JSON.parse(knownRaw);
-        if (Array.isArray(list)) {
-          setRecentEmails(prev => ({ ...prev, emails: list }));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load recent emails:', error);
+  // Reset form state when form is closed (defer so setState runs in callback, not synchronously in effect)
+  useEffect(() => {
+    if (!isOpen) {
+      const id = setTimeout(() => {
+        resetFormState();
+        setSuggestionsVisible(true);
+      }, 0);
+      return () => clearTimeout(id);
     }
-  };
+  }, [isOpen, resetFormState]);
+
+  const derivedSuggestions = useMemo(() => {
+    if (!isOpen) return [];
+    const query = formState.query.trim().toLowerCase();
+    if (!query) return recentEmails.emails.slice(0, 5);
+    return recentEmails.emails
+      .filter(email => email.toLowerCase().includes(query))
+      .slice(0, 5);
+  }, [isOpen, formState.query, recentEmails.emails]);
+
+  // Load recent emails on component mount (async work in effect so setState runs in callback, not synchronously)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const raw = await AsyncStorage.getItem('recent_emails');
+        if (cancelled) return;
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            setRecentEmails(prev => ({ ...prev, emails: list }));
+            return;
+          }
+        }
+        const knownRaw = await AsyncStorage.getItem(KNOWN_EMAILS_KEY);
+        if (cancelled) return;
+        if (knownRaw) {
+          const list = JSON.parse(knownRaw);
+          if (Array.isArray(list)) {
+            setRecentEmails(prev => ({ ...prev, emails: list }));
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          logger.error('OrganizationLoginForm', 'Failed to load recent emails', { error });
+        }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   /**
    * Handles organization confirmation and lookup
@@ -175,24 +173,24 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
       setFormState(prev => ({ ...prev, isChecking: true }));
 
       // Search for organization applications
-      let applications: any[] = [];
+      let applications: OrgApplication[] = [];
       const isEmail = query.includes('@');
 
       if (isEmail) {
         // Search by email (primary key)
         const emailKey = query.toLowerCase();
-        applications = await db.listOrgApplications(emailKey);
+        applications = (await db.listOrgApplications(emailKey)) as OrgApplication[];
       } else {
         // Search by organization name from admin queue
-        const all = await db.listOrgApplications('admin_org_queue');
-        applications = (all || []).filter((app: any) =>
+        const all = (await db.listOrgApplications('admin_org_queue')) as OrgApplication[] | null;
+        applications = (all || []).filter((app) =>
           String(app.orgName || '').toLowerCase().includes(query.toLowerCase())
         );
       }
 
       // Check for approved applications
-      const approved = applications.find((app: any) => app.status === 'approved');
-      const pending = applications.find((app: any) => app.status === 'pending');
+      const approved = applications.find((app) => app.status === 'approved');
+      const pending = applications.find((app) => app.status === 'pending');
 
       if (approved) {
         // Create organization user and login
@@ -212,7 +210,7 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
       // Organization not found - navigate to onboarding
       navigation.navigate('OrgOnboardingScreen' as never);
     } catch (error) {
-      console.error('Org login check failed:', error);
+      logger.error('OrganizationLoginForm', 'Org login check failed', { error });
       Alert.alert(
         t('common:error') as string,
         t('auth:org.checkFailed') as string
@@ -224,7 +222,7 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
   /**
    * Handles login for approved organizations
    */
-  const handleApprovedOrganization = async (approved: any, isEmail: boolean, query: string) => {
+  const handleApprovedOrganization = async (approved: OrgApplication, isEmail: boolean, query: string) => {
     try {
       const email = String(approved.contactEmail || (isEmail ? query : '')).toLowerCase();
 
@@ -254,7 +252,7 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
 
       onLoginSuccess(orgUser);
     } catch (error) {
-      console.error('Failed to create organization user:', error);
+      logger.error('OrganizationLoginForm', 'Failed to create organization user', { error });
       setFormState(prev => ({ ...prev, isChecking: false }));
     }
   };
@@ -264,7 +262,7 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
    */
   const handleSuggestionSelect = (email: string) => {
     setFormState(prev => ({ ...prev, query: email }));
-    setRecentEmails(prev => ({ ...prev, suggestions: [] }));
+    setSuggestionsVisible(false);
   };
 
   if (!isOpen) {
@@ -297,7 +295,10 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
           placeholder={t('auth:org.placeholder')}
           placeholderTextColor={colors.textTertiary}
           value={formState.query}
-          onChangeText={(text) => setFormState(prev => ({ ...prev, query: text }))}
+          onChangeText={(text) => {
+            setSuggestionsVisible(true);
+            setFormState(prev => ({ ...prev, query: text }));
+          }}
           autoCapitalize="none"
           autoCorrect={false}
           textAlign="right"
@@ -325,9 +326,9 @@ const OrganizationLoginForm: React.FC<OrganizationLoginFormProps> = ({
       </View>
 
       {/* Email suggestions dropdown */}
-      {recentEmails.suggestions.length > 0 && (
+      {suggestionsVisible && derivedSuggestions.length > 0 && (
         <View style={styles.suggestionsBox}>
-          {recentEmails.suggestions.map((suggestion) => (
+          {derivedSuggestions.map((suggestion) => (
             <TouchableOpacity
               key={suggestion}
               style={styles.suggestionItem}

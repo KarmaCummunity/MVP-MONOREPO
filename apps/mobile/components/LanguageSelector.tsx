@@ -25,11 +25,13 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../app/i18n';
 import colors from '../globals/colors';
+import { createShadowStyle } from '../globals/styles';
+import { logger } from '../utils/loggerService';
 
 // TypeScript Interfaces
 interface LanguageSelectorProps {
   /** Custom style for the container */
-  containerStyle?: any;
+  containerStyle?: React.ComponentProps<typeof View>['style'];
   /** Whether to show the language menu */
   showMenu?: boolean;
   /** Callback when language is changed */
@@ -98,7 +100,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       // Notify parent component
       onLanguageChange?.(language);
     } catch (error) {
-      console.error('Failed to apply language:', error);
+      logger.error('LanguageSelector', 'Failed to apply language', { error });
     } finally {
       setLanguageState(prev => ({ ...prev, menuOpen: false }));
     }
@@ -199,18 +201,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.transparent,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    } : {
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    }),
+    ...(Platform.OS === 'web'
+      ? createShadowStyle(colors.black, { width: 0, height: 2 }, 0.1, 4)
+      : {
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
   },
   menu: {
     backgroundColor: colors.white,
@@ -220,15 +222,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginTop: 5,
     minWidth: 130,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
-    } : {
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 6,
-    }),
+    ...(Platform.OS === 'web'
+      ? createShadowStyle(colors.black, { width: 0, height: 4 }, 0.15, 8)
+      : {
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 6,
+        }),
   },
   menuItem: {
     flexDirection: 'row',
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   selectedMenuItem: {
-    backgroundColor: 'rgba(76, 126, 255, 0.08)',
+    backgroundColor: colors.infoLight,
   },
   menuText: {
     fontSize: 14,

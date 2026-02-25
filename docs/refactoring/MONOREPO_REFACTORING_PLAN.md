@@ -85,18 +85,23 @@ npm run build --workspace @kc/mobile
 
 ---
 
-## Phase 4: ניקוי ו-TODOs
+## ✅ Phase 4: ניקוי ו-TODOs – הושלם (25/02/2026)
 
 ### 4.1 משימות
 
-| # | משימה | פרטים |
-|---|-------|--------|
-| 1 | **מחיקת קבצים מיותרים** | logger.ts vs loggerService.ts – איחוד אם אפשר |
-| 2 | **מחיקת eslint dumps** | מחיקת eslint.json, eslint2.json, eslint3.json מ-apps/mobile |
-| 3 | **עדכון README** | תיעוד המבנה החדש ב-docs/ |
-| 4 | **בדיקות** | וידוא שכל הבדיקות הקיימות עוברות |
-| 5 | **החלפת process.env** | (אופציונלי) הכנה ל-ConfigService – תיעוד ב-FUTURE_PLANS |
-| 6 | **החלפת console.log** | (אופציונלי) שימוש ב-NestJS Logger – תיעוד ב-FUTURE_PLANS |
+| # | משימה | פרטים | סטטוס |
+|---|-------|--------|--------|
+| 1 | **מחיקת קבצים מיותרים** | logger.ts vs loggerService.ts – איחוד אם אפשר | ✅ הושלם – utils/logger.ts נמחק (כל ה-imports כבר מ-loggerService) |
+| 2 | **מחיקת eslint dumps** | מחיקת eslint.json, eslint2.json, eslint3.json מ-apps/mobile | ⏭️ לא רלוונטי – הקבצים לא קיימים בפרויקט |
+| 3 | **עדכון README** | תיעוד המבנה החדש ב-docs/ | ✅ הושלם |
+| 4 | **בדיקות** | וידוא שכל הבדיקות הקיימות עוברות | ✅ lint עובר; test עובר ב-@kc/api ו-@kc/mobile (@kc/dev-bot ללא test script) |
+| 5 | **החלפת process.env** | (אופציונלי) הכנה ל-ConfigService – תיעוד ב-FUTURE_PLANS | נדחה |
+| 6 | **החלפת console.log** | (אופציונלי) שימוש ב-NestJS Logger – תיעוד ב-FUTURE_PLANS | נדחה |
+
+### 4.2 מבנה Mobile לאחר Phase 3 (תיעוד)
+
+- **Logger:** שימוש ב-`utils/loggerService` בלבד (מאחסן ל-AsyncStorage, רמות log, export).
+- **API/Services/Infrastructure:** תחת `apps/mobile/src/` – ראה §3.1.
 
 ---
 
@@ -108,7 +113,7 @@ npm run build --workspace @kc/mobile
 | Phase 2: Mobile State | ✅ הושלם | 25/02/2026 |
 | Users Controller Split | ✅ הושלם | 25/02/2026 |
 | Phase 3: Mobile Utils | ✅ הושלם | 25/02/2026 |
-| Phase 4: ניקוי | ⬜ לא התחיל | |
+| Phase 4: ניקוי | ✅ הושלם | 25/02/2026 |
 
 ---
 

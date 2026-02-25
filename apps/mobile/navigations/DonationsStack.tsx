@@ -8,7 +8,7 @@
 import React from "react";
 import { Platform } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, type NavigationProp, type ParamListBase } from "@react-navigation/native";
 import DonationsScreen from "../bottomBarScreens/DonationsScreen";
 import MoneyScreen from "../donationScreens/MoneyScreen";
 import TimeScreen from "../donationScreens/TimeScreen";
@@ -79,8 +79,8 @@ export default function DonationsStack() {
         headerShown: true,
         header: () => (
           <TopBarNavigator
-            navigation={navigation as any}
-            hideTopBar={(route?.params as any)?.hideTopBar === true}
+            navigation={navigation as NavigationProp<ParamListBase>}
+            hideTopBar={(route?.params as { hideTopBar?: boolean })?.hideTopBar === true}
           />
         ),
         // Fix for aria-hidden warning: prevent focus on inactive screens

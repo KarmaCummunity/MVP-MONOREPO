@@ -15,7 +15,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import { NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, RouteProp, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
@@ -39,7 +39,7 @@ const DEFAULT_CHALLENGE_IMAGES = {
 
 export interface CommunityChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: any;
+  route?: RouteProp<DonationsStackParamList, 'CommunityChallengesScreen'>;
 }
 
 export default function CommunityChallengesScreen({ navigation, route }: CommunityChallengesScreenProps) {
@@ -109,10 +109,15 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const loadChallenges = useCallback(async () => {
     try {
       setLoading(true);
-      const filters: any = {
+      const filters: {
+        is_active?: boolean;
+        sort_by?: string;
+        sort_order?: 'ASC' | 'DESC';
+        limit?: number;
+      } = {
         is_active: true,
         sort_by: 'created_at',
-        sort_order: 'DESC' as const,
+        sort_order: 'DESC',
         limit: 100,
       };
 
@@ -256,16 +261,16 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       } else {
         showToast(t('challenges:messages.errorCreating'), 'error');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('CommunityChallengesScreen', 'Error creating challenge', { error: String(error) });
-      showToast(error.message || t('challenges:messages.errorCreating'), 'error');
+      showToast(error instanceof Error ? error.message : t('challenges:messages.errorCreating'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleChallengePress = (challenge: CommunityChallenge) => {
-    (navigation as any).navigate('ChallengeDetailsScreen', {
+    navigation.navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
     });
   };
@@ -294,7 +299,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
               <Ionicons
-                name={typeOption?.icon as any || 'trophy-outline'}
+                name={(typeOption?.icon ?? 'trophy-outline') as keyof typeof Ionicons.glyphMap}
                 size={24}
                 color={difficultyOption?.color || colors.primary}
               />
@@ -326,7 +331,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             </View>
             <View style={styles.metaItem}>
               <Ionicons
-                name={challengeFrequencyOptions.find((f) => f.id === item.frequency)?.icon as any}
+                name={(challengeFrequencyOptions.find((f) => f.id === item.frequency)?.icon ?? 'calendar-outline') as keyof typeof Ionicons.glyphMap}
                 size={16}
                 color={colors.textSecondary}
               />
@@ -384,7 +389,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             onPress={() => setSelectedTypeFilter(option.id as ChallengeType)}
           >
             <Ionicons
-              name={option.icon as any}
+              name={option.icon as keyof typeof Ionicons.glyphMap}
               size={16}
               color={selectedTypeFilter === option.id ? colors.white : colors.textSecondary}
             />
@@ -462,7 +467,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             onPress={() => setChallengeType(option.id as ChallengeType)}
           >
             <Ionicons
-              name={option.icon as any}
+              name={option.icon as keyof typeof Ionicons.glyphMap}
               size={20}
               color={challengeType === option.id ? colors.white : colors.textSecondary}
             />
@@ -485,7 +490,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             onPress={() => setFrequency(option.id as ChallengeFrequency)}
           >
             <Ionicons
-              name={option.icon as any}
+              name={option.icon as keyof typeof Ionicons.glyphMap}
               size={20}
               color={frequency === option.id ? colors.white : colors.textSecondary}
             />
@@ -510,7 +515,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             onPress={() => setDifficulty(option.id as ChallengeDifficulty)}
           >
             <Ionicons
-              name={option.icon as any}
+              name={option.icon as keyof typeof Ionicons.glyphMap}
               size={20}
               color={difficulty === option.id ? colors.white : option.color}
             />
@@ -575,11 +580,11 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         onToggleMode={() => setMode(!mode)}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            (navigation as any).navigate('ChallengeStatisticsScreen');
+            navigation.navigate('ChallengeStatisticsScreen');
           } else if (option === t('challenges:myChallenges')) {
-            (navigation as any).navigate('MyChallengesScreen');
+            navigation.navigate('MyChallengesScreen');
           } else if (option === t('challenges:myCreatedChallenges')) {
-            (navigation as any).navigate('MyCreatedChallengesScreen');
+            navigation.navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('challenges:title')}

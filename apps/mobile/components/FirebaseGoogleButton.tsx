@@ -22,7 +22,7 @@ import { logger } from '../utils/loggerService';
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
   const { setSelectedUserWithMode } = useUser();
-  const _navigation = useNavigation<any>();
+  const _navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -228,23 +228,29 @@ export default function FirebaseGoogleButton() {
       // Reset loading state after navigation
       setLoading(false);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      const code = error && typeof error === 'object' && 'code' in error
+        ? (error as { code: string }).code
+        : undefined;
+      const stack = error instanceof Error ? error.stack : undefined;
+
       logger.error('FirebaseGoogleButton', 'Google login error', {
-        error: error.message,
-        code: error.code,
-        stack: error.stack,
+        error: message,
+        code,
+        stack,
       });
 
       let errorMessage = '';
-      if (error.code === 'auth/popup-closed-by-user') {
+      if (code === 'auth/popup-closed-by-user') {
         errorMessage = 'ההתחברות בוטלה';
         logger.debug('FirebaseGoogleButton', 'User closed the popup');
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (code === 'auth/popup-blocked') {
         errorMessage = 'הדפדפן חסם את חלון ההתחברות. אנא אפשר pop-ups.';
         logger.warn('FirebaseGoogleButton', 'Popup was blocked by browser');
       } else {
         errorMessage = 'שגיאה בהתחברות. נסה שוב.';
-        logger.warn('FirebaseGoogleButton', 'Unknown error', { code: error.code });
+        logger.warn('FirebaseGoogleButton', 'Unknown error', { code });
       }
 
       setError(errorMessage);

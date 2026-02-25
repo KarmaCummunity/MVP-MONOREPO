@@ -22,7 +22,7 @@
 // TODO: Add comprehensive unit tests for all category logic
 import { logger } from '../utils/loggerService';
 // Removed console.log statements - using proper logging service
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import {
   Alert,
   Platform,
   Dimensions,
+  ViewStyle,
 } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -54,8 +55,15 @@ import { USE_BACKEND } from '../utils/dbConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Placeholder datasets (purged demo) – replace with real API data
-const donations: any[] = [];
-const charities: any[] = [];
+interface DonationRecord {
+  createdBy?: string;
+  createdAt?: number;
+}
+interface CharityRecord {
+  id?: string;
+}
+const donations: DonationRecord[] = [];
+const charities: CharityRecord[] = [];
 
 interface DonationsScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
@@ -106,6 +114,7 @@ const BASE_CATEGORIES = [
 ] as const;
 
 type CategoryId = typeof BASE_CATEGORIES[number]['id'];
+type CategoryItem = (typeof BASE_CATEGORIES)[number];
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -129,6 +138,14 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   const _isMobileWebView = Platform.OS === 'web' && SCREEN_WIDTH <= 768;
   const isCompact = availableHeight < 600;
 
+  const [now, setNow] = useState<number>(0);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    const tick = () => setNow(Date.now());
+    setTimeout(tick, 0);
+    return () => clearInterval(id);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       // Analytics tracking if needed
@@ -150,7 +167,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
       } else {
         // Fallback to legacy analytics
         const itemId = `${ANALYTICS_ITEM_PREFIX}${categoryId}`;
-        const existing = await restAdapter.read<any>(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId).catch(() => null);
+        const existing = await restAdapter.read<Record<string, unknown>>(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId).catch(() => null);
         const next = { id: itemId, categoryId, count: Number(existing?.count ?? 0) + 1, updatedAt: new Date().toISOString() };
         if (!existing) {
           await restAdapter.create(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId, next);
@@ -163,7 +180,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleCategoryPress = (category: { id: CategoryId; screen?: string }) => {
+  const handleCategoryPress = (category: CategoryItem) => {
     // Fire-and-forget analytics increment  
     incrementCategoryCounter(category.id).catch(() => {});
     
@@ -174,7 +191,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     });
 
     if (category.screen) {
-      (navigation as any).navigate(category.screen);
+      (navigation.navigate as (name: keyof DonationsStackParamList) => void)(category.screen);
     } else {
       Alert.alert(
         t('donations:comingSoonTitle'),
@@ -267,7 +284,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       ]}
                     >
                       <Ionicons 
-                        name={category.icon as any} 
+                        name={category.icon as React.ComponentProps<typeof Ionicons>['name']} 
                         size={iconInnerSize * 0.6} 
                         color="white" 
                       />
@@ -311,7 +328,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       paddingHorizontal: responsiveSpacing(8, 10, 12),
                     },
                   ]}
-                  onPress={() => handleCategoryPress(category as any)}
+                  onPress={() => handleCategoryPress(category)}
                   activeOpacity={0.8}
                 >
                   <View
@@ -327,7 +344,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                     ]}
                   >
                     <Ionicons 
-                      name={category.icon as any} 
+                      name={category.icon as React.ComponentProps<typeof Ionicons>['name']} 
                       size={iconInnerSize * 0.4} 
                       color="white" 
                     />
@@ -360,14 +377,13 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
         </View>
 
       {/* Stats Section */}
-      {(() => {
-        const now = Date.now();
+      {now > 0 && (() => {
         const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-        const weeklyDonations = donations.filter((d: any) => {
-          const t = new Date(d.createdAt || Date.now()).getTime();
-          return t >= weekAgo;
+        const weeklyDonations = donations.filter((d: DonationRecord) => {
+          const ts = new Date(d.createdAt ?? now).getTime();
+          return ts >= weekAgo;
         }).length;
-        const activeDonors = new Set(donations.map((d: any) => d.createdBy).filter(Boolean)).size;
+        const activeDonors = new Set(donations.map((d: DonationRecord) => d.createdBy).filter(Boolean)).size;
         const activeCharities = charities.length;
         return (
             <DonationStatsFooter
@@ -397,19 +413,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  // Web-specific scroll wrappers
+  // Web-specific scroll wrappers (web-only keys typed as ViewStyle extension)
   webScrollContainer: {
     flex: 1,
-    ...(Platform.OS === 'web' && { 
-      overflow: 'auto' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      overscrollBehavior: 'contain' as any,
-      height: SCREEN_HEIGHT as any,
-      maxHeight: SCREEN_HEIGHT as any,
-      width: '100%' as any,
-      touchAction: 'auto' as any,
-    }),
-  } as any,
+    ...(Platform.OS === 'web' && ({
+      overflow: 'auto',
+      height: SCREEN_HEIGHT,
+      maxHeight: SCREEN_HEIGHT,
+      width: '100%',
+    } as unknown as ViewStyle)),
+  } as ViewStyle,
   webScrollContent: {
     minHeight: SCREEN_HEIGHT * 1.2,
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
@@ -519,12 +532,10 @@ const styles = StyleSheet.create({
   horizontalScrollView: {
     flex: 1,
     height: '100%',
-    ...(Platform.OS === 'web' && {
-      overflowX: 'auto' as any,
-      overflowY: 'hidden' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-    }),
-  } as any,
+    ...(Platform.OS === 'web' && ({
+      overflow: 'hidden',
+    } as ViewStyle)),
+  } as ViewStyle,
   horizontalScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -535,10 +546,9 @@ const styles = StyleSheet.create({
     paddingVertical: LAYOUT_CONSTANTS.SPACING.XS,
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
     flexDirection: 'row',
-    ...(Platform.OS === 'web' && {
-      display: 'flex' as any,
-      flexWrap: 'nowrap' as any,
-    }),
+    ...(Platform.OS === 'web' && ({
+      flexWrap: 'nowrap',
+    } as ViewStyle)),
   },
   othersSection: {
     alignSelf: 'stretch',

@@ -77,7 +77,7 @@ export interface AuthSuccessResponse extends BaseApiResponse<{
     avatar: string;
     roles: string[];
     emailVerified: boolean;
-    settings: Record<string, any>;
+    settings: Record<string, unknown>;
   };
 }> {
   /** Additional authentication metadata */
@@ -167,7 +167,7 @@ export interface UserProfileResponse extends BaseApiResponse<{
     language: string;
     darkMode: boolean;
     notificationsEnabled: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   stats: {
     postsCount: number;
@@ -202,7 +202,7 @@ export interface UserUpdateRequest {
     language?: string;
     darkMode?: boolean;
     notificationsEnabled?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -723,7 +723,7 @@ export interface PushNotification {
   type: 'system' | 'social' | 'transaction' | 'security' | 'promotional';
   title: string;
   body: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   priority: 'low' | 'normal' | 'high' | 'critical';
   scheduledFor?: string;
   sentAt?: string;
@@ -814,7 +814,7 @@ export interface AnalyticsEvent {
   /** User who triggered the event */
   userId?: string;
   /** Event properties */
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   /** Event timestamp */
   timestamp: string;
   /** Session identifier */
@@ -901,7 +901,7 @@ export type DeleteResponse = BaseApiResponse<{
 /**
  * Bulk operation response
  */
-export interface BulkOperationResponse<T = any> extends BaseApiResponse<{
+export interface BulkOperationResponse<T = unknown> extends BaseApiResponse<{
   /** Number of items processed successfully */
   successCount: number;
   /** Number of items that failed */

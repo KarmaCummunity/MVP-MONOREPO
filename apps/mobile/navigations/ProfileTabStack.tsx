@@ -44,7 +44,7 @@ export default function ProfileTabStack(): React.ReactElement {
       detachInactiveScreens={true}
       screenOptions={({ navigation }) => ({
         headerShown: true,
-        header: () => <TopBarNavigator navigation={navigation as any} />,
+        header: () => <TopBarNavigator navigation={navigation} />,
         // Fix for aria-hidden warning: prevent focus on inactive screens
         // detachInactiveScreens already handles this, but we keep cardStyle for web compatibility
         cardStyle: Platform.OS === 'web' ? {

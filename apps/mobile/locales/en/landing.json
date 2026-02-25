@@ -21,6 +21,22 @@
       "donate": "Donate to organization"
     }
   },
+  "vision": {
+    "ourVision": "Our vision",
+    "subtitle": "The capitalist kibbutz",
+    "paragraph1Emphasis": "Digital kibbutz in a capitalist world.",
+    "paragraph1Rest": "A social network for unity, centralization, accessibility and distribution of philanthropy and social action of all kinds for everyone.",
+    "paragraph2Emphasis": "We are currently in the process of setting up.",
+    "paragraph2Rest": "Everything written below is part of the vision we want to build, and we invite you to help us build it.",
+    "paragraph3": "We invite you to join us to change the world and create real social change. To be part of something big, moral at the highest level, technological, social and many more good things.",
+    "paragraph4": "KarmaCommunity is more than a social network — it is a movement that connects people who want to do good, with no commercial interests, no ads, just real humanity and community.",
+    "motto1": "\"To give is also to receive\"",
+    "motto2": "\"Everyone has something they need and something they would be happy to give\"",
+    "highlight1": "Moral at the highest level",
+    "highlight2": "Technological and innovative",
+    "highlight3": "Social and connecting",
+    "highlight4": "Real global change"
+  },
   "menu": {
     "title": "Navigation menu",
     "stats": "In numbers",
@@ -31,6 +47,7 @@
     "how": "How it works",
     "who": "Who it's for",
     "values": "Values",
+    "core-mottos": "Core mottos",
     "hierarchy": "Management structure",
     "roadmap": "Roadmap",
     "contact": "Contact",
@@ -300,6 +317,207 @@
     "a2": "No. The platform is ad-free and focuses solely on community content.",
     "q3": "How do I report an issue?",
     "a3": "There's a built-in reporting mechanism on every post/chat. You can also contact us directly via WhatsApp."
+  },
+  "statsDetail": {
+    "user": "User",
+    "joined": "Joined",
+    "city": "City",
+    "anonymousDonor": "Anonymous donor",
+    "category": "Category",
+    "item": "Item",
+    "donor": "Donor",
+    "origin": "Origin",
+    "destination": "Destination",
+    "driver": "Driver",
+    "frequency": "Frequency",
+    "fromDate": "From",
+    "task": "Task",
+    "completed": "Completed",
+    "items": "items",
+    "loadingDetails": "Loading details...",
+    "noData": "No data to display",
+    "amountWithCurrency": " • {{amount}} ₪"
+  },
+  "legacy": {
+    "stats": {
+      "sectionTitle": "The power of our community",
+      "sectionSubtitle": "Real impact, in numbers",
+      "loading": "Loading data...",
+      "siteVisits": "Site visits",
+      "totalMoneyDonated": "Money donations",
+      "moneyLabel": "ILS donated directly",
+      "totalUsers": "Registered community members",
+      "itemDonations": "Published items",
+      "completedRides": "Community rides",
+      "recurringDonations": "Recurring donations",
+      "recurringDonationsActive": "Active recurring donations",
+      "uniqueDonors": "Active donors",
+      "completedTasks": "Completed tasks"
+    },
+    "problems": {
+      "title": "The problems we're here to solve",
+      "subtitle": "Why do we need KC at all?",
+      "card1Title": "Duplication, fragmentation and lack of trust",
+      "card1Text": "Today there are so many platforms, WhatsApp groups and nonprofits trying to help. Everyone works alone, there's duplication, lack of coordination, and it's hard to know who to trust. Karma Community unites all of this in one place, transparent and reliable.",
+      "card2Title": "The dissonance between community and freedom",
+      "card2Text": "For years people have felt the dissonance between the desire for community and the desire for freedom. Every community has its own limits and norms. Karma Community offers a platform, a kind of social network, that emphasizes both togetherness and freedom and openness.",
+      "card3Title": "Social networks driven by interests",
+      "card3Text": "In an era of social networks driven by money and ads, we see the real potential and need we have as humans for these \"networks\". Karma Community offers a social network with no ads and no harmful content. A platform that celebrates community and sharing."
+    },
+    "features": {
+      "sectionTitle": "Everything you need to do good",
+      "sectionSubtitle": "Simple tools that make mutual aid part of everyday life",
+      "feature1Title": "Need help? Want to help?",
+      "feature1Text": "Easily post a request or offer and get a response from the community around you. From tutoring to small repairs at home.",
+      "feature2Title": "Connect with people like you",
+      "feature2Text": "Find interest groups, join discussions, and create new connections with people who care.",
+      "feature3Title": "Discover opportunities around you",
+      "feature3Text": "Our smart map will show you where you're needed, right near home.",
+      "feature4Title": "Safe and transparent platform",
+      "feature4Text": "No ads, no harmful content, just real community and mutual trust."
+    },
+    "howItWorks": {
+      "title": "How does it work?",
+      "subtitle": "A simple, clear process that connects people",
+      "intro": "Karma Community is built on a simple principle: everyone can give and everyone can receive. Our process is designed to be simple, transparent and friendly.",
+      "step1Title": "Join the community",
+      "step1Text": "Sign up in seconds — just basic details. Tell us what interests you, where you are, and what you can offer or need. No unnecessary info, only what matters.",
+      "step2Title": "Post or search",
+      "step2Text": "Need help? Post a clear request with what you need, when and where. Want to help? Post an offer with what you can give. Or just scroll the feed and see what's happening around you.",
+      "step3Title": "Discover opportunities",
+      "step3Text": "Our smart map will show you where you're needed, right near home. Your personal feed will show you relevant requests and offers by location and interest.",
+      "step4Title": "Get in touch",
+      "step4Text": "Saw something that interests you? Send a direct message, coordinate details, meet the person behind the request or offer. Everything is transparent, safe and simple.",
+      "step5Title": "Do good and feel the difference",
+      "step5Text": "Coordinate, meet, help or get help. Every action like this creates a real human connection and strengthens the community. You'll see your impact, and the community will see your contribution.",
+      "note": "Everything is free, everything is transparent, everything for the community. No bureaucracy, no fees, just people helping people."
+    },
+    "who": {
+      "title": "Who is it for?",
+      "subtitle": "Everyone. Really.",
+      "introEmphasis": "Karma Community is for everyone.",
+      "introRest": "Rich and poor, center and periphery — regardless of religion, race, gender, nationality or even physical location. Everyone can give and everyone can receive.",
+      "intro": "Karma Community is for everyone. Rich and poor, center and periphery — regardless of religion, race, gender, nationality or even physical location. Everyone can give and everyone can receive.",
+      "individualsTitle": "For individuals",
+      "individualsText": "In the early stages, KarmaCommunity focuses on individuals — neighbors, friends, and anyone who wants to give their time, knowledge or belongings to help others.",
+      "bullet1": "Sharing items, food and equipment",
+      "bullet2": "Volunteering and one-off assistance",
+      "bullet3": "Sharing knowledge and tutoring",
+      "bullet4": "Creating real human connections",
+      "bullet5": "Everyone is welcome to volunteer and contribute to the community itself and be part of the founders",
+      "donateButton": "Donate to us",
+      "orgsTitle": "Nonprofits and organizations — coming soon",
+      "orgsText": "In the next stages we'll connect nonprofits and organizations with dedicated tools for managing volunteers, donations and requests. Important — this will only happen after we establish a strong community of individuals."
+    },
+    "values": {
+      "title": "The values that guide us",
+      "subtitle": "What makes Karma Community a safe and trusted community",
+      "intro": "We lead change through a system that puts people at the center. Every feature is evaluated by its contribution to transparency, human connections and the ability to measure real impact.",
+      "pill1": "Full transparency",
+      "pill2": "Trust and safety",
+      "pill3": "Active community",
+      "pill4": "Shared responsibility",
+      "pill5": "Access from anywhere",
+      "pill6": "Measurement and learning",
+      "commitment1": "User and org verification before launch",
+      "commitment2": "Clean, distraction-free experience",
+      "commitment3": "Sustainable growth — no ads, no excess data"
+    },
+    "coreMottos": {
+      "title": "Our guiding principles",
+      "subtitle": "What drives us forward",
+      "motto1": "One person's leftovers can be another's treasure",
+      "motto2": "Each of us has something to give and something we'd be happy to receive",
+      "motto3": "To give is also to receive"
+    },
+    "hierarchy": {
+      "title": "Management structure",
+      "subtitle": "The team leading the community",
+      "ctaButton": "Behind the scenes of KC"
+    },
+    "roadmap": {
+      "title": "Our roadmap",
+      "subtitle": "The plan to expand the community's impact",
+      "step1Label": "First app release for Android and iOS",
+      "step2Label": "Advanced features for sharing info with other nonprofits and WhatsApp/Facebook groups",
+      "step3Label": "Partnerships with municipalities and welfare agencies",
+      "step4Label": "International expansion",
+      "logoEvolutionTitle": "How things evolve",
+      "logoEvolutionSubtitle": "Our logo went through several versions to get here",
+      "logoLabel1": "Start",
+      "logoLabel2": "Development",
+      "logoLabel3": "Improvement",
+      "logoLabel4": "Update",
+      "logoLabel5": "Now",
+      "brandStrip": "Moving forward with the community — every piece of feedback affects our priorities."
+    },
+    "about": {
+      "title": "One community. One goal.",
+      "subtitle": "The story of Karma Community",
+      "para1": "In a world full of noise, we believe in the quiet power of doing good. Karma Community was born from a simple need: to connect people. Between those who need help and those who can and want to lend a hand. We saw the duplication, the lack of trust and the scattered efforts, and decided to create one platform that unites everyone.",
+      "para2": "No ads, no interests — just technology in the service of humanity. Our mission is to make giving a natural, simple part of everyone's daily life, and to create a more connected, supportive and caring Israeli society.",
+      "founderSubtitle": "A word from the founder, Nave Sarussi",
+      "founderPara1": "From a young age I felt privileged and that my life was in order. In the army, despite reaching a good position as an aircraft programmer, I didn't feel the meaning I was looking for. I always thought about how I could bring real, positive change to the world. I was always interested in working at scale and positively impacting as many people as possible.",
+      "founderPara2": "Karma Community is my way to make good more accessible, to create a platform that connects people who want to help with people who need help. I believe in the power of community to change reality, and I'd be happy for you to join me on this journey.",
+      "whatsappButton": "Send me WhatsApp",
+      "githubTitle": "GitHub — open source",
+      "githubDescription": "This is the app's code. Everyone is welcome to look and contribute."
+    },
+    "gallery": {
+      "title": "Community moments",
+      "subtitle": "Pictures worth a thousand words"
+    },
+    "partners": {
+      "title": "Together we create change",
+      "subtitle": "Proud to partner with organizations that share our vision"
+    },
+    "instagram": {
+      "title": "Follow us on Instagram",
+      "subtitle": "Photos and videos from our community",
+      "loading": "Loading Instagram...",
+      "fallbackText": "Follow us on Instagram",
+      "openButton": "Open in Instagram"
+    },
+    "faq": {
+      "title": "Q&A",
+      "subtitle": "Everything you wanted to know about Karma Community",
+      "q1": "Does using the app cost money?",
+      "a1": "No. Karma Community is a nonprofit initiative, and using it will always be free for everyone. We believe mutual aid should be accessible to everyone, at no cost.",
+      "q2": "How can I donate or volunteer?",
+      "a2": "The best way is to download the app, join the community and start responding to requests. You can also always contact us directly via WhatsApp, email or our WhatsApp group. Every bit of help is appreciated!",
+      "q3": "Is the app available for both Android and iOS?",
+      "a3": "The app is currently under development. Meanwhile, we have a web site you can use from any browser — also under ongoing development. We're working on Android and iOS versions to launch in the future.",
+      "q4": "Are there ads?",
+      "a4": "Absolutely not. The platform is completely ad-free and focuses only on community content. We're committed to a clean, community-focused experience with no commercial distractions.",
+      "q5": "How do I start using the app?",
+      "a5": "Very simple! Download the app, sign up with a few basic details (or use guest mode), and you can immediately start posting requests or offers, or scroll and discover what's happening in your community.",
+      "q6": "What does \"digital kibbutz\" mean?",
+      "a6": "That's our vision — to create a digital community that works like a kibbutz: sharing, mutual aid, shared responsibility, but in the modern digital world. Everyone can give and everyone can receive, with no bureaucracy and no fees.",
+      "q7": "How do you ensure security and privacy?",
+      "a7": "We take security and privacy very seriously. All data is encrypted, we don't share information with third parties, and we have a user verification system. Users can also control their privacy and decide what to share.",
+      "q8": "What's the difference between Karma Community and other platforms?",
+      "a8": "The main difference is that we're nonprofit, ad-free, and 100% focused on community and mutual aid. We don't sell data, we don't try to make money from users, and everything we do is for the community.",
+      "q9": "How can I help develop the app?",
+      "a9": "We're always happy for help! You can help with code (everything is open on GitHub), design, content, testing, or simply be part of the community and share feedback. Contact us via WhatsApp or email and we'll be happy to tell you how you can help.",
+      "q10": "What if I run into a technical issue?",
+      "a10": "If you've hit a technical problem, we're here to help! Contact us via WhatsApp, email, or our WhatsApp group. We'll do our best to respond as soon as possible and resolve the issue. Your feedback matters a lot to us!"
+    },
+    "contact": {
+      "title": "Talk to us and join a community that does good",
+      "subtitle": "We'd love to hear from you, get feedback or criticism and of course connect you to the community",
+      "whatsapp": "Send me WhatsApp",
+      "email": "Send me email",
+      "instagram": "Follow on Instagram",
+      "whatsappGroup": "Join WhatsApp group"
+    },
+    "donationModal": {
+      "title": "Donate to us",
+      "subtitle": "Every donation helps us grow",
+      "message": "You can transfer to 0528616878 to founder Nave via Bit/Paybox",
+      "whatsappButton": "WhatsApp",
+      "note": "Thank you for your support! Every donation helps us continue to develop the community."
+    },
+    "footer": "© {{year}} Karma Community — Built with love and community support."
   },
   "footer": {
     "text": "© {{year}} KarmaCommunity — Built with love."

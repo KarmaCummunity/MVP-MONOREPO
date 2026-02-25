@@ -3,7 +3,7 @@
 // This component reuses the login logic from LoginScreen but renders it as a side panel
 // instead of a full screen navigation
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useUser } from '../stores/userStore';
+import { useUser, type User } from '../stores/userStore';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { getLoginSidePanelWidth } from '../globals/responsive';
+import { logger } from '../utils/loggerService';
 
 interface LoginSidePanelProps {
   visible: boolean;
@@ -36,9 +37,9 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
   const { t: _t } = useTranslation(['common']);
   const { setSelectedUserWithMode, setGuestMode } = useUser();
 
-  // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const overlayAnim = useRef(new Animated.Value(0)).current;
+  // Animation values (useState to avoid reading refs during render)
+  const [slideAnim] = useState(() => new Animated.Value(0));
+  const [overlayAnim] = useState(() => new Animated.Value(0));
 
   // Login state
   const [emailStep, setEmailStep] = useState<'email' | 'password'>('email');
@@ -53,11 +54,11 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
   const [orgLoginOpen, setOrgLoginOpen] = useState(false);
   const [orgQuery, setOrgQuery] = useState('');
   const [isCheckingOrg, setIsCheckingOrg] = useState(false);
-  const orgOpenAnim = useRef(new Animated.Value(0)).current;
+  const [orgOpenAnim] = useState(() => new Animated.Value(0));
 
   // Email login state
   const [emailLoginOpen, setEmailLoginOpen] = useState(false);
-  const emailOpenAnim = useRef(new Animated.Value(0)).current;
+  const [emailOpenAnim] = useState(() => new Animated.Value(0));
 
   // Screen dimensions
   const panelWidth = getLoginSidePanelWidth();
@@ -96,19 +97,31 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
   // Login handlers (simplified versions from LoginScreen)
   const handleLoginWithCharacter = async (characterType: 'seeker' | 'offerer') => {
     try {
-      const userData = {
+      const guestUser: User = {
         id: `guest_${Date.now()}`,
         name: characterType === 'seeker' ? 'מחפש' : 'מציע',
         email: `guest_${characterType}@example.com`,
-        characterType,
-        isGuest: true,
-        profileImage: null,
+        phone: '',
+        avatar: '',
+        bio: '',
+        karmaPoints: 0,
+        joinDate: new Date().toISOString(),
+        isActive: true,
+        lastActive: new Date().toISOString(),
+        location: { city: '', country: '' },
+        interests: [],
+        roles: [],
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+        notifications: [],
+        settings: { language: 'he', darkMode: false, notificationsEnabled: true },
       };
 
-      await setSelectedUserWithMode(userData as any, 'real');
+      await setSelectedUserWithMode(guestUser, 'real');
       onLoginSuccess?.();
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('LoginSidePanel', 'Login error', { error });
       Alert.alert('שגיאה', 'אירעה שגיאה במהלך הכניסה');
     }
   };

@@ -16,6 +16,7 @@ import { apiService } from '../api/api.service';
 // TODO: Implement proper connection management and reconnection logic
 // TODO: Add comprehensive message validation and sanitization
 import { logger } from '../../utils/loggerService';
+import i18n from '../../app/i18n';
 // Removed console.log statements - using proper logging service
 // TODO: Add comprehensive unit tests for all chat operations
 // TODO: Implement proper memory management for listeners and subscriptions
@@ -99,7 +100,7 @@ export const createConversation = async (participants: string[]): Promise<string
       });
 
       if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to create conversation on backend');
+        throw new Error(response.error || i18n.t('chat:errors.createConversation'));
       }
 
       const data = response.data as { id?: string };
@@ -203,7 +204,7 @@ export const getConversations = async (userId: string): Promise<Conversation[]> 
       new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
     );
 
-    logger.debug('ChatService', 'Sorted conversations', { count: sorted.length, conversations: sorted.map(c => ({ id: c.id, lastMessage: c.lastMessageText || 'שיחה חדשה' })) });
+    logger.debug('ChatService', 'Sorted conversations', { count: sorted.length, conversations: sorted.map(c => ({ id: c.id, lastMessage: c.lastMessageText || 'New conversation' })) });
     return sorted;
   } catch (error) {
     logger.error('ChatService', 'Get conversations error', { error });
@@ -318,7 +319,7 @@ export const sendMessage = async (
 
       // If still no participants, we can't send the message
       if (participants.length === 0) {
-        throw new Error('Conversation not found or has no participants. Please create a new conversation.');
+        throw new Error(i18n.t('chat:errors.conversationNotFound'));
       }
     }
 
@@ -436,7 +437,7 @@ export const sendMessage = async (
 
           logger.info('ChatService', 'Message sent to backend', { messageId });
         } else {
-          throw new Error(response.error || 'Failed to send message to backend');
+          throw new Error(response.error || i18n.t('chat:errors.sendMessage'));
         }
       } catch (backendError) {
         logger.error('ChatService', 'Backend send message error', { error: backendError });
@@ -460,9 +461,9 @@ export const sendMessage = async (
     }
 
     let displayText = message.text;
-    if (message.type === 'image') displayText = '📷 תמונה';
-    else if (message.type === 'video') displayText = '🎥 סרטון';
-    else if (message.type === 'file') displayText = '📎 קובץ';
+    if (message.type === 'image') displayText = `📷 ${i18n.t('chat:image')}`;
+    else if (message.type === 'video') displayText = `🎥 ${i18n.t('chat:video')}`;
+    else if (message.type === 'file') displayText = `📎 ${i18n.t('chat:file')}`;
 
     // Update conversation for all participants
     for (const participantId of participants) {

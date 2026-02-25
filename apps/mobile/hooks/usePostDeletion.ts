@@ -98,7 +98,7 @@ export const usePostDeletion = () => {
 
             if (result.success) {
                 toastService.showSuccess(
-                    (result.data as any)?.message || 'הפוסט נמחק בהצלחה'
+                    (result.data as { message?: string })?.message || 'הפוסט נמחק בהצלחה'
                 );
 
                 // Call success callback

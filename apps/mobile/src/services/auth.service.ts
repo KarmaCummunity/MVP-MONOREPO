@@ -27,10 +27,12 @@ import {
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
+  type Auth,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { logger } from '../../utils/loggerService';
 
-let authInstance: any = null;
+let authInstance: Auth | null = null;
 
 export const getAuthInstance = () => {
   if (!authInstance) {
@@ -41,12 +43,12 @@ export const getAuthInstance = () => {
     if (Platform.OS === 'web') {
       // Web: use browserLocalPersistence (localStorage)
       setPersistence(authInstance, browserLocalPersistence).catch((error) => {
-        console.warn('Failed to set web auth persistence:', error);
+        logger.warn('auth.service', 'Failed to set web auth persistence', { error });
       });
     } else {
       // React Native: Firebase automatically uses AsyncStorage
       // No need to set persistence explicitly - it's the default
-      console.log('🔥 Firebase Auth - Using native AsyncStorage persistence (default)');
+      logger.info('auth.service', 'Firebase Auth - Using native AsyncStorage persistence (default)');
     }
   }
   

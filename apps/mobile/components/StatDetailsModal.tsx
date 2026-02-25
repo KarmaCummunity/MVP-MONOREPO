@@ -1,9 +1,12 @@
 import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import StatMiniCharts from './StatMiniCharts';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 export type StatDetails = {
   key: string;
@@ -24,6 +27,7 @@ interface StatDetailsModalProps {
 }
 
 const StatDetailsModal: React.FC<StatDetailsModalProps> = ({ visible, onClose, details }) => {
+  const { t } = useTranslation('common');
   if (!details) return null;
 
   const isEmoji = details.icon && /\p{Emoji}/u.test(details.icon);
@@ -38,12 +42,12 @@ const StatDetailsModal: React.FC<StatDetailsModalProps> = ({ visible, onClose, d
                 isEmoji ? (
                   <Text style={styles.emoji}>{details.icon}</Text>
                 ) : (
-                  <Ionicons name={details.icon as any} size={24} color={details.color || colors.info} />
+                  <Ionicons name={details.icon as IoniconsName} size={24} color={details.color || colors.info} />
                 )
               ) : null}
               <Text style={styles.title}>{details.title}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} accessibilityLabel={(require('i18next') as any).t('common:close')}>
+            <TouchableOpacity onPress={onClose} accessibilityLabel={t('close')}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -73,7 +77,7 @@ const StatDetailsModal: React.FC<StatDetailsModalProps> = ({ visible, onClose, d
           </ScrollView>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeText}>{(require('i18next') as any).t('common:close')}</Text>
+            <Text style={styles.closeText}>{t('close')}</Text>
           </TouchableOpacity>
         </View>
       </View>

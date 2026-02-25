@@ -214,9 +214,13 @@ logger.error('LandingSiteScreen', 'Error message', error);
 - ✅ Types defined
 - ✅ Constants extracted
 - ✅ Utils created
-- ✅ Core components extracted (Hero, Menu, Section, Feature)
-- 🔄 Remaining sections to extract
-- ⏳ Styles module
+- ✅ Core components extracted (Hero, Menu, Section, Feature, LazySection)
+- ✅ Legacy refactored to use shared Landing components (no duplication)
+- ✅ Section web ID fix for scroll navigation
+- ✅ HeroSection i18n (appName), core-mottos in menu
+- ✅ VisionSection extracted as example
+- 🔄 Styles extended (paragraph, motto, vision, decoCircle)
+- ⏳ Remaining sections extractable incrementally
 - ⏳ Tests
 
 ## Contributing

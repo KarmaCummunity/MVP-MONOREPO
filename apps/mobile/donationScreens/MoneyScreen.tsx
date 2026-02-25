@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
-import { FontSizes, filterOptions, sortOptions } from '../globals/constants';
+import { FontSizes, filterOptions, sortOptions, LAYOUT_CONSTANTS, COMPONENT_SIZES } from '../globals/constants';
 
 const charities: Array<{ name: string; tags: string[]; location: { city: string }; rating: number; volunteersCount: number; beneficiariesCount: number; description: string }> = [];
 const donations: Array<{ amount?: number; createdAt: string; category?: string }> = [];
@@ -31,10 +31,10 @@ const dummyCharitiesBase = charities.map((charity, index) => ({
   rating: charity.rating,
   donors: charity.volunteersCount + charity.beneficiariesCount,
   description: charity.description.substring(0, 100) + "...",
-  image: charity.tags[0] === "קשישים" ? "👴" :
-    charity.tags[0] === "חינוך" ? "📚" :
-      charity.tags[0] === "בעלי חיים" ? "🐕" :
-        charity.tags[0] === "בריאות" ? "🏥" : "💝",
+  image: charity.tags[0] === "elderly" ? "👴" :
+    charity.tags[0] === "education" ? "📚" :
+      charity.tags[0] === "animals" ? "🐕" :
+        charity.tags[0] === "health" ? "🏥" : "💝",
   minDonation: 20 + (index * 10)
 }));
 
@@ -51,11 +51,23 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { Slider } from '@miblanchard/react-native-slider';
 import HeaderComp from '../components/HeaderComp';
+import type { SearchableItem } from '../components/SearchBar';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { logger } from '../utils/loggerService';
 
-// Slider component using @miblanchard/react-native-slider
+const { SPACING, BORDER_RADIUS, BOTTOM_NAV_HEIGHT } = LAYOUT_CONSTANTS;
+const SCROLL_BOTTOM_PADDING = BOTTOM_NAV_HEIGHT + SPACING.MD;
+const PILL_BORDER_RADIUS = 999;
+const CHARITY_CARD_WIDTH = 280;
+const CHARITY_CARD_WIDTH_COMPACT = 220;
+const RECENT_CARD_WIDTH = 200;
+const CHARITY_CARD_MIN_HEIGHT = 200;
+const RECENT_CARD_MIN_HEIGHT = 120;
+const TAG_PADDING_H = 10;
+const INPUT_PADDING = 12;
+
+// Slider component using @miblanchard/react-native-slider using @miblanchard/react-native-slider
 const DonationAmountSlider: React.FC<{
   value: number;
   onChange: (nextValue: number) => void;
@@ -73,7 +85,7 @@ const DonationAmountSlider: React.FC<{
         maximumValue={max}
         step={step}
         trackClickable
-        containerStyle={{ paddingHorizontal: 0 }}
+        containerStyle={{ paddingHorizontal: SPACING.XS - 4 }}
         trackStyle={localStyles.sliderTrack}
         minimumTrackTintColor={colors.secondary}
         maximumTrackTintColor="transparent"
@@ -109,18 +121,30 @@ export default function MoneyScreen({
   const [localMode, setLocalMode] = useState(modeFromParams);
   const mode = hasModeInParams ? modeFromParams : localMode;
 
-  // Update URL when mode changes (toggle) or when screen loads without mode
+  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
+  const hasSetInitialModeRef = useRef(false);
+  const navigationRef = useRef(navigation);
   useEffect(() => {
+    navigationRef.current = navigation;
+  }, [navigation]);
+
+  // Update URL when mode changes (toggle) or when screen loads without mode
+  // NOTE: navigation excluded from deps - it can change on every nav state update, causing effect loops
+  useEffect(() => {
+    const nav = navigationRef.current;
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      navigation.setParams({ mode: 'search' } as Record<string, unknown>);
+      if (!hasSetInitialModeRef.current) {
+        hasSetInitialModeRef.current = true;
+        nav.setParams({ mode: 'search' } as Record<string, unknown>);
+      }
       return;
     }
     if (newMode !== currentMode) {
-      navigation.setParams({ mode: newMode } as Record<string, unknown>);
+      nav.setParams({ mode: newMode } as Record<string, unknown>);
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [mode, routeParams?.mode]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [selectedSort, setSelectedSort] = useState("");
@@ -153,12 +177,12 @@ export default function MoneyScreen({
       resources.forEach((res: DonationResource, index: number) => {
         list.push({
           id: `ext_${catId}_${index}`,
-          name: res.name,
+          name: t(res.nameKey),
           category: categoryTitle,
           location: t('donations:moneyScreen.allCountry'),
           rating: 4.7,
           donors: 500 + (index * 7),
-          description: res.description || categoryTitle,
+          description: t(res.descriptionKey) || categoryTitle,
           image: toEmoji(catId),
           minDonation: 20,
           _extUrl: res.url,
@@ -206,7 +230,7 @@ export default function MoneyScreen({
     : (isRealAuth ? (charitiesStore[0] ? {
       id: `store_${charitiesStore[0].id}`,
       name: charitiesStore[0].name,
-      category: (charitiesStore[0].categories && charitiesStore[0].categories[0]) ? String(charitiesStore[0].categories[0]) : 'כללי',
+      category: (charitiesStore[0].categories && charitiesStore[0].categories[0]) ? String(charitiesStore[0].categories[0]) : t('donations:moneyScreen.general'),
       location: charitiesStore[0].location?.city || t('donations:moneyScreen.allCountry'),
       rating: 4.8,
       donors: 100,
@@ -239,7 +263,7 @@ export default function MoneyScreen({
     const bitUrl = `bit://pay?phone=0528616878&amount=${amount}&reason=${encodedReason}`;
 
     try {
-      // 1) עדיפות: פתיחה ישירה של קבוצת PayBox "Karma Community" אם סופק קישור (ננסה לפתוח ישר)
+      // 1) Priority: Open PayBox "Karma Community" group link directly if provided
       if (payboxGroupLink.length > 0) {
         try {
           if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -253,7 +277,7 @@ export default function MoneyScreen({
         }
       }
 
-      // 1b) עדיפות שנייה: פתיחה ישירה של קבוצת Bit אם יש קישור
+      // 1b) Second priority: Open Bit group link directly if available
       if (bitGroupLink.length > 0) {
         try {
           if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -267,13 +291,13 @@ export default function MoneyScreen({
         }
       }
 
-      // 2) אם לא נפתח קישור קבוצה: נוודא שיש סכום חיובי לפני מסלולי סכום ישירים
+      // 2) If group link did not open: ensure positive amount before direct amount flows
       if (!amount || amount <= 0) {
         Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.selectPositiveAmount'));
         return;
       }
 
-      // 3) ניסיון לפתוח PayBox עם סכום והערה (אפליקציה)
+      // 3) Try to open PayBox with amount and note (app)
       const payboxScheme = `paybox://transfer?phone=0528616878&amount=${amount}&note=${encodedReason}`;
       const supportedPb = await Linking.canOpenURL(payboxScheme);
       if (supportedPb) {
@@ -281,7 +305,7 @@ export default function MoneyScreen({
         return;
       }
 
-      // 4) ניסיון דרך דפדפן: אם יש קישור קבוצה — נשתמש בו; אחרת קישור העברה רגיל
+      // 4) Try via browser: if group link exists use it; otherwise regular transfer link
       const webUrl = payboxGroupLink.length > 0
         ? payboxGroupLink
         : getPayboxWebUrl(amount);
@@ -296,7 +320,7 @@ export default function MoneyScreen({
         logger.debug('MoneyScreen', 'Web URL open failed', { error: e });
       }
 
-      // 5) Fallback אחרון: Bit
+      // 5) Last fallback: Bit
       const bitSupported = await Linking.canOpenURL(bitUrl);
       if (bitSupported) {
         await Linking.openURL(bitUrl);
@@ -417,8 +441,7 @@ export default function MoneyScreen({
   const moneySortOptions = sortOptions.map(opt => t(`search:sort.${opt}`) as string);
 
   // Function to handle search results from HeaderComp
-  type MoneyCharityItem = { id: string | number; name: string; category: string; location: string; rating: number; donors: number; description: string; image: string; minDonation: number; _extUrl?: string };
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: MoneyCharityItem[]) => {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => {
     logger.debug('MoneyScreen', 'Search received', {
       query,
       filters: filters || [],
@@ -433,7 +456,7 @@ export default function MoneyScreen({
 
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
-      setFilteredCharities(results as React.SetStateAction<typeof combinedCharities>);
+      setFilteredCharities(results as unknown as React.SetStateAction<typeof combinedCharities>);
     } else {
       // Otherwise, perform local filtering
       const filtered = getFilteredCharities();
@@ -613,7 +636,7 @@ export default function MoneyScreen({
           // Donor mode - show charities for donation and donation history
           <View style={localStyles.sectionsContainer}>
             <View style={localStyles.quickDonatePanel}>
-              <Text style={localStyles.quickDonateTitle}>תרומה לקהילה</Text>
+              <Text style={localStyles.quickDonateTitle}>{t('donations:moneyScreen.donateToCommunity')}</Text>
               {(() => {
                 const numericAmount = Number(amount) || 0;
                 const isZeroAmount = numericAmount <= 0;
@@ -651,7 +674,7 @@ export default function MoneyScreen({
 
             <View style={[localStyles.section, localStyles.sectionPanel]}>
               <Text style={localStyles.sectionTitle}>
-                {searchQuery || selectedFilter ? 'תוצאות חיפוש' : 'עמותות מומלצות לתרומה'}
+                {searchQuery || selectedFilter ? t('donations:moneyScreen.searchResults') : t('donations:moneyScreen.recommendedCharities')}
               </Text>
               <ScrollView
                 horizontal
@@ -858,34 +881,34 @@ const localStyles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingHorizontal: SPACING.MD,
+    paddingTop: SPACING.XS,
   },
   scrollContent: {
-    paddingBottom: 100, // Bottom margin for screen
+    paddingBottom: SCROLL_BOTTOM_PADDING,
   },
   formContainer: {
     backgroundColor: colors.pinkLight,
-    padding: 16,
-    borderRadius: 15,
-    marginBottom: 24,
+    padding: SPACING.MD,
+    borderRadius: BORDER_RADIUS.MEDIUM,
+    marginBottom: SPACING.LG,
     borderWidth: 1,
     borderColor: colors.secondary,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: SPACING.LG - 4,
   },
   label: {
     fontSize: FontSizes.medium,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
     textAlign: 'right',
   },
   input: {
     backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
+    padding: BORDER_RADIUS.MEDIUM,
     fontSize: FontSizes.body,
     textAlign: 'right',
     color: colors.textPrimary,
@@ -893,18 +916,18 @@ const localStyles = StyleSheet.create({
     borderColor: colors.secondary,
   },
   amountContainer: {
-    marginBottom: 25,
+    marginBottom: SPACING.LG + 1,
   },
   suggestedAmountsContainer: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: BORDER_RADIUS.MEDIUM,
   },
   amountButton: {
     backgroundColor: colors.white,
-    paddingVertical: 12,
+    paddingVertical: INPUT_PADDING,
     paddingHorizontal: 20,
-    borderRadius: 20,
+    borderRadius: BORDER_RADIUS.LARGE,
     borderWidth: 1,
     borderColor: colors.secondary,
   },
@@ -924,11 +947,10 @@ const localStyles = StyleSheet.create({
     textAlign: 'center',
   },
   donateButton: {
-    // backgroundColor: colors.accent,
-    padding: 16,
-    borderRadius: 12,
+    padding: SPACING.MD,
+    borderRadius: INPUT_PADDING,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: TAG_PADDING_H,
   },
   donateButtonText: {
     color: colors.background,
@@ -936,42 +958,42 @@ const localStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
   },
   sectionTitle: {
     fontSize: FontSizes.body,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
     textAlign: 'center',
   },
   sectionsContainer: {
     flex: 1,
-    gap: 5,
+    gap: SPACING.XS + 1,
   },
   sectionPanel: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 12,
+    borderRadius: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: SPACING.SM,
+    paddingHorizontal: SPACING.SM,
   },
   recommendationCard: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 15,
-    padding: 15,
-    marginRight: 15,
+    borderRadius: BORDER_RADIUS.MEDIUM,
+    padding: BORDER_RADIUS.MEDIUM,
+    marginRight: BORDER_RADIUS.MEDIUM,
     width: 150,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.secondary,
   },
   cardImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 10,
+    width: COMPONENT_SIZES.AVATAR.MEDIUM + 10,
+    height: COMPONENT_SIZES.AVATAR.MEDIUM + 10,
+    borderRadius: (COMPONENT_SIZES.AVATAR.MEDIUM + 10) / 2,
+    marginBottom: TAG_PADDING_H,
   },
   cardTitle: {
     fontSize: FontSizes.body,
@@ -985,9 +1007,9 @@ const localStyles = StyleSheet.create({
   },
   historyCard: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: INPUT_PADDING,
+    padding: SPACING.MD,
+    marginBottom: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
     flexDirection: 'row',
@@ -1001,7 +1023,7 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.body,
     fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: SPACING.XS,
   },
   historyAmount: {
     fontSize: FontSizes.medium,
@@ -1015,9 +1037,9 @@ const localStyles = StyleSheet.create({
   },
   historyStatus: {
     backgroundColor: colors.successLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: SPACING.SM,
+    paddingVertical: SPACING.XS,
+    borderRadius: SPACING.SM,
   },
   historyStatusText: {
     fontSize: FontSizes.small,
@@ -1025,17 +1047,17 @@ const localStyles = StyleSheet.create({
     fontWeight: '600',
   },
   searchContainer: {
-    marginBottom: 20,
+    marginBottom: SPACING.LG - 4,
   },
   searchInput: {
-    marginBottom: 15,
+    marginBottom: BORDER_RADIUS.MEDIUM,
   },
   searchButton: {
     backgroundColor: colors.accent,
-    padding: 16,
-    borderRadius: 12,
+    padding: SPACING.MD,
+    borderRadius: INPUT_PADDING,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: TAG_PADDING_H,
   },
   searchButtonText: {
     color: colors.background,
@@ -1046,10 +1068,10 @@ const localStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: TAG_PADDING_H,
   },
   historyContainer: {
-    paddingVertical: 5,
+    paddingVertical: SPACING.XS + 1,
   },
   searchInfoContainer: {
     alignItems: 'center',
@@ -1059,7 +1081,7 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.heading3,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
     textAlign: 'center',
   },
   searchInfoText: {
@@ -1067,12 +1089,12 @@ const localStyles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 24,
+    lineHeight: SPACING.LG,
   },
   searchTipsContainer: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: INPUT_PADDING,
+    padding: SPACING.MD,
     borderWidth: 1,
     borderColor: colors.secondary,
   },
@@ -1080,49 +1102,48 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.body,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
     textAlign: 'right',
   },
   searchTip: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: SPACING.XS,
     textAlign: 'right',
   },
-  // Charity Cards Styles
   charitiesScrollContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: TAG_PADDING_H,
   },
   charityCardWrapper: {
-    marginRight: 12,
-    width: 280,
+    marginRight: INPUT_PADDING,
+    width: CHARITY_CARD_WIDTH,
   },
   charityCardWrapperCompact: {
-    width: 220,
+    width: CHARITY_CARD_WIDTH_COMPACT,
   },
   charityCard: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: INPUT_PADDING,
+    padding: SPACING.MD,
     borderWidth: 1,
     borderColor: colors.secondary,
-    minHeight: 200,
+    minHeight: CHARITY_CARD_MIN_HEIGHT,
   },
   charityCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
   },
   charityEmoji: {
     fontSize: FontSizes.displayLarge,
   },
   charityRating: {
     backgroundColor: colors.successLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: SPACING.SM,
+    paddingVertical: SPACING.XS,
+    borderRadius: SPACING.SM,
   },
   ratingText: {
     fontSize: FontSizes.small,
@@ -1133,13 +1154,13 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.body,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: SPACING.SM - 2,
     textAlign: 'right',
   },
   charityDescription: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
     textAlign: 'right',
     lineHeight: 18,
   },
@@ -1150,7 +1171,7 @@ const localStyles = StyleSheet.create({
   charityDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
   },
   charityLocation: {
     fontSize: FontSizes.small,
@@ -1175,28 +1196,27 @@ const localStyles = StyleSheet.create({
     color: colors.accent,
     fontWeight: '600',
   },
-  // Recent Donations Styles
   recentDonationsScrollContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: TAG_PADDING_H,
   },
   recentDonationCardWrapper: {
-    marginRight: 12,
-    width: 200,
+    marginRight: INPUT_PADDING,
+    width: RECENT_CARD_WIDTH,
   },
   recentDonationCard: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: INPUT_PADDING,
+    padding: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
-    minHeight: 120,
+    minHeight: RECENT_CARD_MIN_HEIGHT,
   },
   recentDonationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: SPACING.SM - 2,
   },
   recentDonationCharity: {
     fontSize: FontSizes.body,
@@ -1213,7 +1233,7 @@ const localStyles = StyleSheet.create({
   recentDonationDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: SPACING.SM - 2,
   },
   recentDonationDate: {
     fontSize: FontSizes.small,
@@ -1231,24 +1251,22 @@ const localStyles = StyleSheet.create({
     color: colors.success,
     fontWeight: '600',
   },
-  // Quick Donate Panel
   quickDonatePanel: {
     backgroundColor: colors.pinkLight,
-    borderRadius: 12,
+    borderRadius: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
-
     marginHorizontal: 0,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: TAG_PADDING_H,
+    paddingHorizontal: INPUT_PADDING,
   },
   bitCornerButton: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    padding: 8,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    top: SPACING.SM,
+    left: SPACING.SM,
+    padding: SPACING.SM,
+    paddingHorizontal: TAG_PADDING_H,
+    borderRadius: PILL_BORDER_RADIUS,
     backgroundColor: colors.infoTintBackground,
     borderWidth: 1,
     borderColor: colors.infoTintBorder,
@@ -1270,21 +1288,21 @@ const localStyles = StyleSheet.create({
     color: colors.textSecondarySoft,
     textAlign: 'center',
     marginTop: 2,
-    marginBottom: 6,
+    marginBottom: SPACING.SM - 2,
   },
   quickDonateAmountsRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: SPACING.SM,
+    marginBottom: SPACING.SM - 2,
   },
   quickAmountButton: {
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.secondary,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: PILL_BORDER_RADIUS,
+    paddingHorizontal: INPUT_PADDING,
+    paddingVertical: SPACING.SM - 2,
   },
   quickAmountButtonText: {
     fontSize: FontSizes.small,
@@ -1295,18 +1313,17 @@ const localStyles = StyleSheet.create({
   quickDonateActionsRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: SPACING.SM,
+    marginTop: SPACING.XS,
   },
-  // Slider styles (modern, subtle)
   amountSliderContainer: {
-    marginTop: 6,
-    marginBottom: 8,
-    paddingHorizontal: 6,
+    marginTop: SPACING.SM - 2,
+    marginBottom: SPACING.SM,
+    paddingHorizontal: SPACING.SM - 2,
   },
   sliderTrack: {
-    height: "20%",
-    borderRadius: 999,
+    height: '20%',
+    borderRadius: PILL_BORDER_RADIUS,
     backgroundColor: colors.surfaceOverlay,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1316,21 +1333,20 @@ const localStyles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   sliderThumb: {
-    // height: 30,
     borderRadius: 14,
     backgroundColor: colors.secondary,
     borderWidth: 2,
     borderColor: colors.primary,
     shadowColor: colors.black,
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: SPACING.XS,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   sliderThumbInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: INPUT_PADDING,
+    height: INPUT_PADDING,
+    borderRadius: SPACING.SM - 2,
     backgroundColor: colors.pinkLight,
     alignSelf: 'center',
     // marginTop: 7,
@@ -1338,7 +1354,7 @@ const localStyles = StyleSheet.create({
   amountDisplayRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: SPACING.SM,
   },
   amountDisplayText: {
     fontSize: FontSizes.medium,
@@ -1348,7 +1364,7 @@ const localStyles = StyleSheet.create({
   amountRangeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: SPACING.XS,
   },
   amountRangeText: {
     fontSize: FontSizes.caption,
@@ -1356,9 +1372,9 @@ const localStyles = StyleSheet.create({
   },
   // Donate CTA styles
   donateMainButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 999,
+    paddingVertical: SPACING.SM,
+    paddingHorizontal: SPACING.MD,
+    borderRadius: PILL_BORDER_RADIUS,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 88,
@@ -1394,7 +1410,7 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.heading2,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: INPUT_PADDING,
     textAlign: 'center',
   },
   searchHelpText: {
@@ -1406,8 +1422,8 @@ const localStyles = StyleSheet.create({
   },
   searchHelpTipsContainer: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: INPUT_PADDING,
+    padding: SPACING.MD,
     borderWidth: 1,
     borderColor: colors.secondary,
     width: '100%',
@@ -1416,13 +1432,13 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.body,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
     writingDirection: 'rtl',
   },
   searchHelpTip: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: SPACING.SM - 2,
     writingDirection: 'rtl',
     lineHeight: 20,
   },
@@ -1430,23 +1446,23 @@ const localStyles = StyleSheet.create({
   bottomStatsRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    gap: 6,
+    gap: SPACING.SM - 2,
   },
   statChip: {
     flex: 1,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.secondary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
+    paddingVertical: SPACING.SM,
+    paddingHorizontal: TAG_PADDING_H,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statLabel: {
     fontSize: FontSizes.caption,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: SPACING.XS,
   },
   statValue: {
     fontSize: FontSizes.body,
@@ -1454,19 +1470,18 @@ const localStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Modal shared styles
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.modalOverlay,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.MD,
   },
   centerModalContent: {
     width: '85%',
     maxHeight: '75%',
     backgroundColor: colors.background,
-    borderRadius: 12,
+    borderRadius: INPUT_PADDING,
     borderWidth: 1,
     borderColor: colors.secondary,
     padding: 14,
@@ -1481,14 +1496,14 @@ const localStyles = StyleSheet.create({
     fontSize: FontSizes.small,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 8,
+    marginTop: SPACING.XS,
+    marginBottom: SPACING.SM,
   },
   modalDescription: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
     textAlign: 'right',
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
     lineHeight: 20,
   },
   modalFieldLabel: {
@@ -1496,24 +1511,23 @@ const localStyles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '600',
     textAlign: 'right',
-    marginBottom: 6,
-    marginTop: 4,
+    marginBottom: SPACING.SM - 2,
+    marginTop: SPACING.XS,
   },
   modalAmountInput: {
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: TAG_PADDING_H,
   },
   modalActionsRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 8,
+    gap: SPACING.SM,
+    marginBottom: SPACING.SM,
   },
-  // Dedicated modal primary button styles to avoid duplicate keys
   modalPrimaryButton: {
     backgroundColor: colors.accent,
-    padding: 12,
-    borderRadius: 10,
+    padding: INPUT_PADDING,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
     alignItems: 'center',
     flex: 1,
   },
@@ -1524,8 +1538,8 @@ const localStyles = StyleSheet.create({
   },
   bitButton: {
     backgroundColor: colors.transparent,
-    padding: 12,
-    borderRadius: 10,
+    padding: INPUT_PADDING,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
     alignItems: 'center',
     flex: 1,
     borderWidth: 1,
@@ -1540,8 +1554,8 @@ const localStyles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.secondary,
-    padding: 12,
-    borderRadius: 10,
+    padding: INPUT_PADDING,
+    borderRadius: BORDER_RADIUS.MEDIUM - 5,
     alignItems: 'center',
   },
   contactButtonText: {

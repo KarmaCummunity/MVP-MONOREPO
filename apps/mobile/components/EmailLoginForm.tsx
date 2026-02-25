@@ -31,7 +31,7 @@ import {
   sendVerification as fbSendVerification,
   sendPasswordReset
 } from '../src/services/auth.service';
-import { ServerUser } from '../src/api/api.service';
+import { ServerUser, ApiResponse } from '../src/api/api.service';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 
@@ -42,7 +42,7 @@ interface EmailLoginFormProps {
   /** Callback to toggle the form open/closed state */
   onToggle: () => void;
   /** Callback when user successfully logs in */
-  onLoginSuccess: (userData: any) => void;
+  onLoginSuccess: (userData: LoggedInUserData) => void;
   /** Animation value for form expansion */
   animationValue: Animated.Value;
 }
@@ -62,6 +62,28 @@ interface EmailFormState {
 interface RecentEmailsState {
   emails: string[];
   suggestions: string[];
+}
+
+/** User data passed to onLoginSuccess after successful email auth */
+export interface LoggedInUserData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  bio: string;
+  karmaPoints: number;
+  joinDate: string;
+  isActive: boolean;
+  lastActive: string;
+  location: { city: string; country: string };
+  interests: string[];
+  roles: string[];
+  postsCount: number;
+  followersCount: number;
+  followingCount: number;
+  notifications: unknown[];
+  settings: Record<string, unknown>;
 }
 
 const KNOWN_EMAILS_KEY = 'known_emails';
@@ -362,7 +384,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       }
 
       // Use UUID from server
-      const serverUser = (resolveResponse as any).user as ServerUser;
+      const serverUser = (resolveResponse as ApiResponse<{ user: ServerUser }>).user as ServerUser;
       const userData = {
         id: serverUser.id, // UUID from database - this is the primary identifier
         name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -406,8 +428,9 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
         t('auth:email.verifyTitle') as string,
         t('auth:email.verifySent') as string
       );
-    } catch (error: any) {
-      if (String(error?.code || '').includes('auth/email-already-in-use')) {
+    } catch (error: unknown) {
+      const err = error as { code?: string };
+      if (String(err?.code || '').includes('auth/email-already-in-use')) {
         // Try to sign in instead
         try {
           const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
@@ -458,7 +481,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
             throw new Error('Failed to get user from server');
           }
 
-          const serverUser = (resolveResponse as any).user as ServerUser;
+          const serverUser = (resolveResponse as ApiResponse<{ user: ServerUser }>).user as ServerUser;
           const userData = {
             id: serverUser.id,
             name: serverUser.name || fbUser.displayName || email.split('@')[0],
