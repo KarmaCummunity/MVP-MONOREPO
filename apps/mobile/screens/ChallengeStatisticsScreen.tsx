@@ -405,7 +405,7 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
                 <AnimatedCard delay={500}>
                   <View style={styles.chartCard}>
                     <Text style={styles.chartTitle}>
-                      <Ionicons name="checkmark-done" size={20} color={colors.success} /> סה"כ רשומות לפי אתגר
+                      <Ionicons name="checkmark-done" size={20} color={colors.success} /> {'סה"כ רשומות לפי אתגר'}
                     </Text>
                     <BarChart
                       data={entriesData}

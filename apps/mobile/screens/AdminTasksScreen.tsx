@@ -246,13 +246,13 @@ export default function AdminTasksScreen() {
 
   const createTask = async () => {
     if (!formData.title.trim()) return;
-    
+
     // Validate created_by is available
     if (!selectedUser?.id) {
       setError('שגיאה: לא ניתן לזהות את המשתמש הנוכחי. נסה להתחבר מחדש.');
       return;
     }
-    
+
     setCreating(true);
     setError(null);
     try {
@@ -384,8 +384,8 @@ export default function AdminTasksScreen() {
     return (
       <View>
         <View style={[
-          styles.taskItem, 
-          isDone && styles.taskItemDone, 
+          styles.taskItem,
+          isDone && styles.taskItemDone,
           isSubtask && styles.subtaskItem,
           isSubtask && { marginRight: taskLevel * 16 }
         ]}>
@@ -435,17 +435,17 @@ export default function AdminTasksScreen() {
               {/* Status Badge */}
               <View style={[styles.badge, styles[`status_${item.status}` as const]]}>
                 <Text style={styles.badgeText}>
-                  {item.status === 'open' ? 'פתוחה' : 
-                   item.status === 'in_progress' ? 'בתהליך' : 
-                   item.status === 'stuck' ? 'תקוע' :
-                   item.status === 'testing' ? 'בבדיקה' :
-                   item.status === 'done' ? 'בוצעה' : 'בארכיון'}
+                  {item.status === 'open' ? 'פתוחה' :
+                    item.status === 'in_progress' ? 'בתהליך' :
+                      item.status === 'stuck' ? 'תקוע' :
+                        item.status === 'testing' ? 'בבדיקה' :
+                          item.status === 'done' ? 'בוצעה' : 'בארכיון'}
                 </Text>
               </View>
 
               {/* Subtasks Count Badge */}
               {hasSubtasks && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.badge, styles.subtaskBadge]}
                   onPress={() => toggleSubtasks(item.id)}
                 >
@@ -453,10 +453,10 @@ export default function AdminTasksScreen() {
                     <ActivityIndicator size="small" color={colors.info} />
                   ) : (
                     <>
-                      <Ionicons 
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                        size={12} 
-                        color={colors.info} 
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={12}
+                        color={colors.info}
                       />
                       <Text style={styles.subtaskBadgeText}>{item.subtask_count} תת-משימות</Text>
                     </>
@@ -493,68 +493,68 @@ export default function AdminTasksScreen() {
             </View>
 
             {/* Hours Display */}
-            {((item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0) || 
+            {((item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0) ||
               (item.actual_hours && parseFloat(String(item.actual_hours)) > 0)) && (
-              <View style={styles.hoursRow}>
-                {item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0 && (
-                  <View style={[styles.badge, styles.hoursBadge]}>
-                    <Ionicons name="time-outline" size={12} color={colors.info} />
-                    <Text style={styles.hoursText}>מוערך: {parseFloat(String(item.estimated_hours)).toFixed(1)} שעות</Text>
-                  </View>
-                )}
-                {item.actual_hours && parseFloat(String(item.actual_hours)) > 0 && (
-                  <View style={[styles.badge, styles.hoursBadge, styles.actualHoursBadge]}>
-                    <Ionicons name="checkmark-circle-outline" size={12} color={colors.success} />
-                    <Text style={[styles.hoursText, { color: colors.success }]}>בוצע: {parseFloat(String(item.actual_hours)).toFixed(1)} שעות</Text>
-                  </View>
-                )}
-              </View>
-            )}
+                <View style={styles.hoursRow}>
+                  {item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0 && (
+                    <View style={[styles.badge, styles.hoursBadge]}>
+                      <Ionicons name="time-outline" size={12} color={colors.info} />
+                      <Text style={styles.hoursText}>מוערך: {parseFloat(String(item.estimated_hours)).toFixed(1)} שעות</Text>
+                    </View>
+                  )}
+                  {item.actual_hours && parseFloat(String(item.actual_hours)) > 0 && (
+                    <View style={[styles.badge, styles.hoursBadge, styles.actualHoursBadge]}>
+                      <Ionicons name="checkmark-circle-outline" size={12} color={colors.success} />
+                      <Text style={[styles.hoursText, { color: colors.success }]}>בוצע: {parseFloat(String(item.actual_hours)).toFixed(1)} שעות</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
             {item.creator_details && (
-              <Text style={styles.creatorText}>נוצר ע"י {item.creator_details.name}</Text>
+              <Text style={styles.creatorText}>{'נוצר ע"י'} {item.creator_details.name}</Text>
             )}
 
-          {!viewOnly && (
-            <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)}>
-                <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
-                <Text style={styles.actionText}>ערוך</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => createSubtask(item)}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.info} />
-                <Text style={[styles.actionText, { color: colors.info }]}>תת-משימה</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => deleteTask(item.id)}
-                disabled={deleting === item.id}
-              >
-                {deleting === item.id ? (
-                  <ActivityIndicator size="small" color={colors.error} />
-                ) : (
-                  <>
-                    <Ionicons name="trash-outline" size={18} color={colors.error} />
-                    <Text style={[styles.actionText, { color: colors.error }]}>מחק</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
+            {!viewOnly && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)}>
+                  <Ionicons name="create-outline" size={18} color={colors.textPrimary} />
+                  <Text style={styles.actionText}>ערוך</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => createSubtask(item)}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.info} />
+                  <Text style={[styles.actionText, { color: colors.info }]}>תת-משימה</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => deleteTask(item.id)}
+                  disabled={deleting === item.id}
+                >
+                  {deleting === item.id ? (
+                    <ActivityIndicator size="small" color={colors.error} />
+                  ) : (
+                    <>
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
+                      <Text style={[styles.actionText, { color: colors.error }]}>מחק</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Subtasks List */}
-      {isExpanded && taskSubtasks.length > 0 && (
-        <View style={styles.subtasksList}>
-          {taskSubtasks.map((subtask) => (
-            <View key={subtask.id}>
-              {renderItem({ item: subtask, isSubtask: true, level: taskLevel + 1 })}
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
+        {/* Subtasks List */}
+        {isExpanded && taskSubtasks.length > 0 && (
+          <View style={styles.subtasksList}>
+            {taskSubtasks.map((subtask) => (
+              <View key={subtask.id}>
+                {renderItem({ item: subtask, isSubtask: true, level: taskLevel + 1 })}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -773,12 +773,12 @@ export default function AdminTasksScreen() {
             />
 
             <TextInput style={styles.modalInput} placeholder="תגיות (מופרדות אות)" value={formData.tagsText} onChangeText={(v) => setFormData({ ...formData, tagsText: v })} />
-            
-            <TextInput 
-              style={styles.modalInput} 
-              placeholder="זמן עבודה מוערך בשעות (אופציונלי)" 
-              value={formData.estimated_hours} 
-              onChangeText={(v) => setFormData({ ...formData, estimated_hours: v })} 
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="זמן עבודה מוערך בשעות (אופציונלי)"
+              value={formData.estimated_hours}
+              onChangeText={(v) => setFormData({ ...formData, estimated_hours: v })}
               keyboardType="decimal-pad"
             />
 
@@ -852,7 +852,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     position: 'relative',
     ...(Platform.OS === 'web' ? {
-      position: 'relative' as any,
       height: '100vh' as any,
     } : {
       padding: LAYOUT_CONSTANTS.SPACING.LG,
@@ -889,7 +888,7 @@ const styles = StyleSheet.create({
   priority_high: { backgroundColor: colors.pinkLight, borderColor: colors.pinkLight },
   priority_medium: { backgroundColor: colors.warningLight, borderColor: colors.warningLight },
   priority_low: { backgroundColor: colors.successLight, borderColor: colors.successLight },
-  
+
   status_open: { backgroundColor: colors.infoLight, borderColor: colors.info },
   status_in_progress: { backgroundColor: colors.warningLight, borderColor: colors.warning },
   status_stuck: { backgroundColor: colors.errorLight, borderColor: colors.error },
@@ -905,10 +904,10 @@ const styles = StyleSheet.create({
   creatorText: { fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
 
   hoursRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
-  hoursBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
+  hoursBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: colors.infoLight,
     borderColor: colors.info,
   },
@@ -916,9 +915,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successLight,
     borderColor: colors.success,
   },
-  hoursText: { 
-    fontSize: 11, 
-    color: colors.info, 
+  hoursText: {
+    fontSize: 11,
+    color: colors.info,
     fontWeight: '600',
   },
 
@@ -932,17 +931,17 @@ const styles = StyleSheet.create({
   unassignedText: { fontSize: 12, color: colors.error, fontWeight: 'bold' },
 
   // Subtask styles
-  subtaskItem: { 
-    marginLeft: 24, 
-    borderLeftWidth: 3, 
+  subtaskItem: {
+    marginLeft: 24,
+    borderLeftWidth: 3,
     borderLeftColor: colors.info,
     backgroundColor: '#F0F8FF',
   },
-  subtaskIndicator: { 
+  subtaskIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingRight: 8, 
+    paddingRight: 8,
     justifyContent: 'center',
   },
   levelText: {
@@ -950,26 +949,26 @@ const styles = StyleSheet.create({
     color: colors.info,
     fontWeight: '600',
   },
-  subtasksList: { 
-    marginTop: 8, 
+  subtasksList: {
+    marginTop: 8,
     gap: 8,
   },
-  subtaskBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
+  subtaskBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: colors.infoLight,
     borderColor: colors.info,
   },
-  subtaskBadgeText: { 
-    fontSize: 11, 
-    color: colors.info, 
+  subtaskBadgeText: {
+    fontSize: 11,
+    color: colors.info,
     fontWeight: '600',
   },
-  parentBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
+  parentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginBottom: 4,
     backgroundColor: colors.infoLight,
     paddingHorizontal: 8,
@@ -977,8 +976,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: 'flex-end',
   },
-  parentText: { 
-    fontSize: 10, 
+  parentText: {
+    fontSize: 10,
     color: colors.info,
   },
 
@@ -989,19 +988,19 @@ const styles = StyleSheet.create({
       WebkitOverflowScrolling: 'touch' as any,
     }),
   },
-  addButton: { 
+  addButton: {
     ...(Platform.OS === 'web' ? { position: 'fixed' as any } : { position: 'absolute' }),
-    left: 20, 
-    bottom: 20, 
-    width: 56, 
-    height: 56, 
-    borderRadius: 28, 
-    backgroundColor: colors.success, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    shadowColor: '#000', 
-    shadowOpacity: 0.3, 
-    shadowRadius: 4, 
+    left: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
     zIndex: 1000

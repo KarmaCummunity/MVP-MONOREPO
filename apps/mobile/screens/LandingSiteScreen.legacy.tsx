@@ -323,11 +323,11 @@ const VisionSection: React.FC<{ onGoToApp: () => void }> = ({ onGoToApp }) => (
     <View style={styles.mottoContainer}>
       <View style={styles.mottoCard}>
         <Ionicons name="swap-horizontal-outline" size={isMobileWeb ? 24 : 32} color={colors.info} style={styles.mottoIcon} />
-        <Text style={styles.mottoText}>"לתת זה גם לקבל"</Text>
+        <Text style={styles.mottoText}>{'"לתת זה גם לקבל"'}</Text>
       </View>
       <View style={[styles.mottoCard, { backgroundColor: colors.greenBright + '15', borderColor: colors.greenBright + '40' }]}>
         <Ionicons name="gift-outline" size={isMobileWeb ? 24 : 32} color={colors.greenBright} style={styles.mottoIcon} />
-        <Text style={styles.mottoText}>"לכל אחד יש משהו שהוא צריך ומשהו שהוא ישמח לתת"</Text>
+        <Text style={styles.mottoText}>{'"לכל אחד יש משהו שהוא צריך ומשהו שהוא ישמח לתת"'}</Text>
       </View>
     </View>
     <Text style={styles.paragraph}>
@@ -710,7 +710,7 @@ const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boolean; onG
           >
             <Ionicons name="cash-outline" size={isMobileWeb ? 24 : 32} color={colors.success} style={styles.statIcon} />
             <Text style={styles.statNumber}>{stats.totalMoneyDonated.toLocaleString('he-IL')} ₪</Text>
-            <Text style={styles.statLabel}>ש"ח שנתרמו ישירות</Text>
+            <Text style={styles.statLabel}>{'ש"ח שנתרמו ישירות'}</Text>
             <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
           </TouchableOpacity>
 
@@ -823,7 +823,7 @@ const ProblemsSection = () => (
         <Ionicons name="ban-outline" size={isMobileWeb ? 24 : 32} color={colors.secondary} style={styles.problemIcon} />
         <Text style={styles.problemTitle}>רשתות חברתיות מונעות מאינטרסים</Text>
         <Text style={styles.problemText}>
-          דווקא בעידן של רשתות חברתיות המונעות מאינטרסים של כסף ופרסומות, אנחנו רואים את הפוטנציאל והצורך האמיתי שיש לנו כבני אדם ב"רשתות" האלה.
+          דווקא בעידן של רשתות חברתיות המונעות מאינטרסים של כסף ופרסומות, אנחנו רואים את הפוטנציאל והצורך האמיתי שיש לנו כבני אדם ב{'"'}רשתות{'"'} האלה.
           {'\n\n'}
           Karma Community באה להציע רשת חברתית ללא פרסומות וללא תוכן חומרי/פוגעני. פלטפורמה המקדשת קהילתיות ושיתוף.
         </Text>

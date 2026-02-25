@@ -291,7 +291,7 @@ function AppContent() {
     return () => {
       if (cleanupListener) cleanupListener();
     };
-  }, [selectedUser?.id]); // React to user changes
+  }, [selectedUser]); // React to user changes
 
 
   // Fast initial setup to show the UI as quickly as possible
@@ -419,7 +419,7 @@ function AppContent() {
     const containerStyle = useMemo(() => ({
       flex: 1,
       paddingTop: Platform.OS === 'web' && shouldShowToggle ? 64 : 0 // Space for top bar
-    }), [mode, shouldShowToggle]);
+    }), [shouldShowToggle]);
 
     // Wrapper style for web - full width without maxWidth constraint
     const webWrapperStyle = useMemo(() => Platform.OS === 'web' ? {

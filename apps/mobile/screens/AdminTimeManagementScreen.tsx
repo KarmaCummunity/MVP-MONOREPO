@@ -109,7 +109,7 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
   return (
     <SafeAreaView style={[styles.container, Platform.OS === 'web' && { position: 'relative' }]}>
       <StatusBar backgroundColor={colors.backgroundSecondary} barStyle="dark-content" />
-      <View 
+      <View
         style={styles.header}
         onLayout={(event) => {
           if (Platform.OS === 'web') {
@@ -144,114 +144,114 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
           scrollEventThrottle={16}
         >
 
-        {loading && !report && (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>טוען דוחות...</Text>
-          </View>
-        )}
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={24} color={colors.error} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={loadReport}>
-              <Text style={styles.retryButtonText}>נסה שוב</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {report && (
-          <>
-            {/* Summary Cards */}
-            <View style={styles.summaryContainer}>
-              <View style={styles.summaryCard}>
-                <Ionicons name="person-outline" size={32} color={colors.primary} />
-                <Text style={styles.summaryValue}>{formatHours(report.manager_hours)}</Text>
-                <Text style={styles.summaryLabel}>שעות המנהל</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Ionicons name="people-outline" size={32} color={colors.success} />
-                <Text style={styles.summaryValue}>{formatHours(report.team_total_hours)}</Text>
-                <Text style={styles.summaryLabel}>סה"כ שעות הצוות</Text>
-              </View>
+          {loading && !report && (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>טוען דוחות...</Text>
             </View>
+          )}
 
-            {/* Hours by User */}
-            {report.by_user && report.by_user.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="people-outline" size={20} color={colors.primary} />
-                  <Text style={styles.sectionTitle}>שעות עבודה לפי משתמש</Text>
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={24} color={colors.error} />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadReport}>
+                <Text style={styles.retryButtonText}>נסה שוב</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {report && (
+            <>
+              {/* Summary Cards */}
+              <View style={styles.summaryContainer}>
+                <View style={styles.summaryCard}>
+                  <Ionicons name="person-outline" size={32} color={colors.primary} />
+                  <Text style={styles.summaryValue}>{formatHours(report.manager_hours)}</Text>
+                  <Text style={styles.summaryLabel}>{'שעות המנהל'}</Text>
                 </View>
-                <View style={styles.list}>
-                  {report.by_user.map((item, index) => (
-                    <View key={item.user_id} style={styles.listItem}>
-                      <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{item.user_name}</Text>
-                        <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
-                      </View>
-                      {index < report.by_user.length - 1 && <View style={styles.separator} />}
-                    </View>
-                  ))}
+                <View style={styles.summaryCard}>
+                  <Ionicons name="people-outline" size={32} color={colors.success} />
+                  <Text style={styles.summaryValue}>{formatHours(report.team_total_hours)}</Text>
+                  <Text style={styles.summaryLabel}>{'סה"כ שעות הצוות'}</Text>
                 </View>
               </View>
-            )}
 
-            {/* Hours by Task */}
-            {report.by_task && report.by_task.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="checkmark-done-outline" size={20} color={colors.info} />
-                  <Text style={styles.sectionTitle}>שעות עבודה לפי משימה</Text>
-                </View>
-                <View style={styles.list}>
-                  {report.by_task.slice(0, 10).map((item, index) => (
-                    <View key={item.task_id} style={styles.listItem}>
-                      <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle} numberOfLines={2}>
-                          {item.task_title}
-                        </Text>
-                        <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
+              {/* Hours by User */}
+              {report.by_user && report.by_user.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="people-outline" size={20} color={colors.primary} />
+                    <Text style={styles.sectionTitle}>{'שעות עבודה לפי משתמש'}</Text>
+                  </View>
+                  <View style={styles.list}>
+                    {report.by_user.map((item, index) => (
+                      <View key={item.user_id} style={styles.listItem}>
+                        <View style={styles.listItemContent}>
+                          <Text style={styles.listItemTitle}>{item.user_name}</Text>
+                          <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
+                        </View>
+                        {index < report.by_user.length - 1 && <View style={styles.separator} />}
                       </View>
-                      {index < Math.min(report.by_task.length, 10) - 1 && <View style={styles.separator} />}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Hours by Period */}
-            {report.by_period && report.by_period.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.warning} />
-                  <Text style={styles.sectionTitle}>שעות עבודה לפי תקופה</Text>
-                </View>
-                <View style={styles.list}>
-                  {report.by_period.map((item, index) => (
-                    <View key={item.period} style={styles.listItem}>
-                      <View style={styles.listItemContent}>
-                        <Text style={styles.listItemTitle}>{formatPeriod(item.period)}</Text>
-                        <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
-                      </View>
-                      {index < report.by_period.length - 1 && <View style={styles.separator} />}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {(!report.by_user || report.by_user.length === 0) &&
-              (!report.by_task || report.by_task.length === 0) &&
-              (!report.by_period || report.by_period.length === 0) && (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="time-outline" size={48} color={colors.textSecondary} />
-                  <Text style={styles.emptyText}>אין נתוני שעות עבודה להצגה</Text>
+                    ))}
+                  </View>
                 </View>
               )}
-          </>
-        )}
+
+              {/* Hours by Task */}
+              {report.by_task && report.by_task.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="checkmark-done-outline" size={20} color={colors.info} />
+                    <Text style={styles.sectionTitle}>{'שעות עבודה לפי משימה'}</Text>
+                  </View>
+                  <View style={styles.list}>
+                    {report.by_task.slice(0, 10).map((item, index) => (
+                      <View key={item.task_id} style={styles.listItem}>
+                        <View style={styles.listItemContent}>
+                          <Text style={styles.listItemTitle} numberOfLines={2}>
+                            {item.task_title}
+                          </Text>
+                          <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
+                        </View>
+                        {index < Math.min(report.by_task.length, 10) - 1 && <View style={styles.separator} />}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Hours by Period */}
+              {report.by_period && report.by_period.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.warning} />
+                    <Text style={styles.sectionTitle}>{'שעות עבודה לפי תקופה'}</Text>
+                  </View>
+                  <View style={styles.list}>
+                    {report.by_period.map((item, index) => (
+                      <View key={item.period} style={styles.listItem}>
+                        <View style={styles.listItemContent}>
+                          <Text style={styles.listItemTitle}>{formatPeriod(item.period)}</Text>
+                          <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
+                        </View>
+                        {index < report.by_period.length - 1 && <View style={styles.separator} />}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {(!report.by_user || report.by_user.length === 0) &&
+                (!report.by_task || report.by_task.length === 0) &&
+                (!report.by_period || report.by_period.length === 0) && (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="time-outline" size={48} color={colors.textSecondary} />
+                    <Text style={styles.emptyText}>{'אין נתוני שעות עבודה להצגה'}</Text>
+                  </View>
+                )}
+            </>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>

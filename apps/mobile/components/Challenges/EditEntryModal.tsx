@@ -49,7 +49,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
         console.log('[EditEntryModal] Opened with values:', { date, existingValue, nextValue, existingNotes: existingNotes?.slice(0, 20) });
       }
     }
-  }, [visible, date, existingValue, existingNotes, challenge?.id]);
+  }, [visible, date, existingValue, existingNotes, challenge]);
 
   if (!challenge) return null;
 
@@ -96,11 +96,11 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
 
   const formatDate = (dateString: string): string => {
     const d = new Date(dateString + 'T00:00:00');
-    return d.toLocaleDateString('he-IL', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return d.toLocaleDateString('he-IL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 

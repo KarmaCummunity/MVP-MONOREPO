@@ -4,7 +4,7 @@
 // - Provides: Real-time search with tabs for different entities, debounced input, and detailed result cards.
 // - Reads from: `enhancedDatabaseService`, `apiService`.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     View,
     Text,
@@ -42,9 +42,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
     let timeout: any;
     return function (this: any, ...args: Parameters<T>) {
-        const context = this;
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
@@ -241,11 +240,11 @@ const SearchScreen = () => {
     };
 
     // Debounce the search
-    const debouncedSearch = useCallback(
-        debounce((nextQuery: string, nextTab: SearchTab) => {
+    const debouncedSearch = useMemo(
+        () => debounce((nextQuery: string, nextTab: SearchTab) => {
             performSearch(nextQuery, nextTab);
         }, 600),
-        []
+        [performSearch]
     );
 
     useEffect(() => {
@@ -264,7 +263,7 @@ const SearchScreen = () => {
                 performSearch(routeParams.q, activeTab);
             }
         }
-    }, [routeParams?.q, activeTab]);
+    }, [routeParams?.q, activeTab, performSearch, query]);
 
     const handleTextChange = (text: string) => {
         setQuery(text);
