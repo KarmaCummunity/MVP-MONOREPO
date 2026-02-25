@@ -1,0 +1,12 @@
+node_modules
+dist
+.expo
+.expo-shared
+npm-debug.log*
+yarn-error.log
+.git
+.gitignore
+Dockerfile.static
+serve-dist.sh
+start-clean.sh
+

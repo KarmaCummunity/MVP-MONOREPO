@@ -1,0 +1,14 @@
+# Ignore all audit reports (they are generated locally)
+*.json
+*.md
+
+# But keep this .gitignore file
+!.gitignore
+
+# Optional: Keep a sample/template
+# !sample-report.json
+
+
+
+
+

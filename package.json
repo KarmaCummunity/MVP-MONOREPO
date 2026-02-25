@@ -1,0 +1,38 @@
+{
+  "name": "kc-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace @kc/api",
+    "dev:api:debug": "npm run start:debug --workspace @kc/api",
+    "dev:mobile": "npm run start --workspace @kc/mobile",
+    "dev:mobile:web": "npm run web --workspace @kc/mobile",
+    "dev:bot": "npm run start --workspace @kc/dev-bot",
+    "e2e:local": "npm run e2e:local --workspace @kc/mobile",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "overrides": {
+    "ajv": "^8.18.0",
+    "undici": "^6.21.1",
+    "cross-spawn": "^7.0.6",
+    "adm-zip": "^0.5.11",
+    "node-forge": "^1.3.2",
+    "tar": "^7.5.8",
+    "fast-xml-parser": "^5.3.6",
+    "ws": "^8.18.1",
+    "lodash": "^4.17.23"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3"
+  }
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>KC - הקיבוץ הקפיטליסטי של ישראל</title>
+    
+    <!-- App Version for cache busting (updated automatically by build script) -->
+    <meta name="app-version" content="__APP_VERSION__" />
+    <meta name="build-timestamp" content="__BUILD_TIMESTAMP__" />
+    
+    <!-- Cache Control -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="__BUILD_TIMESTAMP__" />
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="images/android-chrome-512x512.png">
+    <!-- Theme -->
+    <meta name="theme-color" content="#FF69B4" />
+    <meta name="background-color" content="#F0F8FF" />
+    
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="KC" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <style>
+      /* Loading screen and mobile web optimizations */
+      html, body {
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+        margin: 0px;
+        padding: 0px;
+        min-height: 100vh;
+        background-color: #F0F8FF;
+        /* Mobile web optimizations */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      
+      #root {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex: 1;
+        /* Ensure full height on mobile */
+        min-height: 100vh;
+        max-height: 100vh;
+        position: relative;
+        overflow: hidden;
+        /* Center content horizontally */
+        justify-content: center;
+        align-items: flex-start;
+        background-color: #F0F8FF;
+      }
+      
+      html {
+        scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+        height: 100%;
+        overflow: hidden;
+        /* Mobile web font scaling */
+        font-size: 16px;
+      }
+      
+      body {
+        display: flex;
+        overflow: hidden;
+        overscroll-behavior-y: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        -ms-overflow-style: scrollbar;
+        direction: rtl;
+        /* Remove any default mobile zoom */
+        zoom: 1;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      
+      /* Mobile web specific styles */
+      @media screen and (max-width: 768px) {
+        html {
+          font-size: 14px; /* Slightly smaller base font on mobile web */
+        }
+        
+        body {
+          /* Prevent horizontal scrolling on mobile */
+          overflow-x: hidden;
+          /* Fix viewport issues on mobile browsers */
+          width: 100vw;
+          max-width: 100vw;
+        }
+        
+        #root {
+          width: 100vw;
+          max-width: 100vw;
+          overflow-x: hidden;
+        }
+      }
+      
+      /* Prevent text selection in UI elements */
+      button, .touchable {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html> 

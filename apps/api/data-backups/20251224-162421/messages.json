@@ -1,0 +1,1506 @@
+[
+  {
+    "user_id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+    "item_id": "msg_1764183308585_osj8o0edn",
+    "data": {
+      "id": "msg_1764183308585_osj8o0edn",
+      "read": false,
+      "text": "שדכדגכגדכ",
+      "type": "text",
+      "status": "sending",
+      "senderId": "t2P5MvlK9rac1K8Msx65KBltOG43",
+      "timestamp": "2025-11-26T18:54:55.933Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T18:55:08.940Z",
+    "updated_at": "2025-11-26T18:55:08.940Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "msg_1764183789604_yr3wcqc81",
+    "data": {
+      "id": "msg_1764183789604_yr3wcqc81",
+      "read": false,
+      "text": "שלום",
+      "type": "text",
+      "status": "sending",
+      "senderId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-26T19:03:08.409Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T19:03:09.951Z",
+    "updated_at": "2025-11-26T19:03:09.951Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "msg_1764183308585_osj8o0edn",
+    "data": {
+      "id": "msg_1764183308585_osj8o0edn",
+      "read": true,
+      "text": "שדכדגכגדכ",
+      "type": "text",
+      "status": "sending",
+      "senderId": "t2P5MvlK9rac1K8Msx65KBltOG43",
+      "timestamp": "2025-11-26T18:54:55.933Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T18:55:11.016Z",
+    "updated_at": "2025-11-26T19:05:54.731Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "msg_1764183789604_yr3wcqc81",
+    "data": {
+      "id": "msg_1764183789604_yr3wcqc81",
+      "read": true,
+      "text": "שלום",
+      "type": "text",
+      "status": "sending",
+      "senderId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-26T19:03:08.409Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T19:03:10.151Z",
+    "updated_at": "2025-11-26T19:05:55.185Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "msg_1764183961011_xa4en2z1e",
+    "data": {
+      "id": "msg_1764183961011_xa4en2z1e",
+      "read": false,
+      "text": "Djshssh",
+      "type": "text",
+      "status": "sending",
+      "senderId": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "timestamp": "2025-11-26T19:06:00.178Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T19:06:01.197Z",
+    "updated_at": "2025-11-26T19:06:01.197Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "msg_1764183961011_xa4en2z1e",
+    "data": {
+      "id": "msg_1764183961011_xa4en2z1e",
+      "read": false,
+      "text": "Djshssh",
+      "type": "text",
+      "status": "sending",
+      "senderId": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "timestamp": "2025-11-26T19:06:00.178Z",
+      "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+    },
+    "created_at": "2025-11-26T19:06:01.408Z",
+    "updated_at": "2025-11-26T19:06:01.408Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764190496723_zb3qvrdwq",
+    "data": {
+      "id": "msg_1764190496723_zb3qvrdwq",
+      "read": false,
+      "text": "היי ימלך",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T20:54:43.725Z",
+      "conversationId": "conv_evelrap@gmail.com"
+    },
+    "created_at": "2025-11-26T20:54:57.034Z",
+    "updated_at": "2025-11-26T20:54:57.034Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "msg_1764190496723_zb3qvrdwq",
+    "data": {
+      "id": "msg_1764190496723_zb3qvrdwq",
+      "read": false,
+      "text": "היי ימלך",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T20:54:43.725Z",
+      "conversationId": "conv_evelrap@gmail.com"
+    },
+    "created_at": "2025-11-26T20:54:59.719Z",
+    "updated_at": "2025-11-26T20:54:59.719Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "msg_1764191638207_7v71injks",
+    "data": {
+      "id": "msg_1764191638207_7v71injks",
+      "read": false,
+      "text": "רוצה לצאת איתי?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:13:56.927Z",
+      "conversationId": "conv_karmacommunity2.0@gmail.com"
+    },
+    "created_at": "2025-11-26T21:13:58.384Z",
+    "updated_at": "2025-11-26T21:13:58.384Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191715101_zri9i0fzj",
+    "data": {
+      "id": "msg_1764191715101_zri9i0fzj",
+      "read": false,
+      "text": "ששלשל",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:15:02.352Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:15:15.401Z",
+    "updated_at": "2025-11-26T21:15:15.401Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "msg_1764191715101_zri9i0fzj",
+    "data": {
+      "id": "msg_1764191715101_zri9i0fzj",
+      "read": true,
+      "text": "ששלשל",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:15:02.352Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:15:17.440Z",
+    "updated_at": "2025-11-26T21:15:31.596Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "msg_1764191769571_1nlb4z25q",
+    "data": {
+      "id": "msg_1764191769571_1nlb4z25q",
+      "read": false,
+      "text": "היי אח רוצה לקנות קורס שיווק שותפים?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:16:09.169Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:16:10.014Z",
+    "updated_at": "2025-11-26T21:16:10.014Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191769571_1nlb4z25q",
+    "data": {
+      "id": "msg_1764191769571_1nlb4z25q",
+      "read": true,
+      "text": "היי אח רוצה לקנות קורס שיווק שותפים?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:16:09.169Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:16:09.762Z",
+    "updated_at": "2025-11-26T21:16:13.092Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "msg_1764191809474_8ex4g195s",
+    "data": {
+      "id": "msg_1764191809474_8ex4g195s",
+      "read": false,
+      "text": "אחי",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:16:48.906Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:16:49.884Z",
+    "updated_at": "2025-11-26T21:16:49.884Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191809474_8ex4g195s",
+    "data": {
+      "id": "msg_1764191809474_8ex4g195s",
+      "read": true,
+      "text": "אחי",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:16:48.906Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:16:49.652Z",
+    "updated_at": "2025-11-26T21:16:52.452Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191820576_z9rwhigdy",
+    "data": {
+      "id": "msg_1764191820576_z9rwhigdy",
+      "read": false,
+      "text": "כעעעע",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:16:59.018Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:17:00.932Z",
+    "updated_at": "2025-11-26T21:17:00.932Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "msg_1764191820576_z9rwhigdy",
+    "data": {
+      "id": "msg_1764191820576_z9rwhigdy",
+      "read": true,
+      "text": "כעעעע",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:16:59.018Z",
+      "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+    },
+    "created_at": "2025-11-26T21:17:01.088Z",
+    "updated_at": "2025-11-26T21:17:03.227Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764194268171_xlqdz4c0b",
+    "data": {
+      "id": "msg_1764194268171_xlqdz4c0b",
+      "read": false,
+      "text": "אחחחח עובד ?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:57:46.739Z",
+      "conversationId": "conv_matanya.a@lsports.eu"
+    },
+    "created_at": "2025-11-26T21:57:48.598Z",
+    "updated_at": "2025-11-26T21:57:48.598Z"
+  },
+  {
+    "user_id": "matanya.a@lsports.eu",
+    "item_id": "msg_1764194268171_xlqdz4c0b",
+    "data": {
+      "id": "msg_1764194268171_xlqdz4c0b",
+      "read": false,
+      "text": "אחחחח עובד ?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:57:46.739Z",
+      "conversationId": "conv_matanya.a@lsports.eu"
+    },
+    "created_at": "2025-11-26T21:57:49.138Z",
+    "updated_at": "2025-11-26T21:57:49.138Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "msg_1764191638207_7v71injks",
+    "data": {
+      "id": "msg_1764191638207_7v71injks",
+      "read": true,
+      "text": "רוצה לצאת איתי?",
+      "type": "text",
+      "status": "sending",
+      "senderId": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "timestamp": "2025-11-26T21:13:56.927Z",
+      "conversationId": "conv_karmacommunity2.0@gmail.com"
+    },
+    "created_at": "2025-11-26T21:13:58.534Z",
+    "updated_at": "2025-11-27T16:46:10.387Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "7fe13c49-2db1-490a-9800-6c4b288eb310",
+    "data": {
+      "id": "7fe13c49-2db1-490a-9800-6c4b288eb310",
+      "read": false,
+      "text": "שלום",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-11T17:59:47.911Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-11T17:59:48.916Z",
+    "updated_at": "2025-12-11T17:59:48.916Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "7fe13c49-2db1-490a-9800-6c4b288eb310",
+    "data": {
+      "id": "7fe13c49-2db1-490a-9800-6c4b288eb310",
+      "read": true,
+      "text": "שלום",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-11T17:59:47.911Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-11T17:59:49.054Z",
+    "updated_at": "2025-12-11T19:05:23.777Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "bdb11aaa-aa4e-407a-ad75-6661a00accdd",
+    "data": {
+      "id": "bdb11aaa-aa4e-407a-ad75-6661a00accdd",
+      "read": false,
+      "text": "היי נוה סרוסי! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:24:56.542Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:24:57.367Z",
+    "updated_at": "2025-12-12T08:24:57.367Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "0718784e-96d8-4336-8106-2d1206be44ae",
+    "data": {
+      "id": "0718784e-96d8-4336-8106-2d1206be44ae",
+      "read": false,
+      "text": "אהלן",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:25:06.233Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:25:07.134Z",
+    "updated_at": "2025-12-12T08:25:07.134Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "675daf0a-809c-4339-9319-d2fc1d227ccd",
+    "data": {
+      "id": "675daf0a-809c-4339-9319-d2fc1d227ccd",
+      "read": false,
+      "text": "מה קורה ?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:25:15.380Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:25:16.120Z",
+    "updated_at": "2025-12-12T08:25:16.120Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "bdb11aaa-aa4e-407a-ad75-6661a00accdd",
+    "data": {
+      "id": "bdb11aaa-aa4e-407a-ad75-6661a00accdd",
+      "read": true,
+      "text": "היי נוה סרוסי! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:24:56.542Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:24:57.482Z",
+    "updated_at": "2025-12-12T08:26:03.218Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "0718784e-96d8-4336-8106-2d1206be44ae",
+    "data": {
+      "id": "0718784e-96d8-4336-8106-2d1206be44ae",
+      "read": true,
+      "text": "אהלן",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:25:06.233Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:25:07.246Z",
+    "updated_at": "2025-12-12T08:26:03.456Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "675daf0a-809c-4339-9319-d2fc1d227ccd",
+    "data": {
+      "id": "675daf0a-809c-4339-9319-d2fc1d227ccd",
+      "read": true,
+      "text": "מה קורה ?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-12T08:25:15.380Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-12T08:25:16.243Z",
+    "updated_at": "2025-12-12T08:26:03.675Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "3c883ac2-0a86-41fb-9dd1-5ef39de13aa1",
+    "data": {
+      "id": "3c883ac2-0a86-41fb-9dd1-5ef39de13aa1",
+      "read": false,
+      "text": "שלום",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-12T17:19:14.483Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-12T17:19:15.587Z",
+    "updated_at": "2025-12-12T17:19:15.587Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "e6c0759a-ddb9-41f5-8480-c9aa988cf93a",
+    "data": {
+      "id": "e6c0759a-ddb9-41f5-8480-c9aa988cf93a",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:26.244Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:27.190Z",
+    "updated_at": "2025-12-13T16:33:27.190Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "fdf75257-a9f0-4899-9bd3-35bb971291d5",
+    "data": {
+      "id": "fdf75257-a9f0-4899-9bd3-35bb971291d5",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:26.536Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:27.201Z",
+    "updated_at": "2025-12-13T16:33:27.201Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "3c883ac2-0a86-41fb-9dd1-5ef39de13aa1",
+    "data": {
+      "id": "3c883ac2-0a86-41fb-9dd1-5ef39de13aa1",
+      "read": true,
+      "text": "שלום",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-12T17:19:14.483Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-12T17:19:15.407Z",
+    "updated_at": "2025-12-13T16:33:45.886Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "e6c0759a-ddb9-41f5-8480-c9aa988cf93a",
+    "data": {
+      "id": "e6c0759a-ddb9-41f5-8480-c9aa988cf93a",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:26.244Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:27.293Z",
+    "updated_at": "2025-12-13T22:45:07.996Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "0addc146-dd2f-4daf-8261-eb61b6deabd1",
+    "data": {
+      "id": "0addc146-dd2f-4daf-8261-eb61b6deabd1",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:35.152Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:36.169Z",
+    "updated_at": "2025-12-13T16:33:36.169Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "ce90d6cd-c82b-4a8a-86a3-d1b5bfc86a5a",
+    "data": {
+      "id": "ce90d6cd-c82b-4a8a-86a3-d1b5bfc86a5a",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T16:37:47.102Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:37:48.096Z",
+    "updated_at": "2025-12-13T16:37:48.096Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "ce90d6cd-c82b-4a8a-86a3-d1b5bfc86a5a",
+    "data": {
+      "id": "ce90d6cd-c82b-4a8a-86a3-d1b5bfc86a5a",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T16:37:47.102Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:37:47.982Z",
+    "updated_at": "2025-12-13T16:51:24.256Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "3e34c498-5906-4133-8770-0bef1063cefb",
+    "data": {
+      "id": "3e34c498-5906-4133-8770-0bef1063cefb",
+      "read": false,
+      "text": "dfvdsfsdf",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-13T16:51:38.066Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:51:39.032Z",
+    "updated_at": "2025-12-13T16:51:39.032Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "3e34c498-5906-4133-8770-0bef1063cefb",
+    "data": {
+      "id": "3e34c498-5906-4133-8770-0bef1063cefb",
+      "read": true,
+      "text": "dfvdsfsdf",
+      "type": "text",
+      "status": "sent",
+      "senderId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-13T16:51:38.066Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:51:39.113Z",
+    "updated_at": "2025-12-13T16:51:43.473Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "e06ac9b2-d72f-4429-afea-39094fa49980",
+    "data": {
+      "id": "e06ac9b2-d72f-4429-afea-39094fa49980",
+      "read": false,
+      "text": "שלום\nקראקא",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T16:51:47.048Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:51:47.928Z",
+    "updated_at": "2025-12-13T16:51:47.928Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "e06ac9b2-d72f-4429-afea-39094fa49980",
+    "data": {
+      "id": "e06ac9b2-d72f-4429-afea-39094fa49980",
+      "read": true,
+      "text": "שלום\nקראקא",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T16:51:47.048Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T16:51:47.806Z",
+    "updated_at": "2025-12-13T17:05:26.981Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "9ba1529b-c033-49a0-9bb2-8586d57cbb65",
+    "data": {
+      "id": "9ba1529b-c033-49a0-9bb2-8586d57cbb65",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T22:44:25.333Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T22:44:26.449Z",
+    "updated_at": "2025-12-13T22:44:26.449Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "9ba1529b-c033-49a0-9bb2-8586d57cbb65",
+    "data": {
+      "id": "9ba1529b-c033-49a0-9bb2-8586d57cbb65",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T22:44:25.333Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T22:44:26.666Z",
+    "updated_at": "2025-12-13T22:44:26.666Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "acfd67f7-741e-4d76-8ef6-6d5bcd83cee3",
+    "data": {
+      "id": "acfd67f7-741e-4d76-8ef6-6d5bcd83cee3",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T22:44:43.613Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T22:44:44.462Z",
+    "updated_at": "2025-12-13T22:44:44.462Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "acfd67f7-741e-4d76-8ef6-6d5bcd83cee3",
+    "data": {
+      "id": "acfd67f7-741e-4d76-8ef6-6d5bcd83cee3",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-13T22:44:43.613Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-13T22:44:44.565Z",
+    "updated_at": "2025-12-13T22:44:44.565Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "fdf75257-a9f0-4899-9bd3-35bb971291d5",
+    "data": {
+      "id": "fdf75257-a9f0-4899-9bd3-35bb971291d5",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:26.536Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:27.309Z",
+    "updated_at": "2025-12-13T22:45:08.207Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "0addc146-dd2f-4daf-8261-eb61b6deabd1",
+    "data": {
+      "id": "0addc146-dd2f-4daf-8261-eb61b6deabd1",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-13T16:33:35.152Z",
+      "conversationId": "93778c0a-7c55-4603-adca-69c8b8267a8d"
+    },
+    "created_at": "2025-12-13T16:33:36.306Z",
+    "updated_at": "2025-12-13T22:45:08.767Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "cfc356d0-1035-4ca3-921b-58fa5899a00e",
+    "data": {
+      "id": "cfc356d0-1035-4ca3-921b-58fa5899a00e",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-14T16:17:22.514Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-14T16:17:26.276Z",
+    "updated_at": "2025-12-14T16:17:26.276Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "cfc356d0-1035-4ca3-921b-58fa5899a00e",
+    "data": {
+      "id": "cfc356d0-1035-4ca3-921b-58fa5899a00e",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-14T16:17:22.514Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-14T16:17:26.378Z",
+    "updated_at": "2025-12-14T16:17:35.784Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "64ffe133-27cd-40c4-af45-0c5dfa5f00a4",
+    "data": {
+      "id": "64ffe133-27cd-40c4-af45-0c5dfa5f00a4",
+      "read": false,
+      "text": "יגבר",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T16:17:39.494Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-14T16:17:40.222Z",
+    "updated_at": "2025-12-14T16:17:40.222Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "64ffe133-27cd-40c4-af45-0c5dfa5f00a4",
+    "data": {
+      "id": "64ffe133-27cd-40c4-af45-0c5dfa5f00a4",
+      "read": true,
+      "text": "יגבר",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T16:17:39.494Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-14T16:17:40.102Z",
+    "updated_at": "2025-12-14T16:17:44.748Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "ec90a66c-43a5-4f73-b936-ad31b42642b9",
+    "data": {
+      "id": "ec90a66c-43a5-4f73-b936-ad31b42642b9",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T18:55:32.459Z",
+      "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+    },
+    "created_at": "2025-12-14T18:55:33.372Z",
+    "updated_at": "2025-12-14T18:55:33.372Z"
+  },
+  {
+    "user_id": "35de96db-0043-4d8f-8844-e67318568ecd",
+    "item_id": "ec90a66c-43a5-4f73-b936-ad31b42642b9",
+    "data": {
+      "id": "ec90a66c-43a5-4f73-b936-ad31b42642b9",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T18:55:32.459Z",
+      "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+    },
+    "created_at": "2025-12-14T18:55:33.491Z",
+    "updated_at": "2025-12-14T18:55:33.491Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "99a0f795-56a6-42a9-9502-bba58d2dc10b",
+    "data": {
+      "id": "99a0f795-56a6-42a9-9502-bba58d2dc10b",
+      "read": false,
+      "text": "גיא .\n?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T18:55:45.274Z",
+      "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+    },
+    "created_at": "2025-12-14T18:55:46.251Z",
+    "updated_at": "2025-12-14T18:55:46.251Z"
+  },
+  {
+    "user_id": "35de96db-0043-4d8f-8844-e67318568ecd",
+    "item_id": "99a0f795-56a6-42a9-9502-bba58d2dc10b",
+    "data": {
+      "id": "99a0f795-56a6-42a9-9502-bba58d2dc10b",
+      "read": false,
+      "text": "גיא .\n?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-14T18:55:45.274Z",
+      "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+    },
+    "created_at": "2025-12-14T18:55:46.373Z",
+    "updated_at": "2025-12-14T18:55:46.373Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "9463633e-f2b5-49c1-9386-d5b5fc4eff02",
+    "data": {
+      "id": "9463633e-f2b5-49c1-9386-d5b5fc4eff02",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T07:52:45.322Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T07:52:46.146Z",
+    "updated_at": "2025-12-17T07:52:46.146Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "9463633e-f2b5-49c1-9386-d5b5fc4eff02",
+    "data": {
+      "id": "9463633e-f2b5-49c1-9386-d5b5fc4eff02",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T07:52:45.322Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T07:52:46.265Z",
+    "updated_at": "2025-12-17T07:52:46.265Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "015e6f1e-c6e4-4d95-99d8-4bb73b787024",
+    "data": {
+      "id": "015e6f1e-c6e4-4d95-99d8-4bb73b787024",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T10:02:49.114Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T10:02:49.817Z",
+    "updated_at": "2025-12-17T10:02:49.817Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "015e6f1e-c6e4-4d95-99d8-4bb73b787024",
+    "data": {
+      "id": "015e6f1e-c6e4-4d95-99d8-4bb73b787024",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T10:02:49.114Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T10:02:49.966Z",
+    "updated_at": "2025-12-17T10:02:49.966Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "b4e4203a-c2c8-4008-93f9-fd2b7f1ee6d3",
+    "data": {
+      "id": "b4e4203a-c2c8-4008-93f9-fd2b7f1ee6d3",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T10:03:11.020Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T10:03:11.886Z",
+    "updated_at": "2025-12-17T10:03:11.886Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "b4e4203a-c2c8-4008-93f9-fd2b7f1ee6d3",
+    "data": {
+      "id": "b4e4203a-c2c8-4008-93f9-fd2b7f1ee6d3",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-17T10:03:11.020Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-17T10:03:12.017Z",
+    "updated_at": "2025-12-17T10:03:12.017Z"
+  },
+  {
+    "user_id": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+    "item_id": "43a046ef-7534-4a71-ad77-82f21edf7c85",
+    "data": {
+      "id": "43a046ef-7534-4a71-ad77-82f21edf7c85",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+      "timestamp": "2025-12-18T14:52:18.623Z",
+      "conversationId": "27684465-ec1e-40d0-b9d7-638c46ce69a6"
+    },
+    "created_at": "2025-12-18T14:52:19.487Z",
+    "updated_at": "2025-12-18T14:52:19.487Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "43a046ef-7534-4a71-ad77-82f21edf7c85",
+    "data": {
+      "id": "43a046ef-7534-4a71-ad77-82f21edf7c85",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+      "timestamp": "2025-12-18T14:52:18.623Z",
+      "conversationId": "27684465-ec1e-40d0-b9d7-638c46ce69a6"
+    },
+    "created_at": "2025-12-18T14:52:19.599Z",
+    "updated_at": "2025-12-18T14:52:19.599Z"
+  },
+  {
+    "user_id": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+    "item_id": "b132d236-5abc-4a52-bc8d-41077db08fef",
+    "data": {
+      "id": "b132d236-5abc-4a52-bc8d-41077db08fef",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+      "timestamp": "2025-12-18T14:52:19.097Z",
+      "conversationId": "27684465-ec1e-40d0-b9d7-638c46ce69a6"
+    },
+    "created_at": "2025-12-18T14:52:19.808Z",
+    "updated_at": "2025-12-18T14:52:19.808Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "b132d236-5abc-4a52-bc8d-41077db08fef",
+    "data": {
+      "id": "b132d236-5abc-4a52-bc8d-41077db08fef",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+      "timestamp": "2025-12-18T14:52:19.097Z",
+      "conversationId": "27684465-ec1e-40d0-b9d7-638c46ce69a6"
+    },
+    "created_at": "2025-12-18T14:52:19.920Z",
+    "updated_at": "2025-12-18T14:52:19.920Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "e55394ec-f29f-4354-899e-b04bdfefad0d",
+    "data": {
+      "id": "e55394ec-f29f-4354-899e-b04bdfefad0d",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-18T15:15:27.900Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-18T15:15:28.888Z",
+    "updated_at": "2025-12-18T15:15:28.888Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "e55394ec-f29f-4354-899e-b04bdfefad0d",
+    "data": {
+      "id": "e55394ec-f29f-4354-899e-b04bdfefad0d",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-18T15:15:27.900Z",
+      "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+    },
+    "created_at": "2025-12-18T15:15:29.035Z",
+    "updated_at": "2025-12-18T15:15:29.035Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "3613e90d-919d-4170-a4ba-cc10a1a14d82",
+    "data": {
+      "id": "3613e90d-919d-4170-a4ba-cc10a1a14d82",
+      "read": false,
+      "text": "היי נוה סרוסי! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T15:43:51.102Z",
+      "conversationId": "80422c62-4377-4c1c-9311-4db57ba2005d"
+    },
+    "created_at": "2025-12-18T15:43:52.409Z",
+    "updated_at": "2025-12-18T15:43:52.409Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "c416ffcd-beba-4827-a8ed-4c2decd330d5",
+    "data": {
+      "id": "c416ffcd-beba-4827-a8ed-4c2decd330d5",
+      "read": false,
+      "text": "היי עדו ניצני! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T15:43:50.172Z",
+      "conversationId": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5"
+    },
+    "created_at": "2025-12-18T15:43:52.410Z",
+    "updated_at": "2025-12-18T15:43:52.410Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "c416ffcd-beba-4827-a8ed-4c2decd330d5",
+    "data": {
+      "id": "c416ffcd-beba-4827-a8ed-4c2decd330d5",
+      "read": false,
+      "text": "היי עדו ניצני! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T15:43:50.172Z",
+      "conversationId": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5"
+    },
+    "created_at": "2025-12-18T15:43:52.609Z",
+    "updated_at": "2025-12-18T15:43:52.609Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "3613e90d-919d-4170-a4ba-cc10a1a14d82",
+    "data": {
+      "id": "3613e90d-919d-4170-a4ba-cc10a1a14d82",
+      "read": true,
+      "text": "היי נוה סרוסי! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T15:43:51.102Z",
+      "conversationId": "80422c62-4377-4c1c-9311-4db57ba2005d"
+    },
+    "created_at": "2025-12-18T15:43:52.609Z",
+    "updated_at": "2025-12-18T18:54:31.074Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "72a2ba3e-dbd8-4a44-b6d8-e1ba06de3a4c",
+    "data": {
+      "id": "72a2ba3e-dbd8-4a44-b6d8-e1ba06de3a4c",
+      "read": false,
+      "text": "שלום יצחק! מה נשמע?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-18T18:54:40.505Z",
+      "conversationId": "80422c62-4377-4c1c-9311-4db57ba2005d"
+    },
+    "created_at": "2025-12-18T18:54:41.297Z",
+    "updated_at": "2025-12-18T18:54:41.297Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "72a2ba3e-dbd8-4a44-b6d8-e1ba06de3a4c",
+    "data": {
+      "id": "72a2ba3e-dbd8-4a44-b6d8-e1ba06de3a4c",
+      "read": false,
+      "text": "שלום יצחק! מה נשמע?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-18T18:54:40.505Z",
+      "conversationId": "80422c62-4377-4c1c-9311-4db57ba2005d"
+    },
+    "created_at": "2025-12-18T18:54:41.435Z",
+    "updated_at": "2025-12-18T18:54:41.435Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "c9ed7e28-0684-4dd3-8cea-913a20a05579",
+    "data": {
+      "id": "c9ed7e28-0684-4dd3-8cea-913a20a05579",
+      "read": false,
+      "text": "היי עדו ניצני! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-18T18:58:48.432Z",
+      "conversationId": "f5f62816-f95c-4b0c-835a-75116f2db162"
+    },
+    "created_at": "2025-12-18T18:58:49.300Z",
+    "updated_at": "2025-12-18T18:58:49.300Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "c9ed7e28-0684-4dd3-8cea-913a20a05579",
+    "data": {
+      "id": "c9ed7e28-0684-4dd3-8cea-913a20a05579",
+      "read": false,
+      "text": "היי עדו ניצני! 👋",
+      "type": "text",
+      "status": "sent",
+      "senderId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-18T18:58:48.432Z",
+      "conversationId": "f5f62816-f95c-4b0c-835a-75116f2db162"
+    },
+    "created_at": "2025-12-18T18:58:49.463Z",
+    "updated_at": "2025-12-18T18:58:49.463Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "fd25604a-b1f8-4644-9690-208cab2803d6",
+    "data": {
+      "id": "fd25604a-b1f8-4644-9690-208cab2803d6",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:07.655Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:15.593Z",
+    "updated_at": "2025-12-21T09:33:15.593Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "a91987c6-d602-4dd8-a7c4-08d0a8286059",
+    "data": {
+      "id": "a91987c6-d602-4dd8-a7c4-08d0a8286059",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:07.789Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:15.635Z",
+    "updated_at": "2025-12-21T09:33:15.635Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "7d0bd941-44d4-4cec-bdfc-85a53465b1ba",
+    "data": {
+      "id": "7d0bd941-44d4-4cec-bdfc-85a53465b1ba",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:10.763Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:18.321Z",
+    "updated_at": "2025-12-21T09:33:18.321Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "a67cbd54-a07f-4515-8376-f1d77ba80357",
+    "data": {
+      "id": "a67cbd54-a07f-4515-8376-f1d77ba80357",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:11.444Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:19.024Z",
+    "updated_at": "2025-12-21T09:33:19.024Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "a5f2289e-482e-4773-86cd-a2bfee4a7780",
+    "data": {
+      "id": "a5f2289e-482e-4773-86cd-a2bfee4a7780",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:12.947Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:20.786Z",
+    "updated_at": "2025-12-21T09:33:20.786Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "84c839c1-17a7-4b43-b3b3-121c63543015",
+    "data": {
+      "id": "84c839c1-17a7-4b43-b3b3-121c63543015",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:13.783Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:21.459Z",
+    "updated_at": "2025-12-21T09:33:21.459Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "9d21a340-f75a-4f80-ad9e-0fbee9ce5d8d",
+    "data": {
+      "id": "9d21a340-f75a-4f80-ad9e-0fbee9ce5d8d",
+      "read": false,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:00.288Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:08.115Z",
+    "updated_at": "2025-12-21T09:34:08.115Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "e69dc31d-106c-41d4-9442-d673065687fd",
+    "data": {
+      "id": "e69dc31d-106c-41d4-9442-d673065687fd",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:01.195Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:08.790Z",
+    "updated_at": "2025-12-21T09:34:08.790Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "7d0bd941-44d4-4cec-bdfc-85a53465b1ba",
+    "data": {
+      "id": "7d0bd941-44d4-4cec-bdfc-85a53465b1ba",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:10.763Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:18.450Z",
+    "updated_at": "2025-12-21T09:34:16.502Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "a67cbd54-a07f-4515-8376-f1d77ba80357",
+    "data": {
+      "id": "a67cbd54-a07f-4515-8376-f1d77ba80357",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:11.444Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:19.152Z",
+    "updated_at": "2025-12-21T09:34:16.758Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "a5f2289e-482e-4773-86cd-a2bfee4a7780",
+    "data": {
+      "id": "a5f2289e-482e-4773-86cd-a2bfee4a7780",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:12.947Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:20.918Z",
+    "updated_at": "2025-12-21T09:34:17.022Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "84c839c1-17a7-4b43-b3b3-121c63543015",
+    "data": {
+      "id": "84c839c1-17a7-4b43-b3b3-121c63543015",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:13.783Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:21.599Z",
+    "updated_at": "2025-12-21T09:34:17.254Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "9d21a340-f75a-4f80-ad9e-0fbee9ce5d8d",
+    "data": {
+      "id": "9d21a340-f75a-4f80-ad9e-0fbee9ce5d8d",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:00.288Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:08.253Z",
+    "updated_at": "2025-12-21T09:34:17.519Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "e69dc31d-106c-41d4-9442-d673065687fd",
+    "data": {
+      "id": "e69dc31d-106c-41d4-9442-d673065687fd",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:01.195Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:08.921Z",
+    "updated_at": "2025-12-21T09:34:17.784Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "952ab1bb-6aa7-48ec-b1c4-f991d362a8ee",
+    "data": {
+      "id": "952ab1bb-6aa7-48ec-b1c4-f991d362a8ee",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:01.938Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:09.495Z",
+    "updated_at": "2025-12-21T09:34:09.495Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "a701a78d-8895-4f26-984f-78dfefab0192",
+    "data": {
+      "id": "a701a78d-8895-4f26-984f-78dfefab0192",
+      "read": false,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:04.624Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:12.176Z",
+    "updated_at": "2025-12-21T09:34:12.176Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "fd25604a-b1f8-4644-9690-208cab2803d6",
+    "data": {
+      "id": "fd25604a-b1f8-4644-9690-208cab2803d6",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:07.655Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:15.724Z",
+    "updated_at": "2025-12-21T09:34:15.971Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "a91987c6-d602-4dd8-a7c4-08d0a8286059",
+    "data": {
+      "id": "a91987c6-d602-4dd8-a7c4-08d0a8286059",
+      "read": true,
+      "text": "האם טרמפ זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:33:07.789Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:33:15.765Z",
+    "updated_at": "2025-12-21T09:34:16.216Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "952ab1bb-6aa7-48ec-b1c4-f991d362a8ee",
+    "data": {
+      "id": "952ab1bb-6aa7-48ec-b1c4-f991d362a8ee",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:01.938Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:09.635Z",
+    "updated_at": "2025-12-21T09:34:17.977Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "a701a78d-8895-4f26-984f-78dfefab0192",
+    "data": {
+      "id": "a701a78d-8895-4f26-984f-78dfefab0192",
+      "read": true,
+      "text": "האם פריט זה רלוונטי?",
+      "type": "text",
+      "status": "sent",
+      "senderId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-21T09:34:04.624Z",
+      "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+    },
+    "created_at": "2025-12-21T09:34:12.393Z",
+    "updated_at": "2025-12-21T09:34:18.097Z"
+  }
+]

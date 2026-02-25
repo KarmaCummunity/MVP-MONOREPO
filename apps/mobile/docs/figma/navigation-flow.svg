@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1250" viewBox="0 0 1400 1250">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" fill="#5a646b">
+      <path d="M0,0 L6,3 L0,6 Z" />
+    </marker>
+    <style type="text/css"><![CDATA[
+      text { font-family: 'Inter', 'Arial', sans-serif; fill: #111; }
+      .title { font-size: 18px; font-weight: 600; }
+      .body { font-size: 13px; }
+      .caption { font-size: 12px; fill: #5a646b; }
+      .group { fill: #f4fbff; stroke: #1d3557; stroke-width: 2; }
+      .node { fill: #ffffff; stroke: #2f4858; stroke-width: 1.8; }
+      .tab { fill: #fffdfa; stroke: #444; stroke-width: 1.6; }
+      .global { fill: #fff7f0; stroke: #a45c29; stroke-width: 2; }
+      .connector { stroke: #6d6d6d; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    ]]></style>
+  </defs>
+
+  <!-- Main Navigator Root -->
+  <rect x="580" y="30" width="240" height="80" rx="18" ry="18" class="group" />
+  <text x="700" y="75" text-anchor="middle" class="title">MainNavigator</text>
+  <text x="700" y="95" text-anchor="middle" class="caption">auth + mode logic (site vs app)</text>
+
+  <!-- Entry Points -->
+  <rect x="130" y="170" width="260" height="110" rx="16" ry="16" class="node" />
+  <text x="260" y="205" text-anchor="middle" class="title">LandingSiteScreen</text>
+  <text x="260" y="227" text-anchor="middle" class="body">site mode default entry</text>
+  <text x="260" y="245" text-anchor="middle" class="body">toggle to switch into app mode</text>
+
+  <rect x="500" y="170" width="260" height="110" rx="16" ry="16" class="node" />
+  <text x="630" y="205" text-anchor="middle" class="title">LoginScreen</text>
+  <text x="630" y="227" text-anchor="middle" class="body">shown when app mode + unauthenticated</text>
+  <text x="630" y="245" text-anchor="middle" class="body">leads to HomeStack after success</text>
+
+  <rect x="860" y="150" width="360" height="150" rx="18" ry="18" class="group" />
+  <text x="1040" y="195" text-anchor="middle" class="title">HomeStack / BottomNavigator</text>
+  <text x="1040" y="217" text-anchor="middle" class="body">hosts all bottom tabs + nested stacks</text>
+  <text x="1040" y="237" text-anchor="middle" class="body">initial route depends on auth + mode</text>
+
+  <!-- Connectors from MainNavigator -->
+  <line x1="700" y1="110" x2="260" y2="170" class="connector" />
+  <line x1="700" y1="110" x2="630" y2="170" class="connector" />
+  <line x1="700" y1="110" x2="1040" y2="150" class="connector" />
+
+  <!-- Bottom Tabs -->
+  <rect x="30" y="350" width="250" height="310" rx="16" ry="16" class="tab" />
+  <text x="155" y="380" text-anchor="middle" class="title">Home Tab Stack</text>
+  <text x="50" y="410" class="body">
+    <tspan x="50" dy="0">- HomeMain (numbers/news)</tspan>
+    <tspan x="50" dy="18">- LandingSite fallback (site mode)</tspan>
+    <tspan x="50" dy="18">- ChatList -> ChatDetail</tspan>
+    <tspan x="50" dy="18">- Notifications</tspan>
+    <tspan x="50" dy="18">- About KarmaCommunity</tspan>
+    <tspan x="50" dy="18">- Settings</tspan>
+    <tspan x="50" dy="18">- Bookmarks</tspan>
+    <tspan x="50" dy="18">- UserProfile</tspan>
+    <tspan x="50" dy="18">- Followers</tspan>
+    <tspan x="50" dy="18">- PostsReels (modal)</tspan>
+    <tspan x="50" dy="18">- WebView overlay</tspan>
+  </text>
+
+  <rect x="300" y="350" width="250" height="270" rx="16" ry="16" class="tab" />
+  <text x="425" y="380" text-anchor="middle" class="title">Search Tab Stack</text>
+  <text x="320" y="410" class="body">
+    <tspan x="320" dy="0">- SearchScreen</tspan>
+    <tspan x="320" dy="18">- UserProfile</tspan>
+    <tspan x="320" dy="18">- Followers</tspan>
+    <tspan x="320" dy="18">- DiscoverPeople</tspan>
+    <tspan x="320" dy="18">- ChatList</tspan>
+    <tspan x="320" dy="18">- Notifications</tspan>
+    <tspan x="320" dy="18">- About KC</tspan>
+    <tspan x="320" dy="18">- Settings</tspan>
+  </text>
+
+  <rect x="570" y="350" width="280" height="420" rx="16" ry="16" class="tab" />
+  <text x="710" y="380" text-anchor="middle" class="title">Donations Tab Stack</text>
+  <text x="590" y="410" class="body">
+    <tspan x="590" dy="0">- DonationsScreen hub</tspan>
+    <tspan x="590" dy="18">- Money / Items / Time / Knowledge</tspan>
+    <tspan x="590" dy="18">- Trump / Category / Dreams / Fertility</tspan>
+    <tspan x="590" dy="18">- Jobs / Matchmaking / MentalHealth</tspan>
+    <tspan x="590" dy="18">- GoldenAge / Languages</tspan>
+    <tspan x="590" dy="18">- Food / Clothes / Books / Furniture</tspan>
+    <tspan x="590" dy="18">- Medical / Animals / Housing / Support</tspan>
+    <tspan x="590" dy="18">- Education / Environment / Technology</tspan>
+    <tspan x="590" dy="18">- Music / Games / Riddles / Recipes</tspan>
+    <tspan x="590" dy="18">- Plants / Waste / Art / Sports</tspan>
+    <tspan x="590" dy="18">- ChatList / Notifications</tspan>
+    <tspan x="590" dy="18">- About / Settings</tspan>
+  </text>
+
+  <rect x="880" y="350" width="240" height="230" rx="16" ry="16" class="tab" />
+  <text x="1000" y="380" text-anchor="middle" class="title">Profile Tab Stack</text>
+  <text x="900" y="410" class="body">
+    <tspan x="900" dy="0">- ProfileScreen</tspan>
+    <tspan x="900" dy="18">- Settings</tspan>
+    <tspan x="900" dy="18">- ChatList</tspan>
+    <tspan x="900" dy="18">- Notifications</tspan>
+    <tspan x="900" dy="18">- About KC</tspan>
+    <tspan x="900" dy="18">- Visible only when not guest</tspan>
+  </text>
+
+  <rect x="1140" y="350" width="230" height="250" rx="16" ry="16" class="tab" />
+  <text x="1255" y="380" text-anchor="middle" class="title">Admin Tab Stack</text>
+  <text x="1160" y="410" class="body">
+    <tspan x="1160" dy="0">- AdminDashboard</tspan>
+    <tspan x="1160" dy="18">- AdminMoney</tspan>
+    <tspan x="1160" dy="18">- AdminPeople</tspan>
+    <tspan x="1160" dy="18">- AdminReview</tspan>
+    <tspan x="1160" dy="18">- AdminTasks</tspan>
+    <tspan x="1160" dy="18">- Visible for admin users</tspan>
+  </text>
+
+  <!-- Connectors from HomeStack to tabs -->
+  <line x1="1040" y1="300" x2="155" y2="350" class="connector" />
+  <line x1="1040" y1="300" x2="425" y2="350" class="connector" />
+  <line x1="1040" y1="300" x2="710" y2="350" class="connector" />
+  <line x1="1040" y1="300" x2="1000" y2="350" class="connector" />
+  <line x1="1040" y1="300" x2="1255" y2="350" class="connector" />
+
+  <!-- Global overlays & shared screens -->
+  <rect x="90" y="820" width="1220" height="340" rx="22" ry="22" class="global" />
+  <text x="700" y="860" text-anchor="middle" class="title">Global Screens & Overlays (reachable from MainNavigator)</text>
+  <text x="110" y="900" class="body">
+    <tspan x="110" dy="0">- NewChatScreen</tspan>
+    <tspan x="110" dy="18">- ChatDetailScreen</tspan>
+    <tspan x="110" dy="18">- BookmarksScreen</tspan>
+    <tspan x="110" dy="18">- UserProfileScreen (direct)</tspan>
+    <tspan x="110" dy="18">- FollowersScreen</tspan>
+    <tspan x="110" dy="18">- DiscoverPeopleScreen</tspan>
+    <tspan x="110" dy="18">- PostsReelsScreenWrapper</tspan>
+    <tspan x="110" dy="18">- WebViewScreen</tspan>
+    <tspan x="110" dy="18">- InactiveScreen -> LoginScreen</tspan>
+  </text>
+  <text x="500" y="900" class="body">
+    <tspan x="500" dy="0">- SettingsScreen</tspan>
+    <tspan x="500" dy="18">- ChatListScreen</tspan>
+    <tspan x="500" dy="18">- NotificationsScreen</tspan>
+    <tspan x="500" dy="18">- AboutKarmaCommunityScreen</tspan>
+    <tspan x="500" dy="18">- OrgOnboardingScreen</tspan>
+    <tspan x="500" dy="18">- AdminOrgApprovalsScreen</tspan>
+    <tspan x="500" dy="18">- OrgDashboardScreen</tspan>
+    <tspan x="500" dy="18">- EditProfileScreen</tspan>
+  </text>
+  <text x="900" y="900" class="caption">
+    <tspan x="900" dy="0">These screens can be invoked from notifications,</tspan>
+    <tspan x="900" dy="18">top bar shortcuts, or deep links regardless of the</tspan>
+    <tspan x="900" dy="18">current tab. Treat them as shared components when</tspan>
+    <tspan x="900" dy="18">building the Figma file (use instances + overlays).</tspan>
+  </text>
+
+  <line x1="700" y1="110" x2="700" y2="820" class="connector" />
+
+  <!-- Notes -->
+  <text x="700" y="1180" text-anchor="middle" class="caption">
+    Export created on 2025-11-17 • Remember to bump app version when flows change
+  </text>
+</svg>

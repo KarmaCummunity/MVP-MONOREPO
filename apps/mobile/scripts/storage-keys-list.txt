@@ -1,0 +1,52 @@
+# Complete list of storage keys used in the app
+# These will be cleared when resetting local data
+
+# User authentication
+current_user
+auth_mode
+firebase_user_id
+guest_mode
+
+# OAuth
+oauth_success_flag
+google_auth_user
+google_auth_token
+oauth_in_progress
+
+# App settings
+app_language
+recent_emails
+known_emails
+about_screen_seen
+
+# Database service (from dbConfig.ts)
+karma_user_data
+karma_user_settings
+karma_cached_donations
+karma_cached_rides
+karma_cached_stats
+karma_last_sync
+karma_offline_queue
+
+# Navigation states (pattern: nav_state_{mode}_{userId}_{platform})
+nav_state_site_guest_web
+nav_state_app_guest_web
+nav_state_site_guest_ios
+nav_state_app_guest_ios
+nav_state_site_guest_android
+nav_state_app_guest_android
+# Plus dynamic keys for logged-in users
+
+# Scroll positions (pattern: scroll_pos_{screenKey}_{userId})
+# Dynamic keys for each screen
+
+# Other
+bookmarks
+app_logs
+kc_web_mode
+
+# SecureStorage keys (with @SecureStorage: prefix)
+# These are managed by SecureStorage service
+
+# Database collection keys (pattern: {collection}_*)
+# These are managed by DatabaseService

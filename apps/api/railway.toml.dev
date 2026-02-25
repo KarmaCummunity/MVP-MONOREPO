@@ -1,0 +1,41 @@
+# Railway Configuration for DEVELOPMENT Environment
+# This file is a template - copy these settings to your Railway dev service
+# 
+# IMPORTANT: Each environment (dev/prod) must have:
+# - Separate Railway service
+# - Separate Postgres plugin (separate database!)
+# - Separate Redis plugin (separate cache!)
+# - Different CORS_ORIGIN values
+# - Different ENVIRONMENT variable
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node dist/main.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+# Environment Configuration - DEVELOPMENT
+ENVIRONMENT = "development"
+NODE_ENV = "development"
+
+# Google OAuth (can use same client IDs or separate ones)
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "430191522654-o70t2qnqc4bvpvmbpak7unog7pvp9c95.apps.googleusercontent.com"
+
+# CORS - Development domains (localhost + dev domain)
+CORS_ORIGIN = "http://localhost:19006,http://localhost:3000,http://localhost:8081,https://dev.karma-community-kc.com"
+
+# Security - DEVELOPMENT JWT Secret (different from production!)
+JWT_SECRET = "d8ed28a5b1e295edc952feeb890b51d894b9661da5753a2970632d94f14ca4a2"
+
+# Database and Redis will be automatically set by Railway plugins
+
+
+
+
+
