@@ -25,7 +25,7 @@ export class StatsController {
     private readonly redisCache: RedisCacheService,
     private readonly computedStatsService: ComputedStatsService,
     private readonly queriesService: StatsQueriesService,
-  ) {}
+  ) { }
 
   @Get("community")
   async getCommunityStats(
@@ -367,18 +367,18 @@ export class StatsController {
     );
 
     const stats: CommunityStats = {};
-    rows.forEach(
-      (row: {
-        stat_type: string;
-        total_value: string;
-        days_tracked: string;
-      }) => {
-        stats[row.stat_type] = {
-          value: parseInt(row.total_value, 10) || 0,
-          days_tracked: parseInt(row.days_tracked, 10) || 1,
+    rows.forEach((row) => {
+      const stat_type = String(row.stat_type || "");
+      const total_value = String(row.total_value || "0");
+      const days_tracked = String(row.days_tracked || "1");
+
+      if (stat_type) {
+        stats[stat_type] = {
+          value: parseInt(total_value, 10) || 0,
+          days_tracked: parseInt(days_tracked, 10) || 1,
         };
-      },
-    );
+      }
+    });
 
     return stats;
   }
