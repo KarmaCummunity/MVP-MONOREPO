@@ -28,7 +28,9 @@ fi
 DB_HOST="${POSTGRES_HOST:-localhost}"
 DB_PORT="${POSTGRES_PORT:-5432}"
 DB_USER="${POSTGRES_USER:-kc}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-kc_password}"
+# Note: If POSTGRES_PASSWORD is not set, script will use Docker exec (no password needed)
+# For custom database, set POSTGRES_PASSWORD in your .env file
+DB_PASSWORD="${POSTGRES_PASSWORD:-}"
 DB_NAME="${POSTGRES_DB:-kc_db}"
 
 # ============================================================================

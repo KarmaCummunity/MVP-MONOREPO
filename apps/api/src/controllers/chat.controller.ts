@@ -438,6 +438,158 @@ export class ChatController {
     }
   }
 
+  private validateSenderId(
+    authenticatedUserId: string | undefined,
+    messageSenderId: string | undefined,
+  ): { valid: boolean; senderId?: string; error?: string } {
+    if (authenticatedUserId) {
+      const senderId = messageSenderId || authenticatedUserId;
+      if (senderId !== authenticatedUserId) {
+        return {
+          valid: false,
+          error: "Cannot send message as another user",
+        };
+      }
+      return { valid: true, senderId };
+    } else {
+      if (!messageSenderId) {
+        return {
+          valid: false,
+          error: "sender_id is required when not authenticated",
+        };
+      }
+      return { valid: true, senderId: messageSenderId };
+    }
+  }
+
+  private validateMessageContent(messageData: SendMessageDto): {
+    valid: boolean;
+    error?: string;
+  } {
+    if (!messageData.content && !messageData.file_url) {
+      return {
+        valid: false,
+        error: "Message must have content or file_url",
+      };
+    }
+
+    if (messageData.content && messageData.content.length > 10000) {
+      return { valid: false, error: "Message content too long" };
+    }
+
+    if (messageData.file_url) {
+      try {
+        new URL(messageData.file_url);
+      } catch {
+        return { valid: false, error: "Invalid file_url format" };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  private async findOrCreateConversation(
+    client: import("pg").PoolClient,
+    messageData: SendMessageDto,
+    resolvedSenderId: string,
+  ): Promise<{
+    conversationId: string | null;
+    created: boolean;
+    error?: string;
+  }> {
+    if (messageData.participants && messageData.participants.length > 0) {
+      const resolvedParticipants = await Promise.all(
+        messageData.participants.map((p: string) => this.resolveUserId(p)),
+      );
+
+      for (const p of resolvedParticipants) {
+        if (!this.isValidUUID(p)) {
+          return {
+            conversationId: null,
+            created: false,
+            error: `Invalid participant ID: ${p}`,
+          };
+        }
+      }
+
+      const sortedParticipants = [...resolvedParticipants].sort((a, b) =>
+        a.localeCompare(b),
+      );
+
+      const participantsHash = sortedParticipants.join(",");
+      const lockKey = `conversation_${Buffer.from(participantsHash).toString("base64").slice(0, 16)}`;
+      const lockId = this.hashStringToInt(lockKey);
+      await client.query("SELECT pg_advisory_xact_lock($1)", [lockId]);
+
+      const { rows: existingConvs } = await client.query(
+        `
+          SELECT id FROM chat_conversations
+          WHERE participants @> $1::uuid[]
+            AND participants <@ $1::uuid[]
+            AND array_length(participants, 1) = $2
+          LIMIT 1
+        `,
+        [sortedParticipants, sortedParticipants.length],
+      );
+
+      if (existingConvs.length > 0) {
+        return {
+          conversationId: existingConvs[0].id,
+          created: false,
+        };
+      }
+
+      const { rows: newConvRows } = await client.query(
+        `
+          INSERT INTO chat_conversations (title, type, participants, created_by, metadata)
+          VALUES ($1, $2, $3::uuid[], $4::uuid, $5)
+          RETURNING *
+        `,
+        [
+          null,
+          "direct",
+          sortedParticipants,
+          resolvedSenderId,
+          messageData.metadata ? JSON.stringify(messageData.metadata) : null,
+        ],
+      );
+      return {
+        conversationId: newConvRows[0].id,
+        created: true,
+      };
+    }
+
+    return {
+      conversationId: null,
+      created: false,
+      error: "Invalid conversation ID or missing participants",
+    };
+  }
+
+  private async verifyConversationAccess(
+    client: import("pg").PoolClient,
+    conversationId: string,
+    resolvedSenderId: string,
+    authenticatedUserId: string | undefined,
+  ): Promise<boolean> {
+    if (authenticatedUserId) {
+      const { rows } = await client.query(
+        `
+        SELECT id FROM chat_conversations 
+        WHERE id = $1::uuid AND $2::uuid = ANY(participants::uuid[])
+      `,
+        [conversationId, resolvedSenderId],
+      );
+      return rows.length > 0;
+    } else {
+      const { rows } = await client.query(
+        `SELECT id FROM chat_conversations WHERE id = $1::uuid`,
+        [conversationId],
+      );
+      return rows.length > 0;
+    }
+  }
+
   @Post("messages")
   async sendMessage(
     @Body() messageData: SendMessageDto,
@@ -445,24 +597,16 @@ export class ChatController {
   ) {
     const client = await this.pool.connect();
     const authenticatedUserId = req.user?.userId;
-    let senderId: string;
 
-    if (authenticatedUserId) {
-      senderId = messageData.sender_id || authenticatedUserId;
-      if (senderId !== authenticatedUserId) {
-        client.release();
-        return { success: false, error: "Cannot send message as another user" };
-      }
-    } else {
-      if (!messageData.sender_id) {
-        client.release();
-        return {
-          success: false,
-          error: "sender_id is required when not authenticated",
-        };
-      }
-      senderId = messageData.sender_id;
+    const senderValidation = this.validateSenderId(
+      authenticatedUserId,
+      messageData.sender_id,
+    );
+    if (!senderValidation.valid) {
+      client.release();
+      return { success: false, error: senderValidation.error };
     }
+    const senderId = senderValidation.senderId ?? "";
 
     const resolvedSenderId = await this.resolveUserId(senderId);
     if (!this.isValidUUID(resolvedSenderId)) {
@@ -479,97 +623,36 @@ export class ChatController {
 
     try {
       if (!conversationId || !this.isValidUUID(conversationId)) {
-        if (messageData.participants && messageData.participants.length > 0) {
-          const resolvedParticipants = await Promise.all(
-            messageData.participants.map((p: string) => this.resolveUserId(p)),
-          );
+        await client.query("BEGIN");
+        transactionStarted = true;
 
-          for (const p of resolvedParticipants) {
-            if (!this.isValidUUID(p)) {
-              client.release();
-              return { success: false, error: `Invalid participant ID: ${p}` };
-            }
-          }
+        const result = await this.findOrCreateConversation(
+          client,
+          messageData,
+          resolvedSenderId,
+        );
 
-          // CRITICAL FIX: Sort participants to ensure consistent order
-          const sortedParticipants = [...resolvedParticipants].sort((a, b) =>
-            a.localeCompare(b),
-          );
-
-          await client.query("BEGIN");
-          transactionStarted = true;
-
-          const participantsHash = sortedParticipants.join(",");
-          const lockKey = `conversation_${Buffer.from(participantsHash).toString("base64").slice(0, 16)}`;
-          const lockId = this.hashStringToInt(lockKey);
-          await client.query("SELECT pg_advisory_xact_lock($1)", [lockId]);
-
-          // Check with sorted participants
-          const { rows: existingConvs } = await client.query(
-            `
-              SELECT id FROM chat_conversations
-              WHERE participants @> $1::uuid[]
-                AND participants <@ $1::uuid[]
-                AND array_length(participants, 1) = $2
-              LIMIT 1
-            `,
-            [sortedParticipants, sortedParticipants.length],
-          );
-
-          if (existingConvs.length > 0) {
-            conversationId = existingConvs[0].id;
-          } else {
-            // Insert with sorted participants
-            const { rows: newConvRows } = await client.query(
-              `
-                INSERT INTO chat_conversations (title, type, participants, created_by, metadata)
-                VALUES ($1, $2, $3::uuid[], $4::uuid, $5)
-                RETURNING *
-              `,
-              [
-                null,
-                "direct",
-                sortedParticipants,
-                resolvedSenderId,
-                messageData.metadata
-                  ? JSON.stringify(messageData.metadata)
-                  : null,
-              ],
-            );
-            conversationId = newConvRows[0].id;
-            conversationCreated = true;
-          }
-        } else {
+        if (result.error) {
+          if (transactionStarted) await client.query("ROLLBACK");
           client.release();
-          return {
-            success: false,
-            error: "Invalid conversation ID or missing participants",
-          };
+          return { success: false, error: result.error };
         }
+
+        conversationId = result.conversationId ?? undefined;
+        conversationCreated = result.created;
       } else {
         await client.query("BEGIN");
         transactionStarted = true;
       }
 
-      let convCheck;
-      if (authenticatedUserId) {
-        const { rows } = await client.query(
-          `
-          SELECT id FROM chat_conversations 
-          WHERE id = $1::uuid AND $2::uuid = ANY(participants::uuid[])
-        `,
-          [conversationId, resolvedSenderId],
-        );
-        convCheck = rows;
-      } else {
-        const { rows } = await client.query(
-          `SELECT id FROM chat_conversations WHERE id = $1::uuid`,
-          [conversationId],
-        );
-        convCheck = rows;
-      }
+      const hasAccess = await this.verifyConversationAccess(
+        client,
+        conversationId ?? "",
+        resolvedSenderId,
+        authenticatedUserId,
+      );
 
-      if (convCheck.length === 0) {
+      if (!hasAccess) {
         if (transactionStarted) await client.query("ROLLBACK");
         client.release();
         return {
@@ -578,29 +661,11 @@ export class ChatController {
         };
       }
 
-      if (!messageData.content && !messageData.file_url) {
+      const contentValidation = this.validateMessageContent(messageData);
+      if (!contentValidation.valid) {
         if (transactionStarted) await client.query("ROLLBACK");
         client.release();
-        return {
-          success: false,
-          error: "Message must have content or file_url",
-        };
-      }
-
-      if (messageData.content && messageData.content.length > 10000) {
-        if (transactionStarted) await client.query("ROLLBACK");
-        client.release();
-        return { success: false, error: "Message content too long" };
-      }
-
-      if (messageData.file_url) {
-        try {
-          new URL(messageData.file_url);
-        } catch {
-          if (transactionStarted) await client.query("ROLLBACK");
-          client.release();
-          return { success: false, error: "Invalid file_url format" };
-        }
+        return { success: false, error: contentValidation.error };
       }
 
       const { rows } = await client.query(

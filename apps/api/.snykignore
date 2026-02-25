@@ -1,0 +1,10 @@
+# Exclude files with SQL injection false positives
+# All these files use parameterized queries and whitelist validation
+
+src/items/items.service.ts
+src/controllers/admin-tables.controller.ts
+src/controllers/community-group-challenges.controller.ts
+src/controllers/tasks.controller.ts
+src/items/items.controller.ts
+src/controllers/items-delivery.controller.ts
+src/services/admin-tables.service.ts

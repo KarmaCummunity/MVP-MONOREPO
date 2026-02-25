@@ -10,7 +10,10 @@ services:
       - "5435:5432"
     environment:
       POSTGRES_USER: kc
-      POSTGRES_PASSWORD: local_secret
+      # IMPORTANT: Set a secure password here for local development
+      # This should match the password in your .env DATABASE_URL
+      # Example: postgresql://kc:YOUR_PASSWORD_HERE@localhost:5435/kc_db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_env}
       POSTGRES_DB: kc_db
     volumes:
       - pgdata:/var/lib/postgresql/data

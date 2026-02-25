@@ -17,18 +17,29 @@ if (fs.existsSync(envPath)) {
 async function addImageUrlColumn() {
   // Use DATABASE_URL if available, otherwise build from individual vars
   const connectionString = process.env.DATABASE_URL;
-  const config = connectionString
-    ? { connectionString }
-    : {
-        host: process.env.POSTGRES_HOST || process.env.PGHOST || "localhost",
-        port: Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5432),
-        user: process.env.POSTGRES_USER || process.env.PGUSER || "kc",
-        password:
-          process.env.POSTGRES_PASSWORD ||
-          process.env.PGPASSWORD ||
-          "kc_password",
-        database: process.env.POSTGRES_DB || process.env.PGDATABASE || "kc_db",
-      };
+
+  let config;
+  if (connectionString) {
+    config = { connectionString };
+  } else {
+    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD;
+    if (!password) {
+      console.error("❌ Database password is required!");
+      console.error(
+        "   Set POSTGRES_PASSWORD or PGPASSWORD environment variable",
+      );
+      console.error("   Or use DATABASE_URL connection string");
+      process.exit(1);
+    }
+
+    config = {
+      host: process.env.POSTGRES_HOST || process.env.PGHOST || "localhost",
+      port: Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5435),
+      user: process.env.POSTGRES_USER || process.env.PGUSER || "kc",
+      password,
+      database: process.env.POSTGRES_DB || process.env.PGDATABASE || "kc_db",
+    };
+  }
 
   const pool = new Pool(config);
 

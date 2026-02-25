@@ -9,11 +9,18 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 async function run() {
+  // Validate required environment variables
+  if (!process.env.POSTGRES_PASSWORD && !process.env.DATABASE_URL) {
+    console.error("❌ Database password is required!");
+    console.error("   Set POSTGRES_PASSWORD or DATABASE_URL in your .env file");
+    process.exit(1);
+  }
+
   const pool = new Pool({
     host: process.env.POSTGRES_HOST || "localhost",
-    port: Number(process.env.POSTGRES_PORT || 5432),
+    port: Number(process.env.POSTGRES_PORT || 5435),
     user: process.env.POSTGRES_USER || "kc",
-    password: process.env.POSTGRES_PASSWORD || "kc_password",
+    password: process.env.POSTGRES_PASSWORD,
     database: process.env.POSTGRES_DB || "kc_db",
   });
 

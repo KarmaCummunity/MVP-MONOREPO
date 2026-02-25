@@ -1,0 +1,146 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/pr-quality-check.yml'
+
+jobs:
+  quality-check:
+    name: PR Quality Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: apps/api
+        run: npm ci
+        
+      # ============================================
+      # Changed Files Detection
+      # ============================================
+      - name: Get changed files
+        id: changed-files
+        run: |
+          cd apps/api
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get changed TypeScript files
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA...$HEAD_SHA | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "no_files=true" >> $GITHUB_OUTPUT
+            echo "### ℹ️ No TypeScript files changed" >> $GITHUB_STEP_SUMMARY
+          else
+            FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
+            echo "no_files=false" >> $GITHUB_OUTPUT
+            echo "count=$FILE_COUNT" >> $GITHUB_OUTPUT
+            
+            echo "### 📝 Changed Files ($FILE_COUNT)" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$CHANGED_FILES" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      # ============================================
+      # ESLint - Only changed files
+      # ============================================
+      - name: Run ESLint on changed files
+        if: steps.changed-files.outputs.no_files == 'false'
+        working-directory: apps/api
+        run: |
+          echo "Running ESLint on ${{ steps.changed-files.outputs.count }} changed files..."
+          
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          
+          if npm run lint -- $(echo "$CHANGED_FILES" | tr '\n' ' '); then
+            echo "### ✅ ESLint Passed" >> $GITHUB_STEP_SUMMARY
+            echo "No linting errors in changed files" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ ESLint Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please fix linting errors before merging" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+      # ============================================
+      # Tests
+      # ============================================
+      - name: Run tests with coverage
+        working-directory: apps/api
+        run: npm run test:ci
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-jwt-secret-32-chars-minimum!
+          GOOGLE_CLIENT_ID: test-google-client-id
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: test-web-client-id
+          
+      - name: Add test summary
+        if: always()
+        run: |
+          cd apps/api
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "### 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat coverage/coverage-summary.json | jq '.total' >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      # ============================================
+      # SonarCloud Scan
+      # ============================================
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: apps/api
+          
+      # ============================================
+      # Snyk Security - PR Check
+      # ============================================
+      - name: Run Snyk Security Check
+        if: env.SNYK_TOKEN != ''
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --fail-on=upgradable
+          command: test
+          
+      # ============================================
+      # Comment on PR
+      # ============================================
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 Quality Check Results\n\n${summary}`
+            });

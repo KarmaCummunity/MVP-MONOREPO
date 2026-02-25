@@ -8,8 +8,15 @@ import * as path from 'path';
  * חשוב: זה database נפרד לחלוטין מ-production ו-development!
  */
 export async function createTestDatabase(): Promise<Pool> {
-  const testDbUrl = process.env.TEST_DATABASE_URL || 
-    'postgresql://kc:kc_password@localhost:5432/kc_test_db';
+  const testDbUrl = process.env.TEST_DATABASE_URL;
+  
+  if (!testDbUrl) {
+    throw new Error(
+      'TEST_DATABASE_URL is required for testing!\n' +
+      'Set it in your .env.test file or environment.\n' +
+      'Example: TEST_DATABASE_URL=postgresql://kc:test_password@localhost:5435/kc_test_db'
+    );
+  }
   
   const pool = new Pool({ connectionString: testDbUrl });
   

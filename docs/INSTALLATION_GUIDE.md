@@ -147,19 +147,30 @@ GOOGLE_CLIENT_ID=your-google-client-id-here
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-web-client-id-here (fallback)
 
 # Database
-DATABASE_URL=postgresql://user:password@host:5432/database
-# OR individual DB settings:
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=kc
-POSTGRES_PASSWORD=kc_password
-POSTGRES_DB=kc_db
+# IMPORTANT: Replace 'password' with a secure password!
+# Generate one with: openssl rand -base64 16
+DATABASE_URL=postgresql://kc:YOUR_SECURE_PASSWORD@localhost:5435/kc_db
+
+# Also set POSTGRES_PASSWORD for Docker and scripts
+POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD
+
+# OR use individual DB settings (password still required):
+# POSTGRES_HOST=localhost
+# POSTGRES_PORT=5435
+# POSTGRES_USER=kc
+# POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD
+# POSTGRES_DB=kc_db
 
 # Redis
 REDIS_URL=redis://localhost:6379
 # OR individual Redis settings:
 REDIS_HOST=localhost
 REDIS_PORT=6379
+
+# SECURITY NOTE:
+# - NEVER use hardcoded passwords like 'kc_password' or 'local_secret'
+# - Generate unique passwords for each environment (dev, test, prod)
+# - See SECURITY.md for best practices
 
 # Optional
 PORT=3001

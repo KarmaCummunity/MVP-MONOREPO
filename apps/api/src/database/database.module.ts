@@ -50,13 +50,24 @@ export const PG_POOL = "PG_POOL";
         const host =
           process.env.POSTGRES_HOST || process.env.PGHOST || "localhost";
         const port = Number(
-          process.env.POSTGRES_PORT || process.env.PGPORT || 5432,
+          process.env.POSTGRES_PORT || process.env.PGPORT || 5435,
         );
         const user = process.env.POSTGRES_USER || process.env.PGUSER || "kc";
         const password =
-          process.env.POSTGRES_PASSWORD ||
-          process.env.PGPASSWORD ||
-          "kc_password";
+          process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD;
+
+        // Validate password is set
+        if (!password) {
+          console.error("❌ FATAL: Database password is required!");
+          console.error(
+            "   Set POSTGRES_PASSWORD or PGPASSWORD environment variable",
+          );
+          console.error("   Or use DATABASE_URL connection string");
+          throw new Error(
+            "Database password is required. Check your .env file.",
+          );
+        }
+
         const database =
           process.env.POSTGRES_DB || process.env.PGDATABASE || "kc_db";
         const sslFlag =

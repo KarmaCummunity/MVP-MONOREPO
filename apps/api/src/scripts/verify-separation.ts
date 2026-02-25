@@ -39,31 +39,54 @@ async function verifySeparation() {
     const dbInfo = extractDbInfo(databaseUrl);
     console.log("📊 מידע על מסד הנתונים:");
     console.log(`  Host: ${dbInfo.host}`);
-    console.log(`  Database: ${dbInfo.database}`);
-    console.log(`  Password prefix: ${dbInfo.passwordPrefix}...\n`);
+    console.log(`  Database: ${dbInfo.database}\n`);
 
-    // Check if this is the expected database for the environment
+    // Verify environment separation by checking host patterns
+    // This checks the database host to ensure you're connecting to the right environment
     if (environment === "development") {
       if (
-        dbInfo.passwordPrefix === "mmWLXgvXF" ||
-        dbInfo.host.includes("postgres-a3d6beef")
+        dbInfo.host.includes("localhost") ||
+        dbInfo.host.includes("127.0.0.1") ||
+        dbInfo.host.includes("postgres-a3d6beef") ||
+        dbInfo.database.includes("dev") ||
+        dbInfo.database.includes("test")
       ) {
         console.log("✅ זה נראה כמו מסד נתונים של Development\n");
-      } else if (dbInfo.passwordPrefix === "RHkhivARk") {
+      } else if (
+        dbInfo.host.includes("railway.app") ||
+        dbInfo.host.includes("production") ||
+        (!dbInfo.host.includes("localhost") &&
+          !dbInfo.host.includes("127.0.0.1"))
+      ) {
         console.error("🚨 זה נראה כמו מסד נתונים של PRODUCTION!");
         console.error(
           "   אתה מנסה לבדוק development אבל מחובר ל-production!\n",
         );
+        console.error(`   Host: ${dbInfo.host}`);
+        console.error(`   Database: ${dbInfo.database}\n`);
         process.exit(1);
       }
     } else if (environment === "production") {
-      if (dbInfo.passwordPrefix === "RHkhivARk") {
+      if (
+        dbInfo.host.includes("railway.app") ||
+        dbInfo.host.includes("production") ||
+        (!dbInfo.host.includes("localhost") &&
+          !dbInfo.host.includes("127.0.0.1") &&
+          !dbInfo.host.includes("dev"))
+      ) {
         console.log("✅ זה נראה כמו מסד נתונים של Production\n");
-      } else if (dbInfo.passwordPrefix === "mmWLXgvXF") {
+      } else if (
+        dbInfo.host.includes("localhost") ||
+        dbInfo.host.includes("127.0.0.1") ||
+        dbInfo.database.includes("dev") ||
+        dbInfo.database.includes("test")
+      ) {
         console.error("🚨 זה נראה כמו מסד נתונים של DEVELOPMENT!");
         console.error(
           "   אתה מנסה לבדוק production אבל מחובר ל-development!\n",
         );
+        console.error(`   Host: ${dbInfo.host}`);
+        console.error(`   Database: ${dbInfo.database}\n`);
         process.exit(1);
       }
     }
@@ -140,10 +163,10 @@ async function verifySeparation() {
 function extractDbInfo(url: string): {
   host: string;
   database: string;
-  passwordPrefix: string;
 } {
   try {
     // Format: postgresql://user:password@host:port/database
+    // We extract host and database name, but NOT the password for security
     const match = url.match(
       /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/,
     );
@@ -151,13 +174,12 @@ function extractDbInfo(url: string): {
       return {
         host: match[3],
         database: match[5],
-        passwordPrefix: match[2].substring(0, 9),
       };
     }
   } catch {
     // Ignore
   }
-  return { host: "unknown", database: "unknown", passwordPrefix: "unknown" };
+  return { host: "unknown", database: "unknown" };
 }
 
 verifySeparation();

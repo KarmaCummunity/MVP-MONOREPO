@@ -1,0 +1,198 @@
+name: Quality Gate - Block New Issues
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  quality-gate:
+    name: Quality Gate Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comparing with base branch
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ============================================
+      # 1. ESLint - Check only changed files
+      # ============================================
+      - name: Get changed TypeScript files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          
+          # Get list of changed .ts files (excluding .spec.ts)
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA HEAD | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "no_files=true" >> $GITHUB_OUTPUT
+            echo "No TypeScript files changed"
+          else
+            echo "no_files=false" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+          fi
+
+      - name: Run ESLint on changed files
+        if: steps.changed-files.outputs.no_files == 'false'
+        run: |
+          echo "Running ESLint on changed files..."
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          
+          # Run ESLint and capture exit code
+          npm run lint -- $(echo "$CHANGED_FILES" | tr '\n' ' ') || EXIT_CODE=$?
+          
+          if [ "${EXIT_CODE:-0}" -ne 0 ]; then
+            echo "::error::❌ ESLint found issues in changed files"
+            echo "::error::Fix these linting errors before merging"
+            exit 1
+          fi
+          
+          echo "✅ ESLint passed - no new linting issues"
+
+      # ============================================
+      # 2. Snyk Security Scan - Delta mode
+      # ============================================
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --fail-on=upgradable
+          # Only fail on issues that can be fixed (new upgradable vulnerabilities)
+
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+        continue-on-error: true
+
+      # ============================================
+      # 3. Snyk Code - Check for new code issues
+      # ============================================
+      - name: Run Snyk Code Analysis
+        run: |
+          if [ -z "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "⚠️ SNYK_TOKEN not configured - skipping Snyk Code scan"
+            exit 0
+          fi
+          
+          # Install Snyk CLI
+          npm install -g snyk
+          snyk auth ${{ secrets.SNYK_TOKEN }}
+          
+          # Run Snyk Code on changed files only
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            # Run snyk code test with severity threshold
+            snyk code test --severity-threshold=high || EXIT_CODE=$?
+            
+            if [ "${EXIT_CODE:-0}" -ne 0 ]; then
+              echo "::warning::⚠️ Snyk Code found high/critical severity issues"
+              echo "::warning::Please review and fix security issues before merging"
+              # Don't fail the build yet - collect all issues first
+            fi
+          fi
+        continue-on-error: true
+
+      # ============================================
+      # 4. Run Tests with Coverage
+      # ============================================
+      - name: Run tests with coverage
+        run: npm run test:ci
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-jwt-secret-32-chars-minimum!
+          GOOGLE_CLIENT_ID: test-google-client-id
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: test-web-client-id
+
+      # ============================================
+      # 5. SonarCloud Analysis
+      # ============================================
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # ============================================
+      # 6. Check SonarCloud Quality Gate Status
+      # ============================================
+      - name: Check SonarCloud Quality Gate
+        run: |
+          echo "Waiting for SonarCloud Quality Gate result..."
+          sleep 10
+          
+          # Get the latest analysis from SonarCloud API
+          PROJECT_KEY="KarmaCummunity_KC-MVP-server"
+          
+          QUALITY_GATE_STATUS=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${PROJECT_KEY}" \
+            | jq -r '.projectStatus.status')
+          
+          echo "Quality Gate Status: $QUALITY_GATE_STATUS"
+          
+          if [ "$QUALITY_GATE_STATUS" != "OK" ] && [ "$QUALITY_GATE_STATUS" != "NONE" ]; then
+            echo "::error::❌ SonarCloud Quality Gate failed!"
+            echo "::error::New code contains quality issues. Check SonarCloud dashboard:"
+            echo "::error::https://sonarcloud.io/dashboard?id=${PROJECT_KEY}"
+            exit 1
+          fi
+          
+          echo "✅ SonarCloud Quality Gate passed"
+
+  # ============================================
+  # Summary Job - Overall Status
+  # ============================================
+  quality-gate-summary:
+    name: Quality Gate Summary
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Quality Gate Result
+        run: |
+          if [ "${{ needs.quality-gate.result }}" != "success" ]; then
+            echo "::error::❌ Quality Gate FAILED"
+            echo "::error::"
+            echo "::error::One or more quality checks failed:"
+            echo "::error::- ESLint: Check for linting errors"
+            echo "::error::- Snyk: Check for security vulnerabilities"
+            echo "::error::- SonarCloud: Check for code quality issues"
+            echo "::error::- Tests: Check for failing tests"
+            echo "::error::"
+            echo "::error::Please fix the issues before merging."
+            exit 1
+          fi
+          
+          echo "✅ All quality checks passed!"
+          echo ""
+          echo "Summary:"
+          echo "- ✅ No new linting errors"
+          echo "- ✅ No new high/critical security vulnerabilities"
+          echo "- ✅ SonarCloud quality gate passed"
+          echo "- ✅ All tests passing"

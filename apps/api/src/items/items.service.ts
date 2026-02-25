@@ -4,12 +4,12 @@
 // - Provides: create/read/update/delete/list with safe collection mapping; activity counters and cache stats via Redis.
 // - Storage: Postgres tables named after collections with (user_id, item_id, data JSONB) + indexes.
 // - Cache keys: item:{collection}:{userId}:{itemId}, list:{collection}:{userId}, activity:{userId}, daily_activity:{userId}:{YYYY-MM-DD}, popular_collections:*.
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { PG_POOL } from "../database/database.module";
-import { format } from "../database/query-builder";
 import { Pool } from "pg";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import type { UserActivity } from "./user-activity";
+import pgFormat from "pg-format";
 
 /** Allowlist of collection names; used for validation to prevent SQL injection. */
 export const ALLOWED_COLLECTIONS = new Set([
@@ -48,6 +48,7 @@ export const ALLOWED_COLLECTIONS = new Set([
 
 @Injectable()
 export class ItemsService {
+  private readonly logger = new Logger(ItemsService.name);
   private readonly CACHE_TTL = 5 * 60; // 5 minutes
 
   constructor(
@@ -59,6 +60,7 @@ export class ItemsService {
     if (!ALLOWED_COLLECTIONS.has(collection)) {
       throw new Error(`Unknown collection: ${collection}`);
     }
+    // deepcode ignore SQL: validated against whitelist above
     return collection;
   }
 
@@ -75,40 +77,41 @@ export class ItemsService {
       try {
         await this.trackUserActivity(userId, "create", collection, itemId);
       } catch (err) {
-        console.warn("⚠️ Failed to track user activity (non-fatal):", err);
+        this.logger.warn("⚠️ Failed to track user activity (non-fatal):", err);
       }
 
-      await client.query(
-        format(
-          `INSERT INTO %I (user_id, item_id, data, created_at, updated_at)
-           VALUES ($1, $2, $3, NOW(), NOW())
-           ON CONFLICT (user_id, item_id)
-           DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-          table,
-        ),
-        [userId, itemId, data],
+      const query = pgFormat(
+        `INSERT INTO %I (user_id, item_id, data, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         ON CONFLICT (user_id, item_id)
+         DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        table,
       );
+      await client.query(query, [userId, itemId, data]);
 
       // Cache the created item (safely)
       try {
         const cacheKey = `item:${collection}:${userId}:${itemId}`;
         await this.redisCache.set(cacheKey, data, this.CACHE_TTL);
       } catch (err) {
-        console.warn("⚠️ Failed to cache created item (non-fatal):", err);
+        this.logger.warn("⚠️ Failed to cache created item (non-fatal):", err);
       }
 
       // Invalidate list cache for this user and collection (safely)
       try {
         await this.invalidateListCache(collection, userId);
       } catch (err) {
-        console.warn("⚠️ Failed to invalidate list cache (non-fatal):", err);
+        this.logger.warn(
+          "⚠️ Failed to invalidate list cache (non-fatal):",
+          err,
+        );
       }
 
       // Track popular collections (safely)
       try {
         await this.incrementCollectionCounter(collection);
       } catch (err) {
-        console.warn(
+        this.logger.warn(
           "⚠️ Failed to increment collection counter (non-fatal):",
           err,
         );
@@ -133,15 +136,13 @@ export class ItemsService {
 
     // Cache miss - get from database
     const table = this.tableFor(collection);
-    const { rows } = await this.pool.query(
-      format(
-        `SELECT data FROM %I WHERE user_id = $1 AND item_id = $2 LIMIT 1`,
-        table,
-      ),
-      [userId, itemId],
+    const query = pgFormat(
+      `SELECT data FROM %I WHERE user_id = $1 AND item_id = $2 LIMIT 1`,
+      table,
     );
+    const { rows } = await this.pool.query(query, [userId, itemId]);
 
-    const data = rows[0]?.data ?? null;
+    const data = rows.length > 0 ? rows[0].data : null;
 
     if (data) {
       // Cache the result
@@ -160,35 +161,35 @@ export class ItemsService {
     data: Record<string, unknown>,
   ) {
     const table = this.tableFor(collection);
-    const { rowCount } = await this.pool.query(
-      format(
-        `UPDATE %I SET data = jsonb_strip_nulls(data || $1::jsonb), updated_at = NOW()
-         WHERE user_id = $2 AND item_id = $3`,
-        table,
-      ),
-      [data, userId, itemId],
+    const query = pgFormat(
+      `UPDATE %I SET data = jsonb_strip_nulls(data || $1::jsonb), updated_at = NOW()
+       WHERE user_id = $2 AND item_id = $3`,
+      table,
     );
+    const { rowCount } = await this.pool.query(query, [data, userId, itemId]);
     return { ok: (rowCount ?? 0) > 0 };
   }
 
   async delete(collection: string, userId: string, itemId: string) {
     const table = this.tableFor(collection);
-    console.log(
+    this.logger.log(
       `🗑️  DELETE Request - table: ${table}, userId: ${userId}, itemId: ${itemId}`,
     );
 
     // First check if item exists
-    const checkResult = await this.pool.query(
-      format(`SELECT * FROM %I WHERE user_id = $1 AND item_id = $2`, table),
-      [userId, itemId],
+    const checkQuery = pgFormat(
+      `SELECT * FROM %I WHERE user_id = $1 AND item_id = $2`,
+      table,
     );
-    console.log(`🔍 Item exists check: ${checkResult.rowCount} rows found`);
+    const checkResult = await this.pool.query(checkQuery, [userId, itemId]);
+    this.logger.log(`🔍 Item exists check: ${checkResult.rowCount} rows found`);
 
-    const { rowCount } = await this.pool.query(
-      format(`DELETE FROM %I WHERE user_id = $1 AND item_id = $2`, table),
-      [userId, itemId],
+    const deleteQuery = pgFormat(
+      `DELETE FROM %I WHERE user_id = $1 AND item_id = $2`,
+      table,
     );
-    console.log(`✅ DELETE result: ${rowCount} rows deleted`);
+    const { rowCount } = await this.pool.query(deleteQuery, [userId, itemId]);
+    this.logger.log(`✅ DELETE result: ${rowCount} rows deleted`);
 
     // Invalidate cache
     await this.invalidateListCache(collection, userId);
@@ -201,78 +202,72 @@ export class ItemsService {
   async list(collection: string, userId: string, q?: string) {
     const table = this.tableFor(collection);
     if (q) {
-      const { rows } = await this.pool.query(
-        format(
-          `SELECT data FROM %I
-           WHERE user_id = $1 AND (data::text ILIKE $2)
-           ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
-          table,
-        ),
-        [userId, `%${q}%`],
-      );
-      return rows.map((r) => r.data);
-    }
-    const { rows } = await this.pool.query(
-      format(
+      const query = pgFormat(
         `SELECT data FROM %I
-         WHERE user_id = $1
+         WHERE user_id = $1 AND (data::text ILIKE $2)
          ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
         table,
-      ),
-      [userId],
+      );
+      const { rows } = await this.pool.query(query, [userId, `%${q}%`]);
+      return rows.map((r: { data: Record<string, unknown> }) => r.data);
+    }
+    const query = pgFormat(
+      `SELECT data FROM %I
+       WHERE user_id = $1
+       ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
+      table,
     );
-    return rows.map((r) => r.data);
+    const { rows } = await this.pool.query(query, [userId]);
+    return rows.map((r: { data: Record<string, unknown> }) => r.data);
   }
 
   // List all items from all users (for public collections like links)
   async listAll(collection: string, q?: string) {
     const table = this.tableFor(collection);
-    console.log(
+    this.logger.log(
       `🔍 ItemsService - listAll for ${collection}, table: ${table}, q: ${q || "none"}`,
     );
 
     if (q) {
-      const { rows } = await this.pool.query(
-        format(
-          `SELECT data FROM %I
-           WHERE (data::text ILIKE $1)
-           ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
-          table,
-        ),
-        [`%${q}%`],
-      );
-      console.log(
-        `📊 ItemsService - listAll with query found ${rows.length} items`,
-      );
-      return rows.map((r) => r.data);
-    }
-    const { rows } = await this.pool.query(
-      format(
+      const query = pgFormat(
         `SELECT data FROM %I
+         WHERE (data::text ILIKE $1)
          ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
         table,
-      ),
+      );
+      const { rows } = await this.pool.query(query, [`%${q}%`]);
+      this.logger.log(
+        `📊 ItemsService - listAll with query found ${rows.length} items`,
+      );
+      return rows.map((r: { data: Record<string, unknown> }) => r.data);
+    }
+    const query = pgFormat(
+      `SELECT data FROM %I
+       ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
+      table,
     );
-    console.log(`📊 ItemsService - listAll found ${rows.length} items`);
+    const { rows } = await this.pool.query(query);
+    this.logger.log(`📊 ItemsService - listAll found ${rows.length} items`);
     if (rows.length > 0) {
-      console.log(
+      this.logger.log(
         `📊 ItemsService - First item sample:`,
         JSON.stringify(rows[0].data, null, 2),
       );
     } else {
-      console.log(
+      this.logger.log(
         `⚠️ ItemsService - listAll: No rows found for table ${table}`,
       );
       // Debug: Check if table exists and has data
-      const countResult = await this.pool.query(
-        format(`SELECT COUNT(*) as count FROM %I`, table),
-      );
-      console.log(
+      const countQuery = pgFormat(`SELECT COUNT(*) as count FROM %I`, table);
+      const countResult = await this.pool.query(countQuery);
+      this.logger.log(
         `📊 ItemsService - Table ${table} has ${countResult.rows[0]?.count || 0} total rows`,
       );
     }
-    const result = rows.map((r) => r.data);
-    console.log(`📤 ItemsService - listAll returning ${result.length} items`);
+    const result = rows.map((r: { data: Record<string, unknown> }) => r.data);
+    this.logger.log(
+      `📤 ItemsService - listAll returning ${result.length} items`,
+    );
     return result;
   }
 

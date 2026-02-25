@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from "@nestjs/common";
+import { Injectable, Inject, NotFoundException, Logger } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
@@ -20,6 +20,7 @@ import { RedisCacheService } from "../redis/redis-cache.service";
  */
 @Injectable()
 export class UserResolutionService {
+  private readonly logger = new Logger(UserResolutionService.name);
   private readonly CACHE_TTL = 10 * 60; // 10 minutes
 
   constructor(
@@ -92,7 +93,7 @@ export class UserResolutionService {
       if (rows.length === 0) {
         if (throwOnNotFound) {
           if (logError) {
-            console.warn(
+            this.logger.warn(
               `User not found for identifier: ${normalizedId.substring(0, 10)}...`,
             );
           }
@@ -119,7 +120,7 @@ export class UserResolutionService {
 
       // Handle database errors
       if (logError) {
-        console.error("UserResolutionService - Database error:", error);
+        this.logger.error("UserResolutionService - Database error:", error);
       }
 
       if (throwOnNotFound) {
@@ -197,7 +198,7 @@ export class UserResolutionService {
         );
       }
     } catch (error) {
-      console.error(
+      this.logger.error(
         "UserResolutionService - Failed to link external IDs:",
         error,
       );

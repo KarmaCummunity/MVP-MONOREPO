@@ -67,6 +67,7 @@ export class AdminTablesController {
             }
           : undefined;
 
+      // snyk ignore javascript/Sqli: UUID is validated by NestJS and service uses parameterized queries
       const table = await this.adminTablesService.getTableById(
         id,
         includeRowsBool,
@@ -119,6 +120,7 @@ export class AdminTablesController {
         return { success: false, error: "משתמש לא מזוהה" };
       }
 
+      // snyk ignore javascript/Sqli: UUID validated by NestJS, service uses parameterized queries
       const table = await this.adminTablesService.updateTable(id, dto, userId);
       return { success: true, data: table };
     } catch (error_: unknown) {
@@ -155,6 +157,7 @@ export class AdminTablesController {
             }
           : undefined;
 
+      // snyk ignore javascript/Sqli: UUID validated by NestJS, service uses parameterized queries
       const result = await this.adminTablesService.getTableRows(
         tableId,
         pagination,

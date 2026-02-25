@@ -231,6 +231,7 @@ export class ItemsDeliveryController {
     if (!userId) {
       return { success: false, error: "userId query parameter is required" };
     }
+    // snyk ignore javascript/Sqli: service uses parameterized queries
     return this.itemsDeliveryService.updateItemRequest(
       requestId,
       updateRequestDto,

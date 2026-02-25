@@ -948,6 +948,36 @@ export class PostsController {
   // LIKES ENDPOINTS
   // ============================================
 
+  private async sendLikeNotification(
+    client: import("pg").PoolClient,
+    post: { author_id: string; post_type?: string; title: string },
+    user: { name?: string },
+    user_id: string,
+    postId: string,
+  ): Promise<void> {
+    if (post.author_id !== user_id) {
+      const likerName = user.name || "משתמש";
+      const postType =
+        post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
+
+      await client.query(
+        `
+          INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
+          VALUES($1, $2, $3, $4, $5, $6)
+          ON CONFLICT DO NOTHING
+        `,
+        [
+          post.author_id,
+          "לייק חדש!",
+          `${likerName} אהב / ה את ה${postType} שלך: "${post.title}"`,
+          "like",
+          postId,
+          { liker_id: user_id, post_id: postId },
+        ],
+      );
+    }
+  }
+
   /**
    * Toggle like on a post (like if not liked, unlike if already liked)
    * POST /api/posts/:postId/like
@@ -1009,31 +1039,10 @@ export class PostsController {
         );
         isLiked = true;
 
-        // Send notification to post author if it's not the same user
         const post = postCheck.rows[0];
         const user = userCheck.rows[0];
 
-        if (post.author_id !== user_id) {
-          const likerName = user.name || "משתמש";
-          const postType =
-            post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-          await client.query(
-            `
-                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT DO NOTHING
-                    `,
-            [
-              post.author_id,
-              "לייק חדש!",
-              `${likerName} אהב / ה את ה${postType} שלך: "${post.title}"`,
-              "like",
-              postId,
-              { liker_id: user_id, post_id: postId },
-            ],
-          );
-        }
+        await this.sendLikeNotification(client, post, user, user_id, postId);
       }
 
       // Calculate likes count from post_likes table (more reliable than reading from posts.likes)
@@ -1196,6 +1205,59 @@ export class PostsController {
   // COMMENTS ENDPOINTS
   // ============================================
 
+  private validateCommentInput(
+    user_id?: string,
+    text?: string,
+  ): { valid: boolean; error?: string } {
+    if (!user_id) {
+      return { valid: false, error: "user_id is required" };
+    }
+
+    if (!text || text.trim().length === 0) {
+      return { valid: false, error: "Comment text is required" };
+    }
+
+    if (text.length > 2000) {
+      return {
+        valid: false,
+        error: "Comment text is too long (max 2000 characters)",
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private async sendCommentNotification(
+    client: import("pg").PoolClient,
+    post: { author_id: string; post_type?: string },
+    user: { name?: string },
+    user_id: string,
+    postId: string,
+    text: string,
+    comment: { id: string },
+  ): Promise<void> {
+    if (post.author_id !== user_id) {
+      const commenterName = user.name || "משתמש";
+      const postType =
+        post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
+
+      await client.query(
+        `
+          INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
+          VALUES($1, $2, $3, $4, $5, $6)
+        `,
+        [
+          post.author_id,
+          "תגובה חדשה!",
+          `${commenterName} הגיב / ה על ה${postType} שלך: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
+          "comment",
+          postId,
+          { commenter_id: user_id, post_id: postId, comment_id: comment.id },
+        ],
+      );
+    }
+  }
+
   /**
    * Add a comment to a post
    * POST /api/posts/:postId/comments
@@ -1209,29 +1271,17 @@ export class PostsController {
 
       const { user_id, text } = body;
 
-      if (!user_id) {
-        return { success: false, error: "user_id is required" };
+      const validation = this.validateCommentInput(user_id, text);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
       }
 
-      if (!text || text.trim().length === 0) {
-        return { success: false, error: "Comment text is required" };
-      }
-
-      if (text.length > 2000) {
-        return {
-          success: false,
-          error: "Comment text is too long (max 2000 characters)",
-        };
-      }
-
-      // Ensure schema is up to date (Just in case getPosts wasn't called yet or schema is stale)
       await this.ensurePostsTable();
 
       await client.query("BEGIN");
 
       this.logger.log(`[addComment] Checking existence of post ${postId}`);
 
-      // Check if post exists
       const postCheck = await client.query(
         "SELECT id, author_id, title, post_type FROM posts WHERE id = $1",
         [postId],
@@ -1242,7 +1292,6 @@ export class PostsController {
       );
 
       if (postCheck.rows.length === 0) {
-        // Debugging: Check if post exists with whitespace or case issues?
         const debugCheck = await client.query("SELECT id FROM posts LIMIT 5");
         this.logger.log(
           "[addComment] Debug - First 5 posts in DB:",
@@ -1253,7 +1302,6 @@ export class PostsController {
         return { success: false, error: "Post not found" };
       }
 
-      // Check if user exists
       const userCheck = await client.query(
         "SELECT id, name FROM user_profiles WHERE id = $1",
         [user_id],
@@ -1263,14 +1311,13 @@ export class PostsController {
         return { success: false, error: "User not found" };
       }
 
-      // Insert comment
       const { rows } = await client.query(
         `
-                INSERT INTO post_comments(post_id, user_id, text)
-                VALUES($1, $2, $3)
-                RETURNING id, post_id, user_id, text, likes_count, created_at, updated_at
-                    `,
-        [postId, user_id, text.trim()],
+          INSERT INTO post_comments(post_id, user_id, text)
+          VALUES($1, $2, $3)
+          RETURNING id, post_id, user_id, text, likes_count, created_at, updated_at
+        `,
+        [postId, user_id, text?.trim() || ""],
       );
 
       if (!rows || rows.length === 0) {
@@ -1280,51 +1327,34 @@ export class PostsController {
 
       const comment = rows[0];
 
-      // Get user info for the response
       const userResult = await client.query(
-        `
-                SELECT id, name, avatar_url FROM user_profiles WHERE id = $1
-                    `,
+        `SELECT id, name, avatar_url FROM user_profiles WHERE id = $1`,
         [user_id],
       );
 
-      // Calculate comments count from post_comments table (more reliable than reading from posts.comments)
       const countResult = await client.query(
         "SELECT COUNT(*)::int as count FROM post_comments WHERE post_id = $1",
         [postId],
       );
       const commentsCount = countResult.rows[0]?.count || 0;
 
-      // Update posts.comments manually as fallback (in case trigger didn't fire)
       await client.query(
         "UPDATE posts SET comments = $1, updated_at = NOW() WHERE id = $2",
         [commentsCount, postId],
       );
 
-      // Send notification to post author if not same user
       const post = postCheck.rows[0];
       const user = userCheck.rows[0];
 
-      if (post.author_id !== user_id) {
-        const commenterName = user.name || "משתמש";
-        const postType =
-          post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-        await client.query(
-          `
-                    INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                `,
-          [
-            post.author_id,
-            "תגובה חדשה!",
-            `${commenterName} הגיב / ה על ה${postType} שלך: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
-            "comment",
-            postId,
-            { commenter_id: user_id, post_id: postId, comment_id: comment.id },
-          ],
-        );
-      }
+      await this.sendCommentNotification(
+        client,
+        post,
+        user,
+        user_id || "",
+        postId,
+        text || "",
+        comment,
+      );
 
       await client.query("COMMIT");
 

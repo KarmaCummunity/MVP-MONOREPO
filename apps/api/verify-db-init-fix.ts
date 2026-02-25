@@ -31,10 +31,17 @@ if (process.env.DATABASE_URL) {
     const host = process.env.POSTGRES_HOST || process.env.PGHOST || 'localhost';
     const port = Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5432);
     const user = process.env.POSTGRES_USER || process.env.PGUSER || 'kc';
-    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || 'kc_password';
+    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD;
     const database = process.env.POSTGRES_DB || process.env.PGDATABASE || 'kc_db';
     const sslFlag = process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE;
     const sslEnabled = sslFlag ? /^(1|true|require)$/i.test(sslFlag) : false;
+
+    if (!password) {
+        console.error('❌ Database password is required!');
+        console.error('   Set POSTGRES_PASSWORD or PGPASSWORD environment variable');
+        console.error('   Or use DATABASE_URL connection string');
+        process.exit(1);
+    }
 
     console.log(`Using discrete config: host=${host}, port=${port}, user=${user}, db=${database}`);
 

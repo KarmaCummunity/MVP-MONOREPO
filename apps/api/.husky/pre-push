@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-push hook - Run comprehensive quality gate check
+echo "🚀 Running pre-push quality gate..."
+
+# Get the remote branch we're pushing to
+REMOTE="$1"
+URL="$2"
+
+# Find the project root (where .husky is located)
+HUSKY_DIR="$(dirname "$0")"
+PROJECT_DIR="$(cd "$HUSKY_DIR/.." && pwd)"
+
+# Run the quality gate check script
+"$PROJECT_DIR/scripts/check-quality-gate.sh" main || {
+  echo ""
+  echo "❌ Quality Gate failed - push blocked"
+  echo ""
+  echo "Your code contains issues that would fail CI/CD checks."
+  echo "Please fix the issues above before pushing."
+  echo ""
+  echo "To skip this check (not recommended): git push --no-verify"
+  exit 1
+}
+
+echo "✅ Quality Gate passed - safe to push"

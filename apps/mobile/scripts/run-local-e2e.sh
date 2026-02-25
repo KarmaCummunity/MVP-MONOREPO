@@ -423,9 +423,34 @@ export REDIS_URL=${REDIS_URL:-redis://localhost:6379}
 export POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
 export POSTGRES_PORT=${POSTGRES_PORT:-5435}
 export POSTGRES_USER=${POSTGRES_USER:-kc}
-export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_secret}
 export POSTGRES_DB=${POSTGRES_DB:-kc_db}
 export PORT="$SERVER_PORT"
+
+# Check for database password in .env file first
+if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+  ENV_FILE="$SERVER_DIR/.env"
+  if [[ -f "$ENV_FILE" ]]; then
+    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2- || echo "")
+  fi
+  
+  # If still not set, check DATABASE_URL
+  if [[ -z "${POSTGRES_PASSWORD:-}" && -n "${DATABASE_URL:-}" ]]; then
+    # Extract password from DATABASE_URL
+    POSTGRES_PASSWORD=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+  fi
+  
+  # Last resort: fail with helpful message
+  if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+    log_error "POSTGRES_PASSWORD not set!"
+    log_error "Please set it in one of these ways:"
+    log_error "  1. Set POSTGRES_PASSWORD in $SERVER_DIR/.env"
+    log_error "  2. Set DATABASE_URL with password in $SERVER_DIR/.env"
+    log_error "  3. Export POSTGRES_PASSWORD before running this script"
+    exit 1
+  fi
+fi
+
+export POSTGRES_PASSWORD
 export DATABASE_URL=${DATABASE_URL:-postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB}
 
 # Environment configuration (CRITICAL)

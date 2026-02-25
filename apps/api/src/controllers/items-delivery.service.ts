@@ -568,6 +568,91 @@ export class ItemsDeliveryService {
     return { success: true, data: rows };
   }
 
+  private async handleStatusUpdate(
+    client: import("pg").PoolClient,
+    request: { item_id: string },
+    newStatus: string,
+    isOwner: boolean,
+    isRequester: boolean,
+  ): Promise<{ allowed: boolean; error?: string }> {
+    if (newStatus === "approved" || newStatus === "rejected") {
+      if (!isOwner) {
+        return {
+          allowed: false,
+          error: "Only owner can approve/reject requests",
+        };
+      }
+    } else if (newStatus === "cancelled") {
+      if (!isRequester) {
+        return {
+          allowed: false,
+          error: "Only requester can cancel their request",
+        };
+      }
+    }
+
+    if (newStatus === "approved") {
+      await client.query(`UPDATE items SET status = 'reserved' WHERE id = $1`, [
+        request.item_id,
+      ]);
+    } else if (newStatus === "completed") {
+      await client.query(
+        `UPDATE items SET status = 'delivered' WHERE id = $1`,
+        [request.item_id],
+      );
+    } else if (newStatus === "rejected" || newStatus === "cancelled") {
+      await client.query(
+        `UPDATE items SET status = 'available' WHERE id = $1`,
+        [request.item_id],
+      );
+    }
+
+    return { allowed: true };
+  }
+
+  private buildUpdateFields(
+    updateRequestDto: UpdateItemRequestDto,
+    isOwner: boolean,
+  ): { fields: string[]; params: unknown[]; error?: string } {
+    const updateFields: string[] = [];
+    const params: unknown[] = [];
+    let paramCount = 0;
+
+    if (updateRequestDto.status !== undefined) {
+      paramCount++;
+      updateFields.push(`status = $${paramCount}`);
+      params.push(updateRequestDto.status);
+    }
+
+    if (updateRequestDto.message !== undefined) {
+      paramCount++;
+      updateFields.push(`message = $${paramCount}`);
+      params.push(updateRequestDto.message);
+    }
+
+    if (updateRequestDto.proposed_time !== undefined) {
+      paramCount++;
+      updateFields.push(`proposed_time = $${paramCount}`);
+      params.push(
+        updateRequestDto.proposed_time
+          ? new Date(updateRequestDto.proposed_time)
+          : null,
+      );
+    }
+
+    if (updateRequestDto.owner_response !== undefined) {
+      if (!isOwner) {
+        return { fields: [], params: [], error: "Only owner can set response" };
+      }
+      paramCount++;
+      updateFields.push(`owner_response = $${paramCount}`);
+      params.push(updateRequestDto.owner_response);
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    return { fields: updateFields, params };
+  }
+
   async updateItemRequest(
     requestId: string,
     updateRequestDto: UpdateItemRequestDto,
@@ -577,7 +662,6 @@ export class ItemsDeliveryService {
     try {
       await client.query("BEGIN");
 
-      // Get the request with item info
       const requestCheck = await client.query(
         `
         SELECT ir.*, i.owner_id, i.status as item_status
@@ -594,8 +678,6 @@ export class ItemsDeliveryService {
       }
 
       const request = requestCheck.rows[0];
-
-      // Check permissions
       const isOwner = request.owner_id === userId;
       const isRequester = request.requester_id === userId;
 
@@ -604,115 +686,40 @@ export class ItemsDeliveryService {
         return { success: false, error: "Unauthorized" };
       }
 
-      // Build update query
-      const updateFields: string[] = [];
-      const params: unknown[] = [];
-      let paramCount = 0;
-
       if (updateRequestDto.status !== undefined) {
-        // Only owner can approve/reject, requester can cancel
-        if (
-          updateRequestDto.status === "approved" ||
-          updateRequestDto.status === "rejected"
-        ) {
-          if (!isOwner) {
-            await client.query("ROLLBACK");
-            return {
-              success: false,
-              error: "Only owner can approve/reject requests",
-            };
-          }
-        } else if (updateRequestDto.status === "cancelled") {
-          if (!isRequester) {
-            await client.query("ROLLBACK");
-            return {
-              success: false,
-              error: "Only requester can cancel their request",
-            };
-          }
-        }
-
-        paramCount++;
-        updateFields.push(`status = $${paramCount}`);
-        params.push(updateRequestDto.status);
-
-        // If approved, mark item as reserved
-        if (updateRequestDto.status === "approved") {
-          await client.query(
-            `
-            UPDATE items SET status = 'reserved' WHERE id = $1
-          `,
-            [request.item_id],
-          );
-        }
-
-        // If completed, mark item as delivered
-        if (updateRequestDto.status === "completed") {
-          await client.query(
-            `
-            UPDATE items SET status = 'delivered' WHERE id = $1
-          `,
-            [request.item_id],
-          );
-        }
-
-        // If rejected or cancelled, mark item as available again
-        if (
-          updateRequestDto.status === "rejected" ||
-          updateRequestDto.status === "cancelled"
-        ) {
-          await client.query(
-            `
-            UPDATE items SET status = 'available' WHERE id = $1
-          `,
-            [request.item_id],
-          );
-        }
-      }
-
-      if (updateRequestDto.message !== undefined) {
-        paramCount++;
-        updateFields.push(`message = $${paramCount}`);
-        params.push(updateRequestDto.message);
-      }
-
-      if (updateRequestDto.proposed_time !== undefined) {
-        paramCount++;
-        updateFields.push(`proposed_time = $${paramCount}`);
-        params.push(
-          updateRequestDto.proposed_time
-            ? new Date(updateRequestDto.proposed_time)
-            : null,
+        const statusResult = await this.handleStatusUpdate(
+          client,
+          request,
+          updateRequestDto.status,
+          isOwner,
+          isRequester,
         );
-      }
-
-      if (updateRequestDto.owner_response !== undefined) {
-        if (!isOwner) {
+        if (!statusResult.allowed) {
           await client.query("ROLLBACK");
-          return { success: false, error: "Only owner can set response" };
+          return { success: false, error: statusResult.error };
         }
-        paramCount++;
-        updateFields.push(`owner_response = $${paramCount}`);
-        params.push(updateRequestDto.owner_response);
       }
 
-      if (updateFields.length === 0) {
+      const updateResult = this.buildUpdateFields(updateRequestDto, isOwner);
+      if (updateResult.error) {
+        await client.query("ROLLBACK");
+        return { success: false, error: updateResult.error };
+      }
+
+      if (updateResult.fields.length === 0) {
         await client.query("ROLLBACK");
         return { success: false, error: "No fields to update" };
       }
 
-      paramCount++;
-      updateFields.push(`updated_at = NOW()`);
-      params.push(requestId);
-
+      updateResult.params.push(requestId);
       const { rows } = await client.query(
         `
         UPDATE item_requests
-        SET ${updateFields.join(", ")}
-        WHERE id = $${paramCount}
+        SET ${updateResult.fields.join(", ")}
+        WHERE id = $${updateResult.params.length}
         RETURNING *
       `,
-        params,
+        updateResult.params,
       );
 
       await client.query("COMMIT");

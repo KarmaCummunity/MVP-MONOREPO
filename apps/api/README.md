@@ -5,18 +5,33 @@
 **גרסה נוכחית:** 2.5.2  
 **עדכון אחרון:** 2025-12-24 - בדיקת Redis בפרודקשן
 
-## 🆕 מה חדש בגרסה 2.5.2
+## 🆕 מה חדש בגרסה 2.5.3
 
+- ✅ **Quality Gate System:** מערכת מקיפה למניעת הוספת בעיות חדשות
+  - Pre-commit hooks (ESLint + TypeScript)
+  - Pre-push validation (Tests + Security)
+  - CI/CD Quality Gate (SonarCloud + Snyk)
 - ✅ **הפרדת סביבות מוחלטת:** Development ו-Production מופרדים לחלוטין
 - ✅ **בדיקות אוטומטיות:** סקריפטים לבדיקת משתני סביבה והפרדה
 - ✅ **אבטחה משופרת:** בדיקה בעת startup שמונעת חיבור של dev ל-prod DB
 - ✅ **תיעוד מקיף:** מדריכים מפורטים להגדרת Railway והעתקת DB
 - ✅ **GitHub Actions:** בדיקות אוטומטיות לפני כל deploy
-- 🔍 **בדיקת Redis בפרודקשן:** סקריפטים לבדיקה ותיקון Redis
+
+**🎯 Quality Gate:**
+```bash
+# בדיקה מקומית לפני push
+npm run quality:gate
+
+# בדיקת אבטחה בלבד
+npm run quality:snyk
+```
 
 **⚠️ נמצאה בעיה:** Redis לא מוגדר בפרודקשן! ראה `FIX_REDIS_PRODUCTION.md`
 
-**ראה:** `FIX_REDIS_PRODUCTION.md`, `TEST_REDIS_PRODUCTION.md`, `RAILWAY_SETUP_GUIDE.md`
+**ראה:**
+- `QUALITY_GATE_SETUP.md` - הגדרת Quality Gate
+- `docs/QUALITY_GATE.md` - תיעוד מלא
+- `FIX_REDIS_PRODUCTION.md`, `TEST_REDIS_PRODUCTION.md`, `RAILWAY_SETUP_GUIDE.md`
 
 ## 🌍 סביבות
 
@@ -49,31 +64,27 @@ npm run init:db
 npm run start:dev
 ```
 
-צרו קובץ `.env`:
+צרו קובץ `.env` (ראה `SETUP_GUIDE.md` למדריך מפורט):
+```bash
+# Copy example file and configure
+cp .env.example .env
+
+# Generate secure password
+openssl rand -base64 16
+
+# Edit .env and set:
+# - DATABASE_URL with your generated password
+# - POSTGRES_PASSWORD (same as in DATABASE_URL)
+# - JWT_SECRET (generate with: openssl rand -base64 32)
+# - GOOGLE_CLIENT_ID and other OAuth credentials
+# - ROOT_ADMIN_EMAIL
+
+# IMPORTANT: Never commit .env to git!
+# Use different passwords for development, testing, and production
 ```
-# Local
-PORT=3001
-CORS_ORIGIN=http://localhost:8081,http://localhost:19006
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=kc
-POSTGRES_PASSWORD=kc_password
-POSTGRES_DB=kc_db
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
 
-# JWT Secret - חובה! מינימום 32 תווים
-# ליצירת secret מאובטח: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
-
-# Production (Railway/Vercel): השתמשו בערכי הסביבה שמוקצים
-# DATABASE_URL=postgres://user:pass@host:5432/dbname
-# REDIS_URL=redis://default:pass@host:6379
-# JWT_SECRET=your-production-jwt-secret-minimum-32-characters
-
-# מנהל ראשי - המייל היחיד שמוגדר בקונפיג (כל שאר המנהלים נשמרים בדאטהבייס)
-ROOT_ADMIN_EMAIL=your-admin@gmail.com
-```
+**הערה חשובה:** אל תשתמשו בסיסמאות קשיחות! תמיד קראו מקובץ `.env` או ממשתני סביבה.  
+ראה `SECURITY.md` לפרטים נוספים על ניהול secrets.
 
 ## 🔐 מערכת הרשאות (Permissions)
 

@@ -52,6 +52,11 @@ export class UsersController {
     return this.userHierarchyService.setManager(id, body);
   }
 
+  /**
+   * Manage hierarchy: Add or Remove subordinate
+   * POST /api/users/:id/hierarchy/manage
+   * Body: { action: 'add' | 'remove', managerId: string }
+   */
   @Post(":id/hierarchy/manage")
   @UseGuards(JwtAuthGuard)
   async manageHierarchy(

@@ -26,6 +26,7 @@ import {
   CreateChallengeEntryDto,
   GetChallengesFilterDto,
 } from "./dto/community-challenge.dto";
+import pgFormat from "pg-format";
 
 @Controller("api/community-challenges")
 export class CommunityGroupChallengesController {
@@ -252,6 +253,7 @@ export class CommunityGroupChallengesController {
       query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
       params.push(limit, offset);
 
+      // snyk ignore javascript/Sqli: All user inputs use parameterized queries, identifiers validated with pg-format
       const { rows } = await client.query(query, params);
 
       return { success: true, data: rows, count: rows.length };

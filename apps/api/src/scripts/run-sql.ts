@@ -84,14 +84,22 @@ async function runMigration() {
     });
   } else {
     console.log("🔗 Connecting via discrete env vars");
+
+    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD;
+    if (!password) {
+      console.error("❌ Database password is required!");
+      console.error(
+        "   Set POSTGRES_PASSWORD or PGPASSWORD environment variable",
+      );
+      console.error("   Or use DATABASE_URL connection string");
+      process.exit(1);
+    }
+
     pool = new Pool({
       host: process.env.POSTGRES_HOST || process.env.PGHOST || "localhost",
-      port: Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5432),
+      port: Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5435),
       user: process.env.POSTGRES_USER || process.env.PGUSER || "kc",
-      password:
-        process.env.POSTGRES_PASSWORD ||
-        process.env.PGPASSWORD ||
-        "kc_password",
+      password,
       database: process.env.POSTGRES_DB || process.env.PGDATABASE || "kc_db",
       ssl:
         process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE
