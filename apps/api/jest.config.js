@@ -3,8 +3,15 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.spec.ts', '**/*.test.ts'],
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
+  },
   moduleNameMapper: {
-    // Support for tsconfig-paths (כבר קיים בפרויקט)
     '^src/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
@@ -17,13 +24,15 @@ module.exports = {
     '!src/**/*.module.ts',
     '!src/database/schema.sql',
     '!src/database/**/*.sql',
-    '!src/scripts/**', // Scripts לא נכללים ב-coverage
+    '!src/scripts/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  // חשוב: tsconfig.build.json כבר מוציא את **/*.spec.ts - זה בסדר
-  // הבדיקות לא יכנסו ל-build
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(supertest)/)',
+  ],
 };
 
 

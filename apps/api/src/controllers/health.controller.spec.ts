@@ -15,16 +15,25 @@ describe("HealthController (e2e)", () => {
     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID =
       "test-web-client-id-for-testing";
     process.env.NODE_ENV = "test";
+    process.env.SKIP_FULL_SCHEMA = "1"; // Skip database init in tests
+
+    // Mock pool with proper connect method
+    const mockClient = {
+      query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      release: jest.fn(),
+    };
+
+    const mockPool = {
+      query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      connect: jest.fn().mockResolvedValue(mockClient),
+      end: jest.fn(),
+    } as unknown as Pool;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(PG_POOL)
-      .useValue({
-        query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-        connect: jest.fn(),
-        end: jest.fn(),
-      } as unknown as Pool)
+      .useValue(mockPool)
       .overrideProvider(REDIS)
       .useValue(null) // Redis is optional
       .compile();
@@ -40,6 +49,7 @@ describe("HealthController (e2e)", () => {
     // Clean up environment variables
     delete process.env.GOOGLE_CLIENT_ID;
     delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    delete process.env.SKIP_FULL_SCHEMA;
   });
 
   describe("GET /", () => {
