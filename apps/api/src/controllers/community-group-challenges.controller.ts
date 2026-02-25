@@ -26,7 +26,6 @@ import {
   CreateChallengeEntryDto,
   GetChallengesFilterDto,
 } from "./dto/community-challenge.dto";
-import pgFormat from "pg-format";
 
 @Controller("api/community-challenges")
 export class CommunityGroupChallengesController {
