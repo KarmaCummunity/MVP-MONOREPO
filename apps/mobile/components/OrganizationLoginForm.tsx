@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import colors from '../globals/colors';
 
 // TypeScript Interfaces

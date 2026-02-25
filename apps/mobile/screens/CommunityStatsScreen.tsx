@@ -8,9 +8,9 @@ import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { db } from '../src/infrastructure/database.service';
-import { EnhancedStatsService } from '../src/services/stats.service';
-import { apiService } from '../src/api/api.service';
+import { db } from '../utils/databaseService';
+import { EnhancedStatsService } from '../utils/statsService';
+import { apiService } from '../utils/apiService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -63,23 +63,23 @@ interface CommunityStats {
     recurringDonationsAmount: number;
     uniqueDonors: number;
     completedTasks: number;
-    
+
     // Dashboard stats (tasks)
     tasks_open: number;
     tasks_in_progress: number;
     tasks_done: number;
     tasks_total: number;
-    
+
     // Dashboard stats (users)
     admins_count: number;
     regular_users_count: number;
     total_users: number;
-    
+
     // Dashboard stats (volunteer hours)
     total_volunteer_hours: number;
     avg_hours_per_user: number;
     current_month_hours: number;
-    
+
     // Legacy stats
     totalRides: number;
     totalItems: number;
@@ -102,23 +102,23 @@ export default function CommunityStatsScreen() {
         recurringDonationsAmount: 0,
         uniqueDonors: 0,
         completedTasks: 0,
-        
+
         // Dashboard stats (tasks)
         tasks_open: 0,
         tasks_in_progress: 0,
         tasks_done: 0,
         tasks_total: 0,
-        
+
         // Dashboard stats (users)
         admins_count: 0,
         regular_users_count: 0,
         total_users: 0,
-        
+
         // Dashboard stats (volunteer hours)
         total_volunteer_hours: 0,
         avg_hours_per_user: 0,
         current_month_hours: 0,
-        
+
         // Legacy stats
         totalRides: 0,
         totalItems: 0,
@@ -149,7 +149,7 @@ export default function CommunityStatsScreen() {
 
             // Load community stats from landing page (EnhancedStatsService)
             const communityStats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
-            
+
             // Extract values - handle both direct values and nested value objects
             const getValue = (stat: any): number => {
                 if (typeof stat === 'number') return stat;
@@ -159,7 +159,7 @@ export default function CommunityStatsScreen() {
 
             // Load dashboard stats (tasks, users, volunteer hours)
             const dashboardRes = await apiService.getDashboardStats();
-            const dashboardStats = dashboardRes.success && dashboardRes.data ? dashboardRes.data : null;
+            const dashboardStats = dashboardRes.success && dashboardRes.data ? (dashboardRes.data as any) : null;
 
             // Load legacy rides stats
             const rides = await db.listRides(selectedUser?.id || '', { includePast: true }).catch(() => []);
@@ -194,23 +194,23 @@ export default function CommunityStatsScreen() {
                 recurringDonationsAmount: getValue(communityStats.recurringDonationsAmount) || 0,
                 uniqueDonors: getValue(communityStats.uniqueDonors) || 0,
                 completedTasks: getValue(communityStats.completed_tasks) || 0,
-                
+
                 // Dashboard stats (tasks)
                 tasks_open: dashboardStats?.metrics?.tasks_open ? Number(dashboardStats.metrics.tasks_open) : 0,
                 tasks_in_progress: dashboardStats?.metrics?.tasks_in_progress ? Number(dashboardStats.metrics.tasks_in_progress) : 0,
                 tasks_done: dashboardStats?.metrics?.tasks_done ? Number(dashboardStats.metrics.tasks_done) : 0,
                 tasks_total: dashboardStats?.metrics?.tasks_total ? Number(dashboardStats.metrics.tasks_total) : 0,
-                
+
                 // Dashboard stats (users)
                 admins_count: dashboardStats?.metrics?.admins_count ? Number(dashboardStats.metrics.admins_count) : 0,
                 regular_users_count: dashboardStats?.metrics?.regular_users_count ? Number(dashboardStats.metrics.regular_users_count) : 0,
                 total_users: dashboardStats?.metrics?.total_users ? Number(dashboardStats.metrics.total_users) : 0,
-                
+
                 // Dashboard stats (volunteer hours)
                 total_volunteer_hours: dashboardStats?.metrics?.total_volunteer_hours ? Number(dashboardStats.metrics.total_volunteer_hours) : 0,
                 avg_hours_per_user: dashboardStats?.metrics?.avg_hours_per_user ? Number(dashboardStats.metrics.avg_hours_per_user) : 0,
                 current_month_hours: dashboardStats?.metrics?.current_month_hours ? Number(dashboardStats.metrics.current_month_hours) : 0,
-                
+
                 // Legacy stats
                 totalRides,
                 totalItems: estimatedItems,
@@ -271,7 +271,7 @@ export default function CommunityStatsScreen() {
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
                     }
                 >
-                    <View 
+                    <View
                         style={styles.header}
                         onLayout={(event) => {
                             if (Platform.OS === 'web') {
@@ -280,185 +280,185 @@ export default function CommunityStatsScreen() {
                             }
                         }}
                     >
-                    <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
-                    <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
-                </View>
-
-                {/* סטטיסטיקות קהילה כלליות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות קהילה</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="eye-outline"
-                            value={stats.siteVisits.toLocaleString('he-IL')}
-                            label="ביקורים באתר"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="cash-outline"
-                            value={`${stats.totalMoneyDonated.toLocaleString('he-IL')} ₪`}
-                            label={'ש"ח שנתרמו ישירות'}
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="heart-outline"
-                            value={stats.totalUsers.toLocaleString('he-IL')}
-                            label="חברי קהילה רשומים"
-                            color={colors.secondary}
-                        />
-                        <StatItem
-                            icon="cube-outline"
-                            value={stats.itemDonations.toLocaleString('he-IL')}
-                            label="פריטים שפורסמו"
-                            color={colors.accent}
-                        />
-                        <StatItem
-                            icon="car-outline"
-                            value={stats.completedRides.toLocaleString('he-IL')}
-                            label="נסיעות קהילתיות"
-                            color={colors.greenBright || colors.success}
-                        />
-                        <StatItem
-                            icon="repeat-outline"
-                            value={`${stats.recurringDonationsAmount.toLocaleString('he-IL')} ₪`}
-                            label="תרומות קבועות פעילות"
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="people-outline"
-                            value={stats.uniqueDonors.toLocaleString('he-IL')}
-                            label="תורמים פעילים"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="checkmark-done-outline"
-                            value={stats.completedTasks.toLocaleString('he-IL')}
-                            label="משימות שבוצעו"
-                            color={colors.success}
-                        />
+                        <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
+                        <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
                     </View>
-                </View>
 
-                {/* סטטיסטיקות משימות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות משימות</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="list-outline"
-                            value={stats.tasks_open.toLocaleString('he-IL')}
-                            label="משימות פתוחות"
-                            color={colors.primary}
-                        />
-                        <StatItem
-                            icon="hourglass-outline"
-                            value={stats.tasks_in_progress.toLocaleString('he-IL')}
-                            label="משימות בתהליך"
-                            color={colors.warning}
-                        />
-                        <StatItem
-                            icon="checkmark-done-outline"
-                            value={stats.tasks_done.toLocaleString('he-IL')}
-                            label="משימות שהושלמו"
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="stats-chart-outline"
-                            value={stats.tasks_total.toLocaleString('he-IL')}
-                            label={'סה"כ משימות'}
-                            color={colors.info}
-                        />
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות משתמשים */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות משתמשים</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="shield-outline"
-                            value={stats.admins_count.toLocaleString('he-IL')}
-                            label="מנהלים במערכת"
-                            color={colors.secondary}
-                        />
-                        <StatItem
-                            icon="people-outline"
-                            value={stats.regular_users_count.toLocaleString('he-IL')}
-                            label="משתמשים רגילים"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="person-outline"
-                            value={stats.total_users.toLocaleString('he-IL')}
-                            label={'סה"כ משתמשים'}
-                            color={colors.textSecondary}
-                        />
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות התנדבות */}
-                {stats.total_volunteer_hours > 0 && (
+                    {/* סטטיסטיקות קהילה כלליות */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>סטטיסטיקות התנדבות</Text>
+                        <Text style={styles.sectionTitle}>סטטיסטיקות קהילה</Text>
                         <View style={styles.statsGrid}>
                             <StatItem
-                                icon="time-outline"
-                                value={stats.total_volunteer_hours.toFixed(1)}
-                                label={'סה"כ שעות התנדבות'}
+                                icon="eye-outline"
+                                value={stats.siteVisits.toLocaleString('he-IL')}
+                                label="ביקורים באתר"
+                                color={colors.info}
+                            />
+                            <StatItem
+                                icon="cash-outline"
+                                value={`${stats.totalMoneyDonated.toLocaleString('he-IL')} ₪`}
+                                label={'ש"ח שנתרמו ישירות'}
+                                color={colors.success}
+                            />
+                            <StatItem
+                                icon="heart-outline"
+                                value={stats.totalUsers.toLocaleString('he-IL')}
+                                label="חברי קהילה רשומים"
+                                color={colors.secondary}
+                            />
+                            <StatItem
+                                icon="cube-outline"
+                                value={stats.itemDonations.toLocaleString('he-IL')}
+                                label="פריטים שפורסמו"
                                 color={colors.accent}
                             />
-                            {stats.avg_hours_per_user > 0 && (
-                                <StatItem
-                                    icon="stats-chart-outline"
-                                    value={stats.avg_hours_per_user.toFixed(1)}
-                                    label="ממוצע שעות למשתמש"
-                                    color={colors.info}
-                                />
-                            )}
-                            {stats.current_month_hours > 0 && (
-                                <StatItem
-                                    icon="calendar-outline"
-                                    value={stats.current_month_hours.toFixed(1)}
-                                    label="שעות החודש הנוכחי"
-                                    color={colors.warning}
-                                />
-                            )}
+                            <StatItem
+                                icon="car-outline"
+                                value={stats.completedRides.toLocaleString('he-IL')}
+                                label="נסיעות קהילתיות"
+                                color={colors.greenBright || colors.success}
+                            />
+                            <StatItem
+                                icon="repeat-outline"
+                                value={`${stats.recurringDonationsAmount.toLocaleString('he-IL')} ₪`}
+                                label="תרומות קבועות פעילות"
+                                color={colors.success}
+                            />
+                            <StatItem
+                                icon="people-outline"
+                                value={stats.uniqueDonors.toLocaleString('he-IL')}
+                                label="תורמים פעילים"
+                                color={colors.info}
+                            />
+                            <StatItem
+                                icon="checkmark-done-outline"
+                                value={stats.completedTasks.toLocaleString('he-IL')}
+                                label="משימות שבוצעו"
+                                color={colors.success}
+                            />
                         </View>
                     </View>
-                )}
 
-                {/* סטטיסטיקות נסיעות ופעילות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>פעילות קהילתית</Text>
-                    <View style={styles.impactCard}>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="car" size={24} color={colors.info} />
-                            <Text style={styles.impactText}>
-                                {stats.totalRides.toLocaleString('he-IL')} נסיעות
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="gift" size={24} color={colors.secondary} />
-                            <Text style={styles.impactText}>
-                                {stats.totalItems.toLocaleString('he-IL')} פריטים שנתרמו
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="globe" size={24} color={colors.primary} />
-                            <Text style={styles.impactText}>
-                                {stats.activeCities.toLocaleString('he-IL')} ערים פעילות
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="trending-up" size={24} color={colors.success} />
-                            <Text style={styles.impactText}>
-                                +{stats.monthlyGrowth}% צמיחה חודשית
-                            </Text>
+                    {/* סטטיסטיקות משימות */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>סטטיסטיקות משימות</Text>
+                        <View style={styles.statsGrid}>
+                            <StatItem
+                                icon="list-outline"
+                                value={stats.tasks_open.toLocaleString('he-IL')}
+                                label="משימות פתוחות"
+                                color={colors.primary}
+                            />
+                            <StatItem
+                                icon="hourglass-outline"
+                                value={stats.tasks_in_progress.toLocaleString('he-IL')}
+                                label="משימות בתהליך"
+                                color={colors.warning}
+                            />
+                            <StatItem
+                                icon="checkmark-done-outline"
+                                value={stats.tasks_done.toLocaleString('he-IL')}
+                                label="משימות שהושלמו"
+                                color={colors.success}
+                            />
+                            <StatItem
+                                icon="stats-chart-outline"
+                                value={stats.tasks_total.toLocaleString('he-IL')}
+                                label={'סה"כ משימות'}
+                                color={colors.info}
+                            />
                         </View>
                     </View>
-                </View>
 
-                {/* Bottom padding for safe area */}
-                <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
+                    {/* סטטיסטיקות משתמשים */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>סטטיסטיקות משתמשים</Text>
+                        <View style={styles.statsGrid}>
+                            <StatItem
+                                icon="shield-outline"
+                                value={stats.admins_count.toLocaleString('he-IL')}
+                                label="מנהלים במערכת"
+                                color={colors.secondary}
+                            />
+                            <StatItem
+                                icon="people-outline"
+                                value={stats.regular_users_count.toLocaleString('he-IL')}
+                                label="משתמשים רגילים"
+                                color={colors.info}
+                            />
+                            <StatItem
+                                icon="person-outline"
+                                value={stats.total_users.toLocaleString('he-IL')}
+                                label={'סה"כ משתמשים'}
+                                color={colors.textSecondary}
+                            />
+                        </View>
+                    </View>
+
+                    {/* סטטיסטיקות התנדבות */}
+                    {stats.total_volunteer_hours > 0 && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>סטטיסטיקות התנדבות</Text>
+                            <View style={styles.statsGrid}>
+                                <StatItem
+                                    icon="time-outline"
+                                    value={stats.total_volunteer_hours.toFixed(1)}
+                                    label={'סה"כ שעות התנדבות'}
+                                    color={colors.accent}
+                                />
+                                {stats.avg_hours_per_user > 0 && (
+                                    <StatItem
+                                        icon="stats-chart-outline"
+                                        value={stats.avg_hours_per_user.toFixed(1)}
+                                        label="ממוצע שעות למשתמש"
+                                        color={colors.info}
+                                    />
+                                )}
+                                {stats.current_month_hours > 0 && (
+                                    <StatItem
+                                        icon="calendar-outline"
+                                        value={stats.current_month_hours.toFixed(1)}
+                                        label="שעות החודש הנוכחי"
+                                        color={colors.warning}
+                                    />
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* סטטיסטיקות נסיעות ופעילות */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>פעילות קהילתית</Text>
+                        <View style={styles.impactCard}>
+                            <View style={styles.impactRow}>
+                                <Ionicons name="car" size={24} color={colors.info} />
+                                <Text style={styles.impactText}>
+                                    {stats.totalRides.toLocaleString('he-IL')} נסיעות
+                                </Text>
+                            </View>
+                            <View style={styles.impactRow}>
+                                <Ionicons name="gift" size={24} color={colors.secondary} />
+                                <Text style={styles.impactText}>
+                                    {stats.totalItems.toLocaleString('he-IL')} פריטים שנתרמו
+                                </Text>
+                            </View>
+                            <View style={styles.impactRow}>
+                                <Ionicons name="globe" size={24} color={colors.primary} />
+                                <Text style={styles.impactText}>
+                                    {stats.activeCities.toLocaleString('he-IL')} ערים פעילות
+                                </Text>
+                            </View>
+                            <View style={styles.impactRow}>
+                                <Ionicons name="trending-up" size={24} color={colors.success} />
+                                <Text style={styles.impactText}>
+                                    +{stats.monthlyGrowth}% צמיחה חודשית
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Bottom padding for safe area */}
+                    <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
                 </ScrollView>
             </View>
         </SafeAreaView>

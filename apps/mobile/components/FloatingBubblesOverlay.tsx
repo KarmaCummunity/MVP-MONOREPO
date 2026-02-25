@@ -4,8 +4,8 @@
 // - Inputs: None; fetches stats via `EnhancedStatsService` and renders to <canvas>.
 // - Behavior: Creates many bubbles with depth, wobble and shimmer; assigns labels from stats and updates periodically.
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { EnhancedStatsService, formatShortNumber } from '../src/services/stats.service';
-import type { CommunityStats } from '../src/services/stats.service';
+import { EnhancedStatsService, formatShortNumber } from '../utils/statsService';
+import type { CommunityStats } from '../utils/statsService';
 import colors from '../globals/colors';
 
 // Fallback label by size before stats are loaded

@@ -14,101 +14,23 @@
 
 ---
 
-## Phase 1: ארגון Backend Modules (שבוע 1)
+## ✅ Phase 1: ארגון Backend Modules – הושלם (25/02/2026)
 
-**מטרה:** העברת controllers ו-services למודולים לפי feature, בלי לשנות לוגיקה.
+כל המודולים הועברו ל-`apps/api/src/modules/` (auth, users, items, donations, rides, posts, stats, admin, challenges, chat, notifications, sync). AppModule מייבא רק modules.
 
-### 1.1 מבנה יעד
+## ✅ Phase 2: איחוד Mobile State – הושלם (25/02/2026)
 
-```
-apps/api/src/
-├── core/                    # תשתית (לא משנים כרגע)
-│   └── (ריק - נשאר database/, redis/, auth/)
-├── modules/
-│   ├── auth/                # קיים - auth.controller, session.controller
-│   ├── users/               # חדש - users.controller + ServicesModule
-│   ├── donations/           # חדש
-│   ├── rides/               # חדש
-│   ├── posts/               # חדש
-│   ├── items/               # קיים - מרחיב עם items-delivery
-│   ├── stats/               # קיים - services/stats/
-│   ├── admin/               # חדש - admin-tables, admin-files, crm, tasks, community-members
-│   ├── challenges/          # חדש - challenges, community-group-challenges
-│   ├── chat/                # חדש
-│   ├── notifications/       # חדש
-│   └── sync/                # חדש
-├── shared/                  # controllers משותפים
-│   ├── health/
-│   ├── places/
-│   └── rate-limit/
-├── app.module.ts
-└── main.ts
-```
+`UserContext.tsx` נמחק. הכל עובד דרך `userStore.ts` (Zustand).
 
-### 1.2 משימות Phase 1
+## ✅ Users Controller Split – הושלם (25/02/2026)
 
-| # | משימה | פרטים |
-|---|-------|--------|
-| 1 | **Auth Module** | העבר `auth.controller`, `session.controller` מ-controllers/ ל-auth/controllers/ |
-| 2 | **Items Module** | העבר `ItemsDeliveryController` + `ItemsDeliveryService` מ-controllers/ ל-items/ |
-| 3 | **Users Module** | צור modules/users/ – העבר UsersController + ServicesModule providers |
-| 4 | **Stats Module** | העבר stats מ-services/stats/ ל-modules/stats/ (כולל StatsController) |
-| 5 | **Admin Module** | צור modules/admin/ – העבר AdminTablesController, AdminFilesController, CrmController, TasksController, CommunityMembersController + AdminTablesService |
-| 6 | **Donations, Rides, Posts** | צור מודול לכל אחד, העבר controller + service אם קיים |
-| 7 | **Challenges Module** | צור modules/challenges/ – ChallengesController, CommunityGroupChallengesController |
-| 8 | **Chat, Notifications, Sync** | צור מודול לכל אחד |
-| 9 | **Shared** | health, places, rate-limit – אפשר להשאיר ב-shared/ או health/ |
-| 10 | **AppModule** | עדכן imports – ייבא רק modules, לא controllers ישירות |
-
-### 1.3 כללי העברה
-
-- כל מודול מכיל: `*.module.ts`, `controllers/`, `services/`, `dto/` (אם רלוונטי)
-- DTOs נשארים עם המודול שלהם
-- עדכון imports ב-AppModule בלבד – המודולים מייצאים את ה-controllers שלהם
-
-### 1.4 Checkpoint Phase 1
-
-```bash
-npm run build --workspace @kc/api
-npm run test --workspace @kc/api
-npm run lint --workspace @kc/api
-# בדיקה ידנית: הרצת השרת ובדיקת endpoint אחד מכל מודול
-```
+`users.controller.ts` פוצל ל-6 services: `user-auth.service.ts`, `user-profile.service.ts`, `user-hierarchy.service.ts`, `user-stats.service.ts`, `user-follow.service.ts`, `user-resolution.service.ts`. ה-controller עצמו קטן.
 
 ---
 
-## Phase 2: איחוד Mobile State (שבוע 2)
+## Phase 3: ארגון Mobile Utils (הבא בתור)
 
-**מטרה:** הסרת כפילות UserContext + userStore, מעבר ל-Zustand בלבד.
-
-### 2.1 מצב נוכחי
-
-- `context/UserContext.tsx` – 628 שורות, React Context
-- `stores/userStore.ts` – 774 שורות, Zustand
-- ~72 קבצים מייבאים מ-userStore
-- כפילות: User, AuthMode, Role מוגדרים בשניהם
-
-### 2.2 משימות Phase 2
-
-| # | משימה | פרטים |
-|---|-------|--------|
-| 1 | **בדיקת שימוש** | וידוא שכל השימושים ב-UserContext עוברים דרך userStore |
-| 2 | **החלפת imports** | עדכון App.tsx – הסרת UserContext provider, שימוש ב-userStore בלבד |
-| 3 | **מחיקת UserContext** | מחיקת context/UserContext.tsx |
-| 4 | **ניקוי useUser** | החלפת useUser() ב-useUserStore() בכל הקבצים |
-
-### 2.3 Checkpoint Phase 2
-
-```bash
-npm run build --workspace @kc/mobile
-# בדיקה: התחברות, התנתקות, מעבר בין מסכים
-```
-
----
-
-## Phase 3: ארגון Mobile Utils (שבוע 3)
-
-**מטרה:** העברת קבצים מ-utils/ למבנה ברור יותר, בלי לפצל קבצים גדולים.
+**מטרה:** העברת קבצים מ-`utils/` למבנה ברור יותר, בלי לשנות לוגיקה.
 
 ### 3.1 מבנה יעד
 
@@ -163,17 +85,18 @@ npm run build --workspace @kc/mobile
 
 ---
 
-## Phase 4: ניקוי ו-TODOs (שבוע 4)
+## Phase 4: ניקוי ו-TODOs
 
 ### 4.1 משימות
 
 | # | משימה | פרטים |
 |---|-------|--------|
-| 1 | **החלפת process.env** | (אופציונלי) הכנה ל-ConfigService – תיעוד ב-FUTURE_PLANS |
-| 2 | **החלפת console.log** | (אופציונלי) שימוש ב-NestJS Logger – תיעוד ב-FUTURE_PLANS |
-| 3 | **מחיקת קבצים מיותרים** | logger.ts vs loggerService.ts – איחוד אם אפשר |
-| 4 | **עדכון README** | תיעוד המבנה החדש ב-docs/ |
-| 5 | **בדיקות** | וידוא שכל הבדיקות הקיימות עוברות |
+| 1 | **מחיקת קבצים מיותרים** | logger.ts vs loggerService.ts – איחוד אם אפשר |
+| 2 | **מחיקת eslint dumps** | מחיקת eslint.json, eslint2.json, eslint3.json מ-apps/mobile |
+| 3 | **עדכון README** | תיעוד המבנה החדש ב-docs/ |
+| 4 | **בדיקות** | וידוא שכל הבדיקות הקיימות עוברות |
+| 5 | **החלפת process.env** | (אופציונלי) הכנה ל-ConfigService – תיעוד ב-FUTURE_PLANS |
+| 6 | **החלפת console.log** | (אופציונלי) שימוש ב-NestJS Logger – תיעוד ב-FUTURE_PLANS |
 
 ---
 
@@ -183,6 +106,7 @@ npm run build --workspace @kc/mobile
 |-------|--------|-------|
 | Phase 1: Backend Modules | ✅ הושלם | 25/02/2026 |
 | Phase 2: Mobile State | ✅ הושלם | 25/02/2026 |
+| Users Controller Split | ✅ הושלם | 25/02/2026 |
 | Phase 3: Mobile Utils | ⬜ לא התחיל | |
 | Phase 4: ניקוי | ⬜ לא התחיל | |
 
@@ -191,4 +115,3 @@ npm run build --workspace @kc/mobile
 ## קישורים
 
 - [תוכניות עתיד (FUTURE_PLANS.md)](./FUTURE_PLANS.md) – Prisma, shared packages, database.init
-- [פיצול Users Controller](./USERS_CONTROLLER_SPLIT_PLAN.md) – תוכנית נפרדת לקובץ users.controller

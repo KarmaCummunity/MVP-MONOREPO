@@ -17,10 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 import { pickDocument, validateFile, FileData, formatFileSize } from '../utils/fileService';
-import { uploadFileWithProgress, buildAdminFilePath } from '../src/infrastructure/storage.service';
+import { uploadFileWithProgress, buildAdminFilePath } from '../utils/storageService';
 
 interface AdminFilesScreenProps {
     navigation: NavigationProp<AdminStackParamList>;

@@ -17,11 +17,11 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
-import { sendMessage, createConversation, getConversations } from '../src/services/chat.service';
+import { getCategoryLabel } from '../utils/itemCategoryUtils';
+import { sendMessage, createConversation, getConversations } from '../utils/chatService';
 import { toastService, useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 
@@ -73,11 +73,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setLoadingOwner(true);
     try {
       const response = await apiService.getUserById(ownerId);
-      if (response.success && response.data) {
+      const data = response.data as any;
+      if (response.success && data) {
         setItemOwner({
-          name: response.data.name || 'משתמש',
-          avatar: response.data.avatar_url || response.data.avatar || '',
-          id: response.data.id || ownerId,
+          name: data.name || 'משתמש',
+          avatar: data.avatar_url || data.avatar || '',
+          id: data.id || ownerId,
         });
       } else {
         setItemOwner({
@@ -195,13 +196,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         // Check if we're already in HomeTabStack context
         const currentState = (navigation as any).getState?.();
         const currentRouteName = currentState?.routes?.[currentState?.index]?.name;
-        
+
         // Try to find BottomNavigator
         let bottomNavigator = null;
         let currentNav = navigation as any;
         let depth = 0;
         const maxDepth = 5;
-        
+
         while (currentNav && depth < maxDepth) {
           const state = currentNav.getState?.();
           if (state?.routeNames?.includes('HomeScreen')) {
@@ -216,7 +217,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             break;
           }
         }
-        
+
         if (bottomNavigator) {
           // Navigate through HomeScreen to UserProfileScreen (which is in HomeTabStack)
           bottomNavigator.navigate('HomeScreen', {
@@ -230,7 +231,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           logger.debug('ItemDetailsModal', 'Navigated to UserProfileScreen via HomeTabStack');
           return;
         }
-        
+
         // Fallback: try direct navigation to HomeScreen if available
         const parentNavigator = (navigation as any).getParent();
         if (parentNavigator) {
@@ -297,7 +298,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       const rideText = t('quickMessage:ride', { defaultValue: 'האם טרמפ זה רלוונטי?' });
       const itemText = t('quickMessage:item', { defaultValue: 'האם פריט זה רלוונטי?' });
       let messageText = type === 'ride' ? rideText : itemText;
-      
+
       // Fallback if translation returns the key itself or empty
       if (!messageText || messageText === 'quickMessage:ride' || messageText === 'quickMessage:item' || messageText === 'ride' || messageText === 'item') {
         messageText = type === 'ride' ? 'האם טרמפ זה רלוונטי?' : 'האם פריט זה רלוונטי?';

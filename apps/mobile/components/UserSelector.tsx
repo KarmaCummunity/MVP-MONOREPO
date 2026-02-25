@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import apiService from '../src/api/api.service';
+import apiService from '../utils/apiService';
 
 interface User {
     id: string;
@@ -35,10 +35,11 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
             try {
                 const res = await apiService.getUsers({ limit: 50 });
                 if (res.success && res.data) {
-                    setDefaultUsers(res.data);
+                    const data = res.data as User[];
+                    setDefaultUsers(data);
                     // If no query, show defaults immediately
                     if (!query) {
-                        setResults(res.data);
+                        setResults(data);
                     }
                 }
             } catch (err) {
@@ -68,7 +69,7 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
             try {
                 const res = await apiService.searchUsers(query);
                 if (res.success && res.data) {
-                    setResults(res.data);
+                    setResults(res.data as User[]);
                 }
             } catch (err) {
                 console.error('Search failed', err);

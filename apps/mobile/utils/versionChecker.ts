@@ -15,21 +15,14 @@ function getCurrentVersion(): string {
   return metaTag?.getAttribute('content') || CURRENT_VERSION;
 }
 
-/**
- * קריאת ה-timestamp של ה-build הנוכחי
- */
 function getCurrentBuildTimestamp(): string | null {
   if (typeof document === 'undefined') return null;
   const metaTag = document.querySelector('meta[name="build-timestamp"]');
-  return metaTag?.getAttribute('content');
+  return metaTag?.getAttribute('content') ?? null;
 }
 
-/**
- * בדיקה אם יש גרסה חדשה זמינה
- */
 async function checkForUpdates(): Promise<boolean> {
   try {
-    // מבצעים fetch ל-index.html עם no-cache כדי לקבל את הגרסה העדכנית ביותר
     const response = await fetch('/index.html', {
       method: 'HEAD',
       cache: 'no-cache',
@@ -44,20 +37,16 @@ async function checkForUpdates(): Promise<boolean> {
       return false;
     }
 
-    // בודקים את ה-ETag או Last-Modified header
     const etag = response.headers.get('etag');
     const lastModified = response.headers.get('last-modified');
-    
-    // שומרים את הערכים הקודמים
+
     const previousETag = localStorage.getItem('app-etag');
     const previousLastModified = localStorage.getItem('app-last-modified');
 
-    // אם יש שינוי ב-ETag או Last-Modified, יש עדכון חדש
-    const hasUpdate = (etag && etag !== previousETag) || 
-                     (lastModified && lastModified !== previousLastModified);
+    const hasUpdate = (etag && etag !== previousETag) ||
+      (lastModified && lastModified !== previousLastModified);
 
     if (hasUpdate) {
-      // שומרים את הערכים החדשים
       if (etag) localStorage.setItem('app-etag', etag);
       if (lastModified) localStorage.setItem('app-last-modified', lastModified);
       return true;
@@ -70,21 +59,16 @@ async function checkForUpdates(): Promise<boolean> {
   }
 }
 
-/**
- * מציג הודעה למשתמש שיש עדכון זמין
- */
 function showUpdateNotification() {
-  // בודקים אם כבר הצגנו הודעה (למניעת spam)
   const lastNotification = localStorage.getItem('last-update-notification');
   const now = Date.now();
-  
+
   if (lastNotification && now - parseInt(lastNotification) < VERSION_CHECK_INTERVAL) {
-    return; // כבר הצגנו הודעה לאחרונה
+    return;
   }
 
   localStorage.setItem('last-update-notification', now.toString());
 
-  // יצירת הודעה נאה
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed;
@@ -116,7 +100,6 @@ function showUpdateNotification() {
     </div>
   `;
 
-  // הוספת אנימציה
   const style = document.createElement('style');
   style.textContent = `
     @keyframes slideDown {
@@ -132,12 +115,9 @@ function showUpdateNotification() {
   `;
   document.head.appendChild(style);
 
-  // כשלוחצים על ההודעה - מרעננים
   notification.addEventListener('click', () => {
     window.location.reload();
   });
-
-  // אוטו-סגירה אחרי 10 שניות
   setTimeout(() => {
     notification.style.animation = 'slideDown 0.3s ease-out reverse';
     setTimeout(() => notification.remove(), 300);
@@ -146,12 +126,8 @@ function showUpdateNotification() {
   document.body.appendChild(notification);
 }
 
-/**
- * מנקה את ה-cache של הדפדפן
- */
 async function clearBrowserCache() {
   try {
-    // ניקוי Service Worker cache
     if ('serviceWorker' in navigator && 'caches' in window) {
       const cacheNames = await caches.keys();
       await Promise.all(
@@ -159,20 +135,15 @@ async function clearBrowserCache() {
       );
     }
 
-    // ניקוי localStorage של הודעות ישנות
     localStorage.removeItem('last-update-notification');
-    
+
     console.log('Browser cache cleared successfully');
   } catch (error) {
     console.error('Error clearing cache:', error);
   }
 }
 
-/**
- * מאתחל את בודק הגרסאות
- */
 export function initVersionChecker() {
-  // Only run on web platform
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     console.log('Version checker: Not running on web platform');
     return;
@@ -181,7 +152,6 @@ export function initVersionChecker() {
   console.log(`KC App Version: ${getCurrentVersion()}`);
   console.log(`Build Timestamp: ${getCurrentBuildTimestamp()}`);
 
-  // בדיקה ראשונית אחרי 10 שניות (לאחר שהאפליקציה נטענה)
   setTimeout(async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
@@ -189,7 +159,6 @@ export function initVersionChecker() {
     }
   }, 10000);
 
-  // בדיקה תקופתית
   setInterval(async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
@@ -229,7 +198,7 @@ export function getVersionInfo() {
   return {
     version: getCurrentVersion(),
     buildTimestamp: getCurrentBuildTimestamp(),
-    buildDate: getCurrentBuildTimestamp() 
+    buildDate: getCurrentBuildTimestamp()
       ? new Date(parseInt(getCurrentBuildTimestamp()!) * 1000).toLocaleString('he-IL')
       : 'Unknown',
   };

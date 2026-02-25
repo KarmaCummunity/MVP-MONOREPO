@@ -19,7 +19,7 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 
 interface AdminPeopleScreenProps {
   navigation: NavigationProp<AdminStackParamList>;

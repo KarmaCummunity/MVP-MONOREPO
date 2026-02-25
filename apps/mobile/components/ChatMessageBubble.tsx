@@ -1,7 +1,7 @@
 // components/ChatMessageBubble.tsx
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
-import { Message } from '../src/services/chat.service'; // Use new Message type
+import { Message } from '../utils/chatService'; // Use new Message type
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors'; // Assuming you have a Colors file
 import { FontSizes } from '../globals/constants';

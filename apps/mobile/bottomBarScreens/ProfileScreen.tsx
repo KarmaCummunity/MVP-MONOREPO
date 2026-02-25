@@ -36,10 +36,10 @@ import ProfileCompletionBanner from '../components/ProfileCompletionBanner';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import { createShadowStyle } from '../globals/styles';
 import { scaleSize } from '../globals/responsive';
-import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUpdatedFollowCounts } from '../src/services/follow.service';
-import { createSampleChatData, createConversation, conversationExists } from '../src/services/chat.service';
+import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUpdatedFollowCounts } from '../utils/followService';
+import { createSampleChatData, createConversation, conversationExists } from '../utils/chatService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { UserPreview as CharacterType } from '../globals/types';
 import { useToast } from '../utils/toastService';
@@ -47,7 +47,7 @@ import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
-import { sanitiseAvatarUrl } from '../src/utils/validation/url-validator';
+import { sanitiseAvatarUrl } from '../utils/urlValidator';
 
 // --- Type Definitions ---
 type TabRoute = {

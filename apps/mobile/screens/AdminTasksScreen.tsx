@@ -23,7 +23,7 @@ import {
 import colors from "../globals/colors";
 import { FontSizes, LAYOUT_CONSTANTS } from "../globals/constants";
 import { Ionicons } from "@expo/vector-icons";
-import apiService, { ApiResponse } from "../src/api/api.service";
+import apiService, { ApiResponse } from "../utils/apiService";
 import { useUser } from "../stores/userStore";
 import { useAdminProtection } from "../hooks/useAdminProtection";
 import UserSelector from "../components/UserSelector";

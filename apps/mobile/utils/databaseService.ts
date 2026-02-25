@@ -17,11 +17,11 @@
 // TODO: Add unit tests for all CRUD operations and edge cases
 // TODO: Implement proper migration system for data schema changes
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from '../../utils/config.constants';
-import { apiService } from '../../utils/apiService';
-import { restAdapter } from '../../utils/restAdapter';
-import { firestoreAdapter } from '../../utils/firestoreAdapter';
-import { DB_COLLECTIONS } from '../../utils/dbCollections';
+import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from './config.constants';
+import { apiService } from './apiService';
+import { restAdapter } from './restAdapter';
+import { firestoreAdapter } from './firestoreAdapter';
+import { DB_COLLECTIONS } from './dbCollections';
 import axios from 'axios';
 
 export { DB_COLLECTIONS };
@@ -29,7 +29,7 @@ let enhancedDbInstance: any = null;
 
 async function loadEnhancedDB() {
   if (enhancedDbInstance) return enhancedDbInstance;
-  const module = await import('../../utils/enhancedDatabaseService');
+  const module = await import('./enhancedDatabaseService');
   enhancedDbInstance = module.enhancedDB;
   return enhancedDbInstance;
 }
@@ -261,7 +261,7 @@ export class DatabaseService {
     try {
       if (USE_BACKEND) {
         for (const { id, data } of items) {
-
+           
           await restAdapter.create(collection, userId, id, data);
         }
         console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items (Backend)`);
@@ -290,7 +290,7 @@ export class DatabaseService {
     try {
       if (USE_BACKEND) {
         for (const id of itemIds) {
-
+           
           await restAdapter.delete(collection, userId, id);
         }
         console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Backend)`);
@@ -1125,15 +1125,15 @@ export const db = {
   getDailyTrackerData: async (userId: string, startDate?: string, endDate?: string) => {
     console.log('📊 API: Fetching daily tracker data for user:', userId);
     console.log('📅 Date range:', startDate, '-', endDate);
-
+    
     const params = new URLSearchParams({ user_id: userId });
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
-
+    
     const response = await axios.get(
       `${API_BASE_URL}/api/community-challenges/daily-tracker?${params.toString()}`
     );
-
+    
     const payload = response.data?.data ?? response.data;
     console.log('✅ API: Tracker data received');
     console.log('   Challenges:', payload?.challenges?.length ?? 0);

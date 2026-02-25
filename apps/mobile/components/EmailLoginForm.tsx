@@ -30,7 +30,8 @@ import {
   signUpWithEmail as fbSignUpWithEmail,
   sendVerification as fbSendVerification,
   sendPasswordReset
-} from '../src/services/auth.service';
+} from '../utils/authService';
+import { ServerUser } from '../utils/apiService';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 
@@ -322,7 +323,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
       // Get UUID from server using firebase_uid
-      const { apiService } = await import('../src/api/api.service');
+      const { apiService } = await import('../utils/apiService');
       const resolveResponse = await apiService.resolveUserId({
         firebase_uid: fbUser.uid,
         email: fbUser.email || email
@@ -332,7 +333,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
         // Fallback: try to get user by email
         const userResponse = await apiService.getUserById(fbUser.email || email);
         if (userResponse.success && userResponse.data) {
-          const serverUser = userResponse.data;
+          const serverUser = userResponse.data as ServerUser;
           const userData = {
             id: serverUser.id, // UUID from database
             name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -361,7 +362,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       }
 
       // Use UUID from server
-      const serverUser = resolveResponse.user;
+      const serverUser = (resolveResponse as any).user as ServerUser;
       const userData = {
         id: serverUser.id, // UUID from database - this is the primary identifier
         name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -412,7 +413,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
           const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
           // Get UUID from server using firebase_uid
-          const { apiService } = await import('../src/api/api.service');
+          const { apiService } = await import('../utils/apiService');
           const resolveResponse = await apiService.resolveUserId({
             firebase_uid: fbUser.uid,
             email: fbUser.email || email
@@ -422,7 +423,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
             // Fallback: try to get user by email
             const userResponse = await apiService.getUserById(fbUser.email || email);
             if (userResponse.success && userResponse.data) {
-              const serverUser = userResponse.data;
+              const serverUser = userResponse.data as ServerUser;
               const userData = {
                 id: serverUser.id, // UUID from database
                 name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -457,7 +458,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
             throw new Error('Failed to get user from server');
           }
 
-          const serverUser = resolveResponse.user as any;
+          const serverUser = (resolveResponse as any).user as ServerUser;
           const userData = {
             id: serverUser.id,
             name: serverUser.name || fbUser.displayName || email.split('@')[0],

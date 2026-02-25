@@ -21,7 +21,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import ScrollContainer from '../components/ScrollContainer';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';

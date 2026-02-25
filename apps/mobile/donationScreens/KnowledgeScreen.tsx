@@ -73,7 +73,7 @@ const educationalLinks = [
     description: 'שיעורי אמנות ויצירה לכל הגילאים',
     url: 'https://www.youtube.com/c/ArtForKidsHub',
     icon: 'brush-outline',
-    color: colors.pinkDeep,
+    color: (colors as any).pinkDeep,
     category: 'אמנות',
   },
 ];
@@ -132,16 +132,16 @@ export default function KnowledgeScreen({
 }) {
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
-  
+
   const { selectedUser, isRealAuth } = useUser();
-  
+
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to teach/share), false = seeker (needs learning)
   // URL mode: 'offer' = true, 'search' = false or undefined = search
   // Default is search mode (false)
   const initialMode = routeParams?.mode === 'offer' ? true : false;
   const [mode, setMode] = useState(initialMode);
-  
+
   // If no mode in URL, set it to search (default) and update URL
   useEffect(() => {
     if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null' || routeParams.mode === '') {
@@ -154,7 +154,7 @@ export default function KnowledgeScreen({
       (navigation as any).setParams({ mode: 'search' });
     }
   }, [routeParams?.mode]);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [selectedSort, setSelectedSort] = useState("");
@@ -177,14 +177,14 @@ export default function KnowledgeScreen({
   useEffect(() => {
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
-    
+
     // If no mode in URL, set it to search (default)
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
       // Set initial mode to search in URL
       (navigation as any).setParams({ mode: 'search' });
       return;
     }
-    
+
     // Only update URL if mode actually changed
     if (newMode !== currentMode) {
       (navigation as any).setParams({ mode: newMode });
@@ -254,31 +254,31 @@ export default function KnowledgeScreen({
 
   // Function to handle search results from HeaderComp
   const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('📚 KnowledgeScreen - Search received:', { 
-      query, 
-      filters: filters || [], 
-      sorts: sorts || [], 
-      resultsCount: results?.length || 0 
+    console.log('📚 KnowledgeScreen - Search received:', {
+      query,
+      filters: filters || [],
+      sorts: sorts || [],
+      resultsCount: results?.length || 0
     });
-    
+
     // Update state with search results
     setSearchQuery(query);
     setSelectedFilter(filters?.[0] || "");
     setSelectedSort(sorts?.[0] || "");
-    
+
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
       // Split results between educational links and community content
       const educationalResults = results.filter(item => item.url);
       const communityResults = results.filter(item => item.teacher);
-      
+
       setFilteredEducationalLinks(educationalResults);
       setFilteredCommunityContent(communityResults);
     } else {
       // Otherwise, perform local filtering
       let filteredEducational = [...educationalLinks];
       let filteredCommunity = [...communityContent];
-      
+
       // Filter by search query
       if (query.trim() !== "") {
         filteredEducational = filteredEducational.filter(item =>
@@ -286,7 +286,7 @@ export default function KnowledgeScreen({
           item.description.toLowerCase().includes(query.toLowerCase()) ||
           item.category.toLowerCase().includes(query.toLowerCase())
         );
-        
+
         filteredCommunity = filteredCommunity.filter(item =>
           item.title.toLowerCase().includes(query.toLowerCase()) ||
           item.subject.toLowerCase().includes(query.toLowerCase()) ||
@@ -294,7 +294,7 @@ export default function KnowledgeScreen({
           item.teacher.toLowerCase().includes(query.toLowerCase())
         );
       }
-      
+
       setFilteredEducationalLinks(filteredEducational);
       setFilteredCommunityContent(filteredCommunity);
     }
@@ -303,12 +303,12 @@ export default function KnowledgeScreen({
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
+
       <HeaderComp
         mode={mode}
         menuOptions={[]}
         onToggleMode={() => setMode(!mode)}
-        onSelectMenuItem={() => {}}
+        onSelectMenuItem={() => { }}
         title=""
         placeholder="חפש קורסים ושיעורים..."
         filterOptions={knowledgeFilterOptions}
@@ -328,7 +328,7 @@ export default function KnowledgeScreen({
           <Text style={styles.sectionDescription}>
             קישורים לאתרי לימוד מומלצים בחינם
           </Text>
-          
+
           <View style={styles.linksGrid}>
             {(isRealAuth ? [] : filteredEducationalLinks).map((link) => (
               <TouchableOpacity
@@ -392,7 +392,7 @@ export default function KnowledgeScreen({
           <Text style={styles.sectionDescription}>
             שיעורים פרטיים וקורסים מהקהילה
           </Text>
-          
+
           <View style={styles.communityGrid}>
             {(isRealAuth ? [] : filteredCommunityContent).map((content) => (
               <TouchableOpacity
@@ -409,10 +409,10 @@ export default function KnowledgeScreen({
                       <Text style={styles.ratingText}>{content.rating}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.communitySubject}>{content.subject}</Text>
                   <Text style={styles.communityDescription}>{content.description}</Text>
-                  
+
                   <View style={styles.communityFooter}>
                     <View style={styles.communityStats}>
                       <Ionicons name="people" size={16} color={colors.textSecondary} />
@@ -420,7 +420,7 @@ export default function KnowledgeScreen({
                     </View>
                     <Text style={styles.communityPrice}>{content.price}</Text>
                   </View>
-                  
+
                   <View style={styles.communityTeacher}>
                     <Ionicons name="person" size={16} color={colors.secondary} />
                     <Text style={styles.communityTeacherText}>{content.teacher}</Text>

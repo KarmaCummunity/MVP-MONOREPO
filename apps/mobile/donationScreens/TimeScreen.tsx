@@ -109,16 +109,16 @@ export default function TimeScreen({
 }) {
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
-  
+
   const { selectedUser, isRealAuth } = useUser();
-  
+
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to volunteer), false = seeker (needs volunteers)
   // URL mode: 'offer' = true, 'search' = false
   // Default is search mode (false)
   const initialMode = routeParams?.mode === 'offer' ? true : false;
   const [mode, setMode] = useState(initialMode);
-  
+
   const [selectedCategory, setSelectedCategory] = useState<string>('כל הקטגוריות');
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
@@ -141,14 +141,14 @@ export default function TimeScreen({
   useEffect(() => {
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
-    
+
     // If no mode in URL, set it to search (default)
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
       // Set initial mode to search in URL
       (navigation as any).setParams({ mode: 'search' });
       return;
     }
-    
+
     // Only update URL if mode actually changed
     if (newMode !== currentMode) {
       (navigation as any).setParams({ mode: newMode });
@@ -167,11 +167,11 @@ export default function TimeScreen({
   );
 
   const categories = ['כל הקטגוריות', 'קשישים', 'חינוך', 'רווחה', 'חיות', 'סביבה', 'בריאות'];
-  
+
   // Filter and sort options for time screen
   const timeFilterOptions = [
     "קשישים",
-    "חינוך", 
+    "חינוך",
     "רווחה",
     "חיות",
     "סביבה",
@@ -201,8 +201,8 @@ export default function TimeScreen({
       `האם תרצה להצטרף להתנדבות "${opportunity.title}"?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        { 
-          text: 'הצטרף', 
+        {
+          text: 'הצטרף',
           onPress: () => {
             Alert.alert(
               'הצלחה!',
@@ -233,25 +233,25 @@ export default function TimeScreen({
 
   // Function to handle search results from HeaderComp
   const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('⏰ TimeScreen - Search received:', { 
-      query, 
-      filters: filters || [], 
-      sorts: sorts || [], 
-      resultsCount: results?.length || 0 
+    console.log('⏰ TimeScreen - Search received:', {
+      query,
+      filters: filters || [],
+      sorts: sorts || [],
+      resultsCount: results?.length || 0
     });
-    
+
     // Update state with search results
     setSearchQuery(query);
     setSelectedFilter(filters?.[0] || "");
     setSelectedSort(sorts?.[0] || "");
-    
+
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
       setFilteredOpportunities(results);
     } else {
       // Otherwise, perform local filtering
       let filtered = [...volunteerOpportunities];
-      
+
       // Filter by search query
       if (query.trim() !== "") {
         filtered = filtered.filter(opp =>
@@ -262,12 +262,12 @@ export default function TimeScreen({
           opp.category.toLowerCase().includes(query.toLowerCase())
         );
       }
-      
+
       // Filter by category
       if (selectedCategory !== 'כל הקטגוריות') {
         filtered = filtered.filter(opp => opp.category === selectedCategory);
       }
-      
+
       setFilteredOpportunities(filtered);
     }
   };
@@ -275,7 +275,7 @@ export default function TimeScreen({
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
+
       <HeaderComp
         mode={mode}
         menuOptions={['הגדרות', 'עזרה', 'צור קשר']}
@@ -285,11 +285,11 @@ export default function TimeScreen({
         placeholder="חפש הזדמנויות התנדבות..."
         filterOptions={timeFilterOptions}
         sortOptions={timeSortOptions}
-         searchData={isRealAuth ? [] : volunteerOpportunities}
+        searchData={isRealAuth ? [] : volunteerOpportunities}
         onSearch={handleSearch}
       />
 
-       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} nestedScrollEnabled>
         {/* Emergency Volunteer Link */}
         <View style={styles.emergencySection}>
           <TouchableOpacity
@@ -312,8 +312,8 @@ export default function TimeScreen({
         {/* Categories Filter */}
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>קטגוריות</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesScroll}
           >
@@ -343,9 +343,9 @@ export default function TimeScreen({
           <Text style={styles.sectionDescription}>
             מצא הזדמנויות התנדבות מתאימות לך
           </Text>
-          
+
           <View style={styles.opportunitiesGrid}>
-             {(isRealAuth ? [] : filteredOpportunities).map((opportunity) => (
+            {(isRealAuth ? [] : filteredOpportunities).map((opportunity) => (
               <TouchableOpacity
                 key={opportunity.id}
                 style={styles.opportunityCard}
@@ -359,16 +359,16 @@ export default function TimeScreen({
                       <Text style={styles.opportunityCategoryText}>{opportunity.category}</Text>
                     </View>
                   </View>
-                  
+
                   <Text style={styles.opportunityOrganization}>{opportunity.organization}</Text>
                   <Text style={styles.opportunityDescription}>{opportunity.description}</Text>
                   <TouchableOpacity
                     style={styles.visitButton}
-                    onPress={() => Linking.openURL('https://www.ruachtova.org.il/').catch(() => Alert.alert('שגיאה','לא ניתן לפתוח את הקישור'))}
+                    onPress={() => Linking.openURL('https://www.ruachtova.org.il/').catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור'))}
                   >
                     <Text style={styles.visitButtonText}>מצא התנדבויות דומות</Text>
                   </TouchableOpacity>
-                  
+
                   <View style={styles.opportunityDetails}>
                     <View style={styles.detailItem}>
                       <Ionicons name="location" size={16} color={colors.textSecondary} />
@@ -383,15 +383,15 @@ export default function TimeScreen({
                       <Text style={styles.detailText}>{opportunity.frequency}</Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.volunteersInfo}>
                     <View style={styles.volunteersProgress}>
                       <View style={styles.progressBar}>
-                        <View 
+                        <View
                           style={[
-                            styles.progressFill, 
+                            styles.progressFill,
                             { width: `${(opportunity.volunteers / opportunity.needed) * 100}%` }
-                          ]} 
+                          ]}
                         />
                       </View>
                       <Text style={styles.volunteersText}>
@@ -420,7 +420,7 @@ export default function TimeScreen({
         </View>
 
         {/* Add Links Section */}
-        <View style={styles.section}>
+        <View style={(styles as any).section}>
           <Text style={styles.sectionTitle}>קישורים שימושיים</Text>
           <AddLinkComponent category="time" />
         </View>
@@ -447,9 +447,9 @@ const styles = StyleSheet.create({
   emergencyCard: {
     backgroundColor: colors.warningLight,
     borderRadius: 15,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: colors.accent,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: (colors as any).pinkDeep,
   },
   emergencyContent: {
     flexDirection: 'row',
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   opportunityCategoryText: {
-    color: colors.pinkDeep,
+    color: (colors as any).pinkDeep,
     fontSize: FontSizes.small,
     fontWeight: '600',
   },

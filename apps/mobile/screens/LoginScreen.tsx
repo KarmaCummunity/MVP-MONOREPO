@@ -28,14 +28,15 @@ import {
     signInWithEmail,
     signUpWithEmail,
     sendVerification
-} from '../src/services/auth.service';
+} from '../utils/authService';
 import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
 import i18n from '../app/i18n';
+import { ServerUser } from '../utils/apiService';
 
 const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
-    const { t } = useTranslation(['auth', 'common', 'settings']);
+    const { t } = useTranslation(['auth', 'common', 'settings', 'home']);
     const { setCurrentPrincipal } = useUser();
     // const navigation = useNavigation<any>();
 
@@ -122,7 +123,7 @@ export default function LoginScreen() {
 
                 // Get UUID from server using firebase_uid
                 try {
-                    const { apiService } = await import('../src/api/api.service');
+                    const { apiService } = await import('../utils/apiService');
                     const resolveResponse = await apiService.resolveUserId({
                         firebase_uid: fbUser.uid,
                         email: email
@@ -132,7 +133,7 @@ export default function LoginScreen() {
                         // Fallback: try to get user by email
                         const userResponse = await apiService.getUserById(fbUser.email || email);
                         if (userResponse.success && userResponse.data) {
-                            const serverUser = userResponse.data;
+                            const serverUser = userResponse.data as ServerUser;
                             const userData = {
                                 id: serverUser.id, // UUID from database
                                 name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -146,7 +147,7 @@ export default function LoginScreen() {
                                 bio: serverUser.bio || '',
                                 karmaPoints: serverUser.karma_points || 0,
                                 joinDate: serverUser.join_date || serverUser.created_at || nowIso,
-                                location: { city: serverUser.city || 'תל אביב', country: serverUser.country || 'Israel' },
+                                location: { city: serverUser.city || t('home:cities.tlv'), country: serverUser.country || t('common:labels.countryIsrael') },
                                 interests: serverUser.interests || [],
                                 postsCount: serverUser.posts_count || 0,
                                 followersCount: serverUser.followers_count || 0,
@@ -161,7 +162,7 @@ export default function LoginScreen() {
                     }
 
                     // Use UUID from server
-                    const serverUser = resolveResponse.user;
+                    const serverUser = (resolveResponse as any).user as ServerUser;
                     const userData = {
                         id: serverUser.id, // UUID from database - this is the primary identifier
                         name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -175,7 +176,7 @@ export default function LoginScreen() {
                         bio: serverUser.bio || '',
                         karmaPoints: serverUser.karmaPoints || 0,
                         joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                        location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
+                        location: serverUser.location || { city: t('home:cities.tlv'), country: t('common:labels.countryIsrael') },
                         interests: serverUser.interests || [],
                         postsCount: serverUser.postsCount || 0,
                         followersCount: serverUser.followersCount || 0,
@@ -209,14 +210,14 @@ export default function LoginScreen() {
                         if (signUpError.code === 'auth/email-already-in-use') {
                             const fbUser = await signInWithEmail(email, password);
                             // Get user data and proceed with login (same logic as above)
-                            const { apiService } = await import('../src/api/api.service');
+                            const { apiService } = await import('../utils/apiService');
                             const resolveResponse = await apiService.resolveUserId({
                                 firebase_uid: fbUser.uid,
                                 email: email
                             });
 
-                            if (resolveResponse.success && resolveResponse.user) {
-                                const serverUser = resolveResponse.user;
+                            if (resolveResponse.success && (resolveResponse as any).user) {
+                                const serverUser = (resolveResponse as any).user as ServerUser;
                                 const userData = {
                                     id: serverUser.id,
                                     name: serverUser.name || fbUser.displayName || email.split('@')[0],
@@ -230,7 +231,7 @@ export default function LoginScreen() {
                                     bio: serverUser.bio || '',
                                     karmaPoints: serverUser.karmaPoints || 0,
                                     joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                                    location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
+                                    location: serverUser.location || { city: t('home:cities.tlv'), country: t('common:labels.countryIsrael') },
                                     interests: serverUser.interests || [],
                                     postsCount: serverUser.postsCount || 0,
                                     followersCount: serverUser.followersCount || 0,

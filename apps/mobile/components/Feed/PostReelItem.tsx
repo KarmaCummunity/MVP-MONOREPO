@@ -163,7 +163,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (!selectedUser || !isPostOwner) return;
 
         try {
-            const { apiService } = await import('../../src/api/api.service');
+            const { apiService } = await import('../../utils/apiService');
             const { toastService } = await import('../../utils/toastService');
 
             let updateResult: any = { success: false };

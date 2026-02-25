@@ -17,7 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';

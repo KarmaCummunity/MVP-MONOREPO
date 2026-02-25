@@ -1,7 +1,7 @@
 // utils/notificationService.ts
 import { Platform, Alert } from 'react-native';
-import { db, DB_COLLECTIONS, DatabaseService } from '../../utils/databaseService';
-import colors from '../../globals/colors';
+import { db, DB_COLLECTIONS, DatabaseService } from './databaseService';
+import colors from '../globals/colors';
 
 // Import notifications only on supported platforms
 let Notifications: any = null;

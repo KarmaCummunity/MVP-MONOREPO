@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { postsService } from '../src/services/posts.service';
+import { postsService } from '../utils/postsService';
 import { logger } from '../utils/loggerService';
 import { FeedItem } from '../types/feed';
 import { useUser } from '../stores/userStore';

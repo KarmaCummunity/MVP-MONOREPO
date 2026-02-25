@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
@@ -99,7 +99,7 @@ export const usePostDeletion = () => {
 
             if (result.success) {
                 toastService.showSuccess(
-                    result.data?.message || 'הפוסט נמחק בהצלחה'
+                    (result.data as any)?.message || 'הפוסט נמחק בהצלחה'
                 );
 
                 // Call success callback

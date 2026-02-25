@@ -1,7 +1,7 @@
-import { sendFollowNotification } from '../../utils/notificationService';
-import { db, DatabaseService } from '../../utils/databaseService';
-import { apiService } from '../../utils/apiService';
-import { USE_BACKEND } from '../../utils/dbConfig';
+import { sendFollowNotification } from './notificationService';
+import { db, DatabaseService } from './databaseService';
+import { apiService } from './apiService';
+import { USE_BACKEND } from './dbConfig';
 
 export interface FollowRelationship {
   followerId: string;

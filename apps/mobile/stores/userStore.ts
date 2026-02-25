@@ -85,8 +85,8 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
     const isSuperAdmin = SUPER_ADMINS.includes(emailKey);
 
     // Import services locally
-    const { apiService } = await import('../src/api/api.service');
-    const { db } = await import('../src/infrastructure/database.service');
+    const { apiService } = await import('../utils/apiService');
+    const { db } = await import('../utils/databaseService');
 
     // Run fetches in parallel with independent timeouts
     const [userFetchResult, applicationsFetchResult] = await Promise.allSettled([
@@ -192,7 +192,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       const enriched = await enrichUserWithOrgRoles(principal.user);
       // Treat any non-guest role as real auth
       try {
-        const { DatabaseService } = await import('../src/infrastructure/database.service');
+        const { DatabaseService } = await import('../utils/databaseService');
         await DatabaseService.clearLocalCollections();
       } catch (e) {
         console.log('⚠️ Failed to clear local collections on real auth (non-fatal):', e);
@@ -310,7 +310,7 @@ export const useUserStore = create<UserState>((set, get) => ({
             // Validate token before restoring session
             // Only validate if not in guest mode
             if (authModeStored !== 'guest') {
-              const { apiService } = await import('../src/api/api.service');
+              const { apiService } = await import('../utils/apiService');
 
               // Try to get a valid auth token (this will refresh if needed)
               const authToken = await apiService.getAuthToken();
@@ -587,7 +587,7 @@ export const useUserStore = create<UserState>((set, get) => ({
 
             try {
               // Get UUID from server using firebase_uid and google_id
-              const { apiService } = await import('../src/api/api.service');
+              const { apiService } = await import('../utils/apiService');
 
               // Extract google_id from providerData if available
               const googleProvider = firebaseUser.providerData?.find(

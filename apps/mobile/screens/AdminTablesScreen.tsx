@@ -20,7 +20,7 @@ import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { apiService, ApiResponse } from '../src/api/api.service';
+import { apiService, ApiResponse } from '../utils/apiService';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
 interface AdminTablesScreenProps {

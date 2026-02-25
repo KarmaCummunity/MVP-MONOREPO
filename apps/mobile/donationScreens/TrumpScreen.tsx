@@ -19,7 +19,7 @@ import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import ItemDetailsModal from '../components/ItemDetailsModal';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
@@ -29,7 +29,7 @@ import { getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
 // New Modular Components
 import RideOfferForm from '../components/rides/RideOfferForm';
 import VerticalGridSlider from '../components/VerticalGridSlider';
-import { postsService } from '../src/services/posts.service';
+import { postsService } from '../utils/postsService';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
@@ -381,22 +381,22 @@ export default function TrumpScreen({
       console.log('🔵 מצב מציע - טוען פוסטים של המשתמש להיסטוריה:', uid);
       try {
         // טוען את הפוסטים של המשתמש
-        const { apiService } = await import('../src/api/api.service');
+        const { apiService } = await import('../utils/apiService');
         const postsResponse = await apiService.getUserPosts(uid, 50, uid);
-        
+
         if (postsResponse.success && Array.isArray(postsResponse.data)) {
           // מסנן רק פוסטים של טרמפים
-          const ridePosts = postsResponse.data.filter((post: any) => 
+          const ridePosts = postsResponse.data.filter((post: any) =>
             post.post_type === 'ride' || post.post_type === 'ride_offered' || post.ride_id
           );
-          
+
           // ממפה את הפוסטים
           const mappedPosts = ridePosts
             .map(mapPostToFeedItem)
-            .filter((post: FeedItem | null): post is FeedItem => 
-              post !== null && post !== undefined && post.user && post.user.id && post.user.name
+            .filter((post: FeedItem | null): post is FeedItem =>
+              !!(post !== null && post !== undefined && post.user && post.user.id && post.user.name)
             );
-          
+
           setRecentPosts(mappedPosts);
           console.log('✅ טעינת פוסטים להיסטוריה הצליחה:', mappedPosts.length, 'פוסטים');
         } else {
@@ -831,8 +831,8 @@ export default function TrumpScreen({
   const screenPadding = HORIZONTAL_PADDING;
   const cardGap = COLUMN_GAP;
   // Calculate card width: full width minus padding on both sides, minus gaps between columns
-  const cardWidth = numColumns === 1 
-    ? width - (screenPadding * 2) 
+  const cardWidth = numColumns === 1
+    ? width - (screenPadding * 2)
     : (width - (screenPadding * 2) - (cardGap * (numColumns - 1))) / numColumns;
 
   const handleCloseRideModal = () => {
@@ -844,10 +844,10 @@ export default function TrumpScreen({
   const renderPostItem = useCallback(({ item }: { item: FeedItem }) => {
     // Calculate available width: screen width minus horizontal padding on both sides
     const availableWidth = width - (screenPadding * 2);
-    
+
     // For grid view: with justifyContent: 'space-between', FlatList distributes items automatically
     // So each item gets availableWidth / numColumns (no need to account for gaps)
-    const itemWidth = numColumns > 1 
+    const itemWidth = numColumns > 1
       ? availableWidth / numColumns
       : availableWidth; // Full available width for list view
 

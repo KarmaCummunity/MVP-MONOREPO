@@ -23,8 +23,8 @@ import CommentsModal from './CommentsModal';
 import OptionsModal from './Feed/OptionsModal';
 import ReportPostModal from './Feed/ReportPostModal';
 import EditPostModal from './Feed/EditPostModal';
-import { apiService } from '../src/api/api.service';
-import { postsService } from '../src/services/posts.service';
+import { apiService } from '../utils/apiService';
+import { postsService } from '../utils/postsService';
 import VerticalGridSlider from './VerticalGridSlider';
 import { logger } from '../utils/loggerService';
 import { usePostMenu } from '../hooks/usePostMenu';
@@ -154,8 +154,9 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
       let adminId: string | null = null;
       try {
         const resolveRes = await apiService.resolveUserId({ email: adminEmail });
-        if (resolveRes.success && resolveRes.data?.id) {
-          adminId = resolveRes.data.id;
+        const data = resolveRes.data as any;
+        if (resolveRes.success && data?.id) {
+          adminId = data.id;
         }
       } catch (e) { console.warn('Resolve admin failed', e); }
 
@@ -164,8 +165,9 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
         // For MVP we might need to assume a system user or fail gracefuly
         // Attempt search
         const searchRes = await apiService.getUsers({ search: adminEmail, limit: 1 });
-        if (searchRes.success && searchRes.data?.[0]?.id) {
-          adminId = searchRes.data[0].id;
+        const data = searchRes.data as any;
+        if (searchRes.success && data?.[0]?.id) {
+          adminId = data[0].id;
         }
       }
 

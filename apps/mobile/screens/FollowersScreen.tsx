@@ -27,7 +27,7 @@ import {
   followUser, 
   unfollowUser,
   getFollowStats 
-} from '../src/services/follow.service';
+} from '../utils/followService';
 import { useUser } from '../stores/userStore';
 
 type FollowersScreenRouteParams = {

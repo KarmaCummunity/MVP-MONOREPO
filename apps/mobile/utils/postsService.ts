@@ -3,7 +3,7 @@
 // - Provides: toggleLike, getComments, addComment, deleteComment, toggleCommentLike
 // - Communicates with: /api/posts/* endpoints on the backend
 
-import { API_BASE_URL } from '../../utils/config.constants';
+import { API_BASE_URL } from './config.constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface PostsApiResponse<T = any> {
@@ -69,7 +69,7 @@ class PostsService {
 
       // Fallback: Try to get Firebase ID token
       try {
-        const { getFirebase } = await import('../../utils/firebaseClient');
+        const { getFirebase } = await import('./firebaseClient');
         const { getAuth } = await import('firebase/auth');
         const { app } = getFirebase();
         const auth = getAuth(app);

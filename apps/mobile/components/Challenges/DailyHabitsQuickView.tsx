@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { db } from '../../src/infrastructure/database.service';
+import { db } from '../../utils/databaseService';
 import { useUser } from '../../stores/userStore';
 import { EditEntryModal } from './EditEntryModal';
 import {

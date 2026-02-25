@@ -30,10 +30,10 @@ import {
   followUser,
   unfollowUser,
   getFollowStats
-} from '../src/services/follow.service';
-import { createConversation, conversationExists } from '../src/services/chat.service';
+} from '../utils/followService';
+import { createConversation, conversationExists } from '../utils/chatService';
 import { useUser } from '../stores/userStore';
-import apiService from '../src/api/api.service';
+import apiService from '../utils/apiService';
 
 import { getScreenInfo, isLandscape } from '../globals/responsive';
 import { IS_DEVELOPMENT } from '../utils/dbConfig';

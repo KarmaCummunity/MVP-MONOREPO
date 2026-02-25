@@ -15,12 +15,44 @@
 // TODO: Implement proper API versioning support
 // TODO: Add request/response transformation middleware
 // TODO: Add comprehensive logging and monitoring
-import type { ApiResponse as BaseApiResponse } from '@kc/shared-types';
-import { API_BASE_URL as CONFIG_API_BASE_URL } from '../../utils/config.constants';
-import { logger } from '../../utils/loggerService';
+import type { ApiResponse } from '@kc/shared-types';
+import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
+import { logger } from './loggerService';
 
-type ApiResponse<T = any> = BaseApiResponse<T>;
 export type { ApiResponse };
+
+export interface ServerUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  phone?: string | null;
+  avatar_url?: string | null;
+  avatar?: string | null;
+  bio?: string | null;
+  karma_points?: number;
+  karmaPoints?: number;
+  join_date?: string | null;
+  joinDate?: string | null;
+  is_active?: boolean;
+  isActive?: boolean;
+  last_active?: string | null;
+  lastActive?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  city?: string | null;
+  country?: string | null;
+  location?: { city: string; country: string } | null;
+  interests?: string[] | null;
+  roles?: string[] | null;
+  posts_count?: number;
+  postsCount?: number;
+  followers_count?: number;
+  followersCount?: number;
+  following_count?: number;
+  followingCount?: number;
+  settings?: any;
+  email_verified?: boolean;
+}
 
 class ApiService {
   private _baseURL: string | null = null;
@@ -225,7 +257,7 @@ class ApiService {
 
       // Fallback: Try to get Firebase ID token
       // This is robust because it automatically refreshes if needed
-      const { getFirebase } = await import('../../utils/firebaseClient');
+      const { getFirebase } = await import('./firebaseClient');
       const { getAuth } = await import('firebase/auth');
       const { app } = getFirebase();
       const auth = getAuth(app);
@@ -422,16 +454,16 @@ class ApiService {
     });
   }
 
-  async getUserById(userId: string): Promise<ApiResponse> {
-    return this.request(`/api/users/${userId}`);
+  async getUserById(userId: string): Promise<ApiResponse<ServerUser>> {
+    return this.request<ServerUser>(`/api/users/${userId}`);
   }
 
   /**
    * Resolve user ID from firebase_uid, google_id, or email to UUID
    * This is used when the client has Firebase UID or Google ID and needs the database UUID
    */
-  async resolveUserId(params: { firebase_uid?: string; google_id?: string; email?: string }): Promise<ApiResponse> {
-    return this.request('/api/users/resolve-id', {
+  async resolveUserId(params: { firebase_uid?: string; google_id?: string; email?: string }): Promise<ApiResponse<ServerUser>> {
+    return this.request<ServerUser>('/api/users/resolve-id', {
       method: 'POST',
       body: JSON.stringify(params),
     });

@@ -62,7 +62,7 @@ export default function OAuthRedirect() {
         }
 
         // Send idToken to server to get UUID
-        const { API_BASE_URL } = await import('../src/infrastructure/config');
+        const { API_BASE_URL } = await import('../utils/config.constants');
         const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {

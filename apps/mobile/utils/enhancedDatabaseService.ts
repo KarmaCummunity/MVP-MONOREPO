@@ -20,10 +20,10 @@ import { logger } from './loggerService';
 // TODO: Implement proper data encryption for sensitive cached data
 // TODO: Add comprehensive performance optimization and monitoring
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiService, ApiResponse } from '../src/api/api.service';
+import { apiService, ApiResponse } from './apiService';
 import { USE_BACKEND, CACHE_CONFIG, OFFLINE_CONFIG, STORAGE_KEYS } from './dbConfig';
 import { DB_COLLECTIONS } from './dbCollections';
-import { db } from '../src/infrastructure/database.service';
+import { db } from './databaseService';
 
 // TODO: Move all interfaces to proper types directory
 // TODO: Add comprehensive validation for all interface fields

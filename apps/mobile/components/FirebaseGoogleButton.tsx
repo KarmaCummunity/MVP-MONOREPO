@@ -12,7 +12,7 @@ import { getFirebase } from '../utils/firebaseClient';
 import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../src/infrastructure/config';
+import { API_BASE_URL } from '../utils/config.constants';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';

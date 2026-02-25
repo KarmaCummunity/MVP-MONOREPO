@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { logger } from '../utils/loggerService';
 import ScrollContainer from '../components/ScrollContainer';
 import ScreenWrapper from '../components/ScreenWrapper';
-import { EnhancedStatsService } from '../src/services/stats.service';
-import { apiService } from '../src/api/api.service';
+import { EnhancedStatsService } from '../utils/statsService';
+import { apiService } from '../utils/apiService';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { useWebMode } from '../stores/webModeStore';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -383,9 +383,10 @@ const StatsDetailModal: React.FC<{
       setIsLoading(true);
       logger.info('StatsDetailModal', `Loading detail data for ${statType}`);
       const response = await apiService.getStatDetails(statType);
-      if (response.success && response.data) {
-        setDetailData(response.data);
-        logger.info('StatsDetailModal', `Loaded ${response.data.length} items for ${statType}`);
+      const data = response.data as any[];
+      if (response.success && data) {
+        setDetailData(data);
+        logger.info('StatsDetailModal', `Loaded ${data.length} items for ${statType}`);
       }
     } catch (error) {
       logger.error('StatsDetailModal', 'Failed to load detail data', { error, statType });

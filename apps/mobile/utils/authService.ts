@@ -14,7 +14,7 @@
 // TODO: Create proper TypeScript interfaces for all auth-related types
 // TODO: Add comprehensive unit tests for all authentication functions
 // TODO: Implement proper multi-factor authentication support
-import { getFirebase } from '../../utils/firebaseClient';
+import { getFirebase } from './firebaseClient';
 import {
   getAuth,
   createUserWithEmailAndPassword,

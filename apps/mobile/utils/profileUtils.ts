@@ -4,7 +4,7 @@
 // - Provides: Functions to check if profile is complete and to manage About screen auto-open state
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { User } from '../../../stores/userStore';
+import type { User } from '../stores/userStore';
 
 /**
  * Storage key for tracking if user has seen the About screen

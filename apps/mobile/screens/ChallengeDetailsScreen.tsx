@@ -17,7 +17,7 @@ import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } fr
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';

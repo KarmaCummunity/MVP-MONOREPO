@@ -1,9 +1,9 @@
-import { USE_FIRESTORE, USE_BACKEND } from '../../utils/config.constants';
-import { getFirebase } from '../../utils/firebaseClient';
+import { USE_FIRESTORE, USE_BACKEND } from './config.constants';
+import { getFirebase } from './firebaseClient';
 import { collection as fsCollection, query as fsQuery, where as fsWhere, onSnapshot } from 'firebase/firestore';
-import { sendMessageNotification } from '../../utils/notificationService';
-import { db, DB_COLLECTIONS, DatabaseService } from '../../utils/databaseService';
-import { apiService } from '../../utils/apiService';
+import { sendMessageNotification } from './notificationService';
+import { db, DB_COLLECTIONS, DatabaseService } from './databaseService';
+import { apiService } from './apiService';
 
 // TODO: CRITICAL - This file is extremely complex (735 lines). Split into specialized services:
 //   - ConversationService for conversation management
@@ -15,7 +15,7 @@ import { apiService } from '../../utils/apiService';
 // TODO: Add comprehensive TypeScript interfaces with strict typing
 // TODO: Implement proper connection management and reconnection logic
 // TODO: Add comprehensive message validation and sanitization
-import { logger } from '../../utils/loggerService';
+import { logger } from './loggerService';
 // Removed console.log statements - using proper logging service
 // TODO: Add comprehensive unit tests for all chat operations
 // TODO: Implement proper memory management for listeners and subscriptions

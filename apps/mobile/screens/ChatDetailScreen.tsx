@@ -29,11 +29,11 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../src/services/chat.service';
+import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../utils/chatService';
 import { pickImage, pickVideo, takePhoto, pickDocument, validateFile, FileData } from '../utils/fileService';
-import { uploadFileWithProgress, buildChatFilePath } from '../src/infrastructure/storage.service';
-import { apiService } from '../src/api/api.service';
-import { USE_BACKEND } from '../src/infrastructure/config';
+import { uploadFileWithProgress, buildChatFilePath } from '../utils/storageService';
+import { apiService } from '../utils/apiService';
+import { USE_BACKEND } from '../utils/config.constants';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
@@ -82,8 +82,9 @@ export default function ChatDetailScreen() {
     setIsLoadingProfile(true);
     try {
       const response = await apiService.getUserById(otherUserId);
-      if (response.success && response.data) {
-        const userData = response.data;
+      const data = response.data as any;
+      if (response.success && data) {
+        const userData = data;
         // Only update if we got valid data and the initial name was "unknown user"
         const newName = userData.name || initialUserName || t('chat:unknownUser');
         const newAvatar = userData.avatar_url || userData.avatar || initialUserAvatar || '';

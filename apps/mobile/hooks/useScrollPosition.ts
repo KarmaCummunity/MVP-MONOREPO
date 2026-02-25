@@ -53,7 +53,7 @@ interface UseScrollPositionOptions {
 export const useScrollPosition = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
-): React.RefObject<ScrollView | FlatList> => {
+): React.MutableRefObject<ScrollView | FlatList<any> | null> => {
   const { enabled = true, debounceDelay = 200 } = options;
   const { selectedUser } = useUser();
   const scrollRef = useRef<ScrollView | FlatList>(null);
@@ -87,7 +87,7 @@ export const useScrollPosition = (
             const position = parseFloat(savedPosition);
             if (!isNaN(position) && position > 0 && scrollRef.current) {
               isRestoringRef.current = true;
-              
+
               // Small delay to ensure ScrollView is fully rendered
               setTimeout(() => {
                 try {
@@ -136,7 +136,7 @@ export const useScrollPosition = (
     // For ScrollView - attach scroll event handler
     if ('scrollTo' in scrollRef.current) {
       const scrollView = scrollRef.current as ScrollView;
-      
+
       // Note: ScrollView's onScroll event needs to be passed as a prop
       // We'll need to handle this differently - see usage example
       // For now, we'll save on blur/focus change
@@ -206,7 +206,7 @@ export const useScrollPosition = (
     }, [screenKey, selectedUser?.id, enabled, debounceDelay])
   );
 
-  return scrollRef;
+  return scrollRef as React.MutableRefObject<FlatList<any> | null>;
 };
 
 /**
@@ -221,7 +221,7 @@ export const useScrollPositionWithHandler = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
 ): {
-  ref: React.RefObject<ScrollView | FlatList>;
+  ref: React.MutableRefObject<ScrollView | FlatList<any> | null>;
   onScroll: (event: any) => void;
 } => {
   const { enabled = true, debounceDelay = 200 } = options;

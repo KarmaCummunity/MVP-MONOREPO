@@ -3,9 +3,9 @@
 // - Reached from: `DatabaseService` when `USE_BACKEND` is true, and some direct auth flows.
 // - Provides: create/read/update/delete/list for collections; auth check/register/login; generic POST helper.
 // utils/restAdapter.ts
-import { API_BASE_URL } from '../src/infrastructure/config';
+import { API_BASE_URL } from './config.constants';
 
-import { apiService } from '../src/api/api.service';
+import { apiService } from './apiService';
 
 export class RestAdapter {
   private _baseUrl: string | null = null;

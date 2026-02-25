@@ -28,7 +28,7 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
 import ItemDetailsModal from '../components/ItemDetailsModal';
