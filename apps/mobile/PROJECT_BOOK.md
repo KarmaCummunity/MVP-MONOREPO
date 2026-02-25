@@ -68,7 +68,7 @@
   - **אחריות מרכזית**:
     - טעינת פונטים (Ionicons, MaterialIcons), שליטה ב־SplashScreen והצגת מסך טעינה.  
     - קריאת שפת הממשק מ־`AsyncStorage` (`app_language`), שינוי שפה ב־`i18n` והגדרת RTL דרך `I18nManager`.  
-    - הגדרת `UserProvider`, ‏`WebModeProvider`, ‏`AppLoadingProvider`, ‏`SafeAreaProvider`, ‏`GestureHandlerRootView` ו־`ErrorBoundary`.  
+    - הגדרת Zustand stores (userStore, webModeStore, appLoadingStore), ‏`SafeAreaProvider`, ‏`GestureHandlerRootView` ו־`ErrorBoundary`.  
     - יצירת `NavigationContainer` עם `MainNavigator` וניהול ניווט גלובלי (`navigationRef`) כולל ניווט מתשובות התראות push (למסכי `ChatDetailScreen` / `NotificationsScreen`).  
     - תמיכה ב־Web Mode: רכיב `WebModeToggleOverlay` ותוספת padding במצב `app` על Web.  
   - **שירותים חיצוניים**:
@@ -89,7 +89,7 @@
   - **תוכן מרכזי**:
     - תיאור הפרויקט: אפליקציה קהילתית חינמית בישראל, חיבור בין עמותות, תורמים ומתנדבים.  
     - רשימת **15 סוגי דמויות** שונים (תורמים, מתנדבים, משפחות, עמותות וכו').  
-    - הסבר על ארכיטקטורת ה־Front-end, מנגנון האותנטיקציה והניווט (UserContext, LoginFlow, BottomNavigator).  
+    - הסבר על ארכיטקטורת ה־Front-end, מנגנון האותנטיקציה והניווט (userStore/Zustand, LoginFlow, BottomNavigator).  
     - הוראות התקנה (`npm install`, ‏`npm start`) והרצה על Android/iOS/Web.  
     - פירוט על עיצוב (פלטת צבעים, RTL, רספונסיביות), אחסון מקומי, ביצועים ואבטחה בסיסית.  
   - **קשר לספר הפרויקט**:

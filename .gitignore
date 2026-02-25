@@ -8,6 +8,10 @@ coverage
 .DS_Store
 .env
 .env.*
+# Allow template files (no secrets) to be committed
+!.env.example
+!.env.test.example
+!.env*.example
 
 .vscode
 .idea

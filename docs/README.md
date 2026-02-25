@@ -13,6 +13,10 @@ Welcome to the KC (Karma Community) project documentation.
 - **[Firebase Sync](FIREBASE_SYNC.md)** - Sync Firebase users to PostgreSQL
 - **[Testing Plan](TESTING_PLAN.md)** - Testing strategies and plans
 
+### Refactoring
+- **[Monorepo Refactoring Plan](refactoring/MONOREPO_REFACTORING_PLAN.md)** - מדורג, ארגון מה שקיים
+- **[Future Plans](refactoring/FUTURE_PLANS.md)** - תוכניות נדחות (Prisma, shared packages, וכו')
+
 ### Project Documentation
 - **[Project Book (English)](project-book/01-system-requirements-en.md)** - System requirements
 - **[Project Book (Hebrew)](project-book/01-system-requirements.md)** - דרישות מערכת

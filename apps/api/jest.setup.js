@@ -15,6 +15,8 @@ if (!process.env.TEST_DATABASE_URL && !process.env.DATABASE_URL) {
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 process.env.REDIS_URL = process.env.TEST_REDIS_URL || 'redis://localhost:6379/1';
+// JWT required for auth module tests (e.g. health.controller e2e)
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-min-32-chars-long-for-ci';
 
 // Mock console methods אם צריך (לא להציף את הלוגים בבדיקות)
 // global.console = {

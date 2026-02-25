@@ -677,7 +677,7 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
           onScroll={(event) => {
             onScroll(event);
-            const offsetY = event.nativeEvent.contentOffset.y;
+            const _offsetY = event.nativeEvent.contentOffset.y;
             // console.log('📜 SettingsScreen - Layout measurement:', event.nativeEvent.layoutMeasurement);
           }}
           onScrollBeginDrag={() => {

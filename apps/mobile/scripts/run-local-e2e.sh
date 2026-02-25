@@ -160,24 +160,32 @@ else
   # (cd "$CLIENT_DIR" && npm run audit:all)
   # log_success "Audit checks passed."
 
-  # --- Snyk (required, stops on failure) ---
-  if command -v snyk >/dev/null 2>&1; then
-    SNYK_CMD=("snyk")
+  # --- Snyk (skipped by default to save monthly test quota; set SNYK_RUN=1 to enable) ---
+  if [[ "${SNYK_RUN:-}" != "1" ]]; then
+    log_warning "Snyk checks skipped (set SNYK_RUN=1 to enable)."
   else
-    log_info "Snyk CLI not found. Running via npx..."
-    SNYK_CMD=("npx" "snyk")
+    if command -v snyk >/dev/null 2>&1; then
+      SNYK_CMD=("snyk")
+    else
+      log_info "Snyk CLI not found. Running via npx..."
+      SNYK_CMD=("npx" "snyk")
+    fi
+
+    log_info "Running Snyk security checks on server..."
+    (cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
+
+    log_info "Running Snyk security checks on client..."
+    (cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
+    log_success "Snyk checks passed."
   fi
 
-  log_info "Running Snyk security checks on server..."
-  (cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
-
-  log_info "Running Snyk security checks on client..."
-  (cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
-  log_success "Snyk checks passed."
-
-  # --- SonarQube (required when SONAR_TOKEN is set, stops on failure) ---
+  # --- SonarQube (run only in CI with PR key when project is ALM-bound) ---
+  # ALM-bound projects require sonar.pullrequest.key; branch analysis conflicts with PR params in properties.
+  # So we only run Sonar when SONAR_TOKEN and SONAR_PULLREQUEST_KEY are both set (e.g. CI on a PR).
   if [[ -z "${SONAR_TOKEN:-}" ]]; then
     log_warning "SONAR_TOKEN not set. Skipping SonarQube checks (set SONAR_TOKEN to enable)."
+  elif [[ -z "${SONAR_PULLREQUEST_KEY:-}" ]]; then
+    log_warning "SONAR_PULLREQUEST_KEY not set. Skipping SonarQube (required for ALM-bound project; set in CI for PR analysis)."
   else
     if command -v sonar-scanner >/dev/null 2>&1; then
       SONAR_CMD=("sonar-scanner")
@@ -187,10 +195,10 @@ else
     fi
 
     log_info "Running SonarQube checks on server..."
-    (cd "$SERVER_DIR" && "${SONAR_CMD[@]}")
+    (cd "$SERVER_DIR" && "${SONAR_CMD[@]}" -Dsonar.pullrequest.key="$SONAR_PULLREQUEST_KEY")
 
     log_info "Running SonarQube checks on client..."
-    (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}")
+    (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}" -Dsonar.pullrequest.key="$SONAR_PULLREQUEST_KEY")
     log_success "SonarQube checks passed."
   fi
 fi
@@ -230,6 +238,14 @@ kill_port 3000
 kill_port 5432 # Free Postgres port to ensure we connect to Docker, not local DB
 
 log_success "Ports are ready"
+
+# ============================================================================
+# Database Password (MUST be set BEFORE docker compose - container uses it on first init)
+# For local E2E we always use the docker-compose default so Docker and init-db match.
+# (.env may have production credentials which would fail against local Postgres)
+# ============================================================================
+
+export POSTGRES_PASSWORD="change_me_in_env"
 
 # ============================================================================
 # Docker Services Setup
@@ -426,27 +442,29 @@ export POSTGRES_USER=${POSTGRES_USER:-kc}
 export POSTGRES_DB=${POSTGRES_DB:-kc_db}
 export PORT="$SERVER_PORT"
 
-# Check for database password in .env file first
+# Check for database password: .env first, then DATABASE_URL, then docker-compose default
+ENV_FILE="$SERVER_DIR/.env"
+if [[ -f "$ENV_FILE" ]]; then
+  # Load DATABASE_URL from .env if not already set (for password extraction)
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    DATABASE_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
+  fi
+fi
+
 if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
-  ENV_FILE="$SERVER_DIR/.env"
   if [[ -f "$ENV_FILE" ]]; then
-    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2- || echo "")
+    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
   fi
   
-  # If still not set, check DATABASE_URL
+  # If still not set, extract from DATABASE_URL (env or .env)
   if [[ -z "${POSTGRES_PASSWORD:-}" && -n "${DATABASE_URL:-}" ]]; then
-    # Extract password from DATABASE_URL
     POSTGRES_PASSWORD=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
   fi
   
-  # Last resort: fail with helpful message
+  # Local E2E fallback: docker-compose uses change_me_in_env when POSTGRES_PASSWORD is unset
   if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
-    log_error "POSTGRES_PASSWORD not set!"
-    log_error "Please set it in one of these ways:"
-    log_error "  1. Set POSTGRES_PASSWORD in $SERVER_DIR/.env"
-    log_error "  2. Set DATABASE_URL with password in $SERVER_DIR/.env"
-    log_error "  3. Export POSTGRES_PASSWORD before running this script"
-    exit 1
+    log_info "POSTGRES_PASSWORD not set — using docker-compose default for local E2E"
+    POSTGRES_PASSWORD="change_me_in_env"
   fi
 fi
 

@@ -20,33 +20,29 @@
 
 ### 🎯 מה שונה בקוד?
 
-#### 1. UserContext.tsx
+#### 1. userStore.ts (Zustand)
 - **נוסף Firebase Auth Listener** (`onAuthStateChanged`):
   - מאזין לשינויים במצב ההתחברות של Firebase
   - משחזר אוטומטית את המשתמש כשהאפליקציה נפתחת
-  - מסנכרן את UserContext עם Firebase Auth
+  - מסנכרן את userStore עם Firebase Auth
   
 ```typescript
-// שורות 95-178
-useEffect(() => {
-  const auth = getAuth(app);
-  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-    if (firebaseUser) {
-      // משחזר session אוטומטית
-      // יוצר userData ושומר ב-AsyncStorage
-      // מעדכן את ה-context
-    } else {
-      // מנקה session רק אם היה משתמש Firebase
-    }
-  });
-  return () => unsubscribe();
-}, []);
+// ב-initialize()
+const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+  if (firebaseUser) {
+    // משחזר session אוטומטית
+    // יוצר userData ושומר ב-AsyncStorage
+    // מעדכן את ה-store
+  } else {
+    // מנקה session רק אם היה משתמש Firebase
+  }
+});
 ```
 
 - **עדכון signOut**:
-  - מתנתק מ-Firebase Auth (שורה 391)
+  - מתנתק מ-Firebase Auth
   - מנקה את כל ה-AsyncStorage
-  - מעדכן את ה-context
+  - מעדכן את ה-store
 
 #### 2. authService.ts
 - **הוספת Auth Persistence**:
@@ -139,7 +135,7 @@ await signInWithCredential(auth, credential);
 
 ## קבצים שעודכנו
 
-1. `/MVP/context/UserContext.tsx` - הוספת Firebase Auth listener
+1. `stores/userStore.ts` - הוספת Firebase Auth listener (החליף את UserContext)
 2. `/MVP/utils/authService.ts` - הגדרת persistence
 3. `/MVP/components/SimpleGoogleLoginButton.tsx` - אינטגרציה עם Firebase Auth
 4. `/MVP/docs/REMEMBER_ME_FEATURE.md` - התיעוד הזה

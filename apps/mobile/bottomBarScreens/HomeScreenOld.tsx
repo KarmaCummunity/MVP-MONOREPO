@@ -68,9 +68,9 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 // TODO: Add proper responsive calculations based on device type
 // TODO: Test panel positions on different screen sizes and orientations
 const PANEL_HEIGHT = Platform.OS === 'web' ? SCREEN_HEIGHT - scaleSize(20) : SCREEN_HEIGHT - scaleSize(50);
-const CLOSED_POSITION = PANEL_HEIGHT - scaleSize(60);
-const OPEN_POSITION = 0;
-const MID_POSITION = PANEL_HEIGHT / 2;
+const _CLOSED_POSITION = PANEL_HEIGHT - scaleSize(60);
+const _OPEN_POSITION = 0;
+const _MID_POSITION = PANEL_HEIGHT / 2;
 
 /**
  * Small animated bubble that gently floats to display a stat item.
@@ -84,6 +84,7 @@ interface FloatingBubbleProps {
   delay: number;
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars -- component kept for reuse; name must stay PascalCase for react-hooks */
 const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bubbleStyle, delay }) => {
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -145,14 +146,14 @@ export default function HomeScreen() {
   // TODO: Implement proper state management with useReducer instead of multiple useState
   // TODO: Add proper TypeScript interfaces for navigation and route params
   // TODO: Memoize expensive calculations and objects
-  const tabBarHeight = useBottomTabBarHeight();
+  const _tabBarHeight = useBottomTabBarHeight();
   const isFocused = useIsFocused();
   const navigation = useNavigation();
-  const { selectedUser, setSelectedUser, isGuestMode, resetHomeScreenTrigger, isRealAuth, isAuthenticated } = useUser();
+  const { selectedUser, setSelectedUser: _setSelectedUser, isGuestMode, resetHomeScreenTrigger, isRealAuth: _isRealAuth, isAuthenticated } = useUser();
   const [showPosts, setShowPosts] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedStat, setSelectedStat] = useState<StatDetails | null>(null);
-  const [isStatModalVisible, setIsStatModalVisible] = useState(false);
+  const [_refreshKey, setRefreshKey] = useState(0);
+  const [_selectedStat, setSelectedStat] = useState<StatDetails | null>(null);
+  const [_isStatModalVisible, setIsStatModalVisible] = useState(false);
   const [NativeBubblesComponent, setNativeBubblesComponent] = useState<React.ComponentType | null>(null);
   const hasCheckedAboutAutoOpen = useRef(false);
 
@@ -160,8 +161,10 @@ export default function HomeScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') {
       import('../components/FloatingBubblesSkia')
-        .then((module) => {
-          setNativeBubblesComponent(() => module.default);
+        .then((module: { default?: React.ComponentType }) => {
+          if (module.default) {
+            setNativeBubblesComponent(() => module.default!);
+          }
         })
         .catch((error) => {
           console.error('Failed to load FloatingBubblesSkia:', error);
@@ -274,7 +277,7 @@ export default function HomeScreen() {
     }, [panelHeight, postsTranslateY])
   );
 
-  const handleSelectStat = (details: StatDetails) => {
+  const _handleSelectStat = (details: StatDetails) => {
     setSelectedStat(details);
     setIsStatModalVisible(true);
   };
@@ -282,15 +285,15 @@ export default function HomeScreen() {
   /**
    * Handle vertical scrolling; when reaching near the end, open the posts view.
    */
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+  const _handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize: _contentSize, layoutMeasurement: _layoutMeasurement } = event.nativeEvent;
     const offsetY = contentOffset.y;
     scrollY.value = offsetY;
     // Disabled opening posts by scrolling to bottom; opening is only via the drag handle
   };
 
   /** Animated style for the posts screen */
-  const postsAnimatedStyle = useAnimatedStyle(() => {
+  const _postsAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: postsTranslateY.value }] as any,
     };
@@ -345,7 +348,7 @@ export default function HomeScreen() {
   // TODO: Implement proper error logging/reporting
   // TODO: Add caching mechanism for stats data
   // TODO: Add refresh/pull-to-refresh functionality
-  const [stats, setStats] = useState<StatCardProps[]>([]);
+  const [_stats, setStats] = useState<StatCardProps[]>([]);
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -414,7 +417,7 @@ type StatCardProps = {
   iconName: React.ComponentProps<typeof Ionicons>['name'];
   color: string;
 };
-const StatCard = ({ title, value, change, changeType, iconName, color }: StatCardProps) => (
+const _StatCard = ({ title, value, change, changeType, iconName, color }: StatCardProps) => (
   <View style={styles.statCard}>
     <View style={styles.statContent}>
       <Text style={styles.statTitle}>{title}</Text>

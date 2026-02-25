@@ -12,6 +12,14 @@
         "unused-imports"
     ],
     "rules": {
+        "@typescript-eslint/no-unused-vars": [
+            "warn",
+            {
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
+            }
+        ],
         "unused-imports/no-unused-imports": "warn",
         "unused-imports/no-unused-vars": [
             "warn",

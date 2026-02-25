@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import format from "pg-format";
 import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
@@ -46,7 +47,7 @@ async function exportData() {
         continue;
       }
       console.log(`Exporting table: ${table}...`);
-      const tableData = await client.query(`SELECT * FROM "${table}"`);
+      const tableData = await client.query(format("SELECT * FROM %I", table));
       const sanitizedTableName = table.replace(/[^a-zA-Z0-9_-]/g, "_");
       const filePath = path.join(exportDir, `${sanitizedTableName}.json`);
       const resolvedPath = path.resolve(filePath);

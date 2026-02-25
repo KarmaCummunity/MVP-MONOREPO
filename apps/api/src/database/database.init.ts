@@ -5,7 +5,7 @@
 // - Env inputs: `SKIP_FULL_SCHEMA` to skip full schema in dev.
 // - Downstream: Creates core tables (community_stats, user_profiles, donation_categories, donations, user_activities) when needed.
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "./database.module";
 import * as fs from "fs";
 import * as path from "path";
@@ -19,7 +19,7 @@ export class DatabaseInit implements OnModuleInit {
     return !!forceFullSchemaEnv && /^(1|true|yes)$/i.test(forceFullSchemaEnv);
   }
 
-  private async initializeForcedFullSchema(client: any): Promise<void> {
+  private async initializeForcedFullSchema(client: PoolClient): Promise<void> {
     console.warn(
       "⏭️  FORCE_FULL_SCHEMA detected. Running full schema initialization.",
     );
@@ -39,7 +39,7 @@ export class DatabaseInit implements OnModuleInit {
     }
   }
 
-  private async initializeRegularSchema(client: any): Promise<void> {
+  private async initializeRegularSchema(client: PoolClient): Promise<void> {
     if (process.env.SKIP_FULL_SCHEMA === "1") {
       console.warn(
         "⏭️  Skipping full schema initialization (SKIP_FULL_SCHEMA=1)",
