@@ -15,7 +15,9 @@
     "e2e:local": "npm run e2e:local --workspace @kc/mobile",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "prepare": "husky install",
+    "quality:api": "npm run quality:gate --workspace @kc/api"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -36,6 +38,7 @@
     "class-validator": "^0.14.3"
   },
   "devDependencies": {
-    "@types/pg-format": "^1.0.5"
+    "@types/pg-format": "^1.0.5",
+    "husky": "^8.0.0"
   }
 }

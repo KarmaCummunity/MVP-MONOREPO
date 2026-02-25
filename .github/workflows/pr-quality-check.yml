@@ -39,12 +39,11 @@ jobs:
       - name: Get changed files
         id: changed-files
         run: |
-          cd apps/api
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           
-          # Get changed TypeScript files
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA...$HEAD_SHA | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          # Get changed TypeScript files in apps/api
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA...$HEAD_SHA | grep '^apps/api/.*\.ts$' | grep -v '\.spec\.ts$' | sed 's|^apps/api/||' || echo "")
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "no_files=true" >> $GITHUB_OUTPUT
@@ -69,7 +68,7 @@ jobs:
         run: |
           echo "Running ESLint on ${{ steps.changed-files.outputs.count }} changed files..."
           
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
           
           if npm run lint -- $(echo "$CHANGED_FILES" | tr '\n' ' '); then
             echo "### ✅ ESLint Passed" >> $GITHUB_STEP_SUMMARY

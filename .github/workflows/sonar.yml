@@ -4,8 +4,14 @@ on:
     branches:
       - main
       - dev
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/sonar.yml'
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/sonar.yml'
 jobs:
   sonarcloud:
     name: SonarCloud
@@ -20,8 +26,10 @@ jobs:
           node-version: 18
           cache: 'npm'
       - name: Install dependencies
+        working-directory: apps/api
         run: npm ci
       - name: Run tests with coverage
+        working-directory: apps/api
         run: npm run test:ci
         env:
           NODE_ENV: test
@@ -33,3 +41,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: apps/api

@@ -3,10 +3,16 @@ name: Quality Gate - Block New Issues
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/quality-gate.yml'
   push:
     branches:
       - dev
       - main
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/quality-gate.yml'
 
 jobs:
   quality-gate:
@@ -25,6 +31,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
+        working-directory: apps/api
         run: npm ci
 
       # ============================================
@@ -32,6 +39,7 @@ jobs:
       # ============================================
       - name: Get changed TypeScript files
         id: changed-files
+        working-directory: apps/api
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -39,23 +47,25 @@ jobs:
             BASE_SHA="${{ github.event.before }}"
           fi
           
-          # Get list of changed .ts files (excluding .spec.ts)
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA HEAD | grep '\.ts$' | grep -v '\.spec\.ts$' || echo "")
+          # Get list of changed .ts files in apps/api (excluding .spec.ts)
+          cd ../..
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT $BASE_SHA HEAD | grep '^apps/api/.*\.ts$' | grep -v '\.spec\.ts$' | sed 's|^apps/api/||' || echo "")
           
           if [ -z "$CHANGED_FILES" ]; then
             echo "no_files=true" >> $GITHUB_OUTPUT
-            echo "No TypeScript files changed"
+            echo "No TypeScript files changed in apps/api"
           else
             echo "no_files=false" >> $GITHUB_OUTPUT
             echo "files<<EOF" >> $GITHUB_OUTPUT
             echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-            echo "Changed files:"
+            echo "Changed files in apps/api:"
             echo "$CHANGED_FILES"
           fi
 
       - name: Run ESLint on changed files
         if: steps.changed-files.outputs.no_files == 'false'
+        working-directory: apps/api
         run: |
           echo "Running ESLint on changed files..."
           CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
@@ -123,6 +133,7 @@ jobs:
       # 4. Run Tests with Coverage
       # ============================================
       - name: Run tests with coverage
+        working-directory: apps/api
         run: npm run test:ci
         env:
           NODE_ENV: test
@@ -138,6 +149,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: apps/api
 
       # ============================================
       # 6. Check SonarCloud Quality Gate Status
