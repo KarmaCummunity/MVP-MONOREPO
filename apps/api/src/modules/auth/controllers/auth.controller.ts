@@ -11,17 +11,6 @@
 // ✅ Secure logging - no tokens or passwords in logs
 // ✅ Proper error handling with appropriate HTTP status codes
 // ✅ Email normalization and validation
-//
-// TODO: Implement JWT token-based authentication instead of returning user objects
-// TODO: Add refresh token mechanism for better security
-// TODO: Add password strength requirements
-// TODO: Add email verification flow
-// TODO: Add 2FA (Two-Factor Authentication) support
-// TODO: Add account lockout after multiple failed attempts
-// TODO: Add audit logging for security events
-// TODO: Implement proper session management
-// TODO: Add rate limiting per user (not just global)
-// TODO: Split into separate services (AuthService, UserService, GoogleAuthService)
 import {
   Body,
   Controller,
@@ -32,8 +21,8 @@ import {
   BadRequestException,
   InternalServerErrorException,
   UseGuards,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import * as argon2 from "argon2";
 import { OAuth2Client } from "google-auth-library";

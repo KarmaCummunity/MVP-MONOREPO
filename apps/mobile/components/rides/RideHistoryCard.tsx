@@ -6,17 +6,18 @@ import { FontSizes } from '../../globals/constants';
 import { useTranslation } from 'react-i18next';
 
 interface RideHistoryItem {
-  from?: string;
-  to?: string;
-  date?: string;
-  time?: string;
-  status?: string;
+    from?: string;
+    to?: string;
+    date?: string;
+    time?: string;
+    status?: string;
+    price?: number | string;
 }
 
 interface RideHistoryCardProps {
-  ride: RideHistoryItem;
-  onDelete: (ride: RideHistoryItem) => void;
-  onRestore: (ride: RideHistoryItem) => void;
+    ride: RideHistoryItem;
+    onDelete: (ride: RideHistoryItem) => void;
+    onRestore: (ride: RideHistoryItem) => void;
 }
 
 const RideHistoryCard: React.FC<RideHistoryCardProps> = ({ ride, onDelete, onRestore }) => {

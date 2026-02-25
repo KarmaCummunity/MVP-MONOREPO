@@ -187,7 +187,7 @@ export class EnhancedStatsService {
     try {
       if (USE_BACKEND) {
         const response = await apiService.getDashboardStats();
-        return response.success ? response.data : null;
+        return response.success ? response.data as Record<string, unknown> : null;
       }
 
       return null;
@@ -202,7 +202,7 @@ export class EnhancedStatsService {
     try {
       if (USE_BACKEND) {
         const response = await apiService.getCategoryAnalytics();
-        return response.success ? response.data : [];
+        return response.success ? response.data as Record<string, unknown>[] : [];
       }
 
       return [];
@@ -353,7 +353,7 @@ export class EnhancedStatsService {
     try {
       if (USE_BACKEND) {
         const response = await apiService.getUserStats(userId);
-        return response.success ? response.data : null;
+        return response.success ? response.data as Record<string, unknown> : null;
       }
 
       // Fallback to local calculation

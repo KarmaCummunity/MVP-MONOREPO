@@ -122,6 +122,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
     if (button.route === 'AdminDashboard') {
       return;
     }
+    // @ts-expect-error - dynamic key
     navigation.navigate(button.route, viewOnly ? { viewOnly: true, hideTopBar: false, hideBottomBar: false } : undefined);
   };
 

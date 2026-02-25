@@ -13,8 +13,8 @@ import {
   Put,
   Query,
   Logger,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 import { RedisCacheService } from "../../../redis/redis-cache.service";
@@ -309,7 +309,7 @@ export class RidesController {
     if (limit) {
       paramCount++;
       query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
+      params.push(parseInt(limit, 10));
     } else {
       query += ` LIMIT 50`;
     }
@@ -317,7 +317,7 @@ export class RidesController {
     if (offset) {
       paramCount++;
       query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
+      params.push(parseInt(offset, 10));
     }
 
     const { rows } = await this.pool.query(query, params);

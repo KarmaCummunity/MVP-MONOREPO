@@ -17,6 +17,7 @@ import * as Location from 'expo-location';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
+import { SearchableItem } from '../components/SearchBar';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import { db } from '../src/infrastructure/database.service';
@@ -24,6 +25,7 @@ import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { useToast } from '../utils/toastService';
+import { logger } from '../utils/loggerService';
 import { getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
 
 // New Modular Components
@@ -76,6 +78,7 @@ interface RideRecord {
   noSmoking?: boolean;
   petsAllowed?: boolean;
   kidsFriendly?: boolean;
+  [key: string]: unknown;
 }
 
 export default function TrumpScreen({
@@ -83,7 +86,7 @@ export default function TrumpScreen({
 }: {
   navigation: NavigationProp<ParamListBase>;
 }) {
-  console.log('🚗 TrumpScreen - Refactored Component Rendered');
+  logger.debug('TrumpScreen', 'Refactored Component Rendered');
 
   const { ToastComponent } = useToast();
   const route = useRoute();
@@ -226,7 +229,7 @@ export default function TrumpScreen({
           longitude: location.coords.longitude
         });
 
-        console.log('📍 Reverse Geocode Result:', JSON.stringify(reverseGeocode, null, 2));
+        logger.debug('TrumpScreen', 'Reverse Geocode Result', { count: reverseGeocode?.length });
 
         if (isMountedLocal && reverseGeocode && reverseGeocode.length > 0) {
           const addr = reverseGeocode[0];
@@ -258,7 +261,7 @@ export default function TrumpScreen({
           }
         }
       } catch (error) {
-        console.error("Error fetching location:", error);
+        logger.error('TrumpScreen', 'Error fetching location', { error });
         if (isMountedLocal) {
           setDetectedAddress(t('trump:errors.locationFetchFailed') || "Location unavailable");
           setIsLocationError(true);
@@ -404,7 +407,7 @@ export default function TrumpScreen({
   const loadRides = useCallback(async (includePastOverride?: boolean) => {
     try {
       const uid = selectedUser?.id || 'guest';
-      console.log('🔄 Loading rides/posts for user:', uid, 'mode:', mode);
+      logger.debug('TrumpScreen', 'Loading rides/posts', { uid, mode });
 
       if (mode) {
         try {
@@ -490,7 +493,7 @@ export default function TrumpScreen({
       }));
       setRecentRides(userRecent);
     } catch (_e) {
-      console.error("Failed to load rides", _e);
+      logger.error('TrumpScreen', 'Failed to load rides', { error: _e });
       setAllRides([]);
       setRecentRides([]);
     }
@@ -507,7 +510,7 @@ export default function TrumpScreen({
 
   useFocusEffect(
     useCallback(() => {
-      console.log('🔄 useFocusEffect triggered, refreshKey:', refreshKey);
+      logger.debug('TrumpScreen', 'useFocusEffect triggered', { refreshKey });
       loadRides();
     }, [loadRides, refreshKey])
   );
@@ -518,7 +521,7 @@ export default function TrumpScreen({
     if (mode) {
       let filtered = [...allPosts];
 
-      console.log('🔍 Filtering posts - Total:', allPosts.length, 'Search query:', searchQuery, 'Filters:', selectedFilters.length);
+      logger.debug('TrumpScreen', 'Filtering posts', { total: allPosts.length, query: searchQuery, filters: selectedFilters.length });
 
       // Filter by text
       if (searchQuery) {
@@ -530,7 +533,7 @@ export default function TrumpScreen({
           (post.title?.toLowerCase()?.includes(q) ?? false) ||
           (post.description?.toLowerCase()?.includes(q) ?? false)
         );
-        console.log('🔍 After text filter:', filtered.length);
+        logger.debug('TrumpScreen', 'After text filter', { count: filtered.length });
       }
 
       // Apply Filters
@@ -539,7 +542,7 @@ export default function TrumpScreen({
           if (f === 'noCostSharing') filtered = filtered.filter(p => (p.price ?? 0) === 0);
           // Add other filters as needed
         });
-        console.log('🔍 After tag filters:', filtered.length);
+        logger.debug('TrumpScreen', 'After tag filters', { count: filtered.length });
       }
 
       // Sorting
@@ -549,14 +552,14 @@ export default function TrumpScreen({
         else if (selectedSort === t('trump:sort.byDate')) filtered.sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime());
       }
 
-      console.log('✅ Final filtered posts:', filtered.length);
+      logger.debug('TrumpScreen', 'Final filtered posts', { count: filtered.length });
       return filtered;
     }
 
     // In offer mode, filter rides as before
     let filtered = [...allRides];
 
-    console.log('🔍 Filtering rides - Total:', allRides.length, 'Search query:', searchQuery, 'Filters:', selectedFilters.length);
+    logger.debug('TrumpScreen', 'Filtering rides', { total: allRides.length, query: searchQuery, filters: selectedFilters.length });
 
     // Filter by text
     if (searchQuery) {
@@ -567,7 +570,7 @@ export default function TrumpScreen({
         (ride.to?.toLowerCase()?.includes(q) ?? false) ||
         (ride.category?.toLowerCase()?.includes(q) ?? false)
       );
-      console.log('🔍 After text filter:', filtered.length);
+      logger.debug('TrumpScreen', 'After text filter', { count: filtered.length });
     }
 
     // Apply Filters (Search Mode Tags)
@@ -584,7 +587,7 @@ export default function TrumpScreen({
           // But we can add a visual indicator if needed
         }
       });
-      console.log('🔍 After tag filters:', filtered.length);
+      logger.debug('TrumpScreen', 'After tag filters', { count: filtered.length });
     }
 
     // Sorting
@@ -595,7 +598,7 @@ export default function TrumpScreen({
       // Add other sorts as needed
     }
 
-    console.log('Final filtered rides:', filtered.length);
+    logger.debug('TrumpScreen', 'Final filtered rides', { count: filtered.length });
     return filtered;
   }, [allRides, allPosts, searchQuery, selectedFilters, selectedSorts, t, mode]);
 
@@ -607,7 +610,7 @@ export default function TrumpScreen({
     }
   }, [getFilteredRides, mode]);
 
-  const handleSearch = (query: string, filters?: string[], sorts?: string[]) => {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], _results?: SearchableItem[]) => {
     if (!mode) {
       // Offer Mode: Header search input acts as "Destination"
       setToLocation(query);
@@ -700,10 +703,10 @@ export default function TrumpScreen({
         const localHours = now.getHours();
         const localMinutes = now.getMinutes();
         timeToSave = `${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}`;
-        console.log('⏰ Immediate departure time (local):', timeToSave);
+        logger.debug('TrumpScreen', 'Immediate departure time (local)', { timeToSave });
       } else {
         timeToSave = departureTime; // Selected HH:MM
-        console.log('⏰ Selected departure time:', timeToSave);
+        logger.debug('TrumpScreen', 'Selected departure time', { timeToSave });
       }
 
       const baseRideData = {
@@ -729,12 +732,12 @@ export default function TrumpScreen({
       const [hours, minutes] = timeToSave.split(':').map(Number);
       const baseDate = new Date(dateToSave + 'T00:00:00'); // Create date in local timezone
       baseDate.setHours(hours, minutes, 0, 0);
-      console.log('📅 Base date calculated:', baseDate.toISOString(), 'Local:', baseDate.toLocaleString('he-IL'));
+      logger.debug('TrumpScreen', 'Base date calculated', { baseDate: baseDate.toISOString() });
 
       // Create the first ride
-      console.log('🚗 Creating ride with data:', JSON.stringify(baseRideData, null, 2));
+      logger.debug('TrumpScreen', 'Creating ride');
       await db.createRide(uid, rideId, baseRideData);
-      console.log('✅ Ride created successfully');
+      logger.debug('TrumpScreen', 'Ride created successfully');
 
       // If recurring, create 5 future instances
       if (isRecurring && recurrenceUnit) {
@@ -899,13 +902,11 @@ export default function TrumpScreen({
         item={item}
         cardWidth={itemWidth}
         numColumns={numColumns}
-        onPress={(item) => {
-          // Navigate to post details or open modal
-          console.log('Post pressed:', item.id);
+        onPress={(_item) => {
+          // Navigate to post details or open modal - handled by navigation context
         }}
-        onCommentPress={(item) => {
-          // Handle comment press
-          console.log('Comment pressed:', item.id);
+        onCommentPress={(_item) => {
+          // Handle comment press - handled by navigation context
         }}
         onMorePress={handleMorePress}
       />
@@ -1023,11 +1024,11 @@ export default function TrumpScreen({
                       item={post}
                       cardWidth={historyCardWidth}
                       numColumns={1}
-                      onPress={(item) => {
-                        console.log('Post pressed:', item.id);
+                      onPress={(_item) => {
+                        // handled by navigation context
                       }}
-                      onCommentPress={(item) => {
-                        console.log('Comment pressed:', item.id);
+                      onCommentPress={(_item) => {
+                        // handled by navigation context
                       }}
                       onMorePress={handleMorePress}
                     />

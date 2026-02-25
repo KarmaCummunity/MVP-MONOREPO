@@ -591,7 +591,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         placeholder={t('common:search')}
         filterOptions={[]}
         sortOptions={[]}
-        searchData={filteredChallenges}
+        searchData={filteredChallenges as unknown as Record<string, unknown>[]}
         onSearch={(query) => setSearchQuery(query)}
         hideSortButton={true}
       />

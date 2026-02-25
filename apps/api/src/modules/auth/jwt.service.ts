@@ -3,9 +3,16 @@
 // - Provides: Session token creation, validation, refresh tokens, secure signing
 // - Security: Uses HMAC-SHA256 signing (SEC-001.1), proper expiration, blacklist support
 
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  Inject,
+} from "@nestjs/common";
 import { RedisCacheService } from "../../redis/redis-cache.service";
 import { randomBytes, createHash, createHmac } from "crypto";
+import { Pool } from "pg";
+import { PG_POOL } from "../../database/database.module";
 
 export interface SessionTokenPayload {
   userId: string;
@@ -32,7 +39,10 @@ export class JwtService {
   private readonly TOKEN_BLACKLIST_PREFIX = "blacklisted_token:";
   private readonly REFRESH_TOKEN_PREFIX = "refresh_token:";
 
-  constructor(private readonly redisCache: RedisCacheService) {
+  constructor(
+    private readonly redisCache: RedisCacheService,
+    @Inject(PG_POOL) private readonly pool: Pool,
+  ) {
     this.validateJwtSecret();
   }
 
@@ -152,13 +162,33 @@ export class JwtService {
       throw new UnauthorizedException("Invalid token type for refresh");
     }
 
+    // Fetch LATEST roles from database to ensure updated permissions
+    let currentRoles = payload.roles;
+    try {
+      const { rows } = await this.pool.query(
+        "SELECT roles FROM user_profiles WHERE id = $1 LIMIT 1",
+        [payload.userId],
+      );
+      if (rows.length > 0 && rows[0].roles) {
+        currentRoles = rows[0].roles;
+      }
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        "Failed to fetch latest roles from DB during refresh, using token roles",
+        {
+          userId: payload.userId,
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        },
+      );
+    }
+
     // Create new access token with same session ID
     const now = Math.floor(Date.now() / 1000);
     const newAccessPayload: SessionTokenPayload = {
       userId: payload.userId,
       email: payload.email,
       sessionId: payload.sessionId,
-      roles: payload.roles,
+      roles: currentRoles,
       iat: now,
       exp: now + this.ACCESS_TOKEN_EXPIRY,
       type: "access",

@@ -6,16 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Modal,
-  Image,
   SafeAreaView,
   Platform,
   StatusBar,
   Dimensions,
   type ViewStyle,
   type TextStyle,
-  type ImageStyle,
   type StyleProp,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -32,54 +29,13 @@ import { useUser } from "../stores/userStore";
 import { logger } from "../utils/loggerService";
 import { useAdminProtection } from "../hooks/useAdminProtection";
 import { useTranslation } from "react-i18next";
+import type { AdminStackParamList } from "../globals/types";
+import AdminTaskItem, { AdminTask, TaskStatus, TaskPriority, User } from "../components/Admin/AdminTaskItem";
 import UserSelector from "../components/UserSelector";
 import TaskHoursModal from "../components/TaskHoursModal";
-import type { AdminStackParamList } from "../globals/types";
 
 /** Cast shared StyleSheet entry to TextStyle for use on Text/TextInput (RN style types are incompatible in strict mode). */
 const asTextStyle = (s: StyleProp<ViewStyle>): StyleProp<TextStyle> => s as StyleProp<TextStyle>;
-/** Cast shared StyleSheet entry to ImageStyle for use on Image. */
-const asImageStyle = (s: ViewStyle): ImageStyle => s as ImageStyle;
-
-type TaskStatus =
-  | "open"
-  | "in_progress"
-  | "done"
-  | "archived"
-  | "stuck"
-  | "testing";
-type TaskPriority = "low" | "medium" | "high";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar_url?: string;
-}
-
-type AdminTask = {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  category?: string | null;
-  due_date?: string | null;
-  assignees: string[]; // UUIDs
-  assignees_details?: User[]; // Full objects
-  creator_details?: User;
-  tags: string[];
-  checklist?: { id: string; text: string; done: boolean }[];
-  created_by?: string | null;
-  parent_task_id?: string | null;
-  parent_task_details?: { id: string; title: string } | null;
-  subtask_count?: number;
-  level?: number; // Depth level (0 = root, 1 = subtask, 2 = sub-subtask, etc.)
-  estimated_hours?: number | null;
-  actual_hours?: number | null;
-  created_at?: string;
-  updated_at?: string;
-};
 
 export default function AdminTasksScreen() {
   const { t } = useTranslation("admin");
@@ -173,8 +129,9 @@ export default function AdminTasksScreen() {
         testing: 1.7,
         done: 2,
         archived: 3,
+        reports: 4,
       };
-      return statusRank[a.status] - statusRank[b.status];
+      return (statusRank[a.status] || 0) - (statusRank[b.status] || 0);
     });
   }, [tasks]);
 
@@ -344,7 +301,7 @@ export default function AdminTasksScreen() {
   const parseDueDate = (): string | null => {
     if (!formData.due_date.trim()) return null;
     const date = new Date(formData.due_date);
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       setError(t("tasks.errorInvalidDate"));
       return null;
     }
@@ -354,7 +311,7 @@ export default function AdminTasksScreen() {
   const parseEstimatedHours = (): number | null => {
     if (!formData.estimated_hours?.trim()) return null;
     const hours = parseFloat(formData.estimated_hours.trim());
-    return !isNaN(hours) && hours > 0 ? hours : null;
+    return !Number.isNaN(hours) && hours > 0 ? hours : null;
   };
 
   const buildTaskBody = (
@@ -371,9 +328,9 @@ export default function AdminTasksScreen() {
       assignees: formData.assignees.map((u) => u.id),
       tags: formData.tagsText.trim()
         ? formData.tagsText
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
         : [],
       created_by: selectedUser!.id,
       parent_task_id: formData.parent_task_id || null,
@@ -491,295 +448,24 @@ export default function AdminTasksScreen() {
     item: AdminTask;
     isSubtask?: boolean;
     level?: number;
-  }) => {
-    const isDone = item.status === "done";
-    const hasSubtasks = (item.subtask_count || 0) > 0;
-    const isExpanded = expandedTasks.has(item.id);
-    const taskSubtasks = subtasks[item.id] || [];
-    const taskLevel = item.level ?? level;
-
-    return (
-      <View>
-        <View
-          style={[
-            styles.taskItem,
-            isDone && styles.taskItemDone,
-            isSubtask && styles.subtaskItem,
-            isSubtask && { marginRight: taskLevel * 16 },
-          ]}
-        >
-          {/* Subtask Indicator */}
-          {isSubtask && (
-            <View style={styles.subtaskIndicator}>
-              <Ionicons
-                name="return-down-forward"
-                size={16}
-                color={colors.info}
-              />
-              <Text style={asTextStyle(styles.levelText)}>{t("tasks.levelLabel", { n: taskLevel })}</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={() => toggleDone(item)}
-            disabled={updating === item.id}
-          >
-            {updating === item.id ? (
-              <ActivityIndicator size="small" color={colors.textSecondary} />
-            ) : (
-              <Ionicons
-                name={isDone ? "checkbox" : "square-outline"}
-                size={24}
-                color={isDone ? colors.success : colors.textSecondary}
-              />
-            )}
-          </TouchableOpacity>
-          <View style={styles.taskContent}>
-            {/* Parent Task Reference */}
-            {item.parent_task_details && (
-              <View style={styles.parentBadge}>
-                <Ionicons
-                  name="git-branch-outline"
-                  size={12}
-                  color={colors.info}
-                />
-                <Text style={asTextStyle(styles.parentText)}>
-                  {t("tasks.subtaskOf", { title: item.parent_task_details.title })}
-                </Text>
-              </View>
-            )}
-
-            <Text
-              style={asTextStyle([styles.taskTitle, isDone && styles.taskTitleDone])}
-              numberOfLines={2}
-            >
-              {item.title}
-            </Text>
-            {item.description ? (
-              <Text style={asTextStyle(styles.description)} numberOfLines={2}>
-                {item.description}
-              </Text>
-            ) : null}
-
-            <View style={styles.metaRow}>
-              {/* Priority Badge */}
-              <View
-                style={[
-                  styles.badge,
-                  styles[`priority_${item.priority}` as const],
-                ]}
-              >
-                <Text style={asTextStyle(styles.badgeText)}>
-                  {item.priority === "high"
-                    ? t("tasks.high")
-                    : item.priority === "medium"
-                      ? t("tasks.medium")
-                      : t("tasks.low")}
-                </Text>
-              </View>
-
-              {/* Status Badge */}
-              <View
-                style={[styles.badge, styles[`status_${item.status}` as const]]}
-              >
-                <Text style={asTextStyle(styles.badgeText)}>
-                  {item.status === "open"
-                    ? t("tasks.open")
-                    : item.status === "in_progress"
-                      ? t("tasks.in_progress")
-                      : item.status === "stuck"
-                        ? t("tasks.stuck")
-                        : item.status === "testing"
-                          ? t("tasks.testing")
-                          : item.status === "done"
-                            ? t("tasks.done")
-                            : t("tasks.archived")}
-                </Text>
-              </View>
-
-              {/* Subtasks Count Badge */}
-              {hasSubtasks && (
-                <TouchableOpacity
-                  style={[styles.badge, styles.subtaskBadge]}
-                  onPress={() => toggleSubtasks(item.id)}
-                >
-                  {loadingSubtasks === item.id ? (
-                    <ActivityIndicator size="small" color={colors.info} />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name={isExpanded ? "chevron-up" : "chevron-down"}
-                        size={12}
-                        color={colors.info}
-                      />
-                      <Text style={asTextStyle(styles.subtaskBadgeText)}>
-                        {t("tasks.subtasksCount", { count: item.subtask_count })}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {/* Assignees */}
-              <View style={styles.assigneesContainer}>
-                {item.assignees_details && item.assignees_details.length > 0 ? (
-                  <View style={styles.assigneesContent}>
-                    <Text style={asTextStyle(styles.assigneeText)} numberOfLines={1}>
-                      {t("tasks.assignedTo")}{" "}
-                      {item.assignees_details.map((u) => u.name).join(", ")}
-                    </Text>
-                    <View style={styles.avatarsRow}>
-                      {item.assignees_details.slice(0, 3).map((u, i) => (
-                        <Image
-                          key={u.id}
-                          source={{
-                            uri:
-                              u.avatar_url ||
-                              `https://ui-avatars.com/api/?name=${u.name}`,
-                          }}
-                          style={[
-                            asImageStyle(styles.avatarSmall),
-                            { marginRight: i > 0 ? -10 : 0, zIndex: 3 - i },
-                          ]}
-                        />
-                      ))}
-                      {item.assignees_details.length > 3 && (
-                        <View style={[styles.avatarSmall, styles.moreAvatar]}>
-                          <Text style={asTextStyle(styles.moreAvatarText)}>
-                            +{item.assignees_details.length - 3}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                ) : (
-                  <Text style={asTextStyle(styles.unassignedText)}>
-                    {t("tasks.unassigned")}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            {/* Hours Display */}
-            {((item.estimated_hours &&
-              parseFloat(String(item.estimated_hours)) > 0) ||
-              (item.actual_hours &&
-                parseFloat(String(item.actual_hours)) > 0)) && (
-              <View style={styles.hoursRow}>
-                {item.estimated_hours &&
-                  parseFloat(String(item.estimated_hours)) > 0 && (
-                    <View style={[styles.badge, styles.hoursBadge]}>
-                      <Ionicons
-                        name="time-outline"
-                        size={12}
-                        color={colors.info}
-                      />
-                      <Text style={asTextStyle(styles.hoursText)}>
-                        {t("tasks.estimatedHours", { hours: parseFloat(String(item.estimated_hours)).toFixed(1) })}
-                      </Text>
-                    </View>
-                  )}
-                {item.actual_hours &&
-                  parseFloat(String(item.actual_hours)) > 0 && (
-                    <View
-                      style={[
-                        styles.badge,
-                        styles.hoursBadge,
-                        styles.actualHoursBadge,
-                      ]}
-                    >
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={12}
-                        color={colors.success}
-                      />
-                      <Text
-                        style={asTextStyle([styles.hoursText, { color: colors.success }] as StyleProp<ViewStyle>)}
-                      >
-                        {t("tasks.actualHours", { hours: parseFloat(String(item.actual_hours)).toFixed(1) })}
-                      </Text>
-                    </View>
-                  )}
-              </View>
-            )}
-
-            {item.creator_details && (
-              <Text style={asTextStyle(styles.creatorText)}>
-                {t("tasks.createdBy")} {item.creator_details.name}
-              </Text>
-            )}
-
-            {!viewOnly && (
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => openEdit(item)}
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={18}
-                    color={colors.textPrimary}
-                  />
-                  <Text style={asTextStyle(styles.actionText)}>{t("tasks.edit")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => createSubtask(item)}
-                >
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={18}
-                    color={colors.info}
-                  />
-                  <Text style={asTextStyle([styles.actionText, { color: colors.info }] as StyleProp<ViewStyle>)}>
-                    {t("tasks.subtask")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => deleteTask(item.id)}
-                  disabled={deleting === item.id}
-                >
-                  {deleting === item.id ? (
-                    <ActivityIndicator size="small" color={colors.error} />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name="trash-outline"
-                        size={18}
-                        color={colors.error}
-                      />
-                      <Text
-                        style={asTextStyle([styles.actionText, { color: colors.error }] as StyleProp<ViewStyle>)}
-                      >
-                        {t("tasks.delete")}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Subtasks List */}
-        {isExpanded && taskSubtasks.length > 0 && (
-          <View style={styles.subtasksList}>
-            {taskSubtasks.map((subtask) => (
-              <View key={subtask.id}>
-                {renderItem({
-                  item: subtask,
-                  isSubtask: true,
-                  level: taskLevel + 1,
-                })}
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  };
+  }) => (
+    <AdminTaskItem
+      item={item}
+      isSubtask={isSubtask}
+      level={level}
+      viewOnly={viewOnly}
+      updating={updating}
+      deleting={deleting}
+      loadingSubtasks={loadingSubtasks}
+      expandedTasks={expandedTasks}
+      subtasks={subtasks}
+      onToggleDone={toggleDone}
+      onToggleSubtasks={toggleSubtasks}
+      onOpenEdit={openEdit}
+      onCreateSubtask={createSubtask}
+      onDeleteTask={deleteTask}
+    />
+  );
 
   const openEdit = (task: AdminTask) => {
     setFormData({
@@ -796,8 +482,8 @@ export default function AdminTasksScreen() {
       parent_task_id: task.parent_task_id || "",
       estimated_hours:
         task.estimated_hours !== null &&
-        task.estimated_hours !== undefined &&
-        task.estimated_hours > 0
+          task.estimated_hours !== undefined &&
+          task.estimated_hours > 0
           ? String(task.estimated_hours)
           : "",
     });
@@ -849,9 +535,9 @@ export default function AdminTasksScreen() {
         due_date: parsedDueDate,
         tags: formData.tagsText
           ? formData.tagsText
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
           : [],
         assignees: formData.assignees.map((u) => u.id),
         estimated_hours: parsedEstimatedHours ?? undefined,
@@ -988,8 +674,8 @@ export default function AdminTasksScreen() {
           styles.listWrapper,
           Platform.OS === "web" && maxListHeight
             ? {
-                maxHeight: maxListHeight,
-              }
+              maxHeight: maxListHeight,
+            }
             : undefined,
         ]}
       >
@@ -1209,8 +895,8 @@ const styles = StyleSheet.create({
     ...(Platform.OS === "web"
       ? ({ height: "100vh" } as unknown as ViewStyle)
       : {
-          padding: LAYOUT_CONSTANTS.SPACING.LG,
-        }),
+        padding: LAYOUT_CONSTANTS.SPACING.LG,
+      }),
   },
   listWrapper: {
     flex: 1,
@@ -1535,15 +1221,15 @@ const styles = StyleSheet.create({
 const listContentStyle =
   Platform.OS === "web"
     ? {
-        paddingBottom: 100,
-        gap: 12,
-        paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
-        paddingTop: LAYOUT_CONSTANTS.SPACING.LG,
-      }
+      paddingBottom: 100,
+      gap: 12,
+      paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
+      paddingTop: LAYOUT_CONSTANTS.SPACING.LG,
+    }
     : {
-        paddingBottom: 100,
-        gap: 12,
-      };
+      paddingBottom: 100,
+      gap: 12,
+    };
 
 // Merge with base styles
 const stylesWithListContent = {

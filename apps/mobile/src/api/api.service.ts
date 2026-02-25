@@ -95,7 +95,7 @@ class ApiService {
   }
 
   async getTasks(filters: {
-    status?: 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
+    status?: 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing' | 'reports';
     priority?: 'low' | 'medium' | 'high';
     category?: string;
     assignee?: string;
@@ -188,7 +188,7 @@ class ApiService {
       }
 
       // Check if token is still valid (with 1 minute buffer)
-      if (expiresAt && parseInt(expiresAt) > Date.now() + 60000) {
+      if (expiresAt && parseInt(expiresAt, 10) > Date.now() + 60000) {
         return jwtToken;
       }
 
@@ -314,9 +314,19 @@ class ApiService {
 
         const data = await response.json();
 
-        // Handle 401 Unauthorized - try to refresh token and retry
+        // Handle 401 Unauthorized - force refresh token and retry
         if (response.status === 401 && retryOn401 && authToken) {
           logger.warn('API', 'Received 401, attempting token refresh and retry', { endpoint });
+
+          try {
+            const AsyncStorage = await import('@react-native-async-storage/async-storage');
+            // Force-clear the current access token so validateAndRefreshToken
+            // triggers an actual refresh even if the token is not yet expired.
+            // This is needed when roles change server-side (e.g. admin promotion).
+            await AsyncStorage.default.removeItem('jwt_token_expires_at');
+          } catch (clearErr) {
+            logger.warn('API', 'Failed to clear token expiry for forced refresh', { error: String(clearErr) });
+          }
 
           // Try to refresh token
           const refreshedToken = await this.validateAndRefreshToken();

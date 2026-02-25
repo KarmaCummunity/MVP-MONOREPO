@@ -84,7 +84,7 @@ export const usePostInteractions = (item: FeedItem) => {
                 setIsBookmarkedState(false);
                 toastService.show('Removed from bookmarks');
             } else {
-                await addBookmark(user.id, item);
+                await addBookmark(user.id, item as unknown as Parameters<typeof addBookmark>[1]);
                 setIsBookmarkedState(true);
                 toastService.show('Added to bookmarks');
             }

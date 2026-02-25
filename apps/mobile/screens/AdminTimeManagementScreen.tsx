@@ -71,7 +71,7 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
       setError(null);
       const res = await apiService.getHoursReport(selectedUser.id);
       if (res.success && res.data) {
-        setReport(res.data);
+        setReport(res.data as HoursReport);
       } else {
         setError(res.error || 'שגיאה בטעינת הדוח');
       }

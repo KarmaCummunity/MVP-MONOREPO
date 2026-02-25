@@ -3,17 +3,6 @@
 // - Reached from: Imported by `AppModule` and any provider/controller injecting `PG_POOL`.
 // - Env inputs: `DATABASE_URL` (preferred) or discrete POSTGRES_* / PG* vars and optional SSL flags.
 // - Provides: `PG_POOL` provider; exports for use across the app.
-
-// TODO: Add database connection health checks and retry logic
-// TODO: Implement proper connection pooling configuration (max connections, idle timeout)
-// TODO: Add database migration management system
-// TODO: Add proper error handling for database connection failures
-// TODO: Add database performance monitoring and logging
-// TODO: Implement database transaction management service
-// TODO: Add database backup and recovery mechanisms
-// TODO: Add environment-specific database configurations
-// TODO: Implement database connection graceful shutdown
-// TODO: Add database query performance profiling in development mode
 import { Global, Module } from "@nestjs/common";
 import { Pool } from "pg";
 

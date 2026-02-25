@@ -95,7 +95,7 @@ export default function MainNavigator() {
         header: route.name === 'AdminDashboard' ? () => (
           <TopBarNavigator
             navigation={navigation}
-            hideTopBar={route.params?.hideTopBar === true}
+            hideTopBar={(route.params as Record<string, unknown>)?.hideTopBar === true}
           />
         ) : undefined,
         // Fix for aria-hidden warning: prevent focus on inactive screens

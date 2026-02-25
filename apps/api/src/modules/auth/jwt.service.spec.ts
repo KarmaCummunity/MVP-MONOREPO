@@ -12,6 +12,12 @@ const mockRedisCache = {
   delete: jest.fn().mockResolvedValue(undefined),
 };
 
+// Mock Pool (pg)
+const mockPool = {
+  query: jest.fn().mockResolvedValue({ rows: [] }),
+  connect: jest.fn(),
+};
+
 // Set JWT_SECRET before importing the service
 process.env.JWT_SECRET = "test-secret-key-for-unit-tests-32chars!";
 
@@ -24,6 +30,7 @@ describe("JwtService", () => {
     jest.clearAllMocks();
     service = new JwtService(
       mockRedisCache as unknown as import("../../redis/redis-cache.service").RedisCacheService,
+      mockPool as unknown as import("pg").Pool,
     );
   });
 

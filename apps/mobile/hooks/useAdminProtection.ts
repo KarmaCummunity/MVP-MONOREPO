@@ -1,12 +1,13 @@
 import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute, NavigationProp } from '@react-navigation/native';
+import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
 
 export function useAdminProtection(allowViewOnly?: boolean) {
     const { isAdmin, isLoading, selectedUser, refreshUserRoles, isAuthenticated, isGuestMode } = useUser();
-    const navigation = useNavigation();
+    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const route = useRoute();
     const routeParams = (route.params as { viewOnly?: boolean }) || {};
     const isViewOnly = routeParams?.viewOnly === true;
@@ -18,7 +19,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
         if (navigation.canGoBack()) {
             navigation.goBack();
         } else {
-            navigation.navigate('Home');
+            navigation.navigate('HomeStack', { screen: 'HomeScreen' });
         }
     }, [navigation]);
 
@@ -73,7 +74,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             if (!isLoading && isAdmin && selectedUser) {
                 verifyAdminStatus();
             }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- isAuthenticated/isGuestMode used only in return, not in callback
+            // eslint-disable-next-line react-hooks/exhaustive-deps -- isAuthenticated/isGuestMode used only in return, not in callback
         }, [isAdmin, isLoading, selectedUser, verifyAdminStatus, handleUnauthorized, allowViewOnly, isViewOnly])
     );
 

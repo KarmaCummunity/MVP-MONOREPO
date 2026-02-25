@@ -13,6 +13,7 @@ import { PG_POOL } from "../../../database/database.module";
 import { RedisCacheService } from "../../../redis/redis-cache.service";
 import { JwtAuthGuard, AdminAuthGuard } from "../../auth/jwt-auth.guard";
 import { ComputedStatsService, CommunityStats } from "../services/index";
+import { StatsQueriesService } from "../services/stats-queries.service";
 
 @Controller("api/stats")
 export class StatsController {
@@ -23,6 +24,7 @@ export class StatsController {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly redisCache: RedisCacheService,
     private readonly computedStatsService: ComputedStatsService,
+    private readonly queriesService: StatsQueriesService,
   ) {}
 
   @Get("community")
@@ -107,16 +109,7 @@ export class StatsController {
         return { success: true, data: cached };
       }
 
-      const { rows } = await this.pool.query(
-        `
-        SELECT date_period, SUM(stat_value) as value
-        FROM community_stats
-        WHERE stat_type = $1 AND date_period >= CURRENT_DATE - $2::INTEGER
-        GROUP BY date_period
-        ORDER BY date_period ASC
-      `,
-        [statType, days],
-      );
+      const rows = await this.queriesService.getCommunityTrends(statType, days);
 
       await this.redisCache.set(cacheKey, rows, this.CACHE_TTL);
       return { success: true, data: rows };
@@ -136,26 +129,7 @@ export class StatsController {
         return { success: true, data: cached };
       }
 
-      const query = statType
-        ? `
-          SELECT city, SUM(stat_value) as total
-          FROM community_stats
-          WHERE stat_type = $1 AND city IS NOT NULL
-          GROUP BY city
-          ORDER BY total DESC
-          LIMIT 20
-        `
-        : `
-          SELECT city, COUNT(DISTINCT id) as total_users
-          FROM user_profiles
-          WHERE city IS NOT NULL AND city <> ''
-          GROUP BY city
-          ORDER BY total_users DESC
-          LIMIT 20
-        `;
-
-      const params = statType ? [statType] : [];
-      const { rows } = await this.pool.query(query, params);
+      const rows = await this.queriesService.getCityStats(statType);
 
       await this.redisCache.set(cacheKey, rows, this.CACHE_TTL);
       return { success: true, data: rows };
@@ -387,25 +361,10 @@ export class StatsController {
     period?: string,
   ): Promise<CommunityStats> {
     const dateFilter = this.buildDateFilter(period);
-    const params: unknown[] = [];
-
-    let query = `
-      SELECT 
-        stat_type,
-        SUM(stat_value) as total_value,
-        COUNT(DISTINCT date_period) as days_tracked
-      FROM community_stats
-      WHERE 1=1 ${dateFilter}
-    `;
-
-    if (city) {
-      query += " AND city = $1";
-      params.push(city);
-    }
-
-    query += " GROUP BY stat_type";
-
-    const { rows } = await this.pool.query(query, params);
+    const rows = await this.queriesService.fetchCommunityStats(
+      city,
+      dateFilter,
+    );
 
     const stats: CommunityStats = {};
     rows.forEach(

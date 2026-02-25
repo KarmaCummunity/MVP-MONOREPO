@@ -49,7 +49,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
-  
+
   const [challenges, setChallenges] = useState<CommunityChallenge[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<CommunityChallenge[]>([]);
   const [loading, setLoading] = useState(false);
@@ -141,11 +141,11 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
           style: 'destructive',
           onPress: async () => {
             if (!user?.id) return;
-            
+
             try {
               setLoading(true);
               const response = await db.deleteCommunityChallenge(challenge.id, user.id);
-              
+
               if (response.success) {
                 showToast(t('challengeDeleted'), 'success');
                 await loadChallenges();
@@ -220,7 +220,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
             <Ionicons name="pencil-outline" size={18} color={colors.white} />
             <Text style={styles.actionButtonText}>{t('edit')}</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDeleteChallenge(item)}
@@ -271,16 +271,16 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
         placeholder={t('common:search')}
         filterOptions={[]}
         sortOptions={[]}
-        searchData={filteredChallenges}
+        searchData={filteredChallenges as unknown as Record<string, unknown>[]}
         onSearch={(query) => setSearchQuery(query)}
         hideSortButton={true}
       />
-      
+
       {/* Screen Title */}
       <View style={styles.titleContainer}>
         <Text style={styles.screenTitle}>{t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')}</Text>
       </View>
-      
+
       <FlatList
         data={filteredChallenges}
         renderItem={renderChallengeCard}

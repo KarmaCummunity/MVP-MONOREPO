@@ -62,7 +62,7 @@ class PostsService {
       if (jwtToken) {
         // Check if token is expired
         const expiresAt = await AsyncStorage.getItem('jwt_token_expires_at');
-        if (expiresAt && parseInt(expiresAt) > Date.now()) {
+        if (expiresAt && parseInt(expiresAt, 10) > Date.now()) {
           return jwtToken;
         }
       }

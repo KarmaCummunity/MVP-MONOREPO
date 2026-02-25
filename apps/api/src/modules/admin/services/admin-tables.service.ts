@@ -2,7 +2,7 @@
 // - Purpose: Service for Admin Dynamic Tables management
 // - Used by: AdminTablesController
 // - Provides: CRUD operations for tables, columns, and rows with validation
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 
@@ -37,6 +37,7 @@ export interface UpdateRowDto {
 
 @Injectable()
 export class AdminTablesService {
+  private readonly logger = new Logger(AdminTablesService.name);
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   /**
@@ -54,7 +55,7 @@ export class AdminTablesService {
       `);
 
       if (!checkTable.rows[0].exists) {
-        console.log("📋 Creating admin_tables tables...");
+        this.logger.log("Creating admin_tables tables...");
 
         // Create admin_tables
         await this.pool.query(`
@@ -147,10 +148,10 @@ export class AdminTablesService {
           FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
         `);
 
-        console.log("✅ admin_tables tables created successfully");
+        this.logger.log("admin_tables tables created successfully");
       }
     } catch (error) {
-      console.error("❌ Error ensuring admin_tables tables:", error);
+      this.logger.error("Error ensuring admin_tables tables:", error);
       throw error;
     }
   }
@@ -343,7 +344,7 @@ export class AdminTablesService {
           `SELECT COUNT(*) as count FROM admin_table_rows WHERE table_id = $1::UUID`,
           [table.id],
         );
-        table.row_count = parseInt(countResult.rows[0].count);
+        table.row_count = parseInt(countResult.rows[0].count, 10);
       }
 
       return tables;
@@ -383,7 +384,7 @@ export class AdminTablesService {
 
     return {
       rows: rowsResult.rows,
-      total: parseInt(countResult.rows[0].count),
+      total: parseInt(countResult.rows[0].count, 10),
     };
   }
 
@@ -581,7 +582,7 @@ export class AdminTablesService {
 
       return {
         rows: rowsResult.rows,
-        total: parseInt(countResult.rows[0].count),
+        total: parseInt(countResult.rows[0].count, 10),
         page: pagination?.page || 1,
         limit: pagination?.limit || rowsResult.rows.length,
       };

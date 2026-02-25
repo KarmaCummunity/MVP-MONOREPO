@@ -14,12 +14,6 @@
 // ✅ Production-safe error messages (no stack traces in prod)
 // ✅ Helmet.js security headers (XSS, clickjacking, MITM protection)
 // ✅ Global rate limiting via ThrottlerModule
-//
-// TODO: Add request/response logging middleware for audit trail
-// TODO: Add API documentation setup (Swagger/OpenAPI)
-// TODO: Add metrics collection and monitoring setup (Prometheus)
-// TODO: Configure proper timeouts and request size limits
-// TODO: Add CSRF protection for state-changing operations
 
 // MVP: Reduced startup logging (verbose debug banners commented out)
 // console.log('========================================');
@@ -584,5 +578,3 @@ process.on("uncaughtException", (error) => {
   logger.error("⚠️  Application will exit due to critical error");
   process.exit(1);
 });
-
-import "./sanity";

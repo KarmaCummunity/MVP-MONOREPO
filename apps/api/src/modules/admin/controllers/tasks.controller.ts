@@ -7,6 +7,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -14,14 +15,13 @@ import {
   UseGuards,
   Logger,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 import { RedisCacheService } from "../../../redis/redis-cache.service";
 import { UserResolutionService } from "../../users/services/user-resolution.service";
 import { ItemsService } from "../../items/items.service";
 import { JwtAuthGuard, AdminAuthGuard } from "../../auth/jwt-auth.guard";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 type TaskStatus =
   | "open"
@@ -100,10 +100,15 @@ export class TasksController {
     limitParam?: string,
     offsetParam?: string,
   ): { limit: number; offset: number } {
-    const limitNum = limitParam ? parseInt(String(limitParam), 10) : 100;
-    const offsetNum = offsetParam ? parseInt(String(offsetParam), 10) : 0;
-    const limit = Math.min(Math.max(isNaN(limitNum) ? 100 : limitNum, 1), 500);
-    const offset = Math.max(isNaN(offsetNum) ? 0 : offsetNum, 0);
+    const limitNum = limitParam ? Number.parseInt(String(limitParam), 10) : 100;
+    const offsetNum = offsetParam
+      ? Number.parseInt(String(offsetParam), 10)
+      : 0;
+    const limit = Math.min(
+      Math.max(Number.isNaN(limitNum) ? 100 : limitNum, 1),
+      500,
+    );
+    const offset = Math.max(Number.isNaN(offsetNum) ? 0 : offsetNum, 0);
     return { limit, offset };
   }
 
@@ -1337,7 +1342,8 @@ export class TasksController {
           "SELECT COUNT(*) as count FROM task_time_logs WHERE task_id = $1",
           [taskId],
         );
-        const hasTimeLog = parseInt(timeLogCheck.rows[0]?.count || "0", 10) > 0;
+        const hasTimeLog =
+          Number.parseInt(timeLogCheck.rows[0]?.count || "0", 10) > 0;
         if (!hasTimeLog) {
           return {
             required: true,

@@ -164,4 +164,69 @@ export class StatsQueriesService {
     `);
     return rows[0] || {};
   }
+
+  async fetchCommunityStats(
+    city?: string,
+    dateFilter = "",
+  ): Promise<MetricsRow[]> {
+    const params: unknown[] = [];
+    let query = `
+      SELECT 
+        stat_type,
+        SUM(stat_value) as total_value,
+        COUNT(DISTINCT date_period) as days_tracked
+      FROM community_stats
+      WHERE 1=1 ${dateFilter}
+    `;
+
+    if (city) {
+      query += " AND city = $1";
+      params.push(city);
+    }
+
+    query += " GROUP BY stat_type";
+    const { rows } = await this.pool.query(query, params);
+    return rows;
+  }
+
+  async getCityStats(statType?: string): Promise<MetricsRow[]> {
+    const query = statType
+      ? `
+          SELECT city, SUM(stat_value) as total
+          FROM community_stats
+          WHERE stat_type = $1 AND city IS NOT NULL
+          GROUP BY city
+          ORDER BY total DESC
+          LIMIT 20
+        `
+      : `
+          SELECT city, COUNT(DISTINCT id) as total_users
+          FROM user_profiles
+          WHERE city IS NOT NULL AND city <> ''
+          GROUP BY city
+          ORDER BY total_users DESC
+          LIMIT 20
+        `;
+
+    const params = statType ? [statType] : [];
+    const { rows } = await this.pool.query(query, params);
+    return rows;
+  }
+
+  async getCommunityTrends(
+    statType: string,
+    days: number,
+  ): Promise<MetricsRow[]> {
+    const { rows } = await this.pool.query(
+      `
+      SELECT date_period, SUM(stat_value) as value
+      FROM community_stats
+      WHERE stat_type = $1 AND date_period >= CURRENT_DATE - $2::INTEGER
+      GROUP BY date_period
+      ORDER BY date_period ASC
+    `,
+      [statType, days],
+    );
+    return rows;
+  }
 }

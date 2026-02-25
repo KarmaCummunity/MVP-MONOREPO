@@ -3,26 +3,14 @@
 // - Reached from: Routes under '/api/donations'.
 // - Provides: Create/update/delete donation, list with filters, per-user donations, category endpoints, summary stats.
 // - Storage: `donations`, `donation_categories`, `user_profiles`, `community_stats`; Redis caches with TTL.
-
-// TODO: CRITICAL - This file is long (292+ lines). Split into specialized services:
-//   - DonationsCategoryService for category operations
-//   - DonationsService for CRUD operations
-//   - DonationsStatsService for analytics
-//   - DonationsCacheService for cache management
-// TODO: Add comprehensive DTO validation for all endpoints with class-validator
-// TODO: Implement proper pagination with cursor-based approach
-// TODO: Add comprehensive error handling with proper HTTP status codes
-// TODO: Implement proper authorization and access control
-// TODO: Add comprehensive logging and monitoring for all operations
-// TODO: Remove hardcoded cache TTL and make it configurable
-// TODO: Add comprehensive unit tests for all donation operations
-// TODO: Implement proper data sanitization and validation
-// TODO: Add comprehensive API documentation with Swagger decorators
+// - Future improvements: Split into DonationsCategoryService, DonationsService, DonationsStatsService.
+//   Add class-validator DTOs, cursor-based pagination, and Swagger decorators.
 import {
   Body,
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Post,
   Put,
@@ -30,7 +18,6 @@ import {
   UseGuards,
   Logger,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 import { RedisCacheService } from "../../../redis/redis-cache.service";
@@ -192,10 +179,6 @@ export class DonationsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createDonation(@Body() donationData: CreateDonationDto) {
-    // TODO: Replace 'any' with proper CreateDonationDTO interface
-    // TODO: Add comprehensive input validation and sanitization
-    // TODO: Add proper authentication and authorization checks
-    // TODO: Implement rate limiting for donation creation
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
@@ -329,8 +312,8 @@ export class DonationsController {
       search,
     );
 
-    const parsedLimit = limit ? parseInt(limit) : 50;
-    const parsedOffset = offset ? parseInt(offset) : 0;
+    const parsedLimit = limit ? Number.parseInt(limit, 10) : 50;
+    const parsedOffset = offset ? Number.parseInt(offset, 10) : 0;
 
     const whereClause = ` WHERE ${whereClauses.join(" AND ")}`;
     const orderClause = ` ORDER BY d.created_at DESC`;
@@ -488,6 +471,9 @@ export class DonationsController {
     return { success: true, data: rows };
   }
 
+  /**
+   * Donation stats summary for the past 30 days
+   */
   @Get("stats/summary")
   async getDonationStats() {
     const cacheKey = "donation_stats_summary";
@@ -520,14 +506,12 @@ export class DonationsController {
     type: string,
     amount: number,
   ) {
-    const statType =
-      type === "money"
-        ? "money_donations"
-        : type === "time"
-          ? "volunteer_hours"
-          : type === "trump"
-            ? "rides_completed"
-            : "other_donations";
+    const statTypeMap: Record<string, string> = {
+      money: "money_donations",
+      time: "volunteer_hours",
+      trump: "rides_completed",
+    };
+    const statType = statTypeMap[type] ?? "other_donations";
 
     await client.query(
       `

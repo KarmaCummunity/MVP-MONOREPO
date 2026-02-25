@@ -193,31 +193,28 @@ export default function AdminPeopleScreen({ navigation: _navigation }: AdminPeop
         memberId: editingMemberId,
       });
 
+      const contactInfo: { email?: string; phone?: string } = {};
+      if (formData.email.trim()) {
+        contactInfo.email = formData.email.trim();
+      }
+      if (formData.phone.trim()) {
+        contactInfo.phone = formData.phone.trim();
+      }
+
       const memberData: {
         name: string;
         role: string;
         description?: string;
         status: 'active' | 'inactive';
-        contact_info: { email?: string; phone?: string };
+        contact_info?: { email?: string; phone?: string };
         created_by?: string;
       } = {
         name: formData.name.trim(),
         role: formData.role.trim(),
         description: formData.description.trim() || undefined,
         status: formData.status,
-        contact_info: {},
+        contact_info: Object.keys(contactInfo).length > 0 ? contactInfo : undefined,
       };
-
-      if (formData.email.trim()) {
-        memberData.contact_info.email = formData.email.trim();
-      }
-      if (formData.phone.trim()) {
-        memberData.contact_info.phone = formData.phone.trim();
-      }
-
-      if (Object.keys(memberData.contact_info).length === 0) {
-        memberData.contact_info = undefined;
-      }
 
       if (selectedUser?.id) {
         memberData.created_by = selectedUser.id;

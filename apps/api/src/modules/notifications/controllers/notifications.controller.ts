@@ -151,8 +151,8 @@ export class NotificationsController {
 
         const { rows } = await client.query(query, [
           userId,
-          parseInt(limit),
-          parseInt(offset),
+          parseInt(limit, 10),
+          parseInt(offset, 10),
         ]);
 
         return {

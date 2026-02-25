@@ -31,7 +31,7 @@ import { enhancedDB } from '../utils/enhancedDatabaseService';
 import { apiService } from '../src/api/api.service';
 import { scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
-import ItemDetailsModal from '../components/ItemDetailsModal';
+import ItemDetailsModal, { ItemOrRideRecord } from '../components/ItemDetailsModal';
 import { useToast } from '../utils/toastService';
 import { logger } from '../utils/loggerService';
 
@@ -81,7 +81,7 @@ const SearchScreen = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false); // To show "start typing" vs "no results"
-    const [selectedItem, setSelectedItem] = useState<unknown | null>(null);
+    const [selectedItem, setSelectedItem] = useState<ItemOrRideRecord | null>(null);
     const [showItemModal, setShowItemModal] = useState(false);
     const [selectedItemType, setSelectedItemType] = useState<'item' | 'ride'>('item');
 
@@ -307,7 +307,7 @@ const SearchScreen = () => {
     const handleResultPress = (item: SearchResult) => {
         // Open modal for rides and donations (items)
         if (item.type === 'ride' || item.type === 'donation') {
-            setSelectedItem(item.rawData);
+            setSelectedItem(item.rawData as ItemOrRideRecord);
             setSelectedItemType(item.type === 'ride' ? 'ride' : 'item');
             setShowItemModal(true);
         } else if (item.type === 'user') {

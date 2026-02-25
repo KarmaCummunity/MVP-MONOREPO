@@ -40,7 +40,7 @@ export class UserStatsService {
       ORDER BY created_at DESC
       LIMIT $2
     `,
-      [userId, parseInt(limit || "50")],
+      [userId, parseInt(limit || "50", 10)],
     );
 
     await this.redisCache.set(cacheKey, rows, 5 * 60);

@@ -12,8 +12,8 @@ import {
   Post,
   Query,
   Logger,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 import { RedisCacheService } from "../../../redis/redis-cache.service";

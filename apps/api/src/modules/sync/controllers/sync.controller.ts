@@ -12,8 +12,8 @@ import {
   UnauthorizedException,
   UseGuards,
   Logger,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.module";
 import { AdminAuthGuard } from "../../auth/jwt-auth.guard";
@@ -641,13 +641,16 @@ export class SyncController {
       const { rows: dbCountResult } = await this.pool.query(
         `SELECT COUNT(*) as count FROM user_profiles WHERE email IS NOT NULL AND email <> ''`,
       );
-      const dbCount = parseInt(dbCountResult[0]?.count || "0");
+      const dbCount = parseInt(dbCountResult[0]?.count || "0", 10);
 
       // Count users with firebase_uid
       const { rows: firebaseLinkedResult } = await this.pool.query(
         `SELECT COUNT(*) as count FROM user_profiles WHERE firebase_uid IS NOT NULL`,
       );
-      const firebaseLinked = parseInt(firebaseLinkedResult[0]?.count || "0");
+      const firebaseLinked = parseInt(
+        firebaseLinkedResult[0]?.count || "0",
+        10,
+      );
 
       return {
         success: true,

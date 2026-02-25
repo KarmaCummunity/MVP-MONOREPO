@@ -5,13 +5,15 @@ import colors from '../../globals/colors';
 
 // Import notifications only on supported platforms
 type ExpoNotificationsModule = {
-  setNotificationHandler: (handler: object) => void;
-  getPermissionsAsync: () => Promise<{ status: string }>;
+  setNotificationHandler: (handler: unknown) => void;
+  getPermissionsAsync: () => Promise<{ status: string; canAskAgain: boolean }>;
   requestPermissionsAsync: () => Promise<{ status: string }>;
-  scheduleNotificationAsync: (opts: { content: object; trigger: null }) => Promise<string>;
-  addNotificationReceivedListener: (cb: (n: NotificationData) => void) => { remove: () => void };
-  addNotificationResponseReceivedListener: (cb: (r: { notification: { request: { content: object } } }) => void) => { remove: () => void };
+  scheduleNotificationAsync: (opts: { content: unknown; trigger: unknown }) => Promise<string>;
+  addNotificationReceivedListener: (cb: (n: unknown) => void) => { remove: () => void };
+  addNotificationResponseReceivedListener: (cb: (r: unknown) => void) => { remove: () => void };
   AndroidNotificationPriority?: { HIGH: string };
+  setNotificationChannelAsync: (channelId: string, options: unknown) => Promise<void>;
+  AndroidImportance: { MAX: string | number };
 };
 let Notifications: ExpoNotificationsModule | null = null;
 if (Platform.OS !== 'web') {
@@ -192,7 +194,7 @@ export const sendLocalNotification = async (
         body,
         data: { ...data, type },
         sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
+        priority: Notifications.AndroidNotificationPriority?.HIGH || 'high',
       },
       trigger: null, // Send immediately
     });
@@ -650,7 +652,7 @@ export const setupNotificationListener = (callback: (notification: { request: { 
     return null;
   }
 
-  const subscription = Notifications.addNotificationReceivedListener(callback);
+  const subscription = Notifications?.addNotificationReceivedListener(callback as unknown as (n: unknown) => void);
   return subscription;
 };
 
@@ -665,7 +667,7 @@ export const setupNotificationResponseListener = (callback: (response: { notific
     return null;
   }
 
-  const subscription = Notifications.addNotificationResponseReceivedListener(callback);
+  const subscription = Notifications?.addNotificationResponseReceivedListener(callback as unknown as (r: unknown) => void);
   return subscription;
 };
 

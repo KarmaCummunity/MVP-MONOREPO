@@ -505,7 +505,7 @@ export class UserProfileService {
     if (limit) {
       paramCount++;
       limitClause = `LIMIT $${paramCount}`;
-      queryParams.push(parseInt(limit));
+      queryParams.push(parseInt(limit, 10));
     } else {
       limitClause = `LIMIT 50`;
     }
@@ -513,7 +513,7 @@ export class UserProfileService {
     if (offset) {
       paramCount++;
       offsetClause = `OFFSET $${paramCount}`;
-      queryParams.push(parseInt(offset));
+      queryParams.push(parseInt(offset, 10));
     }
 
     let query: string;

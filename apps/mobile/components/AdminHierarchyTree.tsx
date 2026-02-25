@@ -54,13 +54,13 @@ const ManagerNodeComponent: React.FC<ManagerNodeProps> = ({ node, isLast = false
 
   const toggleExpand = useCallback(() => {
     if (!hasChildren) return;
-    
+
     Animated.timing(animatedHeight, {
       toValue: isExpanded ? 0 : 1,
       duration: 250,
       useNativeDriver: false,
     }).start();
-    
+
     setIsExpanded(!isExpanded);
   }, [isExpanded, hasChildren, animatedHeight]);
 
@@ -140,7 +140,7 @@ const ManagerNodeComponent: React.FC<ManagerNodeProps> = ({ node, isLast = false
           <View style={[styles.roleBadge, { backgroundColor: badgeStyle.backgroundColor }]}>
             <Text style={[styles.roleText, { color: badgeStyle.color }]}>{getRoleLabel()}</Text>
           </View>
-          
+
           {/* Salary */}
           <View style={styles.infoRow}>
             <Ionicons name="cash-outline" size={isMobileWeb ? 12 : 14} color={colors.textSecondary} />
@@ -148,7 +148,7 @@ const ManagerNodeComponent: React.FC<ManagerNodeProps> = ({ node, isLast = false
               {t('hierarchy.salary')}: ₪{(node.salary ?? 0).toLocaleString('he-IL')}
             </Text>
           </View>
-          
+
           {/* Seniority */}
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={isMobileWeb ? 12 : 14} color={colors.textSecondary} />
@@ -156,7 +156,7 @@ const ManagerNodeComponent: React.FC<ManagerNodeProps> = ({ node, isLast = false
               {t('hierarchy.seniority')}: {node.seniority_start_date || new Date().toISOString().split('T')[0]}
             </Text>
           </View>
-          
+
           {/* Level/Rank */}
           <View style={styles.infoRow}>
             <Ionicons name="layers-outline" size={isMobileWeb ? 12 : 14} color={colors.textSecondary} />
@@ -226,13 +226,13 @@ const AdminHierarchyTree: React.FC<AdminHierarchyTreeProps> = ({ onError }) => {
   const loadHierarchy = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiService.getFullAdminHierarchy();
-      
+
       if (response.success && response.data) {
-        setTreeData(response.data);
-        setTotalCount((response as { totalCount?: number }).totalCount ?? response.data.length);
+        setTreeData(response.data as ManagerNode[]);
+        setTotalCount((response as { totalCount?: number }).totalCount ?? (response.data as ManagerNode[]).length);
       } else {
         const errorMsg = response.error || t('hierarchy.loadError');
         setError(errorMsg);

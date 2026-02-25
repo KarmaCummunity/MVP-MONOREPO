@@ -285,21 +285,24 @@ export type PostsReelsStackParamList = {
   // Add any other screens that can be displayed inside the PostsReelsScreen modal
 };
 
+// --- Admin Stack Parameter List ---
+export type AdminParams = { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean } | undefined;
+
 export type AdminStackParamList = {
-  AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean } | undefined;
-  AdminMoney: undefined;
-  AdminTasks: undefined;
-  AdminPeople: undefined;
-  AdminAdmins: undefined;
-  AdminReview: undefined;
-  AdminFiles: undefined;
-  AdminCRM: undefined;
-  AdminTimeManagement: undefined;
-  AdminTables: undefined;
+  AdminDashboard: AdminParams;
+  AdminMoney: AdminParams;
+  AdminTasks: AdminParams;
+  AdminPeople: AdminParams;
+  AdminAdmins: AdminParams;
+  AdminReview: AdminParams;
+  AdminFiles: AdminParams;
+  AdminCRM: AdminParams;
+  AdminTimeManagement: AdminParams;
+  AdminTables: AdminParams;
   AdminTableRows: {
     tableId: string;
     tableName: string;
-  };
+  } & AdminParams;
   ChatListScreen: undefined;
   ChatDetailScreen: {
     conversationId: string;

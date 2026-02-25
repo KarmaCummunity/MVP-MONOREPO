@@ -17,6 +17,7 @@ import { logger } from '../utils/loggerService';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import HeaderComp from '../components/HeaderComp';
+import { SearchableItem } from '../components/SearchBar';
 import { donationResources } from '../utils/donationResources';
 import AddLinkComponent from '../components/AddLinkComponent';
 import ScrollContainer from '../components/ScrollContainer';
@@ -260,7 +261,7 @@ export default function KnowledgeScreen({
   type SearchResultItem = EducationalLinkItem | CommunityContentItem;
 
   // Function to handle search results from HeaderComp
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: SearchResultItem[]) => {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => {
     logger.debug('KnowledgeScreen', 'Search received', {
       query,
       filters: filters ?? [],
@@ -275,9 +276,10 @@ export default function KnowledgeScreen({
 
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
+      const typedResults = results as SearchResultItem[];
       // Split results between educational links and community content (type guards for union)
-      const educationalResults = results.filter((item): item is EducationalLinkItem => 'url' in item);
-      const communityResults = results.filter((item): item is CommunityContentItem => 'teacher' in item);
+      const educationalResults = typedResults.filter((item): item is EducationalLinkItem => 'url' in item);
+      const communityResults = typedResults.filter((item): item is CommunityContentItem => 'teacher' in item);
 
       setFilteredEducationalLinks(educationalResults);
       setFilteredCommunityContent(communityResults);

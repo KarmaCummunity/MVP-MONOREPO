@@ -19,6 +19,7 @@ import { FontSizes } from '../globals/constants';
 import { createShadowStyle } from '../globals/styles';
 import { useUser } from '../stores/userStore';
 import HeaderComp from '../components/HeaderComp';
+import { SearchableItem } from '../components/SearchBar';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { logger } from '../utils/loggerService';
@@ -244,7 +245,7 @@ export default function TimeScreen({
   };
 
   // Function to handle search results from HeaderComp
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: VolunteerOpportunity[]) => {
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => {
     logger.debug('TimeScreen', 'Search received', {
       query,
       filters: filters || [],
@@ -259,7 +260,7 @@ export default function TimeScreen({
 
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
-      setFilteredOpportunities(results);
+      setFilteredOpportunities(results as VolunteerOpportunity[]);
     } else {
       // Otherwise, perform local filtering
       let filtered = [...volunteerOpportunities];

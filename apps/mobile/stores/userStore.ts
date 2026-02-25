@@ -672,7 +672,8 @@ export const useUserStore = create<UserState>((set, get) => ({
                 email: firebaseUser.email || undefined
               });
 
-              const respWithUser = resolveResponse as { success?: boolean; user?: Record<string, unknown> };
+              type ResolveTokens = { accessToken: string; refreshToken: string; expiresIn: number };
+              const respWithUser = resolveResponse as { success?: boolean; user?: Record<string, unknown>; tokens?: ResolveTokens };
               if (!resolveResponse.success || !respWithUser.user) {
                 logger.warn('Auth', 'Failed to resolve user ID from server, using fallback');
                 // Fallback: try to get user by email
@@ -702,9 +703,20 @@ export const useUserStore = create<UserState>((set, get) => ({
                 throw new Error('Failed to get user from server');
               }
 
-              // We used to skip update if ID matched, but this prevents fresh data (like roles/avatar) 
-              // from being applied on startup if the user is already cached.
-              // Removing the check ensures we always sync with server.
+              // ✅ FIX: Save JWT tokens returned by resolveUserId so that getAuthToken()
+              // always sends a token whose userId matches the current user's DB UUID.
+              // Without this, a stale or Firebase-UID-based token causes 403 on ownership checks.
+              if (respWithUser.tokens?.accessToken) {
+                await AsyncStorage.setItem('jwt_access_token', respWithUser.tokens.accessToken);
+                await AsyncStorage.setItem(
+                  'jwt_token_expires_at',
+                  String(Date.now() + (respWithUser.tokens.expiresIn * 1000))
+                );
+                logger.debug('Auth', 'JWT access token refreshed from resolveUserId', { userId: respWithUser.user?.id });
+              }
+              if (respWithUser.tokens?.refreshToken) {
+                await AsyncStorage.setItem('jwt_refresh_token', respWithUser.tokens.refreshToken);
+              }
 
               // Use UUID from server
               const serverUser = (resolveResponse as { user: ApiUserRecord }).user;

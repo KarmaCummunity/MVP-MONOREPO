@@ -62,8 +62,8 @@ export class AdminTablesController {
       const pagination =
         includeRowsBool && page && limit
           ? {
-              page: parseInt(page) || 1,
-              limit: parseInt(limit) || 50,
+              page: parseInt(page, 10) || 1,
+              limit: parseInt(limit, 10) || 50,
             }
           : undefined;
 
@@ -152,8 +152,8 @@ export class AdminTablesController {
       const pagination =
         page && limit
           ? {
-              page: parseInt(page) || 1,
-              limit: parseInt(limit) || 50,
+              page: parseInt(page, 10) || 1,
+              limit: parseInt(limit, 10) || 50,
             }
           : undefined;
 

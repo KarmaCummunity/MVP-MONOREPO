@@ -80,7 +80,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         // `commonProps` passes user of `onMorePress: handleMorePressInternal`.
         // So `handleMorePressInternal` is what the card calls.
         // The card calls it like: `onMorePress(measurements)`.
-        const measurements = itemOrMeasure;
+        const measurements = itemOrMeasure as { x: number, y: number } | undefined;
         if (onMorePress) onMorePress(item, measurements);
     }, [onMorePress, item]);
 
@@ -207,16 +207,16 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                 // CRITICAL: item.itemId should come from item_data.id (from JOIN) or metadata.item_id
                 // If both are missing or are timestamps, we can't update the item
                 const itemId = item.itemId;
-                
+
                 if (!itemId) {
                     console.error('❌ Cannot close post - item ID is missing:', {
                         postId: item.id,
                         subtype: item.subtype,
                         fullItem: JSON.stringify(item, null, 2)
                     });
-                    updateResult = { 
-                        success: false, 
-                        error: 'לא ניתן לסגור את הפוסט - ID של הפריט לא נמצא. אנא רענן את הפיד ונסה שוב.' 
+                    updateResult = {
+                        success: false,
+                        error: 'לא ניתן לסגור את הפוסט - ID של הפריט לא נמצא. אנא רענן את הפיד ונסה שוב.'
                     };
                 } else if (/^\d{10,13}$/.test(itemId)) {
                     // itemId is a timestamp - this means the post was created incorrectly
@@ -227,18 +227,18 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                         subtype: item.subtype,
                         message: 'This post was created before the fix. Please create a new item.'
                     });
-                    updateResult = { 
-                        success: false, 
-                        error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.' 
+                    updateResult = {
+                        success: false,
+                        error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.'
                     };
                 } else if (isValidItemId(itemId)) {
                     console.log('✅ Valid item ID, calling updateItem:', itemId);
                     updateResult = await apiService.updateItem(itemId, { status: 'delivered' });
                 } else {
                     console.warn('❌ Invalid item ID format:', itemId);
-                    updateResult = { 
-                        success: false, 
-                        error: 'ID של הפריט לא תקין. אנא רענן את הפיד ונסה שוב.' 
+                    updateResult = {
+                        success: false,
+                        error: 'ID של הפריט לא תקין. אנא רענן את הפיד ונסה שוב.'
                     };
                 }
             }
@@ -340,7 +340,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.subtype === 'donation') {
         // Check if donation is delivered/completed/expired/cancelled
         const isDonationDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-        
+
         if (isDonationDelivered) {
             return (
                 <>
@@ -349,7 +349,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                 </>
             );
         }
-        
+
         return (
             <>
                 <DonationItemCard {...commonProps} />
@@ -382,7 +382,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
         // Check if item is delivered/completed/expired/cancelled
         const isItemDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-        
+
         if (isItemDelivered) {
             return (
                 <>
@@ -391,7 +391,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                 </>
             );
         }
-        
+
         return (
             <>
                 <RegularItemCard {...commonProps} />

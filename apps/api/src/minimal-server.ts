@@ -4,24 +4,32 @@
 // server without TLS at the network edge.
 import * as http from "http";
 
+// Parse and validate port from environment (sanitize user-controlled input before logging)
+const rawPort = process.env.PORT;
+const portNum = rawPort ? parseInt(rawPort, 10) : null;
+const port =
+  typeof portNum === "number" && portNum > 0 && portNum < 65536
+    ? portNum
+    : 3001;
+
 console.log("==================================================");
 console.log("!!! MINIMAL SERVER STARTING !!!");
 console.log("Current Directory:", process.cwd());
-console.log("Environment PORT:", process.env.PORT);
+// Log the sanitized/validated port number only (not raw env string)
+// Using a numeric value ensures no log injection (S5145)
+console.log("Resolved PORT:", Number(port));
 console.log("Node Version:", process.version);
 console.log("==================================================");
 
-const port = process.env.PORT || 3001;
-
-const server = http.createServer((req, res) => {
-  console.log(`[MINIMAL] Health check request received`);
+const server = http.createServer((_req, res) => {
+  console.log("[MINIMAL] Health check request received");
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(
     JSON.stringify({
       status: "ok",
       message: "Minimal Server is UP!",
       env: {
-        port: process.env.PORT,
+        port,
         db_url_set: !!process.env.DATABASE_URL,
       },
     }),
