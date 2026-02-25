@@ -251,6 +251,130 @@ export class UserProfileService {
     }
   }
 
+  private validateRootAdminProtection(
+    existingUser: UserProfileRow,
+    updateData: UpdateUserBody,
+  ): { isBlocked: boolean; error?: string } {
+    if (existingUser.email === "karmacommunity2.0@gmail.com") {
+      if (
+        updateData.roles !== undefined ||
+        updateData.parent_manager_id !== undefined ||
+        updateData.hierarchy_level !== undefined
+      ) {
+        this.logger.log(
+          `[updateUser] ❌ BLOCKED: Attempt to modify root admin roles/hierarchy (karmacommunity2.0@gmail.com)`,
+        );
+        return {
+          isBlocked: true,
+          error:
+            "לא ניתן לשנות הרשאות או היררכיה למנהל הראשי - הוא המנהל הראשי",
+        };
+      }
+    }
+    return { isBlocked: false };
+  }
+
+  private async buildUpdateFields(
+    updateData: UpdateUserBody,
+    existingUser: UserProfileRow,
+  ): Promise<{
+    fields: string[];
+    values: (string | number | boolean | string[] | null)[];
+  }> {
+    const updateFields: string[] = [];
+    const updateValues: (string | number | boolean | string[] | null)[] = [];
+    let paramCount = 1;
+
+    if (updateData.password) {
+      const passwordHash = await argon2.hash(updateData.password);
+      updateFields.push(`password_hash = $${paramCount++}`);
+      updateValues.push(passwordHash);
+    }
+    if (updateData.name !== undefined) {
+      updateFields.push(`name = $${paramCount++}`);
+      updateValues.push(updateData.name);
+    }
+    if (updateData.phone !== undefined) {
+      updateFields.push(`phone = $${paramCount++}`);
+      updateValues.push(updateData.phone);
+    }
+    if (updateData.avatar_url !== undefined) {
+      updateFields.push(`avatar_url = $${paramCount++}`);
+      updateValues.push(updateData.avatar_url);
+    }
+    if (updateData.bio !== undefined) {
+      updateFields.push(`bio = $${paramCount++}`);
+      updateValues.push(updateData.bio);
+    }
+    if (updateData.city !== undefined) {
+      updateFields.push(`city = $${paramCount++}`);
+      updateValues.push(updateData.city);
+    }
+    if (updateData.country !== undefined) {
+      updateFields.push(`country = $${paramCount++}`);
+      updateValues.push(updateData.country);
+    }
+    if (updateData.interests !== undefined) {
+      updateFields.push(`interests = $${paramCount++}`);
+      updateValues.push(updateData.interests);
+    }
+    if (updateData.settings !== undefined) {
+      updateFields.push(`settings = $${paramCount++}::jsonb`);
+      updateValues.push(
+        JSON.stringify({
+          ...(existingUser.settings || {}),
+          ...updateData.settings,
+        }),
+      );
+    }
+    if (updateData.firebase_uid !== undefined) {
+      updateFields.push(`firebase_uid = $${paramCount++}`);
+      updateValues.push(updateData.firebase_uid);
+    }
+    if (updateData.roles !== undefined) {
+      const rootAdminEmail = this.getRootAdminEmail();
+      const superAdminEmails = rootAdminEmail ? [rootAdminEmail] : [];
+      if (superAdminEmails.includes(existingUser.email?.toLowerCase() || "")) {
+        this.logger.warn(
+          `Attempted to modify roles of Super Admin (${existingUser.email}) - Ignoring role update.`,
+        );
+      } else {
+        updateFields.push(`roles = $${paramCount++}::text[]`);
+        updateValues.push(updateData.roles);
+      }
+    }
+
+    updateFields.push(`last_active = NOW()`, `updated_at = NOW()`);
+
+    return { fields: updateFields, values: updateValues };
+  }
+
+  private formatUserResponse(updatedUser: UserProfileRow) {
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      avatar_url: updatedUser.avatar_url,
+      bio: updatedUser.bio || "",
+      karma_points: updatedUser.karma_points || 0,
+      join_date: updatedUser.join_date || updatedUser.created_at,
+      is_active: updatedUser.is_active !== false,
+      last_active: updatedUser.last_active,
+      city: updatedUser.city || "",
+      country: updatedUser.country || "Israel",
+      interests: updatedUser.interests || [],
+      roles: updatedUser.roles || ["user"],
+      posts_count: updatedUser.posts_count || 0,
+      followers_count: updatedUser.followers_count || 0,
+      following_count: updatedUser.following_count || 0,
+      total_donations_amount: 0,
+      total_volunteer_hours: 0,
+      email_verified: updatedUser.email_verified || false,
+      settings: updatedUser.settings || {},
+    };
+  }
+
   async updateUser(
     id: string,
     updateData: UpdateUserBody,
@@ -278,108 +402,28 @@ export class UserProfileService {
       const existingUser = existingRows[0];
       const userId = existingUser.id;
 
-      if (existingUser.email === "karmacommunity2.0@gmail.com") {
-        if (
-          updateData.roles !== undefined ||
-          updateData.parent_manager_id !== undefined ||
-          updateData.hierarchy_level !== undefined
-        ) {
-          await client.query("ROLLBACK");
-          this.logger.log(
-            `[updateUser] ❌ BLOCKED: Attempt to modify root admin roles/hierarchy (karmacommunity2.0@gmail.com)`,
-          );
-          return {
-            success: false,
-            error:
-              "לא ניתן לשנות הרשאות או היררכיה למנהל הראשי - הוא המנהל הראשי",
-          };
-        }
+      const protection = this.validateRootAdminProtection(
+        existingUser,
+        updateData,
+      );
+      if (protection.isBlocked) {
+        await client.query("ROLLBACK");
+        return { success: false, error: protection.error };
       }
 
-      const updateFields: string[] = [];
-      const updateValues: (string | number | boolean | string[] | null)[] = [];
-      let paramCount = 1;
-
-      if (updateData.password) {
-        const passwordHash = await argon2.hash(updateData.password);
-        updateFields.push(`password_hash = $${paramCount++}`);
-        updateValues.push(passwordHash);
-      }
-      if (updateData.name !== undefined) {
-        updateFields.push(`name = $${paramCount++}`);
-        updateValues.push(updateData.name);
-      }
-      if (updateData.phone !== undefined) {
-        updateFields.push(`phone = $${paramCount++}`);
-        updateValues.push(updateData.phone);
-      }
-      if (updateData.avatar_url !== undefined) {
-        updateFields.push(`avatar_url = $${paramCount++}`);
-        updateValues.push(updateData.avatar_url);
-      }
-      if (updateData.bio !== undefined) {
-        updateFields.push(`bio = $${paramCount++}`);
-        updateValues.push(updateData.bio);
-      }
-      if (updateData.city !== undefined) {
-        updateFields.push(`city = $${paramCount++}`);
-        updateValues.push(updateData.city);
-      }
-      if (updateData.country !== undefined) {
-        updateFields.push(`country = $${paramCount++}`);
-        updateValues.push(updateData.country);
-      }
-      if (updateData.interests !== undefined) {
-        updateFields.push(`interests = $${paramCount++}`);
-        updateValues.push(updateData.interests);
-      }
-      if (updateData.settings !== undefined) {
-        updateFields.push(`settings = $${paramCount++}::jsonb`);
-        updateValues.push(
-          JSON.stringify({
-            ...(existingUser.settings || {}),
-            ...updateData.settings,
-          }),
-        );
-      }
-      if (updateData.firebase_uid !== undefined) {
-        updateFields.push(`firebase_uid = $${paramCount++}`);
-        updateValues.push(updateData.firebase_uid);
-      }
-      if (updateData.roles !== undefined) {
-        const rootAdminEmail = this.getRootAdminEmail();
-        const superAdminEmails = rootAdminEmail ? [rootAdminEmail] : [];
-        if (
-          superAdminEmails.includes(existingUser.email?.toLowerCase() || "")
-        ) {
-          this.logger.warn(
-            `Attempted to modify roles of Super Admin (${existingUser.email}) - Ignoring role update.`,
-          );
-        } else {
-          updateFields.push(`roles = $${paramCount++}::text[]`);
-          updateValues.push(updateData.roles);
-        }
-      }
-
-      updateFields.push(`last_active = NOW()`, `updated_at = NOW()`);
+      const { fields: updateFields, values: updateValues } =
+        await this.buildUpdateFields(updateData, existingUser);
+      const paramCount = updateValues.length + 1;
 
       if (updateFields.length > 2) {
         updateValues.push(userId);
         await client.query(
-          `
-          UPDATE user_profiles 
-          SET ${updateFields.join(", ")}
-          WHERE id = $${paramCount}
-        `,
+          `UPDATE user_profiles SET ${updateFields.join(", ")} WHERE id = $${paramCount}`,
           updateValues,
         );
       } else {
         await client.query(
-          `
-          UPDATE user_profiles 
-          SET last_active = NOW(), updated_at = NOW()
-          WHERE id = $1
-        `,
+          `UPDATE user_profiles SET last_active = NOW(), updated_at = NOW() WHERE id = $1`,
           [userId],
         );
       }
@@ -400,31 +444,7 @@ export class UserProfileService {
       await this.redisCache.delete(`user_profile_${userId}`);
       await this.redisCache.invalidatePattern("users_list*");
 
-      const updatedUser = updatedRows[0];
-
-      const user = {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        phone: updatedUser.phone,
-        avatar_url: updatedUser.avatar_url,
-        bio: updatedUser.bio || "",
-        karma_points: updatedUser.karma_points || 0,
-        join_date: updatedUser.join_date || updatedUser.created_at,
-        is_active: updatedUser.is_active !== false,
-        last_active: updatedUser.last_active,
-        city: updatedUser.city || "",
-        country: updatedUser.country || "Israel",
-        interests: updatedUser.interests || [],
-        roles: updatedUser.roles || ["user"],
-        posts_count: updatedUser.posts_count || 0,
-        followers_count: updatedUser.followers_count || 0,
-        following_count: updatedUser.following_count || 0,
-        total_donations_amount: 0,
-        total_volunteer_hours: 0,
-        email_verified: updatedUser.email_verified || false,
-        settings: updatedUser.settings || {},
-      };
+      const user = this.formatUserResponse(updatedRows[0]);
 
       return { success: true, data: user };
     } catch (error) {

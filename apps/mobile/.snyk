@@ -36,14 +36,18 @@ ignore:
         created: 2026-02-25T00:00:00.000Z
   f10e7ca3-6b7e-4398-b987-4c3b44ec6df5:
     - '*':
-        reason: 'False positive: see apps/mobile/.snyk for full justification.'
+        reason: >-
+          Storage key names (AsyncStorage/SecureStore identifiers), not secrets.
+          Actual tokens stored as values, never hardcoded.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:57.058Z
+        created: 2026-02-25T10:46:55.537Z
   920bd314-6df8-45d8-a0e0-254b6c9423b1:
     - '*':
-        reason: 'False positive: see apps/mobile/.snyk for full justification.'
+        reason: >-
+          Mock JWT for unit tests only with intentionally invalid signature. Not
+          used in production code.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:59.476Z
+        created: 2026-02-25T10:47:06.174Z
   a82f9aeb-ecad-49e4-bb0f-6e443b92f20c:
     - '*':
         reason: 'False positive: see apps/mobile/.snyk for full justification.'

@@ -30,8 +30,71 @@ import {
 @Controller("api/community-challenges")
 export class CommunityGroupChallengesController {
   private readonly logger = new Logger(CommunityGroupChallengesController.name);
+  private readonly ALLOWED_SORT_COLUMNS = [
+    "created_at",
+    "updated_at",
+    "title",
+    "type",
+    "frequency",
+    "difficulty",
+    "category",
+    "is_active",
+  ];
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  private buildChallengeFilters(filters: GetChallengesFilterDto): {
+    whereClauses: string[];
+    params: unknown[];
+  } {
+    const whereClauses: string[] = [];
+    const params: unknown[] = [];
+    let paramCount = 1;
+
+    if (filters.type) {
+      whereClauses.push(`c.type = $${paramCount++}`);
+      params.push(filters.type);
+    }
+    if (filters.frequency) {
+      whereClauses.push(`c.frequency = $${paramCount++}`);
+      params.push(filters.frequency);
+    }
+    if (filters.difficulty) {
+      whereClauses.push(`c.difficulty = $${paramCount++}`);
+      params.push(filters.difficulty);
+    }
+    if (filters.category) {
+      whereClauses.push(`c.category = $${paramCount++}`);
+      params.push(filters.category);
+    }
+    if (filters.is_active !== undefined) {
+      whereClauses.push(`c.is_active = $${paramCount++}`);
+      params.push(filters.is_active);
+    }
+    if (filters.creator_id) {
+      whereClauses.push(`c.creator_id = $${paramCount++}`);
+      params.push(filters.creator_id);
+    }
+    if (filters.search) {
+      whereClauses.push(
+        `(c.title ILIKE $${paramCount} OR c.description ILIKE $${paramCount})`,
+      );
+      params.push(`%${filters.search}%`);
+      paramCount++;
+    }
+
+    return { whereClauses, params };
+  }
+
+  private getSortClause(filters: GetChallengesFilterDto): string {
+    const sortBy =
+      filters.sort_by && this.ALLOWED_SORT_COLUMNS.includes(filters.sort_by)
+        ? filters.sort_by
+        : "created_at";
+    const sortOrder =
+      filters.sort_order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    return ` ORDER BY ${format("c.%I", sortBy)} ${sortOrder}`;
+  }
 
   /**
    * Create a new community challenge
@@ -171,90 +234,30 @@ export class CommunityGroupChallengesController {
 
     const client = await this.pool.connect();
     try {
-      let query = `
+      const baseQuery = `
         SELECT 
           c.*,
           u.name as creator_name,
           u.avatar_url as creator_avatar
         FROM community_group_challenges c
         LEFT JOIN user_profiles u ON c.creator_id = u.id
-        WHERE 1=1
       `;
-      const params: unknown[] = [];
-      let paramCount = 1;
 
-      // Apply filters
-      if (filters.type) {
-        query += ` AND c.type = $${paramCount}`;
-        params.push(filters.type);
-        paramCount++;
-      }
+      const { whereClauses, params } = this.buildChallengeFilters(filters);
+      const whereClause =
+        whereClauses.length > 0 ? ` WHERE ${whereClauses.join(" AND ")}` : "";
 
-      if (filters.frequency) {
-        query += ` AND c.frequency = $${paramCount}`;
-        params.push(filters.frequency);
-        paramCount++;
-      }
+      const sortClause = this.getSortClause(filters);
 
-      if (filters.difficulty) {
-        query += ` AND c.difficulty = $${paramCount}`;
-        params.push(filters.difficulty);
-        paramCount++;
-      }
-
-      if (filters.category) {
-        query += ` AND c.category = $${paramCount}`;
-        params.push(filters.category);
-        paramCount++;
-      }
-
-      if (filters.is_active !== undefined) {
-        query += ` AND c.is_active = $${paramCount}`;
-        params.push(filters.is_active);
-        paramCount++;
-      }
-
-      if (filters.creator_id) {
-        query += ` AND c.creator_id = $${paramCount}`;
-        params.push(filters.creator_id);
-        paramCount++;
-      }
-
-      if (filters.search) {
-        query += ` AND (c.title ILIKE $${paramCount} OR c.description ILIKE $${paramCount})`;
-        params.push(`%${filters.search}%`);
-        paramCount++;
-      }
-
-      // Sorting - allowlist to prevent SQL injection
-      const allowedSortColumns = [
-        "created_at",
-        "updated_at",
-        "title",
-        "type",
-        "frequency",
-        "difficulty",
-        "category",
-        "is_active",
-      ];
-      const sortBy =
-        filters.sort_by && allowedSortColumns.includes(filters.sort_by)
-          ? filters.sort_by
-          : "created_at";
-      const sortOrder =
-        filters.sort_order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
-      // sortBy validated against allowlist; quote identifier via pg-format.
-      query += ` ORDER BY ${format("c.%I", sortBy)} ${sortOrder}`;
-
-      // Pagination
       const limit = filters.limit || 50;
       const offset = filters.offset || 0;
-      query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      const paramCount = params.length + 1;
+      const paginationClause = ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
       params.push(limit, offset);
 
-      // snyk ignore javascript/Sqli: All user inputs use parameterized queries, identifiers validated with pg-format
-      const { rows } = await client.query(query, params);
+      const query = baseQuery + whereClause + sortClause + paginationClause;
 
+      const { rows } = await client.query(query, params);
       return { success: true, data: rows, count: rows.length };
     } catch (error_: unknown) {
       const error = error_ as Error;

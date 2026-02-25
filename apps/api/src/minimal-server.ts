@@ -14,9 +14,7 @@ console.log("==================================================");
 const port = process.env.PORT || 3001;
 
 const server = http.createServer((req, res) => {
-  const safeMethod = req.method ? req.method.replace(/[\r\n]/g, "") : "";
-  const safeUrl = req.url ? encodeURIComponent(req.url) : "";
-  console.log(`[MINIMAL] Received request: ${safeMethod} ${safeUrl}`);
+  console.log(`[MINIMAL] Health check request received`);
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(
     JSON.stringify({

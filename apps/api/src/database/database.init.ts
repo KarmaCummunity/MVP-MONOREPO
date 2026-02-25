@@ -14,63 +14,65 @@ import * as path from "path";
 export class DatabaseInit implements OnModuleInit {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  private shouldForceFullSchema(): boolean {
+    const forceFullSchemaEnv = process.env.FORCE_FULL_SCHEMA;
+    return !!forceFullSchemaEnv && /^(1|true|yes)$/i.test(forceFullSchemaEnv);
+  }
+
+  private async initializeForcedFullSchema(client: any): Promise<void> {
+    console.warn(
+      "⏭️  FORCE_FULL_SCHEMA detected. Running full schema initialization.",
+    );
+    try {
+      await this.runSchema(client);
+      await this.initializeDefaultData(client);
+      console.log(
+        "✅ DatabaseInit - Forced full schema initialized successfully",
+      );
+    } catch (schemaError: unknown) {
+      const reason =
+        schemaError instanceof Error
+          ? schemaError.message
+          : String(schemaError);
+      console.error("❌ Forced full schema initialization failed:", reason);
+      throw schemaError;
+    }
+  }
+
+  private async initializeRegularSchema(client: any): Promise<void> {
+    if (process.env.SKIP_FULL_SCHEMA === "1") {
+      console.warn(
+        "⏭️  Skipping full schema initialization (SKIP_FULL_SCHEMA=1)",
+      );
+      await this.ensureBackwardCompatibility(client);
+      await this.initializeDefaultData(client);
+    } else {
+      try {
+        await this.runSchema(client);
+        await this.initializeDefaultData(client);
+        console.log(
+          "✅ DatabaseInit - Complete schema initialized successfully",
+        );
+      } catch (schemaError: unknown) {
+        const reason =
+          schemaError instanceof Error
+            ? schemaError.message
+            : String(schemaError);
+        console.error("❌ Full schema initialization failed:", reason);
+        throw schemaError;
+      }
+    }
+  }
+
   async onModuleInit() {
     try {
       const client = await this.pool.connect();
       try {
-        // 0) Allow forcing full schema via env var (overrides legacy detection and SKIP flags)
-        const forceFullSchemaEnv = process.env.FORCE_FULL_SCHEMA;
-        const forceFullSchema =
-          !!forceFullSchemaEnv && /^(1|true|yes)$/i.test(forceFullSchemaEnv);
-
-        if (forceFullSchema) {
-          console.warn(
-            "⏭️  FORCE_FULL_SCHEMA detected. Running full schema initialization.",
-          );
-          try {
-            await this.runSchema(client);
-            await this.initializeDefaultData(client);
-            console.log(
-              "✅ DatabaseInit - Forced full schema initialized successfully",
-            );
-          } catch (schemaError: unknown) {
-            const reason =
-              schemaError instanceof Error
-                ? schemaError.message
-                : String(schemaError);
-            console.error(
-              "❌ Forced full schema initialization failed:",
-              reason,
-            );
-            throw schemaError;
-          }
+        if (this.shouldForceFullSchema()) {
+          await this.initializeForcedFullSchema(client);
           return;
         }
-
-        // Run full schema initialization
-        // NOTE: Legacy tables are no longer created - all code should use relational tables
-        if (process.env.SKIP_FULL_SCHEMA === "1") {
-          console.warn(
-            "⏭️  Skipping full schema initialization (SKIP_FULL_SCHEMA=1)",
-          );
-          await this.ensureBackwardCompatibility(client);
-          await this.initializeDefaultData(client);
-        } else {
-          try {
-            await this.runSchema(client);
-            await this.initializeDefaultData(client);
-            console.log(
-              "✅ DatabaseInit - Complete schema initialized successfully",
-            );
-          } catch (schemaError: unknown) {
-            const reason =
-              schemaError instanceof Error
-                ? schemaError.message
-                : String(schemaError);
-            console.error("❌ Full schema initialization failed:", reason);
-            throw schemaError;
-          }
-        }
+        await this.initializeRegularSchema(client);
       } finally {
         client.release();
       }
@@ -79,7 +81,6 @@ export class DatabaseInit implements OnModuleInit {
         "❌ DatabaseInit failed (Non-fatal, continuing startup)",
         err,
       );
-      // DO NOT throw err; allow app to start so we can debug via logs/health check
     }
   }
 

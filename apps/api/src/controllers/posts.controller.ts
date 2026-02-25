@@ -44,6 +44,113 @@ export class PostsController {
     this.logger.log("🔄 PostsController initialized");
   }
 
+  private async checkPostLikesTableExists(): Promise<boolean> {
+    try {
+      const res = await this.pool.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_name = 'post_likes' AND table_schema = 'public'
+        ) AS exists;
+      `);
+      return res.rows[0]?.exists || false;
+    } catch {
+      return false;
+    }
+  }
+
+  private buildPostsWhereClause(
+    postType?: string,
+    itemId?: string,
+    rideId?: string,
+  ): { conditions: string[]; params: unknown[]; nextParamIndex: number } {
+    const conditions: string[] = [`(p.status IS NULL OR p.status != 'hidden')`];
+    const params: unknown[] = [];
+    let paramIndex = 3;
+
+    if (postType) {
+      conditions.push(`p.post_type = $${paramIndex}`);
+      params.push(postType);
+      paramIndex++;
+    }
+    if (itemId) {
+      conditions.push(`p.item_id = $${paramIndex}`);
+      params.push(itemId);
+      paramIndex++;
+    }
+    if (rideId) {
+      conditions.push(`p.ride_id = $${paramIndex}`);
+      params.push(rideId);
+      paramIndex++;
+    }
+
+    return { conditions, params, nextParamIndex: paramIndex };
+  }
+
+  private buildPostsSelectQuery(
+    userId: string | undefined,
+    userIdParamIndex: number,
+    postLikesExists: boolean,
+  ): string {
+    let query = `
+      SELECT 
+        p.id, p.author_id, p.task_id, p.ride_id, p.item_id,
+        p.title, p.description, p.images, p.likes, p.comments,
+        p.post_type, p.metadata, p.created_at, p.updated_at,
+        CASE 
+          WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', COALESCE(u.name, 'ללא שם'), 'avatar_url', COALESCE(u.avatar_url, ''))
+          ELSE json_build_object('id', p.author_id, 'name', 'משתמש לא נמצא', 'avatar_url', '')
+        END as author,
+        CASE WHEN t.id IS NOT NULL THEN json_build_object(
+          'id', t.id, 'title', t.title, 'description', t.description,
+          'status', t.status, 'estimated_hours', t.estimated_hours, 'due_date', t.due_date,
+          'assignees', (
+            SELECT json_agg(json_build_object('id', u_assignee.id, 'name', u_assignee.name, 'avatar', u_assignee.avatar_url))
+            FROM user_profiles u_assignee WHERE u_assignee.id = ANY(t.assignees)
+          )
+        ) ELSE NULL END as task,
+        CASE WHEN r.id IS NOT NULL THEN json_build_object(
+          'id', r.id, 'from_location', r.from_location, 'to_location', r.to_location,
+          'departure_time', r.departure_time, 'available_seats', r.available_seats,
+          'price_per_seat', r.price_per_seat, 'status', r.status
+        ) ELSE NULL END as ride_data,
+        CASE WHEN i.id IS NOT NULL THEN json_build_object('id', i.id, 'title', i.title, 'status', i.status)
+        ELSE NULL END as item_data`;
+
+    if (userId && postLikesExists) {
+      query += `,
+        EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdParamIndex}) as is_liked`;
+    } else {
+      query += `, false as is_liked`;
+    }
+
+    query += `
+      FROM posts p
+      LEFT JOIN user_profiles u ON p.author_id = u.id
+      LEFT JOIN tasks t ON p.task_id = t.id
+      LEFT JOIN rides r ON p.ride_id = r.id
+      LEFT JOIN items i ON p.item_id = i.id`;
+
+    return query;
+  }
+
+  private async executeFallbackPostsQuery(limit: number, offset: number) {
+    const fallbackQuery = `
+      SELECT id, author_id, title, description, images, likes, comments, created_at,
+             post_type, metadata, ride_id, item_id
+      FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2
+    `;
+    const fallbackRes = await this.pool.query(fallbackQuery, [limit, offset]);
+
+    return fallbackRes.rows.map((row: Record<string, unknown>) => ({
+      ...row,
+      author: { id: row.author_id, name: "משתמש", avatar_url: "" },
+      task: null,
+      is_liked: false,
+      ride_data: null,
+      item_data: null,
+    }));
+  }
+
   /**
    * Ensure posts table exists with correct schema, create/migrate if needed
    */
@@ -596,170 +703,45 @@ export class PostsController {
       const limit = parseInt(limitArg) || 20;
       const offset = parseInt(offsetArg) || 0;
 
-      // Build query with optional user_id for checking if user liked each post
-      // Use explicit column names to avoid conflicts in JOIN queries
-      let query = `
-                SELECT 
-                    p.id,
-                    p.author_id,
-                    p.task_id,
-                    p.ride_id,
-                    p.item_id,
-                    p.title,
-                    p.description,
-                    p.images,
-                    p.likes,
-                    p.comments,
-                    p.post_type,
-                    p.metadata,
-                    p.created_at,
-                    p.updated_at,
-                    CASE 
-                        WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', COALESCE(u.name, 'ללא שם'), 'avatar_url', COALESCE(u.avatar_url, ''))
-                        ELSE json_build_object('id', p.author_id, 'name', 'משתמש לא נמצא', 'avatar_url', '')
-                    END as author,
-                    CASE WHEN t.id IS NOT NULL THEN json_build_object(
-                        'id', t.id, 
-                        'title', t.title, 
-                        'description', t.description,
-                        'status', t.status,
-                        'estimated_hours', t.estimated_hours,
-                        'due_date', t.due_date,
-                        'assignees', (
-                            SELECT json_agg(json_build_object(
-                                'id', u_assignee.id, 
-                                'name', u_assignee.name, 
-                                'avatar', u_assignee.avatar_url
-                            ))
-                            FROM user_profiles u_assignee
-                            WHERE u_assignee.id = ANY(t.assignees)
-                        )
-                    ) ELSE NULL END as task,
-                    CASE 
-                        WHEN r.id IS NOT NULL THEN json_build_object(
-                            'id', r.id, 
-                            'from_location', r.from_location,
-                            'to_location', r.to_location,
-                            'departure_time', r.departure_time,
-                            'available_seats', r.available_seats,
-                            'price_per_seat', r.price_per_seat,
-                            'status', r.status
-                        ) 
-                        ELSE NULL 
-                    END as ride_data,
-                    CASE 
-                        WHEN i.id IS NOT NULL THEN json_build_object(
-                            'id', i.id,
-                            'title', i.title,
-                            'status', i.status
-                        )
-                        ELSE NULL
-                    END as item_data
-            `;
+      const postLikesExists = await this.checkPostLikesTableExists();
+      const {
+        conditions,
+        params: filterParams,
+        nextParamIndex,
+      } = this.buildPostsWhereClause(postType, itemId, rideId);
 
-      // Check if post_likes table exists before using it
-      let postLikesExists = false;
-      try {
-        const res = await this.pool.query(`
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = 'post_likes' AND table_schema = 'public'
-                    ) AS exists;
-                `);
-        postLikesExists = res.rows[0]?.exists;
-      } catch {
-        // Ignore
-      }
-
-      // Build WHERE conditions first to know param count
-      const whereConditions: string[] = [];
-      const params: unknown[] = [limit, offset];
-      let paramIndex = 3;
-
-      // Filter out hidden posts by default (unless viewing own profile)
-      whereConditions.push(`(p.status IS NULL OR p.status != 'hidden')`);
-
-      if (postType) {
-        whereConditions.push(`p.post_type = $${paramIndex}`);
-        params.push(postType);
-        paramIndex++;
-      }
-
-      if (itemId) {
-        whereConditions.push(`p.item_id = $${paramIndex}`);
-        params.push(itemId);
-        paramIndex++;
-      }
-
-      if (rideId) {
-        whereConditions.push(`p.ride_id = $${paramIndex}`);
-        params.push(rideId);
-        paramIndex++;
-      }
-
-      // Now we know the param index for userId
-      const userIdParamIndex = paramIndex;
-
+      const allParams = [limit, offset, ...filterParams];
       if (userId && postLikesExists) {
-        query += `,
-                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdParamIndex}) as is_liked
-                `;
-        params.push(userId);
-      } else {
-        query += `,
-                    false as is_liked
-                `;
+        allParams.push(userId);
       }
 
-      query += `
-                FROM posts p
-                LEFT JOIN user_profiles u ON p.author_id = u.id
-                LEFT JOIN tasks t ON p.task_id = t.id
-                LEFT JOIN rides r ON p.ride_id = r.id
-                LEFT JOIN items i ON p.item_id = i.id
-            `;
+      const query =
+        this.buildPostsSelectQuery(userId, nextParamIndex, postLikesExists) +
+        ` WHERE ${conditions.join(" AND ")}` +
+        ` ORDER BY p.created_at DESC LIMIT $1 OFFSET $2`;
 
-      if (whereConditions.length > 0) {
-        query += ` WHERE ${whereConditions.join(" AND ")}`;
-      }
-
-      query += `
-                ORDER BY p.created_at DESC
-                LIMIT $1 OFFSET $2
-            `;
-
-      this.logger.log("📝 [getPosts] Executing query with params:", {
+      this.logger.log("📝 [getPosts] Executing query", {
         limit,
         offset,
-        userId,
         hasUserId: !!userId,
       });
 
       try {
-        const { rows } = await this.pool.query(query, params);
-        this.logger.log(
-          `✅ [getPosts] Query returned ${rows.length} posts (limit: ${limit}, offset: ${offset})`,
-        );
+        const { rows } = await this.pool.query(query, allParams);
+        this.logger.log(`✅ [getPosts] Returned ${rows.length} posts`);
 
-        // Count task-related posts in results
         const taskPostsInResults = rows.filter(
           (p) =>
             p.post_type === "task_assignment" ||
             p.post_type === "task_completion",
         ).length;
-        this.logger.log(
-          `📊 Task-related posts in results: ${taskPostsInResults}/${rows.length}`,
-        );
+        this.logger.log(`📊 Task posts: ${taskPostsInResults}/${rows.length}`);
 
         if (rows.length > 0) {
-          // Show first few posts for debugging
           const samplePosts = rows.slice(0, 3).map((p) => ({
             id: p.id?.substring(0, 8),
             title: p.title?.substring(0, 30),
             post_type: p.post_type,
-            author_id: p.author_id?.substring(0, 8),
-            has_author: !!p.author,
-            author_id_in_author: p.author?.id?.substring(0, 8),
           }));
           this.logger.log("📋 Sample posts:", samplePosts);
         } else {
@@ -769,40 +751,15 @@ export class PostsController {
         return { success: true, data: rows };
       } catch (queryError) {
         this.logger.error(`❌ [getPosts] Primary query failed:`, queryError);
-
-        // Fallback query if main query fails (e.g. issues with joins or columns)
-        // Try simplest possible query without joins first to diagnose
         this.logger.log("⚠️ [getPosts] Attempting fallback query...");
 
         try {
-          const fallbackQuery = `
-                        SELECT 
-                            id, author_id, title, description, images, likes, comments, created_at,
-                            post_type, metadata, ride_id, item_id
-                        FROM posts
-                        ORDER BY created_at DESC
-                        LIMIT $1 OFFSET $2
-                    `;
-          const fallbackParams = [limit, offset];
-          const fallbackRes = await this.pool.query(
-            fallbackQuery,
-            fallbackParams,
+          const mappedRows = await this.executeFallbackPostsQuery(
+            limit,
+            offset,
           );
-
-          // Map fallback results to expected format
-          const mappedRows = fallbackRes.rows.map(
-            (row: Record<string, unknown>) => ({
-              ...row,
-              author: { id: row.author_id, name: "משתמש", avatar_url: "" },
-              task: null,
-              is_liked: false,
-              ride_data: null,
-              item_data: null,
-            }),
-          );
-
           this.logger.log(
-            `✅[getPosts] Fallback query returned ${mappedRows.length} posts`,
+            `✅[getPosts] Fallback returned ${mappedRows.length} posts`,
           );
           return { success: true, data: mappedRows };
         } catch {
@@ -814,10 +771,7 @@ export class PostsController {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error("Get posts error:", errorMessage);
-      return {
-        success: false,
-        error: `Failed to get posts: ${errorMessage} `,
-      };
+      return { success: false, error: `Failed to get posts: ${errorMessage}` };
     }
   }
 

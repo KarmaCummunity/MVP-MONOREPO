@@ -96,6 +96,92 @@ export class TasksController {
     private readonly itemsService: ItemsService,
   ) {}
 
+  private parsePaginationParams(
+    limitParam?: string,
+    offsetParam?: string,
+  ): { limit: number; offset: number } {
+    const limitNum = limitParam ? parseInt(String(limitParam), 10) : 100;
+    const offsetNum = offsetParam ? parseInt(String(offsetParam), 10) : 0;
+    const limit = Math.min(Math.max(isNaN(limitNum) ? 100 : limitNum, 1), 500);
+    const offset = Math.max(isNaN(offsetNum) ? 0 : offsetNum, 0);
+    return { limit, offset };
+  }
+
+  private buildTaskCacheKey(
+    status?: TaskStatus,
+    priority?: TaskPriority,
+    category?: string,
+    assignee?: string,
+    searchQuery?: string,
+    limit?: number,
+    offset?: number,
+  ): string {
+    return `tasks_list_${status || "all"}_${priority || "all"}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${limit}_${offset}`;
+  }
+
+  private async buildTaskFilters(
+    status?: TaskStatus,
+    priority?: TaskPriority,
+    category?: string,
+    assignee?: string,
+    searchQuery?: string,
+  ): Promise<{ filters: string[]; params: unknown[] }> {
+    const filters: string[] = [];
+    const params: unknown[] = [];
+
+    if (status) {
+      params.push(status);
+      filters.push(`status = $${params.length}`);
+    }
+    if (priority) {
+      params.push(priority);
+      filters.push(`priority = $${params.length}`);
+    }
+    if (category) {
+      params.push(category);
+      filters.push(`category = $${params.length}`);
+    }
+    if (assignee) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let assigneeUuid = assignee;
+
+      if (!uuidRegex.test(assignee)) {
+        const resolved = await this.resolveUserIdToUUID(assignee);
+        if (resolved) {
+          this.logger.log(`👤 Resolved assignee ${assignee} -> ${resolved}`);
+          assigneeUuid = resolved;
+        } else {
+          this.logger.warn(`⚠️ Could not resolve assignee: ${assignee}`);
+        }
+      }
+      params.push(assigneeUuid);
+      filters.push(`$${params.length}::UUID = ANY(assignees::UUID[])`);
+    }
+    if (searchQuery && searchQuery.trim()) {
+      const searchTerm = `%${searchQuery.trim()}%`;
+      params.push(searchTerm);
+      filters.push(
+        `(title ILIKE $${params.length} OR description ILIKE $${params.length})`,
+      );
+    }
+
+    return { filters, params };
+  }
+
+  private async getActualHoursSubquery(): Promise<string> {
+    const tableExists = await this.pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'task_time_logs'
+      )
+    `);
+    const hasTimeLogs = tableExists.rows[0].exists;
+    return hasTimeLogs
+      ? `COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours`
+      : `0::NUMERIC as actual_hours`;
+  }
+
   /**
    * Resolve any user identifier (email, firebase_uid, google_id, UUID string) to UUID
    * Now delegates to UserResolutionService for consistency
@@ -401,132 +487,56 @@ export class TasksController {
     @Query("offset") offsetParam?: string,
   ) {
     try {
-      // Ensure table exists before querying
       await this.ensureTasksTable();
 
-      // Parse limit and offset - handle 0 correctly
-      const limitNum = limitParam ? parseInt(String(limitParam), 10) : 100;
-      const offsetNum = offsetParam ? parseInt(String(offsetParam), 10) : 0;
-      const limit = Math.min(
-        Math.max(isNaN(limitNum) ? 100 : limitNum, 1),
-        500,
+      const { limit, offset } = this.parsePaginationParams(
+        limitParam,
+        offsetParam,
       );
-      const offset = Math.max(isNaN(offsetNum) ? 0 : offsetNum, 0);
+      const cacheKey = this.buildTaskCacheKey(
+        status,
+        priority,
+        category,
+        assignee,
+        searchQuery,
+        limit,
+        offset,
+      );
 
-      // Build cache key from query parameters (include search query if present)
-      const cacheKey = `tasks_list_${status || "all"}_${priority || "all"}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${limit}_${offset}`;
-
-      // Cache restored - race condition was fixed by awaiting cache clearing in create/update/delete
-      // Try to get from cache (but don't fail if Redis is unavailable)
-      let cached = null;
       try {
-        cached = await this.redisCache.get(cacheKey);
+        const cached = await this.redisCache.get(cacheKey);
+        if (cached) {
+          this.logger.log("✅ Returning cached tasks list");
+          return { success: true, data: cached };
+        }
       } catch (cacheError) {
         this.logger.warn("Redis cache error (non-fatal):", cacheError);
       }
 
-      if (cached) {
-        this.logger.log("✅ Returning cached tasks list");
-        return { success: true, data: cached };
-      }
-
-      const filters: string[] = [];
-      const params: unknown[] = [];
-
-      if (status) {
-        params.push(status);
-        filters.push(`status = $${params.length}`);
-      }
-
-      if (priority) {
-        params.push(priority);
-        filters.push(`priority = $${params.length}`);
-      }
-
-      if (category) {
-        params.push(category);
-        filters.push(`category = $${params.length}`);
-      }
-
-      if (assignee) {
-        // Assume assignee is UUID for now. If email, we'd need to resolve it.
-        // Ideally we resolve it to be safe.
-        // But for performance, let's assume UUID if it looks like one.
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        let assigneeUuid = assignee;
-
-        if (!uuidRegex.test(assignee)) {
-          // Try to resolve if not UUID (e.g. email)
-          const resolved = await this.resolveUserIdToUUID(assignee);
-          if (resolved) {
-            this.logger.log(
-              `👤 Resolved list filter assignee ${assignee} -> ${resolved}`,
-            );
-            assigneeUuid = resolved;
-          } else {
-            this.logger.warn(
-              `⚠️ Could not resolve list filter assignee: ${assignee}`,
-            );
-          }
-        }
-
-        params.push(assigneeUuid);
-        // "assigneeUuid = ANY(assignees)" checks if uuid is in the array
-        // Cast both sides to UUID to ensure type compatibility
-        filters.push(`$${params.length}::UUID = ANY(assignees::UUID[])`);
-      }
-
-      // Add text search if query parameter is provided
-      if (searchQuery && searchQuery.trim()) {
-        const searchTerm = `%${searchQuery.trim()}%`;
-        params.push(searchTerm);
-        const searchParamIndex = params.length;
-        filters.push(
-          `(title ILIKE $${searchParamIndex} OR description ILIKE $${searchParamIndex})`,
-        );
-      }
-
-      // deepcode ignore SQL: all filters are built using parameterized queries with $1, $2, etc.
+      const { filters, params } = await this.buildTaskFilters(
+        status,
+        priority,
+        category,
+        assignee,
+        searchQuery,
+      );
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
-
-      // Check if task_time_logs table exists
-      const tableExists = await this.pool.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'task_time_logs'
-        )
-      `);
-      const hasTimeLogs = tableExists.rows[0].exists;
-
-      const actualHoursSubquery = hasTimeLogs
-        ? `COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours`
-        : `0::NUMERIC as actual_hours`;
+      const actualHoursSubquery = await this.getActualHoursSubquery();
 
       const sql = `
         SELECT 
             t.id, t.title, t.description, t.status, t.priority, t.category, t.due_date, t.assignees, t.tags, t.checklist, t.parent_task_id, t.estimated_hours, t.created_at, t.updated_at,
             (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
-             FROM user_profiles u 
-             WHERE u.id::text = t.created_by::text 
-                OR u.firebase_uid = t.created_by::text
-                OR u.google_id = t.created_by::text
-             LIMIT 1) as creator_details,
+             FROM user_profiles u WHERE u.id::text = t.created_by::text OR u.firebase_uid = t.created_by::text OR u.google_id = t.created_by::text LIMIT 1) as creator_details,
             (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
              FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
             (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtask_count,
-            (SELECT json_build_object('id', pt.id, 'title', pt.title) 
-             FROM tasks pt WHERE pt.id = t.parent_task_id) as parent_task_details,
+            (SELECT json_build_object('id', pt.id, 'title', pt.title) FROM tasks pt WHERE pt.id = t.parent_task_id) as parent_task_details,
             ${actualHoursSubquery}
         FROM tasks t
         ${where}
-        ORDER BY 
-          CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
-          status ASC,
-          created_at DESC
-        LIMIT $${params.length + 1}
-        OFFSET $${params.length + 2}
+        ORDER BY CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC, status ASC, created_at DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `;
       params.push(limit, offset);
 
@@ -534,13 +544,9 @@ export class TasksController {
         `🚀 Executing LIST SQL:`,
         sql.replace(/\s+/g, " ").trim(),
       );
-      this.logger.log(`params:`, params);
-
-      // snyk ignore javascript/Sqli: All filters use parameterized queries ($1, $2, etc.)
       const { rows } = await this.pool.query(sql, params);
       this.logger.log(`✅ Found ${rows.length} tasks`);
 
-      // Try to cache the result (but don't fail if Redis is unavailable)
       try {
         await this.redisCache.set(cacheKey, rows, 10 * 60);
       } catch (cacheError) {
@@ -550,8 +556,6 @@ export class TasksController {
       return { success: true, data: rows };
     } catch (error) {
       this.logger.error("Error listing tasks:", error);
-
-      // Check if error is about missing table/columns
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       if (
@@ -561,14 +565,10 @@ export class TasksController {
         return {
           success: false,
           error:
-            "Database table structure issue. Please contact administrator or check server logs.",
+            "Database table structure issue. Please contact administrator.",
         };
       }
-
-      return {
-        success: false,
-        error: errorMessage || "Failed to list tasks",
-      };
+      return { success: false, error: errorMessage || "Failed to list tasks" };
     }
   }
 

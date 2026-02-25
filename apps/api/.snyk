@@ -74,45 +74,45 @@ ignore:
   3f315c45-c6db-4051-8b0c-03548a55821a:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          sort_by validated against allowlist; sort_order forced ASC/DESC;
+          identifier quoted via pg-format %I
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:04.774Z
+        created: 2026-02-25T10:47:09.539Z
   388e63db-5124-4619-b730-93f9deb81977:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          WHERE clause built from fixed column names; all values parameterised;
+          no user input as identifier
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:07.625Z
+        created: 2026-02-25T10:47:15.552Z
   4fac904c-0806-463e-bf2d-cc14f8fc9448:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          tableFor() validates against hard-coded allowlist; all queries use
+          pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:10.132Z
+        created: 2026-02-25T10:47:23.414Z
   28c08764-3823-48f6-a20a-a5bdc5b98f66:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          tableFor() validates against hard-coded allowlist; all queries use
+          pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:12.794Z
+        created: 2026-02-25T10:47:25.704Z
   e7f03704-67d2-45f3-a1f2-91d9cdeb1840:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          tableFor() validates against hard-coded allowlist; all queries use
+          pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:15.089Z
+        created: 2026-02-25T10:47:32.694Z
   5492b045-fde8-45bb-a6f4-adee689e3cfb:
     - '*':
         reason: >-
-          False positive: validated via allowlist/pg-format/TLS-terminating
-          proxy. See apps/api/.snyk for full justification.
+          tableFor() validates against hard-coded allowlist; all queries use
+          pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T02:29:17.696Z
+        created: 2026-02-25T10:47:32.713Z
   31ef0db6-6356-408c-b819-cd5167fda42e:
     - '*':
         reason: >-
@@ -120,6 +120,42 @@ ignore:
           proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:29:20.140Z
+  8f2edcce-3eca-439c-ac6d-8fd61f866e0f:
+    - '*':
+        reason: >-
+          False positive: Image source for profile picture avatar, not a
+          redirect. React Native Image component, not network redirection.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-25T00:00:00.000Z
+  a82f9aeb-ecad-49e4-bb0f-6e443b92f20c:
+    - '*':
+        reason: >-
+          False positive: Image source for profile picture avatar, not a
+          redirect. React Native Image component, not network redirection.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-25T00:00:00.000Z
+  f10e7ca3-6b7e-4398-b987-4c3b44ec6df5:
+    - '*':
+        reason: >-
+          False positive: Storage key names (AsyncStorage/SecureStore
+          identifiers), not secrets. Actual tokens stored as values, never
+          hardcoded.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-25T00:00:00.000Z
+  920bd314-6df8-45d8-a0e0-254b6c9423b1:
+    - '*':
+        reason: >-
+          False positive: Mock JWT for unit tests only with intentionally
+          invalid signature. Not used in production code.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-25T00:00:00.000Z
+  1ef2f6b3-a29e-4e38-b189-400f246e1500:
+    - '*':
+        reason: >-
+          itemsDeliveryService uses parameterized queries. Already marked with
+          snyk ignore comment in code.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-25T10:47:12.422Z
 patch: {}
 exclude:
   code:

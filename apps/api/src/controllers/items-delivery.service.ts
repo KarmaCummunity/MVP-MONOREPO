@@ -25,6 +25,83 @@ export class ItemsDeliveryService {
     private readonly redisCache: RedisCacheService,
   ) {}
 
+  private buildItemFiltersQuery(filters: ItemFiltersDto): {
+    whereClauses: string[];
+    params: unknown[];
+  } {
+    const whereClauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (filters.status) {
+      whereClauses.push(`i.status = $${params.length + 1}`);
+      params.push(filters.status);
+    } else {
+      whereClauses.push(`i.status = 'available'`);
+    }
+
+    if (filters.category) {
+      whereClauses.push(`i.category = $${params.length + 1}`);
+      params.push(filters.category);
+    }
+
+    if (filters.condition) {
+      whereClauses.push(`i.condition = $${params.length + 1}`);
+      params.push(filters.condition);
+    }
+
+    if (filters.city) {
+      const paramIndex = params.length + 1;
+      whereClauses.push(
+        `(i.location->>'city' = $${paramIndex} OR up.city = $${paramIndex})`,
+      );
+      params.push(filters.city);
+    }
+
+    if (filters.min_price !== undefined) {
+      whereClauses.push(`i.price >= $${params.length + 1}`);
+      params.push(filters.min_price);
+    }
+
+    if (filters.max_price !== undefined) {
+      whereClauses.push(`i.price <= $${params.length + 1}`);
+      params.push(filters.max_price);
+    }
+
+    if (filters.owner_id) {
+      whereClauses.push(`i.owner_id::text = $${params.length + 1}`);
+      params.push(filters.owner_id);
+    }
+
+    if (filters.search) {
+      const paramIndex = params.length + 1;
+      whereClauses.push(`(
+        i.title ILIKE $${paramIndex} OR
+        i.description ILIKE $${paramIndex} OR
+        EXISTS (SELECT 1 FROM unnest(i.tags) AS tag WHERE tag ILIKE $${paramIndex})
+      )`);
+      params.push(`%${filters.search}%`);
+    }
+
+    return { whereClauses, params };
+  }
+
+  private getItemSortClause(filters: ItemFiltersDto): string {
+    const allowedSortColumns = [
+      "created_at",
+      "price",
+      "title",
+      "quantity",
+      "updated_at",
+    ];
+    const sortBy = filters.sort_by || "created_at";
+    const sortOrder = filters.sort_order || "desc";
+    const safeSortBy = allowedSortColumns.includes(sortBy)
+      ? sortBy
+      : "created_at";
+    const safeSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    return ` ORDER BY i.${safeSortBy} ${safeSortOrder}`;
+  }
+
   // ==================== Items CRUD ====================
 
   async createItem(createItemDto: CreateItemDto) {
@@ -202,109 +279,28 @@ export class ItemsDeliveryService {
   }
 
   async listItems(filters: ItemFiltersDto) {
-    // Build cache key from filters
     const cacheKey = `items_list:${JSON.stringify(filters)}`;
     const cached = await this.redisCache.get(cacheKey);
     if (cached) {
       return { success: true, data: cached };
     }
 
-    // Build query
-    // Note: owner_id can be either UUID (id) or Firebase UID (firebase_uid)
-    let query = `
+    const baseQuery = `
       SELECT i.*, up.name as owner_name, up.avatar_url as owner_avatar
       FROM items i
       LEFT JOIN user_profiles up ON (i.owner_id::text = up.id::text OR i.owner_id::text = up.firebase_uid)
-      WHERE 1=1
     `;
-    const params: unknown[] = [];
-    let paramCount = 0;
 
-    if (filters.status) {
-      paramCount++;
-      query += ` AND i.status = $${paramCount}`;
-      params.push(filters.status);
-    } else {
-      query += ` AND i.status = 'available'`;
-    }
+    const { whereClauses, params } = this.buildItemFiltersQuery(filters);
+    const whereClause = ` WHERE ${whereClauses.join(" AND ")}`;
+    const sortClause = this.getItemSortClause(filters);
 
-    if (filters.category) {
-      paramCount++;
-      query += ` AND i.category = $${paramCount}`;
-      params.push(filters.category);
-    }
-
-    if (filters.condition) {
-      paramCount++;
-      query += ` AND i.condition = $${paramCount}`;
-      params.push(filters.condition);
-    }
-
-    if (filters.city) {
-      paramCount++;
-      query += ` AND (i.location->>'city' = $${paramCount} OR up.city = $${paramCount})`;
-      params.push(filters.city);
-    }
-
-    if (filters.min_price !== undefined) {
-      paramCount++;
-      query += ` AND i.price >= $${paramCount}`;
-      params.push(filters.min_price);
-    }
-
-    if (filters.max_price !== undefined) {
-      paramCount++;
-      query += ` AND i.price <= $${paramCount}`;
-      params.push(filters.max_price);
-    }
-
-    if (filters.owner_id) {
-      paramCount++;
-      query += ` AND i.owner_id::text = $${paramCount}`;
-      params.push(filters.owner_id);
-    }
-
-    // Full-text search
-    if (filters.search) {
-      paramCount++;
-      query += ` AND (
-        i.title ILIKE $${paramCount} OR
-        i.description ILIKE $${paramCount} OR
-        EXISTS (
-          SELECT 1 FROM unnest(i.tags) AS tag
-          WHERE tag ILIKE $${paramCount}
-        )
-      )`;
-      params.push(`%${filters.search}%`);
-    }
-
-    // Sorting
-    // S2077: Whitelist sortBy/sortOrder to prevent SQL injection
-    const sortBy = filters.sort_by || "created_at";
-    const sortOrder = filters.sort_order || "desc";
-    const allowedSortColumns = [
-      "created_at",
-      "price",
-      "title",
-      "quantity",
-      "updated_at",
-    ];
-    const safeSortBy = allowedSortColumns.includes(sortBy)
-      ? sortBy
-      : "created_at";
-    const safeSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
-    query += ` ORDER BY i.${safeSortBy} ${safeSortOrder}`;
-
-    // Pagination
     const limit = filters.limit || 50;
     const offset = filters.offset || 0;
-    paramCount++;
-    query += ` LIMIT $${paramCount}`;
-    params.push(limit);
-    paramCount++;
-    query += ` OFFSET $${paramCount}`;
-    params.push(offset);
+    const paginationClause = ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
 
+    const query = baseQuery + whereClause + sortClause + paginationClause;
     const { rows } = await this.pool.query(query, params);
 
     await this.redisCache.set(cacheKey, rows, this.CACHE_TTL);
