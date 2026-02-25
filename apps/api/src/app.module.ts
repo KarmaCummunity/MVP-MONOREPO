@@ -34,6 +34,7 @@ import { RedisCacheModule } from "./redis/redis-cache.module";
 import { AuthModule } from "./auth/auth.module";
 import { ItemsModule } from "./items/items.module";
 import { ServicesModule } from "./services/services.module";
+import { StatsModule } from "./services/stats/stats.module";
 
 // Controllers
 import { HealthController } from "./controllers/health.controller";
@@ -85,6 +86,7 @@ import { AdminTablesService } from "./services/admin-tables.service";
     AuthModule,
     ItemsModule,
     ServicesModule, // User resolution and other shared services
+    StatsModule, // Stats queries and computed stats
   ],
   controllers: [
     // Core functionality

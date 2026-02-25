@@ -356,6 +356,37 @@ export class AdminTablesService {
   /**
    * Get table by ID with columns and optionally rows
    */
+  private async fetchTableRows(
+    id: string,
+    pagination?: { page: number; limit: number },
+  ): Promise<{ rows: unknown[]; total: number }> {
+    const rowsParams: unknown[] = [id];
+    let rowsQuery: string;
+
+    if (pagination) {
+      rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+      rowsParams.push(
+        pagination.limit,
+        (pagination.page - 1) * pagination.limit,
+      );
+    } else {
+      rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
+    }
+
+    const [rowsResult, countResult] = await Promise.all([
+      this.pool.query(rowsQuery, rowsParams),
+      this.pool.query(
+        `SELECT COUNT(*) as count FROM admin_table_rows WHERE table_id = $1::UUID`,
+        [id],
+      ),
+    ]);
+
+    return {
+      rows: rowsResult.rows,
+      total: parseInt(countResult.rows[0].count),
+    };
+  }
+
   async getTableById(
     id: string,
     includeRows = false,
@@ -374,37 +405,16 @@ export class AdminTablesService {
 
       const table = tableResult.rows[0];
 
-      // Fetch columns
       const columnsResult = await this.pool.query(
         `SELECT * FROM admin_table_columns WHERE table_id = $1::UUID ORDER BY display_order, created_at`,
         [id],
       );
       table.columns = columnsResult.rows;
 
-      // Fetch rows if requested
       if (includeRows) {
-        // Pagination values are integers validated in the controller; use fixed params.
-        const rowsParams: unknown[] = [id];
-        let rowsQuery: string;
-        if (pagination) {
-          rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
-          rowsParams.push(
-            pagination.limit,
-            (pagination.page - 1) * pagination.limit,
-          );
-        } else {
-          rowsQuery = `SELECT * FROM admin_table_rows WHERE table_id = $1::UUID ORDER BY created_at DESC`;
-        }
-
-        const rowsResult = await this.pool.query(rowsQuery, rowsParams);
-        table.rows = rowsResult.rows;
-
-        // Get total count
-        const countResult = await this.pool.query(
-          `SELECT COUNT(*) as count FROM admin_table_rows WHERE table_id = $1::UUID`,
-          [id],
-        );
-        table.total_rows = parseInt(countResult.rows[0].count);
+        const { rows, total } = await this.fetchTableRows(id, pagination);
+        table.rows = rows;
+        table.total_rows = total;
       }
 
       return table;

@@ -64,13 +64,10 @@ import "./sanity";
  *
  * If any required variable is missing, the process exits with error code 1.
  */
-function validateEnvironment(): void {
-  const logger = new Logger("Bootstrap");
-
+function validateRequiredEnvVars(logger: Logger): void {
   const required = [
     { key: "GOOGLE_CLIENT_ID", fallback: "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" },
     { key: "DATABASE_URL", fallback: null },
-    // REDIS_URL is now optional - removed from required list
     { key: "JWT_SECRET", fallback: null, minLength: 32 },
   ];
 
@@ -88,7 +85,6 @@ function validateEnvironment(): void {
       }
     }
 
-    // Validate minimum length if specified
     const value = process.env[key];
     if (minLength && value && value.length < minLength) {
       invalid.push({
@@ -100,7 +96,6 @@ function validateEnvironment(): void {
   }
 
   if (missing.length > 0) {
-    // [MVP] Agent debug log removed
     logger.error(
       `❌ Missing REQUIRED environment variables: ${missing.join(", ")}`,
     );
@@ -130,25 +125,14 @@ function validateEnvironment(): void {
     }
     process.exit(1);
   }
+}
 
-  // ═══════════════════════════════════════════════════════════════
-  // ENVIRONMENT SEPARATION VALIDATION
-  // ═══════════════════════════════════════════════════════════════
-  // Validate that environment configuration matches the database
-  // This prevents critical errors like connecting dev to prod DB
-
-  const environment =
-    process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
-  const databaseUrl = process.env.DATABASE_URL || "";
-  const redisUrl = process.env.REDIS_URL || "";
-
-  logger.log(
-    `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
-  );
-
-  // Check DATABASE_URL matches environment
+function validateDatabaseEnvironment(
+  logger: Logger,
+  environment: string,
+  databaseUrl: string,
+): void {
   if (environment === "development") {
-    // DEV should use password: mmWLXgvXF... or host: postgres-a3d6beef
     if (databaseUrl.includes("RHkhivARk")) {
       logger.error(
         "🚨 CRITICAL: DATABASE_URL appears to be PRODUCTION but ENVIRONMENT is development!",
@@ -171,7 +155,6 @@ function validateEnvironment(): void {
       );
     }
   } else if (environment === "production") {
-    // PROD should use password: RHkhivARk...
     if (
       databaseUrl.includes("mmWLXgvXF") ||
       databaseUrl.includes("postgres-a3d6beef")
@@ -198,8 +181,13 @@ function validateEnvironment(): void {
       `⚠️  ENVIRONMENT not set (currently: ${environment}). Set to 'development' or 'production'`,
     );
   }
+}
 
-  // Check if Redis is shared (warning only, not critical)
+function validateRedisEnvironment(
+  logger: Logger,
+  environment: string,
+  redisUrl: string,
+): void {
   const isSharedRedis = redisUrl.includes("deQMolmzgWZsqeAkiEpZPFvejfGjenEm");
   if (isSharedRedis) {
     logger.warn("⚠️  Redis appears to be SHARED between environments!");
@@ -217,6 +205,24 @@ function validateEnvironment(): void {
   } else if (environment === "production" && isSharedRedis) {
     logger.log("✅ Redis: Production");
   }
+}
+
+function validateEnvironment(): void {
+  const logger = new Logger("Bootstrap");
+
+  validateRequiredEnvVars(logger);
+
+  const environment =
+    process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
+  const databaseUrl = process.env.DATABASE_URL || "";
+  const redisUrl = process.env.REDIS_URL || "";
+
+  logger.log(
+    `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
+  );
+
+  validateDatabaseEnvironment(logger, environment, databaseUrl);
+  validateRedisEnvironment(logger, environment, redisUrl);
 
   logger.log("✅ Environment validation passed");
 }

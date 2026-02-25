@@ -57,12 +57,82 @@ type FirebaseProviderInfo = {
 @Injectable()
 export class UserAuthService {
   private readonly logger = new Logger(UserAuthService.name);
+  private readonly PRE_APPROVED_ADMINS = [
+    "mahalalel100@gmail.com",
+    "matan7491@gmail.com",
+    "ichai1306@gmail.com",
+    "lianbh2004@gmail.com",
+    "navesarussi@gmail.com",
+    "karmacommunity2.0@gmail.com",
+  ];
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly redisCache: RedisCacheService,
     private readonly jwtService: JwtService,
   ) {}
+
+  private async ensureAdminRole(
+    userId: string,
+    email: string,
+    currentRoles: string[],
+  ): Promise<string[]> {
+    const normalizedEmail = email.toLowerCase();
+    const shouldBeAdmin = this.PRE_APPROVED_ADMINS.includes(normalizedEmail);
+
+    if (shouldBeAdmin && !currentRoles.includes("admin")) {
+      await this.pool.query(
+        `UPDATE user_profiles SET roles = array_append(roles, 'admin') WHERE id = $1`,
+        [userId],
+      );
+      return [...currentRoles, "admin"];
+    }
+
+    return currentRoles;
+  }
+
+  private async verifyPassword(
+    passwordHash: string,
+    providedPassword: string,
+  ): Promise<boolean> {
+    return await argon2.verify(passwordHash, providedPassword);
+  }
+
+  private async updateLastActive(userId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE user_profiles SET last_active = NOW(), updated_at = NOW() WHERE id = $1`,
+      [userId],
+    );
+  }
+
+  private formatUserResponse(
+    user: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      avatar_url: user.avatar_url,
+      bio: user.bio || "",
+      karma_points: user.karma_points || 0,
+      join_date: user.join_date || user.created_at,
+      is_active: user.is_active !== false,
+      last_active: new Date().toISOString(),
+      city: user.city || "",
+      country: user.country || "Israel",
+      interests: user.interests || [],
+      roles: user.roles || ["user"],
+      posts_count: 0,
+      followers_count: 0,
+      following_count: 0,
+      total_donations_amount: 0,
+      total_volunteer_hours: 0,
+      email_verified: user.email_verified || false,
+      parent_manager_id: user.parent_manager_id || null,
+      settings: user.settings || {},
+    };
+  }
 
   async registerUser(userData: RegisterUserBody): Promise<{
     success: boolean;
@@ -209,29 +279,16 @@ export class UserAuthService {
       }
 
       const user = rows[0];
-
-      const PRE_APPROVED_ADMINS = [
-        "mahalalel100@gmail.com",
-        "matan7491@gmail.com",
-        "ichai1306@gmail.com",
-        "lianbh2004@gmail.com",
-        "navesarussi@gmail.com",
-        "karmacommunity2.0@gmail.com",
-      ];
-
-      const shouldBeAdmin = PRE_APPROVED_ADMINS.includes(normalizedEmail);
       const currentRoles: string[] = user.roles || [];
 
-      if (shouldBeAdmin && !currentRoles.includes("admin")) {
-        await this.pool.query(
-          `UPDATE user_profiles SET roles = array_append(roles, 'admin') WHERE id = $1`,
-          [user.id],
-        );
-        user.roles = [...currentRoles, "admin"];
-      }
+      user.roles = await this.ensureAdminRole(
+        user.id,
+        normalizedEmail,
+        currentRoles,
+      );
 
       if (loginData.password && user.password_hash) {
-        const isValid = await argon2.verify(
+        const isValid = await this.verifyPassword(
           user.password_hash,
           loginData.password,
         );
@@ -240,36 +297,9 @@ export class UserAuthService {
         }
       }
 
-      await this.pool.query(
-        `UPDATE user_profiles SET last_active = NOW(), updated_at = NOW() WHERE id = $1`,
-        [user.id],
-      );
+      await this.updateLastActive(user.id);
 
-      const userResponse = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-        avatar_url: user.avatar_url,
-        bio: user.bio || "",
-        karma_points: user.karma_points || 0,
-        join_date: user.join_date || user.created_at,
-        is_active: user.is_active !== false,
-        last_active: new Date().toISOString(),
-        city: user.city || "",
-        country: user.country || "Israel",
-        interests: user.interests || [],
-        roles: user.roles || ["user"],
-        posts_count: 0,
-        followers_count: 0,
-        following_count: 0,
-        total_donations_amount: 0,
-        total_volunteer_hours: 0,
-        email_verified: user.email_verified || false,
-        parent_manager_id: user.parent_manager_id || null,
-        settings: user.settings || {},
-      };
-
+      const userResponse = this.formatUserResponse(user);
       return { success: true, data: userResponse };
     } catch (error) {
       this.logger.error("Login user error:", error);

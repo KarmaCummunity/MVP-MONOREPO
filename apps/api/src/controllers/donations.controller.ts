@@ -73,15 +73,66 @@ interface UpdateDonationDto {
 @Controller("api/donations")
 export class DonationsController {
   private readonly logger = new Logger(DonationsController.name);
-  // TODO: Move cache TTL to configuration service
-  // TODO: Implement different TTL values for different types of data
-  // TODO: Add cache invalidation strategies
-  private readonly CACHE_TTL = 10 * 60; // 10 minutes
+  private readonly CACHE_TTL = 10 * 60;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly redisCache: RedisCacheService,
   ) {}
+
+  private buildDonationCacheKey(
+    type?: string,
+    category?: string,
+    city?: string,
+    status?: string,
+    limit?: string,
+    offset?: string,
+    search?: string,
+  ): string {
+    return `donations_${type || "all"}_${category || "all"}_${city || "all"}_${status || "active"}_${limit || "50"}_${offset || "0"}_${search || ""}`;
+  }
+
+  private buildDonationsWhereClause(
+    type?: string,
+    category?: string,
+    city?: string,
+    status?: string,
+    search?: string,
+  ): { whereClauses: string[]; params: unknown[] } {
+    const whereClauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (type) {
+      whereClauses.push(`d.type = $${params.length + 1}`);
+      params.push(type);
+    }
+    if (category) {
+      whereClauses.push(`dc.slug = $${params.length + 1}`);
+      params.push(category);
+    }
+    if (city) {
+      const paramIndex = params.length + 1;
+      whereClauses.push(
+        `(d.location->>'city' = $${paramIndex} OR up.city = $${paramIndex})`,
+      );
+      params.push(city);
+    }
+    if (status) {
+      whereClauses.push(`d.status = $${params.length + 1}`);
+      params.push(status);
+    } else {
+      whereClauses.push(`d.status = 'active'`);
+    }
+    if (search) {
+      const paramIndex = params.length + 1;
+      whereClauses.push(
+        `(d.title ILIKE $${paramIndex} OR d.description ILIKE $${paramIndex})`,
+      );
+      params.push(`%${search}%`);
+    }
+
+    return { whereClauses, params };
+  }
 
   /**
    * Get all donation categories with caching
@@ -247,79 +298,50 @@ export class DonationsController {
     @Query("offset") offset?: string,
     @Query("search") search?: string,
   ) {
-    const cacheKey = `donations_${type || "all"}_${category || "all"}_${city || "all"}_${status || "active"}_${limit || "50"}_${offset || "0"}_${search || ""}`;
+    const cacheKey = this.buildDonationCacheKey(
+      type,
+      category,
+      city,
+      status,
+      limit,
+      offset,
+      search,
+    );
 
-    // Try cache first
     const cached = await this.redisCache.get(cacheKey);
     if (cached) {
       return { success: true, data: cached };
     }
 
-    let query = `
+    const baseQuery = `
       SELECT d.*, dc.name_he as category_name, dc.icon as category_icon,
              up.name as donor_name, up.city as donor_city, up.avatar_url as donor_avatar
       FROM donations d
       LEFT JOIN donation_categories dc ON d.category_id = dc.id
       LEFT JOIN user_profiles up ON d.donor_id = up.id
-      WHERE 1=1
     `;
 
-    const params: unknown[] = [];
-    let paramCount = 0;
+    const { whereClauses, params } = this.buildDonationsWhereClause(
+      type,
+      category,
+      city,
+      status,
+      search,
+    );
 
-    if (type) {
-      paramCount++;
-      query += ` AND d.type = $${paramCount}`;
-      params.push(type);
-    }
+    const parsedLimit = limit ? parseInt(limit) : 50;
+    const parsedOffset = offset ? parseInt(offset) : 0;
 
-    if (category) {
-      paramCount++;
-      query += ` AND dc.slug = $${paramCount}`;
-      params.push(category);
-    }
+    const whereClause = ` WHERE ${whereClauses.join(" AND ")}`;
+    const orderClause = ` ORDER BY d.created_at DESC`;
+    const paginationClause = ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
 
-    if (city) {
-      paramCount++;
-      query += ` AND (d.location->>'city' = $${paramCount} OR up.city = $${paramCount})`;
-      params.push(city);
-    }
+    params.push(parsedLimit, parsedOffset);
 
-    if (status) {
-      paramCount++;
-      query += ` AND d.status = $${paramCount}`;
-      params.push(status);
-    } else {
-      query += ` AND d.status = 'active'`;
-    }
-
-    if (search) {
-      paramCount++;
-      query += ` AND (d.title ILIKE $${paramCount} OR d.description ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
-    }
-
-    query += ` ORDER BY d.created_at DESC`;
-
-    if (limit) {
-      paramCount++;
-      query += ` LIMIT $${paramCount}`;
-      params.push(parseInt(limit));
-    } else {
-      query += ` LIMIT 50`;
-    }
-
-    if (offset) {
-      paramCount++;
-      query += ` OFFSET $${paramCount}`;
-      params.push(parseInt(offset));
-    }
-
+    const query = baseQuery + whereClause + orderClause + paginationClause;
     const { rows } = await this.pool.query(query, params);
 
-    // Cache for 5 minutes
     await this.redisCache.set(cacheKey, rows, 5 * 60);
-
     return { success: true, data: rows };
   }
 
