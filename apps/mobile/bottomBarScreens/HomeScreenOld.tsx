@@ -21,12 +21,12 @@
 // TODO: Implement proper accessibility for drag gestures and animations
 // TODO: Add unit tests for complex gesture and animation logic
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { 
-  View, 
-  StyleSheet, 
-  Dimensions, 
-  Text, 
-  TouchableOpacity, 
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Text,
+  TouchableOpacity,
 
   Image,
   Alert,
@@ -126,7 +126,7 @@ const FloatingBubble: React.FC<FloatingBubbleProps> = ({ icon, value, label, bub
         true
       )
     );
-  }, []);
+  }, [delay, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -162,7 +162,7 @@ export default function HomeScreen() {
   const [isStatModalVisible, setIsStatModalVisible] = useState(false);
   const [NativeBubblesComponent, setNativeBubblesComponent] = useState<React.ComponentType | null>(null);
   const hasCheckedAboutAutoOpen = useRef(false);
-  
+
   // Dynamically load FloatingBubblesSkia only on Native platforms to avoid Web bundle issues
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -175,7 +175,7 @@ export default function HomeScreen() {
         });
     }
   }, []);
-  
+
   // No logical difference between guest/user modes other than the header banner
   useEffect(() => {
     if (isGuestMode) {
@@ -208,17 +208,17 @@ export default function HomeScreen() {
       if (hasCheckedAboutAutoOpen.current) {
         return;
       }
-      
+
       // Wait a bit for navigation to settle before checking
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Check if About screen should auto-open
       const shouldOpen = await shouldAutoOpenAboutScreen(
         selectedUser,
         isGuestMode,
         isAuthenticated
       );
-      
+
       if (shouldOpen) {
         console.log('🏠 HomeScreen - Auto-opening About screen for new user');
         hasCheckedAboutAutoOpen.current = true;
@@ -233,7 +233,7 @@ export default function HomeScreen() {
         hasCheckedAboutAutoOpen.current = true;
       }
     };
-    
+
     // Only check if user is authenticated and not in guest mode
     if (isAuthenticated && !isGuestMode && selectedUser) {
       checkAndOpenAbout();
@@ -246,7 +246,7 @@ export default function HomeScreen() {
       console.log('🏠 HomeScreen - Screen focused, refreshing data...');
       // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
-    }, [])
+    }, [setRefreshKey])
   );
 
   // Reset state when screen loses focus
@@ -278,7 +278,7 @@ export default function HomeScreen() {
         mass: 0.8,
       });
       panelHeight.value = withTiming(0, { duration: 0 });
-    }, [])
+    }, [panelHeight, postsTranslateY])
   );
 
   const handleSelectStat = (details: StatDetails) => {
@@ -343,7 +343,7 @@ export default function HomeScreen() {
     });
 
 
-  const { t } = useTranslation(['home','common']);
+  const { t } = useTranslation(['home', 'common']);
 
   // Fetch stats from DB
   // TODO: Move stats fetching to custom hook (useStatsData)
@@ -369,43 +369,43 @@ export default function HomeScreen() {
       }
     };
     fetchStats();
-  }, []);
+  }, [t]);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
-       {showPosts ? (
+
+      {showPosts ? (
         // Posts screen
-          <PostsReelsScreen 
-            onScroll={(hide) => {
-              console.log('🏠 HomeScreen - Setting hideTopBar:', hide);
-              setHideTopBar(hide);
-            }}
-            hideTopBar={hideTopBar}
-          />
+        <PostsReelsScreen
+          onScroll={(hide) => {
+            console.log('🏠 HomeScreen - Setting hideTopBar:', hide);
+            setHideTopBar(hide);
+          }}
+          hideTopBar={hideTopBar}
+        />
       ) : (
         // Home screen with enhanced scrolling
         <>
-        <Animated.View style={[styles.homeContainer, homeAnimatedStyle]}>
-          {Platform.OS === 'web' ? (
-            <FloatingBubblesOverlay />
-          ) : (
-            NativeBubblesComponent ? <NativeBubblesComponent /> : null
+          <Animated.View style={[styles.homeContainer, homeAnimatedStyle]}>
+            {Platform.OS === 'web' ? (
+              <FloatingBubblesOverlay />
+            ) : (
+              NativeBubblesComponent ? <NativeBubblesComponent /> : null
+            )}
+          </Animated.View>
+          {/* Drag Handle Button - the ONLY way to open PostsReelsScreen */}
+          {!showPosts && (
+            <GestureDetector gesture={panGesture}>
+              <Animated.View style={[styles.dragHandleButton, { zIndex: 1100 }]}>
+                <View style={styles.handleBar} />
+              </Animated.View>
+            </GestureDetector>
           )}
-        </Animated.View>
-        {/* Drag Handle Button - the ONLY way to open PostsReelsScreen */}
-        {!showPosts && (
-          <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.dragHandleButton, { zIndex: 1100 }]}>
-              <View style={styles.handleBar} />
-            </Animated.View>
-          </GestureDetector>
-        )}
-        {/* Draggable Panel Overlay (visual only, replaced by PostsReelsScreen on threshold) */}
-        {!showPosts && (
-          <Animated.View style={[styles.dragPanel, panelAnimatedStyle]} />
-        )}
+          {/* Draggable Panel Overlay (visual only, replaced by PostsReelsScreen on threshold) */}
+          {!showPosts && (
+            <Animated.View style={[styles.dragPanel, panelAnimatedStyle]} />
+          )}
         </>
       )}
     </SafeAreaView>
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  
+
   activitiesContainer: {
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
     marginBottom: LAYOUT_CONSTANTS.SPACING.LG,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     marginBottom: LAYOUT_CONSTANTS.SPACING.LG,
   },
 
-     statCard: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'white', borderRadius: 12, padding: 16, margin: 8, ...createShadowStyle('colors.black', { width: 0, height: 0 }, 0.1, 4) },
+  statCard: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'white', borderRadius: 12, padding: 16, margin: 8, ...createShadowStyle('colors.black', { width: 0, height: 0 }, 0.1, 4) },
   statContent: {
     flex: 1,
     marginRight: LAYOUT_CONSTANTS.SPACING.MD,
@@ -490,40 +490,40 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.heading1,
     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
   },
-     statValue: {
-     fontSize: FontSizes.medium,
-     fontWeight: 'bold',
-     color: colors.primary, // Darker blue for better readability
-     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   statTitle: {
-     fontSize: FontSizes.body,
-     fontWeight: 'bold',
-     color: colors.textPrimary,
-     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   statChange: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     marginTop: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   statChangeText: {
-     fontSize: FontSizes.small,
-     marginLeft: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   statIconContainer: {
-     width: scaleSize(50),
-     height: scaleSize(50),
-     borderRadius: scaleSize(25),
-     justifyContent: 'center',
-     alignItems: 'center',
-   },
-   statName: {
-     fontSize: FontSizes.caption,
-     color: colors.primary, // Darker blue for better readability
-     textAlign: 'center',
-     fontWeight: '500',
-   },
+  statValue: {
+    fontSize: FontSizes.medium,
+    fontWeight: 'bold',
+    color: colors.primary, // Darker blue for better readability
+    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  statTitle: {
+    fontSize: FontSizes.body,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  statChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  statChangeText: {
+    fontSize: FontSizes.small,
+    marginLeft: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  statIconContainer: {
+    width: scaleSize(50),
+    height: scaleSize(50),
+    borderRadius: scaleSize(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statName: {
+    fontSize: FontSizes.caption,
+    color: colors.primary, // Darker blue for better readability
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   panel: {
     height: PANEL_HEIGHT,
     width: "100%",
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   // Web-specific scroll wrappers
   webScrollContainer: {
     flex: 1,
-    ...(Platform.OS === 'web' && { 
+    ...(Platform.OS === 'web' && {
       overflow: 'auto' as any,
       WebkitOverflowScrolling: 'touch' as any,
       overscrollBehavior: 'contain' as any,
@@ -722,35 +722,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexWrap: 'wrap',
   },
-     personalStatCard: {
-     backgroundColor: colors.backgroundTertiary, // Very light blue
-     padding: LAYOUT_CONSTANTS.SPACING.MD,
-     borderRadius: scaleSize(50), // Fully rounded
-     alignItems: 'center',
-     flex: 1,
-     marginHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
-     marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-     ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.15, 4),
-     minWidth: scaleSize(80),
-     minHeight: scaleSize(80),
-     justifyContent: 'center',
-   },
+  personalStatCard: {
+    backgroundColor: colors.backgroundTertiary, // Very light blue
+    padding: LAYOUT_CONSTANTS.SPACING.MD,
+    borderRadius: scaleSize(50), // Fully rounded
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
+    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
+    ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.15, 4),
+    minWidth: scaleSize(80),
+    minHeight: scaleSize(80),
+    justifyContent: 'center',
+  },
   personalStatIcon: {
     fontSize: FontSizes.heading2,
     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
   },
-     personalStatValue: {
-     fontSize: FontSizes.large,
-     fontWeight: 'bold',
-     color: colors.primary, // Darker blue for better readability
-     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   personalStatName: {
-     fontSize: FontSizes.caption,
-     color: colors.primary, // Darker blue for better readability
-     textAlign: 'center',
-     fontWeight: '500',
-   },
+  personalStatValue: {
+    fontSize: FontSizes.large,
+    fontWeight: 'bold',
+    color: colors.primary, // Darker blue for better readability
+    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  personalStatName: {
+    fontSize: FontSizes.caption,
+    color: colors.primary, // Darker blue for better readability
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   // Floating community statistics styles
   floatingStatsContainer: {
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
@@ -761,140 +761,140 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexWrap: 'wrap',
   },
-     floatingBubble: {
-     backgroundColor: colors.backgroundTertiary, // Very light blue
-     padding: LAYOUT_CONSTANTS.SPACING.MD,
-     borderRadius: scaleSize(50), // Fully rounded
-     alignItems: 'center',
-     marginHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
-     marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
-     ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.15, 4),
-     minWidth: scaleSize(80),
-     minHeight: scaleSize(80),
-     justifyContent: 'center',
-   },
+  floatingBubble: {
+    backgroundColor: colors.backgroundTertiary, // Very light blue
+    padding: LAYOUT_CONSTANTS.SPACING.MD,
+    borderRadius: scaleSize(50), // Fully rounded
+    alignItems: 'center',
+    marginHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
+    marginBottom: LAYOUT_CONSTANTS.SPACING.SM,
+    ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.15, 4),
+    minWidth: scaleSize(80),
+    minHeight: scaleSize(80),
+    justifyContent: 'center',
+  },
   bubbleIcon: {
     fontSize: FontSizes.heading2,
     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
   },
-     bubbleValue: {
-     fontSize: FontSizes.large,
-     fontWeight: 'bold',
-     color: colors.primary, // Darker blue for better readability
-     marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
-   },
-   bubbleLabel: {
-     fontSize: FontSizes.caption,
-     color: colors.primary, // Darker blue for better readability
-     textAlign: 'center',
-     fontWeight: '500',
-   },
-     // Specific donation types styles
-   moneyBubble: {
-     backgroundColor: colors.legacyLightGreen,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   foodBubble: {
-     backgroundColor: colors.successLight,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   clothingBubble: {
-     backgroundColor: colors.infoLight,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   bloodBubble: {
-     backgroundColor: colors.errorLight,
-     borderColor: colors.error + '30',
-     borderWidth: 1,
-   },
-   timeBubble: {
-     backgroundColor: colors.warningLight,
-     borderColor: colors.warning + '30',
-     borderWidth: 1,
-   },
-   transportBubble: {
-     backgroundColor: colors.legacyLightBlue,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   educationBubble: {
-     backgroundColor: colors.successLight,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   environmentBubble: {
-     backgroundColor: colors.legacyLightGreen,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   animalsBubble: {
-     backgroundColor: colors.legacyLightOrange,
-     borderColor: colors.warning + '30',
-     borderWidth: 1,
-   },
-   eventsBubble: {
-     backgroundColor: colors.legacyLightPink,
-     borderColor: colors.secondary + '30',
-     borderWidth: 1,
-   },
-   recyclingBubble: {
-     backgroundColor: colors.successLight,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-      cultureBubble: {
-     backgroundColor: colors.legacyLightPurple,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   healthBubble: {
-     backgroundColor: colors.legacyLightRed,
-     borderColor: colors.error + '30',
-     borderWidth: 1,
-   },
-   elderlyBubble: {
-     backgroundColor: colors.legacyLightBlue,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   childrenBubble: {
-     backgroundColor: colors.legacyLightPink,
-     borderColor: colors.secondary + '30',
-     borderWidth: 1,
-   },
-   sportsBubble: {
-     backgroundColor: colors.legacyLightGreen,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   musicBubble: {
-     backgroundColor: colors.legacyLightPurple,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   artBubble: {
-     backgroundColor: colors.legacyLightOrange,
-     borderColor: colors.warning + '30',
-     borderWidth: 1,
-   },
-   techBubble: {
-     backgroundColor: colors.legacyLightBlue,
-     borderColor: colors.info + '30',
-     borderWidth: 1,
-   },
-   gardenBubble: {
-     backgroundColor: colors.successLight,
-     borderColor: colors.success + '30',
-     borderWidth: 1,
-   },
-   leadershipBubble: {
-     backgroundColor: colors.legacyLightYellow,
-     borderColor: colors.warning + '30',
-     borderWidth: 1,
-   },
+  bubbleValue: {
+    fontSize: FontSizes.large,
+    fontWeight: 'bold',
+    color: colors.primary, // Darker blue for better readability
+    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
+  },
+  bubbleLabel: {
+    fontSize: FontSizes.caption,
+    color: colors.primary, // Darker blue for better readability
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  // Specific donation types styles
+  moneyBubble: {
+    backgroundColor: colors.legacyLightGreen,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  foodBubble: {
+    backgroundColor: colors.successLight,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  clothingBubble: {
+    backgroundColor: colors.infoLight,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  bloodBubble: {
+    backgroundColor: colors.errorLight,
+    borderColor: colors.error + '30',
+    borderWidth: 1,
+  },
+  timeBubble: {
+    backgroundColor: colors.warningLight,
+    borderColor: colors.warning + '30',
+    borderWidth: 1,
+  },
+  transportBubble: {
+    backgroundColor: colors.legacyLightBlue,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  educationBubble: {
+    backgroundColor: colors.successLight,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  environmentBubble: {
+    backgroundColor: colors.legacyLightGreen,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  animalsBubble: {
+    backgroundColor: colors.legacyLightOrange,
+    borderColor: colors.warning + '30',
+    borderWidth: 1,
+  },
+  eventsBubble: {
+    backgroundColor: colors.legacyLightPink,
+    borderColor: colors.secondary + '30',
+    borderWidth: 1,
+  },
+  recyclingBubble: {
+    backgroundColor: colors.successLight,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  cultureBubble: {
+    backgroundColor: colors.legacyLightPurple,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  healthBubble: {
+    backgroundColor: colors.legacyLightRed,
+    borderColor: colors.error + '30',
+    borderWidth: 1,
+  },
+  elderlyBubble: {
+    backgroundColor: colors.legacyLightBlue,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  childrenBubble: {
+    backgroundColor: colors.legacyLightPink,
+    borderColor: colors.secondary + '30',
+    borderWidth: 1,
+  },
+  sportsBubble: {
+    backgroundColor: colors.legacyLightGreen,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  musicBubble: {
+    backgroundColor: colors.legacyLightPurple,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  artBubble: {
+    backgroundColor: colors.legacyLightOrange,
+    borderColor: colors.warning + '30',
+    borderWidth: 1,
+  },
+  techBubble: {
+    backgroundColor: colors.legacyLightBlue,
+    borderColor: colors.info + '30',
+    borderWidth: 1,
+  },
+  gardenBubble: {
+    backgroundColor: colors.successLight,
+    borderColor: colors.success + '30',
+    borderWidth: 1,
+  },
+  leadershipBubble: {
+    backgroundColor: colors.legacyLightYellow,
+    borderColor: colors.warning + '30',
+    borderWidth: 1,
+  },
   // New styles for dashboard elements
   welcomeSection: {
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.LG,
@@ -983,4 +983,4 @@ const styles = StyleSheet.create({
     marginBottom: LAYOUT_CONSTANTS.SPACING.MD,
   },
 
- });
+});

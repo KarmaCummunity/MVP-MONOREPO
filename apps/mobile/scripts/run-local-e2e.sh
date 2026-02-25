@@ -156,6 +156,10 @@ else
   (cd "$CLIENT_DIR" && npm run lint)
   log_success "Lint checks passed."
 
+  # log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
+  # (cd "$CLIENT_DIR" && npm run audit:all)
+  # log_success "Audit checks passed."
+
   # --- Snyk (required, stops on failure) ---
   if command -v snyk >/dev/null 2>&1; then
     SNYK_CMD=("snyk")
@@ -431,15 +435,33 @@ export NODE_ENV=${NODE_ENV:-development}
 # CORS configuration (IMPORTANT)
 export CORS_ORIGIN=${CORS_ORIGIN:-"http://localhost:8081,http://localhost:3000,http://localhost:19006"}
 
-# JWT Secret (CRITICAL - required by server)
+# JWT Secret (CRITICAL - try .env first, then generate)
 if [[ -z "${JWT_SECRET:-}" ]]; then
-  log_info "Generating JWT_SECRET for local development..."
-  export JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-  log_success "JWT_SECRET generated: ${JWT_SECRET:0:20}..."
+  # Try to find it in .env file
+  ENV_FILE="$SERVER_DIR/.env"
+  if [[ -f "$ENV_FILE" ]]; then
+    DOT_ENV_SECRET=$(grep "^JWT_SECRET=" "$ENV_FILE" | cut -d'=' -f2- || echo "")
+    if [[ -n "$DOT_ENV_SECRET" ]]; then
+      export JWT_SECRET="$DOT_ENV_SECRET"
+      log_success "Using JWT_SECRET from .env: ${JWT_SECRET:0:20}..."
+    fi
+  fi
+  
+  # Generation fallback if still not set
+  if [[ -z "${JWT_SECRET:-}" ]]; then
+    log_info "Generating NEW JWT_SECRET for local development..."
+    export JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+    log_success "JWT_SECRET generated: ${JWT_SECRET:0:20}..."
+    
+    # Optionally save to .env if missing to help next time
+    if [[ -f "$ENV_FILE" ]] && ! grep -q "^JWT_SECRET=" "$ENV_FILE"; then
+      echo "JWT_SECRET=$JWT_SECRET" >> "$ENV_FILE"
+      log_info "Saved new JWT_SECRET to $ENV_FILE"
+    fi
+  fi
 else
   if [[ ${#JWT_SECRET} -lt 32 ]]; then
     log_error "JWT_SECRET must be at least 32 characters long (current: ${#JWT_SECRET})"
-    log_error "Generate a new one: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     exit 1
   fi
   log_success "Using provided JWT_SECRET: ${JWT_SECRET:0:20}..."

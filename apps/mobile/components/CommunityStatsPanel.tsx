@@ -39,7 +39,6 @@ export default function CommunityStatsPanel() {
   const isExpanded = useSharedValue(false);
 
   const { isRealAuth } = useUser();
-  if (isRealAuth) return null;
 
   const gesture = Gesture.Pan()
     .onUpdate((event) => {

@@ -121,6 +121,13 @@ const colors = {
   legacyDarkRed: palette.errorRed, // Added
   legacyLightGray: palette.greyLight,
   legacyDarkGray: palette.brownDeep,
+  legacyLightGreen: '#dcfce7',
+  legacyLightBlue: '#dbeafe',
+  legacyLightOrange: '#ffedd5',
+  legacyLightPink: '#fce7f3',
+  legacyLightPurple: '#f3e8ff',
+  legacyLightRed: '#fee2e2',
+  legacyLightYellow: '#fef9c3',
 
 
   // Specific Overrides for exact matches if needed
@@ -128,6 +135,7 @@ const colors = {
   backgroundSecondary_2: palette.greyLight,
   backgroundSecondaryPink: palette.greyLight,
   borderFocus: palette.tealLight,
+  offWhite: '#F8F9FA',
 
   // Money Specifics (Preserving keys)
   moneyFormBorder: palette.greyMedium,

@@ -37,7 +37,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly rateLimitService: RateLimitService,
     private readonly firebaseAdmin: FirebaseAdminService,
     @Inject(PG_POOL) private readonly pool: Pool,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -208,7 +208,7 @@ export class JwtAuthGuard implements CanActivate {
       this.logger.warn("Firebase token verification failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new UnauthorizedException("Invalid Firebase token");
+      throw new UnauthorizedException(`Invalid Firebase token: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -271,7 +271,7 @@ export class AdminAuthGuard extends JwtAuthGuard {
 export class OptionalAuthGuard implements CanActivate {
   private readonly logger = new Logger(OptionalAuthGuard.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();

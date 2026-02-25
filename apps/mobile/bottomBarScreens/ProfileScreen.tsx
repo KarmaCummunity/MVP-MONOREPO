@@ -507,7 +507,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
     };
 
     loadOpenContent();
-  }, [targetUserId]);
+  }, [targetUserId, user, selectedUser?.id, db]);
 
   if (loading) {
     return (
@@ -944,7 +944,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
     };
 
     loadClosedContent();
-  }, [targetUserId]);
+  }, [targetUserId, user, selectedUser?.id, db]);
 
   if (loading) {
     return (
@@ -1264,7 +1264,7 @@ function ProfileScreenContent({
   }, [viewingUser, selectedUser, isOwnProfile]);
 
   // Function to update user statistics
-  const updateUserStats = async () => {
+  const updateUserStats = React.useCallback(async () => {
     try {
       const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
       if (!userIdToUse) {
@@ -1286,10 +1286,10 @@ function ProfileScreenContent({
     } catch (error) {
       console.error('❌ Update user stats error:', error);
     }
-  };
+  }, [isOwnProfile, selectedUser, viewingUser]);
 
   // Function to load recent user activities from database (only for own profile)
-  const loadRecentActivities = async () => {
+  const loadRecentActivities = React.useCallback(async () => {
     try {
       if (!isOwnProfile) {
         setRecentActivities([]);
@@ -1521,7 +1521,7 @@ function ProfileScreenContent({
       console.error('❌ Load recent activities error:', error);
       setRecentActivities([]);
     }
-  };
+  }, [isOwnProfile, selectedUser]);
 
   // Function to select a random user (demo mode only - disabled)
   const selectRandomUser = () => {
@@ -1560,7 +1560,7 @@ function ProfileScreenContent({
       await updateUserStats();
     };
     updateStats();
-  }, [selectedUser, viewingUser, isOwnProfile]);
+  }, [selectedUser, viewingUser, isOwnProfile, updateUserStats]);
 
   // Refresh stats when screen comes into focus
   useFocusEffect(
@@ -1591,7 +1591,7 @@ function ProfileScreenContent({
         }));
       };
       refreshStats();
-    }, [selectedUser, viewingUser, isOwnProfile, targetUserId])
+    }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities])
   );
 
   // Load activities when selectedUser changes (only for own profile)
@@ -1599,7 +1599,7 @@ function ProfileScreenContent({
     if (isOwnProfile) {
       loadRecentActivities();
     }
-  }, [selectedUser, isOwnProfile]);
+  }, [selectedUser, isOwnProfile, loadRecentActivities]);
 
   const renderScene = ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
     switch (sceneRoute.key) {

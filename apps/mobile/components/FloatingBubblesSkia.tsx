@@ -647,3 +647,7 @@
 // };
 
 // export default FloatingBubblesSkia;
+
+import React from 'react';
+const DummyFloatingBubblesSkia = () => { return null; };
+export default DummyFloatingBubblesSkia;

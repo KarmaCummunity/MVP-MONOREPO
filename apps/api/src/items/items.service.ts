@@ -8,7 +8,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PG_POOL } from "../database/database.module";
 import { Pool } from "pg";
 import { RedisCacheService } from "../redis/redis-cache.service";
-import { UserActivity } from "./user-activity.interface";
+import type { UserActivity } from "./user-activity";
 
 @Injectable()
 export class ItemsService {

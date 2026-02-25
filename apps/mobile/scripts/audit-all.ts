@@ -337,6 +337,14 @@ if (require.main === module) {
     .then(report => {
       auditor.saveMasterReport(report);
       auditor.printFinalSummary(report);
+
+      // Exit with error code if any issues were found
+      if (report.summary.totalIssues > 0) {
+        console.error(`\n❌ Audit failed with ${report.summary.totalIssues} issues.\n`);
+        process.exit(1);
+      }
+
+      console.log('\n✅ Audit passed! No issues found.\n');
       process.exit(0);
     })
     .catch(error => {

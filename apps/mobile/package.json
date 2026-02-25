@@ -23,7 +23,7 @@
     "audit:constants": "ts-node scripts/audit-constants.ts",
     "audit:responsive": "ts-node scripts/audit-responsive.ts",
     "audit:unused": "ts-node scripts/find-unused-files.ts",
-    "audit:all": "ts-node scripts/audit-all.ts",
+    "audit:all": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ts-node scripts/audit-all.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
