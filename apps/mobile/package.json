@@ -32,6 +32,7 @@
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx --max-warnings 1000"
   },
   "dependencies": {
+    "@kc/shared-types": "1.0.0",
     "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.1.0",
     "@miblanchard/react-native-slider": "^2.3.2",

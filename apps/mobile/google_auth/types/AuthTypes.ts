@@ -309,32 +309,8 @@ export interface UserMetadata {
 // TOKEN AND SESSION TYPES
 // ========================================
 
-/**
- * JWT token pair received from authentication server
- * Both tokens are cryptographically signed and cannot be forged
- */
-export interface AuthTokens {
-  /** JWT access token for API requests (short-lived) */
-  readonly accessToken: string;
-  
-  /** JWT refresh token for obtaining new access tokens (long-lived) */
-  readonly refreshToken: string;
-  
-  /** Access token expiration time in seconds from now */
-  readonly expiresIn: number;
-  
-  /** Refresh token expiration time in seconds from now */
-  readonly refreshExpiresIn: number;
-  
-  /** Token type (always 'Bearer') */
-  readonly tokenType: 'Bearer';
-  
-  /** Server-assigned session identifier */
-  readonly sessionId?: string;
-  
-  /** Token issuance timestamp */
-  readonly issuedAt: number; // Unix timestamp
-}
+import type { AuthTokens } from '@kc/shared-types';
+export type { AuthTokens } from '@kc/shared-types';
 
 /**
  * JWT token payload structure
@@ -589,56 +565,11 @@ export interface GoogleIdTokenPayload {
 }
 
 // ========================================
-// API RESPONSE TYPES
+// API RESPONSE TYPES (from @kc/shared-types)
 // ========================================
 
-/**
- * Standard API response wrapper
- * Consistent response format across all API endpoints
- */
-export interface ApiResponse<TData = any> {
-  /** Whether the operation was successful */
-  success: boolean;
-  
-  /** Response data (only present if success is true) */
-  data?: TData;
-  
-  /** Error message (only present if success is false) */
-  error?: string;
-  
-  /** Additional message or context */
-  message?: string;
-  
-  /** Response metadata */
-  metadata?: ResponseMetadata;
-}
-
-/**
- * Response metadata for debugging and monitoring
- */
-export interface ResponseMetadata {
-  /** Unique request identifier */
-  requestId?: string;
-  
-  /** Response timestamp */
-  timestamp: string;
-  
-  /** Request duration in milliseconds */
-  duration?: number;
-  
-  /** Whether response was served from cache */
-  cached?: boolean;
-  
-  /** API version that handled the request */
-  apiVersion?: string;
-  
-  /** Rate limiting information */
-  rateLimitInfo?: {
-    remaining: number;
-    resetTime: number;
-    limit: number;
-  };
-}
+import type { ApiResponse, ResponseMetadata } from '@kc/shared-types';
+export type { ApiResponse, ResponseMetadata } from '@kc/shared-types';
 
 /**
  * Authentication response from server OAuth verification

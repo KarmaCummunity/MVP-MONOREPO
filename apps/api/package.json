@@ -44,6 +44,7 @@
     "_TODO_ADD_SCRIPTS": "// TODO: Add missing scripts: migration:run, migration:revert, seed, security-audit"
   },
   "dependencies": {
+    "@kc/shared-types": "1.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^10.0.0",
@@ -75,6 +76,7 @@
     "@types/node": "^20.14.2",
     "@types/pg": "^8.15.5",
     "@types/supertest": "^6.0.3",
+    "@kc/config-eslint": "1.0.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",

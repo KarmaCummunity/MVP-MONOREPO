@@ -15,22 +15,11 @@
 // TODO: Implement proper API versioning support
 // TODO: Add request/response transformation middleware
 // TODO: Add comprehensive logging and monitoring
+import type { ApiResponse } from '@kc/shared-types';
 import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  user?: any; // For resolveUserId endpoint compatibility
-  tokens?: {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-  };
-  error?: string;
-  message?: string;
-  version?: string;
-}
+export type { ApiResponse };
 
 class ApiService {
   private _baseURL: string | null = null;

@@ -1,0 +1,8 @@
+{
+  "name": "@kc/config-eslint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared ESLint config for KC monorepo (Node/API)",
+  "main": "index.cjs",
+  "files": ["index.cjs"]
+}

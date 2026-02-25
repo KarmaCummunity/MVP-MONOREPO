@@ -33,35 +33,12 @@
  */
 
 import { Platform } from 'react-native';
+import type { ApiResponse } from '@kc/shared-types';
 import { googleAuthService } from './GoogleAuthService';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL } from '../utils/dbConfig';
 
-// ========================================
-// TYPE DEFINITIONS
-// ========================================
-
-/**
- * Standard API response format
- * Consistent across all endpoints for predictable error handling
- */
-export interface ApiResponse<T = any> {
-  /** Whether the request was successful */
-  success: boolean;
-  /** Response data if successful */
-  data?: T;
-  /** Error message if unsuccessful */
-  error?: string;
-  /** Additional error context */
-  message?: string;
-  /** Response metadata */
-  metadata?: {
-    requestId?: string;
-    timestamp?: string;
-    duration?: number;
-    cached?: boolean;
-  };
-}
+export type { ApiResponse };
 
 /**
  * Request options for API calls

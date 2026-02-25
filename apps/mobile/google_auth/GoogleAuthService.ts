@@ -28,29 +28,11 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { AuthTokens } from '@kc/shared-types';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL as GLOBAL_API_BASE_URL } from '../utils/dbConfig';
 
-// ========================================
-// TYPE DEFINITIONS
-// ========================================
-
-/**
- * Authentication tokens received from the server after successful OAuth verification
- * These tokens are cryptographically signed by the server and cannot be forged
- */
-export interface AuthTokens {
-  /** JWT access token for API requests (short-lived, typically 1 hour) */
-  accessToken: string;
-  /** JWT refresh token for obtaining new access tokens (long-lived, typically 30 days) */
-  refreshToken: string;
-  /** Access token expiration time in seconds from now */
-  expiresIn: number;
-  /** Refresh token expiration time in seconds from now */
-  refreshExpiresIn: number;
-  /** Server-assigned session ID for tracking and security */
-  sessionId?: string;
-}
+export type { AuthTokens };
 
 /**
  * User profile data verified and enriched by the server
