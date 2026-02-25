@@ -1,0 +1,39 @@
+{
+  "hierarchy": {
+    "loadError": "שגיאה בטעינת עץ המנהלים",
+    "connectionError": "שגיאה בחיבור לשרת",
+    "loading": "טוען את מבנה הניהול...",
+    "retry": "נסה שוב",
+    "noManagers": "אין מנהלים להצגה",
+    "managersCount": "{{count}} מנהלים",
+    "roleSuperAdmin": "מנהל ראשי",
+    "roleAdmin": "מנהל",
+    "roleVolunteer": "מתנדב",
+    "roleUser": "משתמש",
+    "expandHint": "לחץ להרחבה",
+    "salary": "משכורת",
+    "seniority": "ותק",
+    "level": "דרגה"
+  },
+  "tables": {
+    "loadError": "לא ניתן לטעון טבלה",
+    "fetchError": "שגיאה בטעינת טבלה",
+    "deleteConfirm": "האם למחוק את הרשומה?",
+    "deleteTitle": "מחיקת רשומה",
+    "deleteFailed": "שגיאה במחיקת רשומה",
+    "deleteSuccess": "רשומה נמחקה בהצלחה",
+    "editRow": "עריכת רשומה",
+    "addRow": "רשומה חדשה",
+    "saveFailed": "שגיאה בשמירת רשומה",
+    "saveSuccess": "רשומה נשמרה בהצלחה",
+    "requiredField": "שדה חובה: {{name}}",
+    "noData": "אין רשומות",
+    "selectDate": "בחר תאריך",
+    "tableNotFound": "טבלה לא נמצאה",
+    "fieldPlaceholder": "הכנס {{name}}",
+    "updateSuccess": "רשומה עודכנה בהצלחה",
+    "createSuccess": "רשומה נוספה בהצלחה",
+    "updateError": "שגיאה בעדכון רשומה",
+    "createError": "שגיאה ביצירת רשומה"
+  }
+}

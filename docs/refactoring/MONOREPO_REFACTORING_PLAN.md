@@ -28,7 +28,7 @@
 
 ---
 
-## Phase 3: ארגון Mobile Utils (הבא בתור)
+## ✅ Phase 3: ארגון Mobile Utils – הושלם (25/02/2026)
 
 **מטרה:** העברת קבצים מ-`utils/` למבנה ברור יותר, בלי לשנות לוגיקה.
 
@@ -107,7 +107,7 @@ npm run build --workspace @kc/mobile
 | Phase 1: Backend Modules | ✅ הושלם | 25/02/2026 |
 | Phase 2: Mobile State | ✅ הושלם | 25/02/2026 |
 | Users Controller Split | ✅ הושלם | 25/02/2026 |
-| Phase 3: Mobile Utils | ⬜ לא התחיל | |
+| Phase 3: Mobile Utils | ✅ הושלם | 25/02/2026 |
 | Phase 4: ניקוי | ⬜ לא התחיל | |
 
 ---

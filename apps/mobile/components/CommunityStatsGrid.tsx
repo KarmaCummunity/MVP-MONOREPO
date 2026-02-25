@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { logger } from '../utils/loggerService';
 import type { StatDetails } from './StatDetailsModal';
 import { useUser } from '../stores/userStore';
 import { useEffect, useState } from 'react';
-import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../utils/statsService';
+import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../src/services/stats.service';
 import { USE_BACKEND } from '../utils/dbConfig';
 
 export type CommunityStat = {
@@ -22,24 +23,24 @@ interface CommunityStatsGridProps {
   onSelect: (details: StatDetails) => void;
 }
 
-const makeDetails = (stat: CommunityStat): StatDetails => ({
+const makeDetails = (stat: CommunityStat, t: TFunction): StatDetails => ({
   key: stat.key,
   title: stat.label,
   icon: stat.icon,
   value: stat.value,
   color: stat.color,
-  description: (require('i18next') as any).t('home:statsDetails.description', { label: stat.label }),
+  description: t('home:statsDetails.description', { label: stat.label }),
   bullets: [
-    (require('i18next') as any).t('home:statsDetails.bullets.trends'),
-    (require('i18next') as any).t('home:statsDetails.bullets.byCities'),
-    (require('i18next') as any).t('home:statsDetails.bullets.highlight'),
+    t('home:statsDetails.bullets.trends'),
+    t('home:statsDetails.bullets.byCities'),
+    t('home:statsDetails.bullets.highlight'),
   ],
   breakdownByCity: [
-    { label: (require('i18next') as any).t('home:cities.tlv'), value: 42 },
-    { label: (require('i18next') as any).t('home:cities.jerusalem'), value: 35 },
-    { label: (require('i18next') as any).t('home:cities.haifa'), value: 28 },
-    { label: (require('i18next') as any).t('home:cities.beerSheva'), value: 19 },
-    { label: (require('i18next') as any).t('home:cities.ashdod'), value: 16 },
+    { label: t('home:cities.tlv'), value: 42 },
+    { label: t('home:cities.jerusalem'), value: 35 },
+    { label: t('home:cities.haifa'), value: 28 },
+    { label: t('home:cities.beerSheva'), value: 19 },
+    { label: t('home:cities.ashdod'), value: 16 },
   ],
   trend: [8, 12, 9, 15, 13, 17, 21, 18, 24, 22],
 });
@@ -123,7 +124,7 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
       ];
       return cfg.map((c) => {
         const labelKey = c.labelKey || String(c.key);
-        const valueNum = (statsState as any)[c.key] ?? 0;
+        const valueNum = (statsState as Record<string, number>)[c.key] ?? 0;
         return {
           key: String(c.key),
           icon: c.icon,
@@ -135,7 +136,7 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
     })()
     : [];
 
-  // Demo-only extra categories (לא יתנגשו עם keys שכבר קיימים ב-realStats)
+  // Demo-only extra categories (do not conflict with keys in realStats)
   const demoStats: CommunityStat[] = [
     { key: 'sportsGroups', icon: '⚽', label: t('home:stats.sportsGroups'), value: '23', color: colors.success },
     { key: 'musicLessons', icon: '🎵', label: t('home:stats.musicLessons'), value: '34', color: colors.info },
@@ -149,7 +150,7 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
   return (
     <View style={styles.container}>
       {stats.map((s) => (
-        <TouchableOpacity key={s.key} style={[styles.card, styles.shadow]} onPress={() => onSelect(makeDetails(s))}>
+        <TouchableOpacity key={s.key} style={[styles.card, styles.shadow]} onPress={() => onSelect(makeDetails(s, t))}>
           <Text style={styles.icon}>{s.icon}</Text>
           <Text style={styles.value}>{s.value}</Text>
           <Text style={styles.label} numberOfLines={2}>{s.label}</Text>

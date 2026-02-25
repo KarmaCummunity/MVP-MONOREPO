@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
-import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 
 export const usePostDeletion = () => {
     const { selectedUser } = useUser();
-    const { t } = useTranslation();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const canDelete = (postAuthorId: string): boolean => {
@@ -115,7 +114,7 @@ export const usePostDeletion = () => {
                 return false;
             }
         } catch (error) {
-            console.error('Error deleting post:', error);
+            logger.error('usePostDeletion', 'Error deleting post', { error });
             toastService.showError('שגיאה במחיקת הפוסט');
             return false;
         } finally {

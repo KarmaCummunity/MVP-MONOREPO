@@ -103,8 +103,10 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
   const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
 
+  // translateY is a Reanimated shared value (ref-like); including it in deps is unnecessary
   React.useEffect(() => {
     translateY.value = withTiming(shouldHideTopBar ? -measuredHeight : 0, { duration: 200 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- translateY is stable shared value
   }, [shouldHideTopBar, measuredHeight]);
 
 

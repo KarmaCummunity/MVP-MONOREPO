@@ -11,9 +11,9 @@ import { View, Text, StyleSheet, RefreshControl, Alert, TextInput, TouchableOpac
 import { useNavigation, NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import ChatListItem from '../components/ChatListItem';
 import { useUser } from '../stores/userStore';
-import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../utils/chatService';
-import { apiService } from '../utils/apiService';
-import { USE_BACKEND } from '../utils/config.constants';
+import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../src/services/chat.service';
+import { apiService } from '../src/api/api.service';
+import { USE_BACKEND } from '../src/infrastructure/config';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
@@ -25,7 +25,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 export default function ChatListScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const { selectedUser, isRealAuth } = useUser();
+  const { selectedUser, isRealAuth: _isRealAuth } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -173,7 +173,7 @@ export default function ChatListScreen() {
   }, [conversations, selectedUser, usersMap, loadUserProfiles]);
 
   // Resolve display data for conversations (other user, last message, unread)
-  const combinedUsers = useMemo(() => {
+  const _combinedUsers = useMemo(() => {
     // No demo/static users – rely on real user data from backend elsewhere if available
     return [] as ChatUser[];
   }, []);

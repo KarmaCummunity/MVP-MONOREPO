@@ -1,16 +1,17 @@
 #!/usr/bin/env ts-node
 /**
  * Master Audit Script
- * 
+ *
  * Purpose: Runs all audit scripts and generates a comprehensive summary report
- * 
+ *
  * Runs:
  * 1. audit-colors.ts
  * 2. audit-texts.ts
  * 3. audit-constants.ts
  * 4. audit-responsive.ts
  * 5. find-unused-files.ts
- * 
+ * 6. audit-structure.ts
+ *
  * Output: audit-reports/summary.md (comprehensive summary)
  */
 
@@ -124,8 +125,6 @@ class MasterAuditor {
           textsReport.totalIssues +
           constantsReport.totalIssues +
           responsiveReport.totalIssues +
-          constantsReport.totalIssues +
-          responsiveReport.totalIssues +
           unusedReport.issues.length +
           structureReport.totalIssues,
         criticalIssues:
@@ -181,11 +180,12 @@ class MasterAuditor {
     md.push('### Issues by Severity\n');
     md.push('| Severity | Count | Percentage |');
     md.push('|----------|-------|------------|');
-    const total = report.summary.totalIssues;
-    md.push(`| 🔴 Critical | ${report.summary.criticalIssues} | ${((report.summary.criticalIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟠 High | ${report.summary.highIssues} | ${((report.summary.highIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟡 Medium | ${report.summary.mediumIssues} | ${((report.summary.mediumIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟢 Low | ${report.summary.lowIssues} | ${((report.summary.lowIssues / total) * 100).toFixed(1)}% |\n`);
+    const total = report.summary.totalIssues || 1;
+    const pct = (n: number) => ((n / total) * 100).toFixed(1);
+    md.push(`| 🔴 Critical | ${report.summary.criticalIssues} | ${pct(report.summary.criticalIssues)}% |`);
+    md.push(`| 🟠 High | ${report.summary.highIssues} | ${pct(report.summary.highIssues)}% |`);
+    md.push(`| 🟡 Medium | ${report.summary.mediumIssues} | ${pct(report.summary.mediumIssues)}% |`);
+    md.push(`| 🟢 Low | ${report.summary.lowIssues} | ${pct(report.summary.lowIssues)}% |\n`);
 
     // Colors
     md.push('## 🎨 Colors Audit\n');

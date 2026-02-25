@@ -1,0 +1,18 @@
+{
+  "title": "Notifications",
+  "loadError": "Failed to load notifications",
+  "markAllDoneTitle": "Done",
+  "markAllDoneBody": "All notifications marked as read",
+  "markAllError": "Failed to mark notifications",
+  "clearAllTitle": "Delete all notifications",
+  "clearAllMessage": "Are you sure you want to delete all notifications?",
+  "clearAllDoneTitle": "Done",
+  "clearAllDoneBody": "All notifications deleted",
+  "clearAllError": "Failed to delete notifications",
+  "empty": {
+    "title": "No notifications",
+    "subtitle": "When you receive new notifications, they will appear here"
+  },
+  "unreadBadge": "{{count}} new notifications",
+  "welcomeSystem": "Welcome to Karma Community!"
+}

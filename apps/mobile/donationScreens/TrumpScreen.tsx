@@ -19,7 +19,7 @@ import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import ItemDetailsModal from '../components/ItemDetailsModal';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
@@ -29,7 +29,7 @@ import { getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
 // New Modular Components
 import RideOfferForm from '../components/rides/RideOfferForm';
 import VerticalGridSlider from '../components/VerticalGridSlider';
-import { postsService } from '../utils/postsService';
+import { postsService } from '../src/services/posts.service';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
@@ -373,7 +373,7 @@ export default function TrumpScreen({
       }
 
       try {
-        const { apiService } = await import('../utils/apiService');
+        const { apiService } = await import('../src/api/api.service');
         const postsResponse = await apiService.getUserPosts(uid, 50, uid);
 
         if (postsResponse.success && Array.isArray(postsResponse.data)) {

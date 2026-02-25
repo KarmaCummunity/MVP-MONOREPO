@@ -16,6 +16,10 @@ No Hebrew in code: All comments, documentation, and log messages must be in Engl
 
 Clean code: Remove commented-out code and stray TODOs unless explicitly requested to keep them.
 
+Dead code removal: When you identify dead/unused code that is definitely not referenced anywhere and can be safely deleted, remove it—but do so with great caution: verify there are no dynamic imports, string-based references, or indirect usages before deleting.
+
+TODO handling: When you encounter a TODO in a file, decide: if the task is straightforward and within scope, implement it; if it is too heavy, complex, or out of scope, leave it untouched and do not modify it.
+
 Naming: Follow project conventions (camelCase for TS/JS, snake_case for Python).
 
 DRY: Flag or refactor repeated logic; prefer shared helpers and globals.

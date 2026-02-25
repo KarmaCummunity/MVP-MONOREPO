@@ -17,17 +17,19 @@ import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
+import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
 import EditChallengeModal from '../components/Challenges/EditChallengeModal';
+import type { RouteProp } from '@react-navigation/native';
 
 export interface MyCreatedChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: any;
+  route?: RouteProp<DonationsStackParamList, 'MyCreatedChallengesScreen'>;
 }
 
 const CHALLENGE_TYPE_OPTIONS = [
@@ -43,7 +45,7 @@ const CHALLENGE_DIFFICULTY_OPTIONS = [
   { id: 'expert', icon: 'trophy-outline', color: colors.primary },
 ];
 
-export default function MyCreatedChallengesScreen({ navigation, route }: MyCreatedChallengesScreenProps) {
+export default function MyCreatedChallengesScreen({ navigation, route: _route }: MyCreatedChallengesScreenProps) {
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
@@ -56,11 +58,41 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<CommunityChallenge | null>(null);
 
-  // Load challenges when screen focuses
+  const loadChallenges = useCallback(async () => {
+    if (!user?.id) {
+      showToast(t('messages.loginRequired'), 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filters = {
+        creator_id: user.id,
+        sort_by: 'created_at',
+        sort_order: 'DESC' as const,
+        limit: 100,
+      };
+
+      const response = await db.getCommunityChallenges(filters);
+
+      if (response.success && response.data) {
+        setChallenges(response.data);
+      } else {
+        setChallenges([]);
+      }
+    } catch (error) {
+      logger.error('MyCreatedChallengesScreen', 'Error loading challenges', { error });
+      showToast(t('messages.errorLoading'), 'error');
+      setChallenges([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, t, showToast]);
+
   useFocusEffect(
     useCallback(() => {
-      loadChallenges();
-    }, [])
+      void loadChallenges();
+    }, [loadChallenges])
   );
 
   // Apply search filter
@@ -79,37 +111,6 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
       setFilteredChallenges(challenges);
     }
   }, [searchQuery, challenges]);
-
-  const loadChallenges = async () => {
-    if (!user?.id) {
-      showToast(t('messages.loginRequired'), 'error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const filters = {
-        creator_id: user.id,
-        sort_by: 'created_at',
-        sort_order: 'DESC' as const,
-        limit: 100,
-      };
-      
-      const response = await db.getCommunityChallenges(filters);
-      
-      if (response.success && response.data) {
-        setChallenges(response.data);
-      } else {
-        setChallenges([]);
-      }
-    } catch (error) {
-      console.error('Error loading challenges:', error);
-      showToast(t('messages.errorLoading'), 'error');
-      setChallenges([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -172,7 +173,7 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
             <Ionicons
-              name={typeOption?.icon as any || 'trophy-outline'}
+              name={(typeOption?.icon ?? 'trophy-outline') as keyof typeof Ionicons.glyphMap}
               size={24}
               color={difficultyOption?.color || colors.primary}
             />
@@ -239,7 +240,7 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
       <Text style={styles.emptySubtitle}>{t('messages.noCreatedChallengesSubtitle')}</Text>
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'offer' })}
+        onPress={() => navigation.navigate('CommunityChallengesScreen', { mode: 'offer' })}
       >
         <Ionicons name="add-circle-outline" size={24} color={colors.white} />
         <Text style={styles.createButtonText}>{t('createNewChallenge')}</Text>
@@ -256,14 +257,14 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
           t('challenges:browseChallenges', 'עיון באתגרים'),
           t('challenges:myChallenges', 'האתגרים שלי'),
         ]}
-        onToggleMode={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'offer' })}
+        onToggleMode={() => navigation.navigate('CommunityChallengesScreen', { mode: 'offer' })}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            (navigation as any).navigate('ChallengeStatisticsScreen');
+            navigation.navigate('ChallengeStatisticsScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
+            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myChallenges', 'האתגרים שלי')) {
-            (navigation as any).navigate('MyChallengesScreen');
+            navigation.navigate('MyChallengesScreen');
           }
         }}
         title={t('myCreatedChallenges')}

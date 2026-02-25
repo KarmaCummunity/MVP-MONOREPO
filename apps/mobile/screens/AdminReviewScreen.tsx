@@ -11,7 +11,7 @@ interface AdminReviewScreenProps {
 
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
-export default function AdminReviewScreen({ navigation }: AdminReviewScreenProps) {
+export default function AdminReviewScreen({ navigation: _navigation }: AdminReviewScreenProps) {
   useAdminProtection();
   return (
     <SafeAreaView style={styles.container}>

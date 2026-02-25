@@ -21,7 +21,7 @@ interface OptionsModalProps {
     anchorPosition?: { x: number, y: number };
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const OptionsModal: React.FC<OptionsModalProps> = ({
     visible,

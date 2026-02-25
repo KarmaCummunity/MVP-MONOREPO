@@ -77,7 +77,7 @@ const RideOfferForm: React.FC<RideOfferFormProps> = ({
     recurrenceUnit, onRecurrenceUnitChange,
     seats, onSeatsChange,
     price, onPriceChange,
-    selectedTags, onToggleTag, availableTags,
+    selectedTags: _selectedTags, onToggleTag: _onToggleTag, availableTags: _availableTags,
     onSubmit, isValid, hideDestinationInput
 }) => {
     const { t } = useTranslation();

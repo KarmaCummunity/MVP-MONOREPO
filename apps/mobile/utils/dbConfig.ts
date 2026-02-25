@@ -1,7 +1,7 @@
 // Re-export basic constants from the minimal config file to avoid circular dependencies
-import { IS_DEVELOPMENT, IS_PRODUCTION, API_BASE_URL as RESOLVED_API_BASE_URL, USE_BACKEND, USE_FIRESTORE } from './config.constants';
+import { IS_DEVELOPMENT, IS_PRODUCTION, API_BASE_URL as RESOLVED_API_BASE_URL, USE_BACKEND, USE_FIRESTORE } from '../src/infrastructure/config';
 export { IS_DEVELOPMENT, IS_PRODUCTION, USE_BACKEND, USE_FIRESTORE };
-export { API_BASE_URL } from './config.constants';
+export { API_BASE_URL } from '../src/infrastructure/config';
 
 // File overview:
 // - Purpose: Central configuration for backend usage, API base URL, caching, sync, offline, and feature flags.

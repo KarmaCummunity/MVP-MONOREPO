@@ -1,0 +1,104 @@
+{
+  "sortTitle": "Sort",
+  "filterTitle": "Filter",
+  "chooseFiltersTitle": "Choose filter options",
+  "chooseSortsTitle": "Choose sort options",
+  "popularSearches": [
+    "Food collection",
+    "Blood donation",
+    "Help the elderly",
+    "Garden cleanup",
+    "Teaching kids"
+  ],
+  "recentSearches": [
+    "Volunteers",
+    "Events",
+    "Donations",
+    "Urgent tasks"
+  ],
+  "tabs": {
+    "all": "All",
+    "donations": "Donations",
+    "events": "Events",
+    "users": "Users"
+  },
+  "userDefaultBio": "Community member",
+  "typeLabels": {
+    "user": "User"
+  },
+  "labels": {
+    "category": "Category",
+    "location": "Location",
+    "date": "Date"
+  },
+  "moreDetails": "More details",
+  "details": "Details",
+  "openFullDetails": "Open full details page",
+  "filters": {
+    "education": "Education",
+    "health": "Health",
+    "welfare": "Welfare",
+    "environment": "Environment",
+    "animals": "Animals",
+    "atRiskYouth": "At-risk youth",
+    "elderly": "Elderly",
+    "disabled": "Disabled",
+    "patients": "Patients",
+    "familiesInDistress": "Families in distress",
+    "immigrants": "Immigrants",
+    "community": "Community",
+    "בחינם": "Free",
+    "כמו חדש": "Like New",
+    "משומש": "Used",
+    "לחלפים": "For Parts",
+    "עם איסוף עצמי": "Self Pickup",
+    "משלוח בתשלום": "Paid Delivery",
+    "נגישות": "Accessibility",
+    "ספות": "Sofas",
+    "ארונות": "Wardrobes",
+    "מיטות": "Beds",
+    "גברים": "Men",
+    "נשים": "Women",
+    "ילדים": "Children",
+    "מטבח": "Kitchen",
+    "חשמל": "Electronics",
+    "צעצועים": "Toys"
+  },
+  "sort": {
+    "alphabetical": "Alphabetical",
+    "byLocation": "By location",
+    "byCategory": "By category",
+    "byEstablishedDate": "By established date",
+    "byDonors": "By donors",
+    "byRating": "By rating",
+    "byRelevance": "By relevance",
+    "אלפביתי": "Alphabetical",
+    "לפי מיקום": "By location",
+    "לפי תאריך": "By date",
+    "לפי דירוג": "By rating",
+    "לפי רלוונטיות": "By relevance"
+  },
+  "popularTitle": "Popular searches",
+  "recentTitle": "Recent searches",
+  "quickActions": {
+    "title": "Quick actions",
+    "urgentTasks": "Urgent tasks",
+    "upcomingEvents": "Upcoming events",
+    "newDonations": "New donations",
+    "activeVolunteers": "Active volunteers",
+    "showUrgentTasks": "Showing urgent tasks",
+    "showUpcomingEvents": "Showing upcoming events",
+    "showNewDonations": "Showing new donations",
+    "showActiveVolunteers": "Showing active volunteers"
+  },
+  "searching": "Searching...",
+  "resultsCount": "Found {{count}} results for \"{{query}}\"",
+  "noResultsFound": "No results found",
+  "tryChangingSearchTerms": "Try changing the search terms",
+  "ai": {
+    "fabLabel": "AI",
+    "title": "AI Assistant",
+    "placeholder": "Ask anything: where to find donations, how to publish, or navigating the app.",
+    "assistantReply": "Got it! I'll get back with an answer soon."
+  }
+}

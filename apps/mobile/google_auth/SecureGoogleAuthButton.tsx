@@ -29,6 +29,7 @@ import * as WebBrowser from 'expo-web-browser';
 import GoogleAuthService from './GoogleAuthService';
 import { createOAuthConfig } from './AuthConfiguration';
 import colors from '../globals/colors';
+import { LAYOUT_CONSTANTS } from '../globals/constants';
 import { logger } from '../utils/loggerService';
 
 // Complete the auth session if we are on web
@@ -109,7 +110,8 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
         };
 
         handleResponse();
-    }, [response]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onSuccess/onError are callbacks; parent should wrap in useCallback if needed
+    }, [response, onSuccess, onError]);
 
     const handlePress = async () => {
         if (disabled || isAuthenticating || !request) return;
@@ -152,7 +154,7 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
                         </Text>
                         {showSecurityIndicator && (
                             <View style={styles.securityIndicator}>
-                                <Ionicons name="shield-checkmark" size={12} color={colors.success || '#4CAF50'} />
+                                <Ionicons name="shield-checkmark" size={12} color={colors.success} />
                             </View>
                         )}
                     </>
@@ -164,18 +166,16 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
 
 const styles = StyleSheet.create({
     button: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        backgroundColor: colors.background,
+        borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.MEDIUM,
         paddingVertical: 14,
         paddingHorizontal: 20,
         width: '100%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...LAYOUT_CONSTANTS.SHADOW.LIGHT,
+        shadowColor: colors.shadow,
         elevation: 3,
         borderWidth: 1,
-        borderColor: '#E1E4E8',
+        borderColor: colors.border,
     },
     contentContainer: {
         flexDirection: 'row',
@@ -187,20 +187,20 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     text: {
-        color: '#3C4043',
+        color: colors.textPrimary,
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.5,
     },
     securityIndicator: {
         marginLeft: 10,
-        backgroundColor: '#F1F8F1',
+        backgroundColor: colors.successLight,
         borderRadius: 6,
         padding: 2,
     },
     disabledButton: {
         opacity: 0.7,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: colors.offWhite,
     },
 });
 

@@ -11,20 +11,20 @@ export type NavigationActionType = 'navigate' | 'reset' | 'replace' | 'goBack' |
 export interface NavigateAction {
   type: 'navigate';
   routeName: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   key?: string;
 }
 
 export interface ResetAction {
   type: 'reset';
   index: number;
-  routes: Array<{ name: string; params?: Record<string, any>; key?: string }>;
+  routes: Array<{ name: string; params?: Record<string, unknown>; key?: string }>;
 }
 
 export interface ReplaceAction {
   type: 'replace';
   routeName: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   key?: string;
 }
 
@@ -35,7 +35,7 @@ export interface GoBackAction {
 
 export interface SetParamsAction {
   type: 'setParams';
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   key?: string;
 }
 
@@ -47,7 +47,7 @@ export interface NavigationQueueItem {
   priority: number; // Higher priority = executed first
   timestamp: number;
   resolve: (value: void | PromiseLike<void>) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 }
 
 // Navigation Guard Types

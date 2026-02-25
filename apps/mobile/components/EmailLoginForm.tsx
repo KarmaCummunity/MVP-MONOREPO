@@ -30,8 +30,8 @@ import {
   signUpWithEmail as fbSignUpWithEmail,
   sendVerification as fbSendVerification,
   sendPasswordReset
-} from '../utils/authService';
-import { ServerUser } from '../utils/apiService';
+} from '../src/services/auth.service';
+import { ServerUser } from '../src/api/api.service';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 
@@ -323,7 +323,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
       // Get UUID from server using firebase_uid
-      const { apiService } = await import('../utils/apiService');
+      const { apiService } = await import('../src/api/api.service');
       const resolveResponse = await apiService.resolveUserId({
         firebase_uid: fbUser.uid,
         email: fbUser.email || email
@@ -385,7 +385,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       };
       await saveRecentEmail(email);
       onLoginSuccess(userData);
-    } catch (error: any) {
+    } catch (_error) {
       setFormState(prev => ({
         ...prev,
         statusMessage: t('auth:email.invalidPassword') as string,
@@ -413,7 +413,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
           const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
 
           // Get UUID from server using firebase_uid
-          const { apiService } = await import('../utils/apiService');
+          const { apiService } = await import('../src/api/api.service');
           const resolveResponse = await apiService.resolveUserId({
             firebase_uid: fbUser.uid,
             email: fbUser.email || email
@@ -482,7 +482,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
 
           await saveRecentEmail(email);
           onLoginSuccess(userData);
-        } catch (signinError) {
+        } catch (_signinError) {
           setFormState(prev => ({
             ...prev,
             statusMessage: t('auth:email.invalidPassword') as string,

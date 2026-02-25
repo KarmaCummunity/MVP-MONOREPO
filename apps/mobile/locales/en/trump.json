@@ -1,0 +1,126 @@
+{
+  "sorts": [
+    "Alphabetical",
+    "By location",
+    "By date",
+    "By time",
+    "By rating",
+    "By relevance"
+  ],
+  "sort": {
+    "alphabetical": "Alphabetical",
+    "byLocation": "By location",
+    "byCategory": "By category",
+    "byDate": "By date",
+    "byTime": "By time",
+    "byPrice": "By price",
+    "byRating": "By rating",
+    "byRelevance": "By relevance"
+  },
+  "status": {
+    "published": "Published",
+    "completed": "Completed"
+  },
+  "rideOf": "Ride by {{name}}",
+  "from": "From",
+  "to": "To",
+  "date": "Date",
+  "time": "Time",
+  "price": "Price",
+  "seatsAvailable": "Seats available",
+  "joinQuestion": "Would you like to join this ride?",
+  "joinRide": "Join ride",
+  "requestSentTitle": "Request sent",
+  "requestSentBody": "Request to join {{name}}'s ride was sent successfully!",
+  "currentLocation": "Current location",
+  "near": "Near",
+  "filters": {
+    "noCostSharing": "No cost sharing",
+    "noSmoking": "No smoking",
+    "withPets": "With pets",
+    "withKids": "With kids",
+    "includePast": "Include past rides"
+  },
+  "category": {
+    "other": "Other"
+  },
+  "success": {
+    "title": "Success",
+    "ridePublished": "Ride published successfully!"
+  },
+  "errors": {
+    "fillDestination": "Please enter a destination",
+    "fillFromOrCurrent": "Please set 'From' or choose current location",
+    "saveFailed": "Failed to save ride",
+    "noGroupLink": "Group link not available",
+    "locationNotResolved": "Please wait for location detection or enter address manually",
+    "locationPermissionDenied": "Location permission denied",
+    "locationFetchFailed": "Failed to fetch location"
+  },
+  "ui": {
+    "timePickerPlaceholder": "Departure time",
+    "immediateDeparture": "Immediate departure",
+    "useCurrentLocation": "Use current location",
+    "fromLocationLabel": "Departure point",
+    "fromPointLabel": "From",
+    "fromPlaceholder": "Enter starting point",
+    "enterDepartureAddress": "Enter departure address",
+    "leavingToday": "Leaving today",
+    "selectDate": "Select date",
+    "seatsLabel": "Seats",
+    "fuelContributionLabel": "Fuel contribution",
+    "publishRide": "Publish ride",
+    "recurringRide": "Recurring ride",
+    "recurrenceConfigLabel": "Recurrence settings",
+    "recurrenceFrequencyLabel": "Frequency",
+    "recurrenceUnitLabel": "Unit",
+    "recurrenceDay": "day",
+    "recurrenceWeek": "week",
+    "recurrenceMonth": "month",
+    "recurrenceDays": "days",
+    "recurrenceWeeks": "weeks",
+    "recurrenceMonths": "months",
+    "recurrencePreview": "Ride will repeat every {{frequency}} {{unit}}",
+    "yourHistoryTitle": "Your recent rides",
+    "yourRecentRides": "Your recent rides",
+    "ridesAvailableTitle": "Available rides",
+    "ridesRecommendedTitle": "Recommended rides",
+    "groupsTitle": "Groups",
+    "whatsappGroups": "WhatsApp groups",
+    "noRecentRides": "No recent rides",
+    "searchResultsPrefix": "Search results for",
+    "availableRides": "Available rides",
+    "noRidesFoundTitle": "No rides found",
+    "noRidesFoundBody": "Try changing your search criteria",
+    "searchPlaceholder": {
+      "offer": "Where to? Destination...",
+      "seek": "Find a ride: destination..."
+    }
+  },
+  "menu": {
+    "history": "History",
+    "settings": "Settings",
+    "help": "Help",
+    "contact": "Contact",
+    "title": "Menu",
+    "selected": "Selected: {{option}}"
+  },
+  "alerts": {
+    "rideSelectedTitle": "Ride selected",
+    "rideSelectedBody": "You selected {{name}}'s ride",
+    "restoreDoneTitle": "Restored",
+    "restoreDoneBody": "From {{from}} to {{to}} restored to the form",
+    "deleteRideTitle": "Delete ride",
+    "deleteRideBody": "Are you sure you want to delete this ride?"
+  },
+  "restore": "Restore",
+  "groups": {
+    "whatsapp": "WhatsApp groups",
+    "facebook": "Facebook groups"
+  },
+  "stats": {
+    "availableRides": "Available rides",
+    "noCost": "No cost",
+    "groupMembers": "Group members"
+  }
+}

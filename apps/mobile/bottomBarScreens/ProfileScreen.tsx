@@ -36,10 +36,10 @@ import ProfileCompletionBanner from '../components/ProfileCompletionBanner';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import { createShadowStyle } from '../globals/styles';
 import { scaleSize } from '../globals/responsive';
-import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUpdatedFollowCounts } from '../utils/followService';
-import { createSampleChatData, createConversation, conversationExists } from '../utils/chatService';
+import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUpdatedFollowCounts } from '../src/services/follow.service';
+import { createSampleChatData, createConversation, conversationExists } from '../src/services/chat.service';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { UserPreview as CharacterType } from '../globals/types';
 import { useToast } from '../utils/toastService';
@@ -47,7 +47,8 @@ import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
-import { sanitiseAvatarUrl } from '../utils/urlValidator';
+import { sanitiseAvatarUrl } from '../src/utils/validation/url-validator';
+import { logger } from '../utils/loggerService';
 
 // --- Type Definitions ---
 type TabRoute = {
@@ -128,7 +129,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { db } = require('../utils/databaseService');
+  const { db } = require('../src/infrastructure/database.service');
 
   // Post menu hook
   const {
@@ -163,7 +164,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
 
       try {
         setLoading(true);
-        console.log('📱 OpenRoute - Loading open content for userId:', targetUserId);
+        logger.debug('ProfileScreen', 'OpenRoute - Loading open content', { targetUserId });
 
         const { USE_BACKEND, API_BASE_URL } = await import('../utils/dbConfig');
         const allContent: any[] = [];
@@ -264,10 +265,10 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
                 });
               }
             });
-            console.log('📱 OpenRoute - Loaded posts from API:', res.data.length);
+            logger.debug('ProfileScreen', 'OpenRoute - Loaded posts from API', { count: res.data.length });
           }
         } catch (error) {
-          console.error('Error loading posts from API:', error);
+          logger.error('ProfileScreen', 'Error loading posts from API', { error });
         }
 
         // Load items from API (available, reserved)
@@ -290,7 +291,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
               userItems.push(...reservedResponse.data.data);
             }
           } catch (error) {
-            console.error('Error loading items from API:', error);
+            logger.error('ProfileScreen', 'Error loading items from API', { error });
           }
         } else {
           try {
@@ -299,7 +300,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
               item.status === 'available' || item.status === 'reserved'
             );
           } catch (error) {
-            console.error('Error loading items from local DB:', error);
+            logger.error('ProfileScreen', 'Error loading items from local DB', { error });
           }
         }
 
@@ -345,7 +346,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
         // Load rides (active, full)
         try {
           const allRides = await enhancedDB.getRides({});
-          console.log('[ProfileScreen OpenRoute] Fetched rides:', allRides.length);
+          logger.debug('ProfileScreen', 'Fetched rides', { count: allRides.length });
 
           const userRides = allRides.filter((ride: any) => {
             const driverId = ride.driver_id || ride.createdBy || ride.created_by || ride.driverId;
@@ -353,13 +354,13 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
             const isUserRide = driverId === targetUserId && (status === 'active' || status === 'full');
 
             if (isUserRide) {
-              console.log('[ProfileScreen OpenRoute] Found user ride:', ride.id, 'driver:', driverId);
+              logger.debug('ProfileScreen', 'Found user ride', { rideId: ride.id, driverId });
             }
 
             return isUserRide;
           });
 
-          console.log('[ProfileScreen OpenRoute] User rides count:', userRides.length);
+          logger.debug('ProfileScreen', 'User rides count', { count: userRides.length });
 
           userRides.forEach((ride: any) => {
             if (existingRideIds.has(ride.id)) return;
@@ -408,7 +409,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
             });
           });
         } catch (error) {
-          console.error('[ProfileScreen OpenRoute] Error loading rides:', error);
+          logger.error('ProfileScreen', 'Error loading rides', { error });
         }
 
         // Load tasks (open, in_progress) - avoid duplicates with task posts
@@ -430,7 +431,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
           tasks.forEach((task: any) => {
             // Skip if already added via task posts
             if (existingTaskIds.has(task.id)) {
-              console.log(`📱 OpenRoute - Skipping duplicate task: ${task.id}`);
+              logger.debug('ProfileScreen', 'Skipping duplicate task', { taskId: task.id });
               return;
             }
 
@@ -461,7 +462,7 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
             });
           });
         } catch (error) {
-          console.error('Error loading tasks:', error);
+          logger.error('ProfileScreen', 'Error loading tasks', { error });
         }
 
         // Load donations (active)
@@ -493,13 +494,13 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
             });
           }
         } catch (error) {
-          console.error('Error loading donations:', error);
+          logger.error('ProfileScreen', 'Error loading donations', { error });
         }
 
-        console.log('📱 OpenRoute - Total open content:', allContent.length);
+        logger.debug('ProfileScreen', 'Total open content', { count: allContent.length });
         setPosts(allContent);
       } catch (error) {
-        console.error('Error loading open content:', error);
+        logger.error('ProfileScreen', 'Error loading open content', { error });
         setPosts([]);
       } finally {
         setLoading(false);
@@ -576,7 +577,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { db } = require('../utils/databaseService');
+  const { db } = require('../src/infrastructure/database.service');
 
   // Post menu hook
   const {
@@ -611,7 +612,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
 
       try {
         setLoading(true);
-        console.log('📱 ClosedRoute - Loading closed content for userId:', targetUserId);
+        logger.debug('ProfileScreen', 'ClosedRoute - Loading closed content', { targetUserId });
 
         const { USE_BACKEND, API_BASE_URL } = await import('../utils/dbConfig');
         const allContent: any[] = [];
@@ -712,10 +713,10 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
                 });
               }
             });
-            console.log('📱 ClosedRoute - Loaded posts from API:', res.data.length);
+            logger.debug('ProfileScreen', 'ClosedRoute - Loaded posts from API', { count: res.data.length });
           }
         } catch (error) {
-          console.error('Error loading posts from API:', error);
+          logger.error('ProfileScreen', 'Error loading posts from API', { error });
         }
 
         // Load items from API (delivered, completed)
@@ -738,7 +739,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
               userItems.push(...completedResponse.data.data);
             }
           } catch (error) {
-            console.error('Error loading items from API:', error);
+            logger.error('ProfileScreen', 'Error loading items from API', { error });
           }
         } else {
           try {
@@ -747,7 +748,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
               item.status === 'delivered' || item.status === 'completed'
             );
           } catch (error) {
-            console.error('Error loading items from local DB:', error);
+            logger.error('ProfileScreen', 'Error loading items from local DB', { error });
           }
         }
 
@@ -845,7 +846,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
             });
           });
         } catch (error) {
-          console.error('Error loading rides:', error);
+          logger.error('ProfileScreen', 'Error loading rides', { error });
         }
 
         // Load tasks (done, archived) - avoid duplicates with task posts
@@ -867,7 +868,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
           tasks.forEach((task: any) => {
             // Skip if already added via task posts
             if (existingTaskIds.has(task.id)) {
-              console.log(`📱 ClosedRoute - Skipping duplicate task: ${task.id}`);
+              logger.debug('ProfileScreen', 'ClosedRoute - Skipping duplicate task', { taskId: task.id });
               return;
             }
 
@@ -898,7 +899,7 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
             });
           });
         } catch (error) {
-          console.error('Error loading tasks:', error);
+          logger.error('ProfileScreen', 'Error loading tasks', { error });
         }
 
         // Load donations (completed)
@@ -930,13 +931,13 @@ const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?:
             });
           }
         } catch (error) {
-          console.error('Error loading donations:', error);
+          logger.error('ProfileScreen', 'Error loading donations', { error });
         }
 
-        console.log('📱 ClosedRoute - Total closed content:', allContent.length);
+        logger.debug('ProfileScreen', 'Total closed content', { count: allContent.length });
         setPosts(allContent);
       } catch (error) {
-        console.error('Error loading closed content:', error);
+        logger.error('ProfileScreen', 'Error loading closed content', { error });
         setPosts([]);
       } finally {
         setLoading(false);
@@ -1055,10 +1056,10 @@ function ProfileScreenContent({
         if (stored) {
           const parsedParams = JSON.parse(stored);
           routeParams = parsedParams;
-          console.log('👤 ProfileScreen - Restored params from localStorage:', parsedParams);
+          logger.debug('ProfileScreen', 'Restored params from localStorage', { parsedParams });
         }
       } catch (error) {
-        console.warn('Failed to restore params from localStorage:', error);
+        logger.warn('ProfileScreen', 'Failed to restore params from localStorage', { error });
       }
     } else if (routeParams?.userId) {
       // Save params to localStorage when viewing other user's profile
@@ -1069,7 +1070,7 @@ function ProfileScreenContent({
           // Don't save characterData as it might be large
         }));
       } catch (error) {
-        console.warn('Failed to save params to localStorage:', error);
+        logger.warn('ProfileScreen', 'Failed to save params to localStorage', { error });
       }
     }
   }
@@ -1095,7 +1096,7 @@ function ProfileScreenContent({
   const targetUserId = externalUserId || selectedUser?.id;
 
   // Debug log to help identify the issue
-  console.log('👤 ProfileScreenContent - Profile check:', {
+  logger.debug('ProfileScreen', 'Profile check', {
     externalUserId,
     normalizedExternalUserId,
     selectedUserId: selectedUser?.id,
@@ -1194,11 +1195,11 @@ function ProfileScreenContent({
               }
             }
           } else {
-            console.warn('User not found:', externalUserId);
+            logger.warn('ProfileScreen', 'User not found', { externalUserId });
             setViewingUser(null);
           }
         } catch (err) {
-          console.error('❌ Load user error:', err);
+          logger.error('ProfileScreen', 'Load user error', { error: err });
           if (externalUserName && externalUserName !== 'משתמש לא ידוע') {
             setViewingUser({
               id: externalUserId,
@@ -1249,14 +1250,14 @@ function ProfileScreenContent({
       if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) return;
 
       try {
-        console.log('👤 ProfileScreen - Loading follow stats for user:', viewingUser.name);
+        logger.debug('ProfileScreen', 'Loading follow stats for user', { userName: viewingUser.name });
         const stats = await getFollowStats(viewingUser.id, selectedUser.id);
         const counts = await getUpdatedFollowCounts(viewingUser.id);
         setFollowStats(stats);
         setUpdatedCounts(counts);
         setIsFollowing(stats.isFollowing);
       } catch (error) {
-        console.error('❌ Load follow stats error:', error);
+        logger.error('ProfileScreen', 'Load follow stats error', { error });
       }
     };
 
@@ -1268,7 +1269,7 @@ function ProfileScreenContent({
     try {
       const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
       if (!userIdToUse) {
-        console.warn('⚠️ No user ID, skipping stats update');
+        logger.warn('ProfileScreen', 'No user ID, skipping stats update');
         return;
       }
 
@@ -1284,7 +1285,7 @@ function ProfileScreenContent({
         totalDonations: (userToUse as any)?.totalDonations || 0,
       });
     } catch (error) {
-      console.error('❌ Update user stats error:', error);
+      logger.error('ProfileScreen', 'Update user stats error', { error });
     }
   }, [isOwnProfile, selectedUser, viewingUser]);
 
@@ -1306,7 +1307,7 @@ function ProfileScreenContent({
 
       // Load posts
       try {
-        const { db } = require('../utils/databaseService');
+        const { db } = require('../src/infrastructure/database.service');
         const userPosts = await db.getUserPosts(userId) || [];
         userPosts.forEach((post: any) => {
           activities.push({
@@ -1320,7 +1321,7 @@ function ProfileScreenContent({
           });
         });
       } catch (error) {
-        console.error('Error loading posts:', error);
+        logger.error('ProfileScreen', 'Error loading posts', { error });
       }
 
       // Load items/donations
@@ -1341,10 +1342,10 @@ function ProfileScreenContent({
               userItems = response.data.data;
             }
           } catch (error) {
-            console.error('Error loading items from API:', error);
+            logger.error('ProfileScreen', 'Error loading items from API', { error });
           }
         } else {
-          const { db } = require('../utils/databaseService');
+          const { db } = require('../src/infrastructure/database.service');
           userItems = await db.getDedicatedItemsByOwner(userId) || [];
         }
 
@@ -1360,7 +1361,7 @@ function ProfileScreenContent({
           });
         });
       } catch (error) {
-        console.error('Error loading items:', error);
+        logger.error('ProfileScreen', 'Error loading items', { error });
       }
 
       // Load donations - filter by createdBy after loading
@@ -1391,7 +1392,7 @@ function ProfileScreenContent({
           });
         });
       } catch (error) {
-        console.error('Error loading donations:', error);
+        logger.error('ProfileScreen', 'Error loading donations', { error });
       }
 
       // Load rides using the correct API endpoint
@@ -1413,7 +1414,7 @@ function ProfileScreenContent({
           });
         }
       } catch (error) {
-        console.error('Error loading rides:', error);
+        logger.error('ProfileScreen', 'Error loading rides', { error });
       }
 
       // Load task posts (both assignment and completion) with proper icons
@@ -1446,7 +1447,7 @@ function ProfileScreenContent({
           });
         }
       } catch (error) {
-        console.error('Error loading task posts:', error);
+        logger.error('ProfileScreen', 'Error loading task posts', { error });
       }
 
       // Load tasks (all statuses) - for tasks without posts (legacy)
@@ -1478,7 +1479,7 @@ function ProfileScreenContent({
           });
         }
       } catch (error) {
-        console.error('Error loading tasks:', error);
+        logger.error('ProfileScreen', 'Error loading tasks', { error });
       }
 
       // Sort by time (newest first) and limit to 10
@@ -1518,7 +1519,7 @@ function ProfileScreenContent({
 
       setRecentActivities(formattedActivities);
     } catch (error) {
-      console.error('❌ Load recent activities error:', error);
+      logger.error('ProfileScreen', 'Load recent activities error', { error });
       setRecentActivities([]);
     }
   }, [isOwnProfile, selectedUser]);
@@ -1566,7 +1567,7 @@ function ProfileScreenContent({
   useFocusEffect(
     React.useCallback(() => {
       const refreshStats = async () => {
-        console.log('👤 ProfileScreen - Screen focused, refreshing stats...', { isOwnProfile, targetUserId });
+        logger.debug('ProfileScreen', 'Screen focused, refreshing stats', { isOwnProfile, targetUserId });
         await updateUserStats();
         if (isOwnProfile) {
           await loadRecentActivities();
@@ -1579,7 +1580,7 @@ function ProfileScreenContent({
             setUpdatedCounts(counts);
             setIsFollowing(stats.isFollowing);
           } catch (error) {
-            console.error('❌ Refresh follow stats error:', error);
+            logger.error('ProfileScreen', 'Refresh follow stats error', { error });
           }
         }
 
@@ -1702,7 +1703,7 @@ function ProfileScreenContent({
             style={[styles.webScrollContent, { paddingBottom: tabBarHeight + scaleSize(24) }]}
             onLayout={(e) => {
               const h = e.nativeEvent.layout.height;
-              console.log('🧭 ProfileScreen[WEB] content layout height:', h, 'window:', SCREEN_HEIGHT);
+              logger.debug('ProfileScreen', 'Content layout height', { height: h, windowHeight: SCREEN_HEIGHT });
             }}
           >
             {/* Header for other user's profile */}
@@ -2040,7 +2041,7 @@ function ProfileScreenContent({
                               }
                             }
                           } catch (error) {
-                            console.error('❌ Follow/Unfollow error:', error);
+                            logger.error('ProfileScreen', 'Follow/Unfollow error', { error });
                             Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
                           }
                         }}
@@ -2066,10 +2067,10 @@ function ProfileScreenContent({
                             let conversationId: string;
 
                             if (existingConvId) {
-                              console.log('💬 Conversation already exists:', existingConvId);
+                              logger.debug('ProfileScreen', 'Conversation already exists', { existingConvId });
                               conversationId = existingConvId;
                             } else {
-                              console.log('💬 Creating new conversation...');
+                              logger.debug('ProfileScreen', 'Creating new conversation');
                               conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                             }
 
@@ -2080,7 +2081,7 @@ function ProfileScreenContent({
                               userAvatar: displayUser.avatar || 'https://i.pravatar.cc/150?img=1',
                             });
                           } catch (error) {
-                            console.error('❌ Create chat error:', error);
+                            logger.error('ProfileScreen', 'Create chat error', { error });
                             Alert.alert('שגיאה', 'שגיאה ביצירת השיחה');
                           }
                         }}
@@ -2121,7 +2122,7 @@ function ProfileScreenContent({
                                           userAvatar: displayUser.avatar,
                                           initialMessage: 'אשמח לעזור במה שצריך' // Pass this if ChatDetail supports it, or handle locally
                                         });
-                                      } catch (e) { console.error(e); }
+                                      } catch (e) { logger.error('ProfileScreen', 'Manage hierarchy error', { error: e }); }
                                     }
                                   }
                                 ]);
@@ -2138,40 +2139,39 @@ function ProfileScreenContent({
                           <TouchableOpacity
                             style={[
                               styles.messageButton,
-                              isSubordinate ? { backgroundColor: '#ff444410', borderColor: '#ff4444' } : { backgroundColor: colors.secondary + '10', borderColor: colors.secondary }
+                              isSubordinate ? { backgroundColor: colors.error + '10', borderColor: colors.error } : { backgroundColor: colors.secondary + '10', borderColor: colors.secondary }
                             ]}
                             onPress={() => {
                               const action = isSubordinate ? 'remove' : 'add';
-                              const title = isSubordinate ? 'הסר מנהל' : 'הפוך למנהל בצוות';
+                              const title = isSubordinate ? t('profile:hierarchy.removeManager') : t('profile:hierarchy.makeManager');
                               const msg = isSubordinate
-                                ? 'האם אתה בטוח שברצונך להסיר משתמש זה מניהול תחתיך? המשימות יועברו אליך.'
-                                : 'האם אתה בטוח שברצונך להפוך משתמש זה למנהל תחתיך?';
+                                ? t('profile:hierarchy.removeManagerConfirm')
+                                : t('profile:hierarchy.makeManagerConfirm');
 
                               Alert.alert(title, msg, [
-                                { text: 'ביטול', style: 'cancel' },
+                                { text: t('common:cancel'), style: 'cancel' },
                                 {
-                                  text: 'אישור', style: isSubordinate ? 'destructive' : 'default', onPress: async () => {
+                                  text: t('common:confirm'), style: isSubordinate ? 'destructive' : 'default', onPress: async () => {
                                     try {
                                       const res = await apiService.manageHierarchy(displayUser.id!, action, selectedUser.id);
                                       if (res.success) {
-                                        Alert.alert('הצלחה', res.message);
-                                        // Update local state to reflect change immediately
+                                        Alert.alert(t('profile:hierarchy.success'), res.message);
                                         setViewingUser(prev => prev ? ({ ...prev, parentManagerId: action === 'add' ? selectedUser.id : null }) : null);
                                       } else {
-                                        Alert.alert('שגיאה', res.error || 'פעולה נכשלה');
+                                        Alert.alert(t('common:error'), res.error || t('profile:hierarchy.actionFailed'));
                                       }
                                     } catch (err) {
-                                      console.error(err);
-                                      Alert.alert('שגיאה', 'שגיאה בתקשורת');
+                                      logger.error('ProfileScreen', 'Manage hierarchy error', { error: err });
+                                      Alert.alert(t('common:error'), t('profile:hierarchy.communicationError'));
                                     }
                                   }
                                 }
                               ]);
                             }}
                           >
-                            <Ionicons name={isSubordinate ? "person-remove-outline" : "person-add-outline"} size={20} color={isSubordinate ? '#ff4444' : colors.secondary} />
-                            <Text style={[styles.messageButtonText, { color: isSubordinate ? '#ff4444' : colors.secondary }]}>
-                              {isSubordinate ? 'הסר מנהל' : 'הפוך למנהל'}
+                            <Ionicons name={isSubordinate ? "person-remove-outline" : "person-add-outline"} size={20} color={isSubordinate ? colors.error : colors.secondary} />
+                            <Text style={[styles.messageButtonText, { color: isSubordinate ? colors.error : colors.secondary }]}>
+                              {isSubordinate ? t('profile:hierarchy.removeManager') : t('profile:hierarchy.makeManager')}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -2620,7 +2620,7 @@ function ProfileScreenContent({
                             }
                           }
                         } catch (error) {
-                          console.error('❌ Follow/Unfollow error:', error);
+                          logger.error('ProfileScreen', 'Follow/Unfollow error', { error });
                           Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
                         }
                       }}
@@ -2646,10 +2646,10 @@ function ProfileScreenContent({
                           let conversationId: string;
 
                           if (existingConvId) {
-                            console.log('💬 Conversation already exists:', existingConvId);
+                            logger.debug('ProfileScreen', 'Conversation already exists', { existingConvId });
                             conversationId = existingConvId;
                           } else {
-                            console.log('💬 Creating new conversation...');
+                            logger.debug('ProfileScreen', 'Creating new conversation');
                             conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                           }
 
@@ -2660,7 +2660,7 @@ function ProfileScreenContent({
                             userAvatar: displayUser.avatar || 'https://i.pravatar.cc/150?img=1',
                           });
                         } catch (error) {
-                          console.error('❌ Create chat error:', error);
+                          logger.error('ProfileScreen', 'Create chat error', { error });
                           Alert.alert('שגיאה', 'שגיאה ביצירת השיחה');
                         }
                       }}
@@ -2801,10 +2801,10 @@ export default function ProfileScreen(props: any) {
       if (stored) {
         const parsedParams = JSON.parse(stored);
         routeParams = parsedParams;
-        console.log('👤 ProfileScreen - Restored params from localStorage:', parsedParams);
+        logger.debug('ProfileScreen', 'Restored params from localStorage', { parsedParams });
       }
     } catch (error) {
-      console.warn('Failed to restore params from localStorage:', error);
+      logger.warn('ProfileScreen', 'Failed to restore params from localStorage', { error });
     }
   }
 
@@ -2836,7 +2836,7 @@ export default function ProfileScreen(props: any) {
       normalizedExternalUserId !== normalizedSelectedUserId);
 
   // Debug log to help identify the issue
-  console.log('👤 ProfileScreen - Route check:', {
+  logger.debug('ProfileScreen', 'Route check', {
     externalUserId,
     propUserId,
     normalizedExternalUserId,
@@ -2860,7 +2860,7 @@ export default function ProfileScreen(props: any) {
   if (isViewingOtherUser) {
     // Viewing another user's profile - not in bottom tab navigator
     // Use ProfileScreenContent directly with tabBarHeight = 0 (no hook call)
-    console.log('👤 ProfileScreen - Using ProfileScreenContent (other user)');
+    logger.debug('ProfileScreen', 'Using ProfileScreenContent (other user)');
     // Pass the params via route override or similar mechanism if ProfileScreenContent relies on useRoute
     // Actually ProfileScreenContent calls useRoute(). We should probably pass props to it.
     // Let's modify ProfileScreenContent to accept overrides.
@@ -2869,7 +2869,7 @@ export default function ProfileScreen(props: any) {
 
   // Viewing own profile (either no externalUserId, or externalUserId === selectedUser.id)
   // In bottom tab navigator, can use the hook
-  console.log('👤 ProfileScreen - Using ProfileScreenWithTabBar (own profile)');
+  logger.debug('ProfileScreen', 'Using ProfileScreenWithTabBar (own profile)');
   return <ProfileScreenWithTabBar />;
 }
 
@@ -3184,7 +3184,7 @@ const styles = StyleSheet.create({
   postStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.overlayDark,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -3280,7 +3280,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: colors.overlayLight,
     zIndex: 1000,
   },
   menuOverlay: {

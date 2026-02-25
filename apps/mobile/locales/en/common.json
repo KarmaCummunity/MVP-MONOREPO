@@ -1,0 +1,125 @@
+{
+  "search": "Search",
+  "confirm": "OK",
+  "notifications": "Notifications",
+  "notificationsList": "Notifications list",
+  "cancel": "Cancel",
+  "done": "Done",
+  "edit": "Edit",
+  "delete": "Delete",
+  "loading": "Loading...",
+  "notFound": {
+    "title": "Oops! Not found",
+    "header": "Page not found",
+    "description": "The page you are looking for does not exist",
+    "backHome": "Back to home"
+  },
+  "error": "Error",
+  "errorTitle": "Error",
+  "success": "Success",
+  "reportSent": "Report sent successfully",
+  "reportFailed": "Failed to send report",
+  "time": {
+    "now": "Now",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago"
+  },
+  "offerer": "Offerer",
+  "seeker": "Seeker",
+  "close": "Close",
+  "guestLoginHint": "You're in guest mode, please log in",
+  "unknownUser": "User",
+  "languageSwitch": "Switch language (עברית/English)",
+  "languages": {
+    "he": "עברית",
+    "en": "English"
+  },
+  "back": "Back",
+  "web": "Web page",
+  "report": "Report",
+  "options": "Options",
+  "reopen": "Reopen",
+  "hide": "Hide",
+  "cannotOpenLink": "Cannot open the link",
+  "edit_coming_soon": "Edit functionality coming soon",
+  "hide_coming_soon": "Hide functionality coming soon",
+  "reopen_coming_soon": "Reopen functionality coming soon",
+  "welcomeShort": "Welcome!",
+  "appName": "Karma Community",
+  "freeAppNotice": "The app is completely free and non-profit",
+  "genericTryAgain": "An error occurred. Please try again.",
+  "labels": {
+    "countryIsrael": "Israel"
+  },
+  "accessibility": {
+    "aboutButton": "About",
+    "aboutButtonHint": "Open About Karma Community screen"
+  },
+  "devBanner": {
+    "dataIsolated": "Data isolated from production",
+    "tapForInfo": "Tap for info"
+  },
+  "newChat": "New Chat",
+  "chat": "Chat",
+  "favorites": "Favorites",
+  "posts": "Posts",
+  "inactive": "Inactive",
+  "feed": {
+    "tabs": {
+      "friends": "Friends",
+      "discovery": "Discovery"
+    },
+    "empty_title": "No posts yet",
+    "empty_friends": "Add friends to see posts!",
+    "empty_discovery": "Be the first to post!"
+  },
+  "rides": {
+    "offered": "Ride",
+    "completed": "Ride Completed",
+    "from": "From",
+    "to": "To",
+    "origin": "Origin",
+    "destination": "Destination",
+    "seats": "Seats",
+    "free": "Free",
+    "fuelShare": "Participation",
+    "noCharge": "No Charge",
+    "departure": "Departure",
+    "thanks_message": "Thanks for taking part!"
+  },
+  "items": {
+    "title": "Item",
+    "available": "Item Available",
+    "delivered": "Item Delivered"
+  },
+  "post": {
+    "noTitle": "Post without title",
+    "closedSuccess": "Post closed successfully",
+    "closeError": "Error closing post",
+    "hideSuccess": "Post hidden successfully",
+    "hideError": "Error hiding post",
+    "itemForDelivery": "{{title}} for delivery",
+    "itemForDeliveryWithDesc": "{{title}} for delivery - {{description}}"
+  },
+  "edit_post": {
+    "title": "Edit Post",
+    "post_title": "Title",
+    "title_placeholder": "Enter post title",
+    "title_required": "Title is required",
+    "description": "Description",
+    "description_placeholder": "Add detailed description",
+    "image": "Image",
+    "add_image": "Add Image",
+    "change_image": "Change Image",
+    "remove_image_title": "Remove Image",
+    "remove_image_message": "Are you sure you want to remove the image?",
+    "image_permission_required": "Gallery access permission required",
+    "image_error": "Error loading image",
+    "save_success": "Post updated successfully",
+    "save_error": "Error saving post",
+    "unsaved_changes_title": "Unsaved Changes",
+    "unsaved_changes_message": "Are you sure you want to close without saving?",
+    "discard": "Discard"
+  }
+}

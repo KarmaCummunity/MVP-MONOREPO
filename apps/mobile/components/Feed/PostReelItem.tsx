@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    StyleSheet,
     Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -71,7 +70,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (onCommentPress) onCommentPress(item);
     }, [onCommentPress, item]);
 
-    const handleMorePressInternal = useCallback((itemOrMeasure?: any, measure?: any) => {
+    const handleMorePressInternal = useCallback((itemOrMeasure?: any, _measure?: any) => {
         // Handle both (item) and (item, measure) signatures if cards call differently
         // But since we control call sites, we expect cards to call onMorePress(item, measure)?
         // Wait, BaseCardProps says onMorePress: (measure) => void.
@@ -163,7 +162,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (!selectedUser || !isPostOwner) return;
 
         try {
-            const { apiService } = await import('../../utils/apiService');
+            const { apiService } = await import('../../src/api/api.service');
             const { toastService } = await import('../../utils/toastService');
 
             let updateResult: any = { success: false };
@@ -273,7 +272,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
             if (diff < 60 * 60 * 1000) return `לפני ${Math.floor(diff / (60 * 1000))} דקות`;
             if (diff < 24 * 60 * 60 * 1000) return `לפני ${Math.floor(diff / (60 * 60 * 1000))} שעות`;
             return date.toLocaleDateString('he-IL');
-        } catch (e) {
+        } catch (_e) {
             return 'עכשיו';
         }
     }, [item.timestamp]);
@@ -409,7 +408,5 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         </>
     );
 };
-
-const styles = StyleSheet.create({});
 
 export default React.memo(PostReelItem);

@@ -1,0 +1,14 @@
+{
+  "title": "Send quick message",
+  "to": "To",
+  "placeholder": "Type a message...",
+  "send": "Send",
+  "ride": "Is this ride still relevant?",
+  "item": "Is this item still relevant?",
+  "success": "Message sent successfully",
+  "error": "Error sending message",
+  "sendButton": "Send quick message",
+  "cannotMessageSelf": "Cannot send message to yourself",
+  "task": "Is this task still relevant?",
+  "default": "Is this still relevant?"
+}

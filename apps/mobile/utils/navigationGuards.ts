@@ -228,7 +228,7 @@ export const checkNavigationGuards = async (
 ): Promise<GuardResult> => {
   logger.debug(LOG_SOURCE, 'Checking navigation guards', {
     actionType: action.type,
-    routeName: (action as any).routeName,
+    routeName: (action as { routeName?: string }).routeName,
     context: {
       isAuthenticated: context.isAuthenticated,
       isGuestMode: context.isGuestMode,

@@ -1,0 +1,12 @@
+{
+  "title": "פריט",
+  "forSale": "למכירה",
+  "imageTooLarge": "התמונה שבחרת גדולה מאוד. מומלץ להשתמש בתמונה קטנה יותר.",
+  "continueAnyway": "המשך בכל זאת",
+  "convertImageError": "לא הצלחנו להמיר את התמונה",
+  "loadItemsError": "לא הצלחנו לטעון את הפריטים",
+  "saveSuccessTitle": "נשמר בהצלחה!",
+  "saveSuccessBody": "הפריט \"{{title}}\" נשמר במערכת",
+  "saveErrorBody": "לא הצלחנו לשמור את הפריט: {{errorMessage}}",
+  "unknownError": "שגיאה לא ידועה"
+}

@@ -17,7 +17,7 @@ import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } fr
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +28,7 @@ import {
   DonationsStackParamList,
 } from '../globals/types';
 import CommentsModal from '../components/CommentsModal';
+import { logger } from '../utils/loggerService';
 
 type ChallengeDetailsScreenRouteProp = RouteProp<DonationsStackParamList, 'ChallengeDetailsScreen'>;
 
@@ -37,7 +38,7 @@ interface ChallengeDetailsScreenProps {
 
 export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsScreenProps) {
   const route = useRoute<ChallengeDetailsScreenRouteProp>();
-  const { challengeId = '', openEntryForm } = route.params || {};
+  const { challengeId = '', openEntryForm: _openEntryForm } = route.params || {};
   const { selectedUser: user } = useUser();
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
@@ -45,7 +46,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [loading, setLoading] = useState(true);
   const [challenge, setChallenge] = useState<CommunityChallenge | null>(null);
   const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
-  const [userParticipation, setUserParticipation] = useState<ChallengeParticipant | null>(null);
+  const [_userParticipation, setUserParticipation] = useState<ChallengeParticipant | null>(null);
   const [recentEntries, setRecentEntries] = useState<ChallengeEntry[]>([]);
   const [isJoined, setIsJoined] = useState(false);
 
@@ -59,13 +60,19 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [challengePostId, setChallengePostId] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadChallengeDetails();
-    }, [challengeId])
-  );
+  const loadUserEntries = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await db.getChallengeEntries(challengeId, user.id, 10, 0);
+      if (response.success && response.data) {
+        setRecentEntries(response.data);
+      }
+    } catch (error) {
+      logger.error('ChallengeDetailsScreen', 'Error loading entries', { error });
+    }
+  }, [challengeId, user?.id]);
 
-  const loadChallengeDetails = async () => {
+  const loadChallengeDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await db.getChallengeDetails(challengeId);
@@ -75,11 +82,10 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         setParticipants(response.data.participants || []);
 
         // Get the post_id for comments (challenges auto-create posts)
-        console.log('📝 Challenge post_id:', response.data.post_id);
         if (response.data.post_id) {
           setChallengePostId(response.data.post_id);
         } else {
-          console.warn('⚠️ Challenge has no post_id - comments will not be available');
+          logger.warn('ChallengeDetailsScreen', 'Challenge has no post_id - comments will not be available');
         }
 
         // Check if user is participating
@@ -97,24 +103,18 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         }
       }
     } catch (error) {
-      console.error('Error loading challenge details:', error);
+      logger.error('ChallengeDetailsScreen', 'Error loading challenge details', { error });
       showToast(t('challenges:messages.errorLoading'), 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [challengeId, user?.id, t, showToast, loadUserEntries]);
 
-  const loadUserEntries = async () => {
-    if (!user?.id) return;
-    try {
-      const response = await db.getChallengeEntries(challengeId, user.id, 10, 0);
-      if (response.success && response.data) {
-        setRecentEntries(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading entries:', error);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadChallengeDetails();
+    }, [loadChallengeDetails])
+  );
 
   const handleJoinChallenge = async () => {
     if (!user?.id) {
@@ -130,9 +130,9 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         showToast(t('challenges:challengeJoined'), 'success');
         await loadChallengeDetails();
       }
-    } catch (error: any) {
-      console.error('Error joining challenge:', error);
-      if (error.message?.includes('Already joined')) {
+    } catch (error: unknown) {
+      logger.error('ChallengeDetailsScreen', 'Error joining challenge', { error });
+      if (error instanceof Error && error.message?.includes('Already joined')) {
         showToast(t('challenges:alreadyJoined'), 'info');
       } else {
         showToast(t('challenges:messages.errorJoining'), 'error');

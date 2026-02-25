@@ -17,10 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 import { pickDocument, validateFile, FileData, formatFileSize } from '../utils/fileService';
-import { uploadFileWithProgress, buildAdminFilePath } from '../utils/storageService';
+import { uploadFileWithProgress, buildAdminFilePath } from '../src/infrastructure/storage.service';
+import { logger } from '../utils/loggerService';
 
 interface AdminFilesScreenProps {
     navigation: NavigationProp<AdminStackParamList>;
@@ -138,10 +139,9 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                 );
                 uploadedUrl = uploadResult.url;
             } catch (uploadError: any) {
-                console.error('❌ Upload file error:', uploadError);
                 const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
-                console.error('❌ Upload error details:', {
-                    error: uploadError,
+                logger.error('AdminFilesScreen', 'Upload file error', {
+                    error: uploadError?.message,
                     fullPath,
                     fileName: selectedFile.name,
                     fileSize: selectedFile.size,
@@ -175,7 +175,7 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                 Alert.alert('שגיאה', 'הוספה נכשלה');
             }
         } catch (error) {
-            console.error('❌ Upload error:', error);
+            logger.error('AdminFilesScreen', 'Upload error', { error });
             Alert.alert('שגיאה', 'שגיאה בהעלאת הקובץ. אנא נסה שוב.');
         } finally {
             setIsMutating(false);
@@ -189,7 +189,7 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                 <Text style={styles.title}>קבצים משותפים</Text>
                 {!viewOnly && (
                     <TouchableOpacity style={styles.addButton} onPress={() => setIsModalVisible(true)}>
-                        <Ionicons name="add" size={24} color="white" />
+                        <Ionicons name="add" size={24} color={colors.buttonText} />
                         <Text style={styles.addText}>הוסף קובץ</Text>
                     </TouchableOpacity>
                 )}
@@ -292,9 +292,9 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                                 disabled={!selectedFile || isMutating}
                             >
                                 {isMutating ? (
-                                    <ActivityIndicator color="white" />
+                                    <ActivityIndicator color={colors.buttonText} />
                                 ) : (
-                                    <Text style={{ color: 'white' }}>העלה</Text>
+                                    <Text style={{ color: colors.buttonText }}>העלה</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -310,8 +310,8 @@ const styles = StyleSheet.create({
     header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background },
     title: { fontSize: 22, fontWeight: 'bold' },
     addButton: { flexDirection: 'row', backgroundColor: colors.primary, padding: 8, borderRadius: 8 },
-    addText: { color: 'white', marginLeft: 5, fontWeight: 'bold' },
-    folderBar: { flexDirection: 'row', padding: 15, alignItems: 'center', backgroundColor: '#eef' },
+    addText: { color: colors.buttonText, marginLeft: 5, fontWeight: 'bold' },
+    folderBar: { flexDirection: 'row', padding: 15, alignItems: 'center', backgroundColor: colors.infoLight },
     folderName: { marginLeft: 10, fontWeight: 'bold', color: colors.primary },
     list: { padding: 15 },
     fileItem: { flexDirection: 'row', backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'space-between' },
@@ -319,15 +319,15 @@ const styles = StyleSheet.create({
     textContainer: { marginLeft: 15, flex: 1 },
     fileName: { fontSize: 16, fontWeight: 'bold', textAlign: 'left' },
     fileMeta: { flexDirection: 'row', alignItems: 'center' },
-    fileDate: { fontSize: 12, color: '#888', textAlign: 'left' },
-    fileSize: { fontSize: 12, color: '#888', textAlign: 'left' },
+    fileDate: { fontSize: 12, color: colors.textTertiary, textAlign: 'left' },
+    fileSize: { fontSize: 12, color: colors.textTertiary, textAlign: 'left' },
     deleteBtn: { padding: 10 },
-    emptyText: { textAlign: 'center', marginTop: 30, color: '#999' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-    modalContent: { backgroundColor: 'white', padding: 20, borderRadius: 10 },
+    emptyText: { textAlign: 'center', marginTop: 30, color: colors.textTertiary },
+    modalOverlay: { flex: 1, backgroundColor: colors.dropdownModalOverlay, justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: colors.background, padding: 20, borderRadius: 10 },
     modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
     label: { marginBottom: 5, fontWeight: 'bold', textAlign: 'right' },
-    hintText: { fontSize: 12, color: '#888', textAlign: 'center', marginTop: 8 },
+    hintText: { fontSize: 12, color: colors.textTertiary, textAlign: 'center', marginTop: 8 },
     pickFileButton: { 
         flexDirection: 'row', 
         alignItems: 'center', 
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     },
     selectedFileInfo: { flex: 1, marginLeft: 10 },
     selectedFileName: { fontSize: 14, fontWeight: 'bold', textAlign: 'right' },
-    selectedFileSize: { fontSize: 12, color: '#888', textAlign: 'right', marginTop: 4 },
+    selectedFileSize: { fontSize: 12, color: colors.textTertiary, textAlign: 'right', marginTop: 4 },
     progressContainer: { marginBottom: 15 },
     progressBarContainer: {
         width: '100%',
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         textAlign: 'center',
     },
-    input: { borderWidth: 1, borderColor: '#ddd', padding: 10, borderRadius: 5, marginBottom: 15, textAlign: 'right' },
+    input: { borderWidth: 1, borderColor: colors.inputBorder, padding: 10, borderRadius: 5, marginBottom: 15, textAlign: 'right' },
     modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
     cancelBtn: { padding: 10 },
     saveBtn: { backgroundColor: colors.primary, padding: 10, borderRadius: 5, width: 100, alignItems: 'center' },

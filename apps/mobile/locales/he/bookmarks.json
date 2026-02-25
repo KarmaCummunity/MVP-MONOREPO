@@ -1,0 +1,16 @@
+{
+  "title": "מועדפים",
+  "selectUserFirst": "יש לבחור יוזר תחילה",
+  "loadError": "שגיאה בטעינת המועדפים",
+  "removeTitle": "הסרת מועדף",
+  "removeMessage": "האם ברצונך להסיר את הפוסט מהמועדפים?",
+  "removeConfirm": "הסר",
+  "removeError": "שגיאה בהסרת המועדף",
+  "clearTitle": "ניקוי מועדפים",
+  "clearMessage": "האם ברצונך לנקות את כל המועדפים?",
+  "clearConfirm": "נקה הכל",
+  "selectUserTitle": "יש לבחור יוזר",
+  "selectUserSubtitle": "בחר יוזר כדי לראות את המועדפים שלו",
+  "emptyTitle": "אין מועדפים",
+  "emptySubtitle": "הפוסטים שתשמור יופיעו כאן"
+}

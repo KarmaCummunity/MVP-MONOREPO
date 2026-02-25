@@ -1,0 +1,131 @@
+{
+  "title": "Profile",
+  "tabs": {
+    "posts": "Posts",
+    "reels": "Reels",
+    "tagged": "Tagged"
+  },
+  "stats": {
+    "posts": "Posts",
+    "followers": "Followers",
+    "following": "Following",
+    "karmaPointsSuffix": "karma points"
+  },
+  "followersTitle": "Followers",
+  "followingTitle": "Following",
+  "sections": {
+    "recentActivity": "Recent activity",
+    "highlights": "Highlights"
+  },
+  "reels": {
+    "noReelsYet": "No reels yet",
+    "createFirstReel": "Create your first reel to share with the community",
+    "createReel": "Create reel"
+  },
+  "tagged": {
+    "noTagsYet": "No tags yet",
+    "tagsAppearHere": "When people tag you, it will appear here"
+  },
+  "alerts": {
+    "post": "Post",
+    "postNumber": "Post number {{number}}",
+    "newUser": "New user",
+    "selectedUser": "Selected user: {{name}}",
+    "shareProfile": "Share profile",
+    "shareProfileDesc": "Share your profile with others",
+    "editProfile": "Edit profile",
+    "editProfileDesc": "Edit your profile details",
+    "settings": "Settings",
+    "openSettings": "Open settings",
+    "help": "Help",
+    "openHelp": "Open help",
+    "activity": "Activity",
+    "viewActivity": "View activity",
+    "history": "History",
+    "activityHistory": "Activity history",
+    "favorites": "Favorites",
+    "yourFavorites": "Your favorites"
+  },
+  "menu": {
+    "bookmarks": "Bookmarks",
+    "communityStats": "Community stats",
+    "shareProfile": "Share profile",
+    "editProfile": "Edit profile",
+    "settings": "Settings",
+    "help": "Help",
+    "login": "Login",
+    "switchUser": "Switch user"
+  },
+  "activity": "Activity",
+  "history": "History",
+  "favorites": "Favorites",
+  "discoverPeople": "Discover people",
+  "discover": "Discover people",
+  "notifications": "Notifications",
+  "highlights": {
+    "new": "New",
+    "highlightIndex": "Highlight {{index}}"
+  },
+  "users": {
+    "loadError": "Failed to load users.",
+    "selected": "Selected",
+    "selectUserTitle": "Select a user",
+    "selectUserSubtitle": "Choose a user to view the app from their perspective"
+  },
+  "hierarchy": {
+    "removeManager": "Remove manager",
+    "makeManager": "Make team manager",
+    "removeManagerConfirm": "Are you sure you want to remove this user from your management? Tasks will be transferred to you.",
+    "makeManagerConfirm": "Are you sure you want to make this user a manager under you?",
+    "success": "Success",
+    "actionFailed": "Action failed",
+    "communicationError": "Communication error"
+  },
+  "banner": {
+    "title": "Complete your profile for the full experience",
+    "cta": "Edit profile",
+    "editTitle": "Edit profile",
+    "missing": {
+      "avatar": "Profile picture",
+      "fullName": "Full name",
+      "address": "Address"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "avatar": "Profile picture URL",
+      "city": "City",
+      "country": "Country",
+      "bio": "Bio"
+    }
+  },
+  "edit": {
+    "gallery": "Gallery",
+    "camera": "Camera",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "phone": "Phone",
+    "city": "City",
+    "country": "Country",
+    "street": "Street",
+    "houseNumber": "House No.",
+    "zipcode": "Zip code",
+    "gender": "Gender",
+    "genderPlaceholder": "male / female / other",
+    "birthDate": "Birth date",
+    "birthDatePlaceholder": "YYYY-MM-DD",
+    "website": "Website",
+    "linkedin": "LinkedIn",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "preferredLanguage": "Preferred language",
+    "preferredLanguagePlaceholder": "he / en",
+    "interests": "Interests",
+    "interestsPlaceholder": "Comma separated"
+  },
+  "recent": {
+    "taskCompleted": "Task completed: {{task}}",
+    "donated": "Donated {{amount}} for {{purpose}}",
+    "joinedEvent": "Joined event: {{event}}"
+  }
+}

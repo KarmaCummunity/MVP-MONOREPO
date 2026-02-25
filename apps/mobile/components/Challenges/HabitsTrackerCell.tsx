@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { ChallengeType, EntryStatus } from '../../globals/types';
+import colors from '../../globals/colors';
 
 interface HabitsTrackerCellProps {
   challengeType: ChallengeType;
@@ -35,15 +36,15 @@ export const HabitsTrackerCell: React.FC<HabitsTrackerCellProps> = ({
   const getStatusColor = (): string => {
     switch (status) {
       case 'success':
-        return '#4CAF50';
+        return colors.success;
       case 'failed':
-        return '#F44336';
+        return colors.error;
       case 'neutral':
-        return '#9E9E9E';
+        return colors.textTertiary;
       case 'empty':
-        return '#E0E0E0';
+        return colors.border;
       default:
-        return '#E0E0E0';
+        return colors.border;
     }
   };
 
@@ -99,17 +100,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   cellToday: {
     borderWidth: 2,
-    borderColor: '#2196F3',
+    borderColor: colors.info,
   },
   cellText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   cellTextEmpty: {
-    color: '#BDBDBD',
+    color: colors.textDisabled,
   },
 });

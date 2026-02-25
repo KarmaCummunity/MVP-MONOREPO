@@ -1,5 +1,5 @@
 // screens/CommunityStatsScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, Dimensions, ActivityIndicator, Platform, RefreshControl, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -8,11 +8,11 @@ import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { db } from '../utils/databaseService';
-import { EnhancedStatsService } from '../utils/statsService';
-import { apiService } from '../utils/apiService';
+import { db } from '../src/infrastructure/database.service';
+import { EnhancedStatsService } from '../src/services/stats.service';
+import { apiService } from '../src/api/api.service';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 // Responsive breakpoints
 const isSmallScreen = width < 375;
@@ -134,12 +134,7 @@ export default function CommunityStatsScreen() {
         ? screenHeight - tabBarHeight - headerHeight
         : undefined;
 
-    useEffect(() => {
-        logger.debug('CommunityStatsScreen', 'Screen viewed', { userId: selectedUser?.id });
-        loadStats();
-    }, []);
-
-    const loadStats = async (forceRefresh = false) => {
+    const loadStats = useCallback(async (forceRefresh = false) => {
         try {
             if (!forceRefresh) {
                 setLoading(true);
@@ -231,11 +226,16 @@ export default function CommunityStatsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [selectedUser?.id]);
 
-    const onRefresh = React.useCallback(async () => {
+    useEffect(() => {
+        logger.debug('CommunityStatsScreen', 'Screen viewed', { userId: selectedUser?.id });
+        loadStats();
+    }, [loadStats, selectedUser?.id]);
+
+    const onRefresh = useCallback(async () => {
         await loadStats(true);
-    }, []);
+    }, [loadStats]);
 
     if (loading) {
         return (

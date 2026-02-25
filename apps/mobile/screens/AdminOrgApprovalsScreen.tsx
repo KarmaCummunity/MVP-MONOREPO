@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshContr
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 
 type OrgApplication = {
@@ -79,7 +79,7 @@ export default function AdminOrgApprovalsScreen() {
         status === 'approved' ? 'הבקשה אושרה' : 'הבקשה נדחתה'
       );
       load();
-    } catch (e) {
+    } catch (_e) {
       Alert.alert('שגיאה', 'עדכון הסטטוס נכשל');
     }
   };

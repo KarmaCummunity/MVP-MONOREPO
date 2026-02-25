@@ -17,8 +17,6 @@ import { useRoute, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { useScrollPositionWithHandler } from '../hooks/useScrollPosition';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
 interface ScrollContainerProps extends Omit<ScrollViewProps, 'style' | 'contentContainerStyle'> {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;

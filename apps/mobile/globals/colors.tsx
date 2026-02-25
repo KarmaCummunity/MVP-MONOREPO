@@ -207,6 +207,20 @@ const colors = {
   dropdownModalOverlay: 'rgba(0,0,0,0.5)',
   /** Modal overlay (lighter than dropdown) for full-screen overlays */
   modalOverlay: 'rgba(0,0,0,0.4)',
+  /** Dark overlay for badges/stats (e.g. 0.6 opacity) */
+  overlayDark: 'rgba(0,0,0,0.6)',
+  /** Light overlay for menu backdrop (e.g. 0.3 opacity) */
+  overlayLight: 'rgba(0,0,0,0.3)',
+  /** Image gradient overlay (e.g. card overlays) */
+  overlayImage: 'rgba(0,0,0,0.35)',
+  /** Text shadow overlay for readability on images */
+  textShadowOverlay: 'rgba(0,0,0,0.8)',
+  /** Light surface for headers/actions (e.g. #FAFAFA) */
+  surfaceLight: '#FAFAFA',
+  /** Lighter surface for placeholders (e.g. #F5F5F5) */
+  surfaceLighter: '#F5F5F5',
+  /** Semi-transparent white for badges on dark backgrounds */
+  badgeOverlay: 'rgba(255,255,255,0.25)',
   /** Soft text primary (e.g. 90% opacity) */
   textPrimarySoft: 'rgba(44,44,44,0.9)',
   /** Muted text primary (85% opacity) */
@@ -233,6 +247,14 @@ const colors = {
   decoCircle1: palette.tealLight,
   decoCircle2: palette.tealDark,
   decoCircle3: palette.greenBright,
+
+  // Canvas/bubble overlay (for FloatingBubbles)
+  bubbleOutline: 'rgba(10,22,48,0.7)',
+  bubbleOutlineLight: 'rgba(10,22,48,0.55)',
+  bubbleFill: 'rgba(255,255,255,0.98)',
+  bubbleFillLight: 'rgba(255,255,255,0.92)',
+  bubbleShadow: 'rgba(0,0,0,0.22)',
+  bubbleShadowLight: 'rgba(0,0,0,0.18)',
 };
 
 export default colors;

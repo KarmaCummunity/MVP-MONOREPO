@@ -1653,7 +1653,7 @@
 
 #### UX-002.2: i18n
 - **Library:** i18next + react-i18next
-- **Files:** `locales/he.json`, `locales/en.json`
+- **Files:** `locales/he/{namespace}.json`, `locales/en/{namespace}.json` (split by namespace: common, donations, auth, etc.)
 - **Features:**
   - מעבר שפה דינמי
   - RTL flip אוטומטי

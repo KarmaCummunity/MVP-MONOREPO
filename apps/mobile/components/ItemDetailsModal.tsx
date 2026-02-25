@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,11 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { getCategoryLabel } from '../utils/itemCategoryUtils';
-import { sendMessage, createConversation, getConversations } from '../utils/chatService';
+import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
+import { sendMessage, createConversation, getConversations } from '../src/services/chat.service';
 import { toastService, useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 
@@ -55,20 +55,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [sendingMessage, setSendingMessage] = useState(false);
   const { ToastComponent } = useToast();
 
-  useEffect(() => {
-    if (visible && item) {
-      const ownerId = type === 'item'
-        ? (item.ownerId || item.owner_id)
-        : (item.driverId || item.driver_id || item.createdBy || item.created_by);
-      if (ownerId) {
-        loadItemOwner(ownerId);
-      }
-    } else {
-      setItemOwner(null);
-    }
-  }, [visible, item, type]);
-
-  const loadItemOwner = async (ownerId: string) => {
+  const loadItemOwner = useCallback(async (ownerId: string) => {
     if (!ownerId) return;
     setLoadingOwner(true);
     try {
@@ -97,7 +84,20 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     } finally {
       setLoadingOwner(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (visible && item) {
+      const ownerId = type === 'item'
+        ? (item.ownerId || item.owner_id)
+        : (item.driverId || item.driver_id || item.createdBy || item.created_by);
+      if (ownerId) {
+        loadItemOwner(ownerId);
+      }
+    } else {
+      setItemOwner(null);
+    }
+  }, [visible, item, type, loadItemOwner]);
 
   const handleProfilePress = () => {
     if (!itemOwner) return;
@@ -195,7 +195,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       try {
         // Check if we're already in HomeTabStack context
         const currentState = (navigation as any).getState?.();
-        const currentRouteName = currentState?.routes?.[currentState?.index]?.name;
+        const _currentRouteName = currentState?.routes?.[currentState?.index]?.name;
 
         // Try to find BottomNavigator
         let bottomNavigator = null;
@@ -245,7 +245,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               }
             });
             return;
-          } catch (e) {
+          } catch (_e) {
             // If that fails, try UserProfileScreen directly as fallback
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,

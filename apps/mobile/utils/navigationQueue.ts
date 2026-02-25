@@ -3,6 +3,7 @@
 // Prevents race conditions and navigation conflicts
 
 import { NavigationContainerRef, StackActions } from '@react-navigation/native';
+import type { ParamListBase } from '@react-navigation/native';
 import {
   QueuedNavigationAction,
   NavigationQueueItem,
@@ -18,13 +19,13 @@ const LOG_SOURCE = 'NavigationQueue';
 class NavigationQueue {
   private queue: NavigationQueueItem[] = [];
   private isProcessing = false;
-  private navigationRef: NavigationContainerRef<any> | null = null;
+  private navigationRef: NavigationContainerRef<ParamListBase> | null = null;
   private defaultPriority = 0;
 
   /**
    * Initialize the navigation queue with a navigation ref
    */
-  initialize(ref: NavigationContainerRef<any> | null): void {
+  initialize(ref: NavigationContainerRef<ParamListBase> | null): void {
     this.navigationRef = ref;
     logger.debug(LOG_SOURCE, 'Navigation queue initialized', { hasRef: !!ref });
   }
@@ -149,7 +150,7 @@ class NavigationQueue {
         await this.executeSetParams(action);
         break;
       default:
-        throw new Error(`Unknown navigation action type: ${(action as any).type}`);
+        throw new Error(`Unknown navigation action type: ${(action as QueuedNavigationAction & { type: string }).type}`);
     }
   }
 
@@ -161,7 +162,7 @@ class NavigationQueue {
       throw new Error('Navigation ref not initialized');
     }
 
-    (this.navigationRef.navigate as any)(action.routeName, action.params);
+    (this.navigationRef.navigate as (name: string, params?: object) => void)(action.routeName, action.params);
   }
 
   /**
@@ -172,9 +173,10 @@ class NavigationQueue {
       throw new Error('Navigation ref not initialized');
     }
 
-    this.navigationRef.reset({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.navigationRef as any).reset({
       index: action.index,
-      routes: action.routes as any,
+      routes: action.routes,
     });
   }
 
@@ -218,15 +220,15 @@ class NavigationQueue {
     }
 
     // Find the current route
-    const findCurrentRoute = (navState: any): any => {
+    const findCurrentRoute = (navState: { routes?: { state?: unknown; index?: number; key?: string; params?: unknown }[]; index?: number }): { key?: string; params?: unknown } | null => {
       if (!navState.routes || navState.routes.length === 0) {
         return null;
       }
       const currentRoute = navState.routes[navState.index || 0];
-      if (currentRoute.state) {
-        return findCurrentRoute(currentRoute.state);
+      if (currentRoute?.state) {
+        return findCurrentRoute(currentRoute.state as { routes?: { state?: unknown; index?: number; key?: string; params?: unknown }[]; index?: number });
       }
-      return currentRoute;
+      return currentRoute ?? null;
     };
 
     const currentRoute = findCurrentRoute(state);
@@ -237,19 +239,18 @@ class NavigationQueue {
     // Use the route's key to set params
     if (currentRoute.key) {
       this.navigationRef.setParams({
-        ...currentRoute.params,
+        ...(currentRoute.params as Record<string, unknown>),
         ...action.params,
-      } as any);
+      } as never);
     } else {
-      // Fallback: try to set params on the current route
-      this.navigationRef.setParams(action.params as any);
+      this.navigationRef.setParams(action.params as never);
     }
   }
 
   /**
    * Public API: Navigate to a route
    */
-  navigate(routeName: string, params?: Record<string, any>, priority: number = 0): Promise<void> {
+  navigate(routeName: string, params?: Record<string, unknown>, priority: number = 0): Promise<void> {
     return this.enqueue(
       {
         type: 'navigate',
@@ -263,7 +264,7 @@ class NavigationQueue {
   /**
    * Public API: Reset navigation stack
    */
-  reset(index: number, routes: Array<{ name: string; params?: Record<string, any> }>, priority: number = 1): Promise<void> {
+  reset(index: number, routes: Array<{ name: string; params?: Record<string, unknown> }>, priority: number = 1): Promise<void> {
     return this.enqueue(
       {
         type: 'reset',
@@ -277,7 +278,7 @@ class NavigationQueue {
   /**
    * Public API: Replace current route
    */
-  replace(routeName: string, params?: Record<string, any>, priority: number = 1): Promise<void> {
+  replace(routeName: string, params?: Record<string, unknown>, priority: number = 1): Promise<void> {
     return this.enqueue(
       {
         type: 'replace',
@@ -303,7 +304,7 @@ class NavigationQueue {
   /**
    * Public API: Set params on current route
    */
-  setParams(params: Record<string, any>, priority: number = 0): Promise<void> {
+  setParams(params: Record<string, unknown>, priority: number = 0): Promise<void> {
     return this.enqueue(
       {
         type: 'setParams',

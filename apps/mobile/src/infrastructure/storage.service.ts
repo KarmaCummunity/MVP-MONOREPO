@@ -1,7 +1,7 @@
 // utils/storageService.ts
 import { getFirebase } from '../../utils/firebaseClient';
 import { ref, uploadBytes, uploadBytesResumable, getDownloadURL, UploadTaskSnapshot } from 'firebase/storage';
-import { IS_DEVELOPMENT } from '../../utils/config.constants';
+import { IS_DEVELOPMENT } from './config';
 
 export interface UploadResult {
   url: string;

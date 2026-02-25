@@ -19,7 +19,7 @@ import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { CommunityChallenge, ChallengeDifficulty } from '../../globals/types';
-import { db } from '../../utils/databaseService';
+import { db } from '../../src/infrastructure/database.service';
 import { useToast } from '../../utils/toastService';
 import { useUser } from '../../stores/userStore';
 

@@ -77,7 +77,7 @@ let notificationService: NotificationService = null;
 if (Platform.OS !== 'web') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    notificationService = require('./utils/notificationService');
+    notificationService = require('./src/services/notification.service');
   } catch (error) {
     logger.warn('App', 'Failed to load notification service', { error });
   }
@@ -281,7 +281,7 @@ function AppContent() {
     if (Platform.OS !== 'web') {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { startNotificationListener } = require('./utils/notificationService');
+        const { startNotificationListener } = require('./src/services/notification.service');
         cleanupListener = startNotificationListener(selectedUser.id);
       } catch (e) {
         logger.warn('App', 'Failed to start notification listener', { error: e });

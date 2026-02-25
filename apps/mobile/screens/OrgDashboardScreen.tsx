@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 
 export default function OrgDashboardScreen() {
-  const { t } = useTranslation(['auth','common']);
   const { selectedUser } = useUser();
   const [orgs, setOrgs] = useState<any[]>([]);
   const isOrgAdmin = (selectedUser?.roles || []).includes('org_admin');

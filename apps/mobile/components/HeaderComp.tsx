@@ -61,7 +61,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   const removeFilterRef = React.useRef<((filter: string) => void) | null>(null);
   const removeSortRef = React.useRef<(() => void) | null>(null);
 
-  const { isTablet, isDesktop, isLargeDesktop, width } = getScreenInfo();
+  const { isTablet, isLargeDesktop, width } = getScreenInfo();
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   // Responsive padding and margins using responsiveSpacing for better mobile support
   // Values are optimized for mobile web experience

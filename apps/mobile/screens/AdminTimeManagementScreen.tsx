@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { useAdminProtection } from '../hooks/useAdminProtection';
-import { apiService } from '../utils/apiService';
+import { logger } from '../utils/loggerService';
+import { apiService } from '../src/api/api.service';
 
 interface AdminTimeManagementScreenProps {
   navigation: NavigationProp<AdminStackParamList>;
@@ -48,7 +49,7 @@ interface HoursReport {
 export default function AdminTimeManagementScreen({ navigation }: AdminTimeManagementScreenProps) {
   const route = useRoute();
   const routeParams = (route.params as any) || {};
-  const viewOnly = routeParams?.viewOnly === true;
+  const _viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
@@ -62,11 +63,7 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  useEffect(() => {
-    loadReport();
-  }, [selectedUser?.id]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     if (!selectedUser?.id) return;
 
     try {
@@ -78,13 +75,17 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
       } else {
         setError(res.error || 'שגיאה בטעינת הדוח');
       }
-    } catch (err: any) {
-      console.error('Error loading hours report:', err);
+    } catch (err: unknown) {
+      logger.error('AdminTimeManagementScreen', 'Error loading hours report', { err });
       setError('שגיאה בטעינת הדוח');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedUser?.id]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const onRefresh = async () => {
     setRefreshing(true);

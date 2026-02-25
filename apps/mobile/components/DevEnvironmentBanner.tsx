@@ -1,13 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar, TouchableOpacity } from 'react-native';
-import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../utils/config.constants';
+import { useTranslation } from 'react-i18next';
+import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../src/infrastructure/config';
+import colors from '../globals/colors';
+import { FontSizes } from '../globals/constants';
+import { createShadowStyle } from '../globals/styles';
+import { logger } from '../utils/loggerService';
 
 /**
  * DevEnvironmentBanner
- * 
+ *
  * A visual indicator shown only in development environments to help
  * developers and testers distinguish between Dev and Production builds.
- * 
+ *
  * Features:
  * - Clear visual distinction from production
  * - Shows API endpoint being used
@@ -15,34 +20,25 @@ import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../utils/conf
  * - Tap to see full environment details
  */
 const DevEnvironmentBanner = () => {
-    // Only show in development environment
+    const { t } = useTranslation('common');
     if (!IS_DEVELOPMENT) {
         return null;
     }
 
     const handlePress = () => {
-        // Show environment details
-        const message = `🟢 Development Environment\n\n` +
-            `API: ${API_BASE_URL}\n` +
-            `Environment: ${CURRENT_ENVIRONMENT}\n\n` +
-            `✅ Data is completely isolated from Production\n` +
-            `✅ Safe to test and experiment\n` +
-            `✅ Changes won't affect real users`;
-        
-        // On web, we can use alert. On mobile, you might want a modal
+        const message = `Development Environment\n\nAPI: ${API_BASE_URL}\nEnvironment: ${CURRENT_ENVIRONMENT}\n\nData is isolated from Production. Safe to test.`;
         if (Platform.OS === 'web') {
             alert(message);
         } else {
-            // For mobile, you could implement a modal or use a toast library
-            console.log(message);
+            logger.info('DevEnvironmentBanner', message);
         }
     };
 
     return (
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                <TouchableOpacity 
-                    style={styles.banner} 
+                <TouchableOpacity
+                    style={styles.banner}
                     onPress={handlePress}
                     activeOpacity={0.7}
                 >
@@ -51,11 +47,9 @@ const DevEnvironmentBanner = () => {
                             <Text style={styles.dot}>🟢</Text>
                             <Text style={styles.text}>DEV</Text>
                         </View>
-                        <Text style={styles.subtext}>
-                            נתונים מבודדים מהפרודקשן
-                        </Text>
+                        <Text style={styles.subtext}>{t('devBanner.dataIsolated')}</Text>
                     </View>
-                    <Text style={styles.tapHint}>לחץ למידע</Text>
+                    <Text style={styles.tapHint}>{t('devBanner.tapForInfo')}</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         </View>
@@ -64,19 +58,13 @@ const DevEnvironmentBanner = () => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#E8F5E9', // Very light green
+        backgroundColor: colors.successLight,
         borderBottomWidth: 2,
-        borderBottomColor: '#66BB6A',
+        borderBottomColor: colors.success,
         zIndex: 9999,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
+        ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.1, 3),
     },
     safeArea: {
-        // On iOS, SafeAreaView handles the notch
-        // On Android, we might need manual padding if not using a library
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     banner: {
@@ -94,35 +82,31 @@ const styles = StyleSheet.create({
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#66BB6A',
+        backgroundColor: colors.success,
         paddingHorizontal: 10,
         paddingVertical: 3,
         borderRadius: 14,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-        elevation: 2,
+        ...createShadowStyle(colors.shadow, { width: 0, height: 1 }, 0.2, 2),
     },
     dot: {
-        fontSize: 12,
+        fontSize: FontSizes.small,
         marginRight: 4,
     },
     text: {
-        fontSize: 11,
+        fontSize: FontSizes.extraSmall + 3,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: colors.textInverse,
         letterSpacing: 0.8,
     },
     subtext: {
-        fontSize: 10,
+        fontSize: FontSizes.extraSmall + 2,
         fontStyle: 'italic',
-        color: '#2E7D32',
+        color: colors.success,
         fontWeight: '500',
     },
     tapHint: {
-        fontSize: 9,
-        color: '#4CAF50',
+        fontSize: FontSizes.extraSmall + 1,
+        color: colors.success,
         fontStyle: 'italic',
     },
 });

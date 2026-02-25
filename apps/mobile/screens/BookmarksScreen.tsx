@@ -40,18 +40,14 @@ export default function BookmarksScreen() {
   // TODO: Add proper TypeScript interfaces for all props and state
   // TODO: Implement proper error boundaries for crash prevention
   // TODO: Add comprehensive analytics tracking for bookmark actions
-  const navigation = useNavigation();
+  const _navigation = useNavigation();
   const { selectedUser } = useUser();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [, setRefreshKey] = useState(0);
   const { t } = useTranslation(['bookmarks','common']);
 
-  const loadBookmarks = async () => {
-    // TODO: Add proper loading state management
-    // TODO: Implement retry logic for failed requests
-    // TODO: Add proper error classification and handling
-    // TODO: Implement caching mechanism to reduce API calls
+  const loadBookmarks = useCallback(async () => {
     if (!selectedUser) {
       Alert.alert(t('common:errorTitle'), t('bookmarks:selectUserFirst'));
       return;
@@ -62,24 +58,20 @@ export default function BookmarksScreen() {
       setBookmarks(userBookmarks);
     } catch (error) {
       console.error('❌ Load bookmarks error:', error);
-      // TODO: Replace Alert.alert with proper toast/snackbar notification
-      // TODO: Add error tracking and monitoring
       Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
     }
-  };
+  }, [selectedUser, t]);
 
   useEffect(() => {
     loadBookmarks();
-  }, [selectedUser]);
+  }, [loadBookmarks]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
       loadBookmarks();
-      // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
-    }, [selectedUser])
+    }, [loadBookmarks])
   );
 
   const onRefresh = async () => {

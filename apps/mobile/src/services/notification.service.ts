@@ -1,6 +1,6 @@
 // utils/notificationService.ts
 import { Platform, Alert } from 'react-native';
-import { db, DB_COLLECTIONS, DatabaseService } from '../../utils/databaseService';
+import { db, DB_COLLECTIONS, DatabaseService } from '../infrastructure/database.service';
 import colors from '../../globals/colors';
 
 // Import notifications only on supported platforms
@@ -532,7 +532,7 @@ export const saveNotification = async (notification: NotificationData): Promise<
       console.log('🌐 Web platform - saving notification to history');
     }
 
-    await db.createNotification(notification.userId, notification.id, notification);
+    await db.createNotification(notification.userId, notification.id, notification as unknown as Record<string, unknown>);
     console.log('✅ Notification saved to history');
 
     // Emit in-app event so UI can update in real-time

@@ -578,7 +578,7 @@ class SecureApiService {
    * @param endpoint The endpoint that failed
    * @returns Categorized error information
    */
-  private categorizeError(error: any, endpoint: string): ApiError {
+  private categorizeError(error: any, _endpoint: string): ApiError {
     // Network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return {

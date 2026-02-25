@@ -56,7 +56,7 @@ export const validateNavigationState = (
   }
 
   // Validate routes recursively
-  const validateRoute = (route: any, stackName: string = 'RootStack', depth: number = 0): void => {
+  const validateRoute = (route: Record<string, unknown>, stackName: string = 'RootStack', depth: number = 0): void => {
     if (depth > 10) {
       errors.push('Navigation state has too many nested levels (max 10)');
       return;
@@ -79,16 +79,17 @@ export const validateNavigationState = (
     }
 
     // Validate nested state
-    if (route.state) {
-      if (!route.state.routes || !Array.isArray(route.state.routes)) {
+    const routeState = route.state as { routes?: unknown[]; index?: number } | undefined;
+    if (routeState) {
+      if (!routeState.routes || !Array.isArray(routeState.routes)) {
         errors.push(`Route "${route.name}" has invalid nested state`);
         return;
       }
 
-      if (route.state.index !== undefined) {
-        if (typeof route.state.index !== 'number' ||
-          route.state.index < 0 ||
-          route.state.index >= route.state.routes.length) {
+      if (routeState.index !== undefined) {
+        if (typeof routeState.index !== 'number' ||
+          routeState.index < 0 ||
+          routeState.index >= routeState.routes.length) {
           errors.push(`Route "${route.name}" has invalid nested state index`);
           return;
         }
@@ -111,7 +112,7 @@ export const validateNavigationState = (
       }
 
       // Validate nested routes
-      route.state.routes.forEach((nestedRoute: any) => {
+      (routeState.routes as Record<string, unknown>[]).forEach((nestedRoute) => {
         validateRoute(nestedRoute, nestedStackName, depth + 1);
       });
     }
@@ -119,7 +120,7 @@ export const validateNavigationState = (
 
   // Validate all routes
   state.routes.forEach((route) => {
-    validateRoute(route, 'RootStack', 0);
+    validateRoute(route as Record<string, unknown>, 'RootStack', 0);
   });
 
   const valid = errors.length === 0;

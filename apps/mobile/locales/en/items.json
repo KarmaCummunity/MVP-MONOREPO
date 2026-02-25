@@ -1,0 +1,12 @@
+{
+  "title": "Item",
+  "forSale": "For Sale",
+  "imageTooLarge": "The image you selected is very large. Consider using a smaller image.",
+  "continueAnyway": "Continue anyway",
+  "convertImageError": "Failed to convert the image",
+  "loadItemsError": "Failed to load items",
+  "saveSuccessTitle": "Saved successfully!",
+  "saveSuccessBody": "Item \"{{title}}\" was saved.",
+  "saveErrorBody": "Failed to save item: {{errorMessage}}",
+  "unknownError": "Unknown error"
+}

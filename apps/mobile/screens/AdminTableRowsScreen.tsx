@@ -20,9 +20,8 @@ import DatePicker from '../components/DatePicker';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
-import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
-import { apiService, ApiResponse } from '../utils/apiService';
+import { apiService, ApiResponse } from '../src/api/api.service';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
 interface AdminTableRowsScreenProps {
@@ -56,7 +55,6 @@ interface AdminTable {
 
 export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProps) {
   useAdminProtection();
-  const { selectedUser } = useUser();
   const { tableId, tableName } = route.params;
   const { t } = useTranslation(['admin', 'common']);
 
@@ -76,7 +74,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
   const fetchTable = useCallback(async () => {
     setLoading(true);
     try {
-      const res: ApiResponse<AdminTable> = await apiService.adminTables.getById(tableId, true);
+      const res = (await apiService.adminTables.getById(tableId, true)) as ApiResponse<AdminTable>;
       if (res.success && res.data) {
         setTable(res.data);
         setRows(res.data.rows || []);
@@ -89,7 +87,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     } finally {
       setLoading(false);
     }
-  }, [tableId]);
+  }, [tableId, t]);
 
   useEffect(() => {
     fetchTable();
@@ -173,11 +171,11 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     try {
       if (editingRowId) {
         setUpdating(editingRowId);
-        const res: ApiResponse<TableRow> = await apiService.adminTables.updateRow(
+        const res = (await apiService.adminTables.updateRow(
           tableId,
           editingRowId,
           { data: rowData }
-        );
+        )) as ApiResponse<TableRow>;
         if (res.success) {
           Alert.alert(t('common:done'), t('admin:tables.updateSuccess'));
           setShowRowModal(false);
@@ -189,9 +187,9 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
         setUpdating(null);
       } else {
         setCreating(true);
-        const res: ApiResponse<TableRow> = await apiService.adminTables.createRow(tableId, {
+        const res = (await apiService.adminTables.createRow(tableId, {
           data: rowData,
-        });
+        })) as ApiResponse<TableRow>;
         if (res.success) {
           Alert.alert(t('common:done'), t('admin:tables.createSuccess'));
           setShowRowModal(false);

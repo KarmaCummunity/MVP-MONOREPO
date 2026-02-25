@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
   const { mode } = useWebMode();
-  const navigation = useNavigation();
+  const _navigation = useNavigation();
 
   // Refresh data when navigator comes into focus
   useFocusEffect(

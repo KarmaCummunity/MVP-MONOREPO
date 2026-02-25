@@ -13,12 +13,12 @@ import {
   Linking,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
-import { FontSizes } from '../globals/constants';
+import { FontSizes, filterOptions, sortOptions } from '../globals/constants';
 
-const charities: any[] = [];
-const donations: any[] = [];
+const charities: Array<{ name: string; tags: string[]; location: { city: string }; rating: number; volunteersCount: number; beneficiariesCount: number; description: string }> = [];
+const donations: Array<{ amount?: number; createdAt: string; category?: string }> = [];
 import { charitiesStore } from '../utils/charitiesStore';
-import { donationResources } from '../utils/donationResources';
+import { donationResources, DonationResource } from '../utils/donationResources';
 import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 
@@ -26,7 +26,7 @@ import ScrollContainer from '../components/ScrollContainer';
 const dummyCharitiesBase = charities.map((charity, index) => ({
   id: index + 1,
   name: charity.name,
-  category: charity.tags[0] || "כללי",
+  category: charity.tags[0] || 'general',
   location: charity.location.city,
   rating: charity.rating,
   donors: charity.volunteersCount + charity.beneficiariesCount,
@@ -41,11 +41,11 @@ const dummyCharitiesBase = charities.map((charity, index) => ({
 // Convert donations to old format for recent donations
 const dummyRecentDonationsBase = donations.slice(0, 5).map((donation, index) => ({
   id: index + 1,
-  charityName: charities[index % charities.length]?.name || "עמותה לא ידועה",
+  charityName: charities[index % charities.length]?.name || 'unknownCharity',
   amount: donation.amount || 100,
   date: new Date(donation.createdAt).toLocaleDateString('he-IL'),
-  status: "הושלמה",
-  category: donation.category || "כללי"
+  status: 'completed',
+  category: donation.category || 'general'
 }));
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
@@ -53,6 +53,7 @@ import { Slider } from '@miblanchard/react-native-slider';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
+import { logger } from '../utils/loggerService';
 
 // Slider component using @miblanchard/react-native-slider
 const DonationAmountSlider: React.FC<{
@@ -97,42 +98,27 @@ export default function MoneyScreen({
   const routeParams = route.params as { mode?: string } | undefined;
 
   const { isRealAuth } = useUser();
-  const { t } = useTranslation(['donations', 'common']);
+  const { t } = useTranslation(['donations', 'common', 'search', 'webOverlay']);
   const [selectedRecipient, setSelectedRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('50');
 
-  // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to donate), false = seeker (needs help)
-  // URL mode: 'offer' = true, 'search' = false
-  // Default is search mode (false)
-  const initialMode = routeParams?.mode === 'offer' ? true : false;
-  const [mode, setMode] = useState(initialMode);
+  // URL mode: 'offer' = true, 'search' = false. Derive from route params when available.
+  const hasModeInParams = routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null';
+  const modeFromParams = routeParams?.mode === 'offer';
+  const [localMode, setLocalMode] = useState(modeFromParams);
+  const mode = hasModeInParams ? modeFromParams : localMode;
 
-  // Update mode when route params change (e.g., from deep link)
-  useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'offer' ? true : false;
-      if (newMode !== mode) {
-        setMode(newMode);
-      }
-    }
-  }, [routeParams?.mode, mode]);
-
-  // Update URL when mode changes (toggle button pressed) or when screen loads without mode
+  // Update URL when mode changes (toggle) or when screen loads without mode
   useEffect(() => {
     const newMode = mode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
-
-    // If no mode in URL, set it to search (default)
     if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      // Set initial mode to search in URL
-      (navigation as any).setParams({ mode: 'search' });
+      navigation.setParams({ mode: 'search' } as Record<string, unknown>);
       return;
     }
-
-    // Only update URL if mode actually changed
     if (newMode !== currentMode) {
-      (navigation as any).setParams({ mode: newMode });
+      navigation.setParams({ mode: newMode } as Record<string, unknown>);
     }
   }, [mode, navigation, routeParams?.mode]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,16 +146,16 @@ export default function MoneyScreen({
         default: return '💝';
       }
     };
-    const list: any[] = [];
+    const list: Array<{ id: string; name: string; category: string; location: string; rating: number; donors: number; description: string; image: string; minDonation: number; _extUrl?: string }> = [];
     categoryIds.forEach((catId) => {
-      const resources = (donationResources as any)[catId] || [];
+      const resources = donationResources[catId] || [];
       const categoryTitle = (t(`donations:categories.${catId}.title`) as string) || catId;
-      resources.forEach((res: any, index: number) => {
+      resources.forEach((res: DonationResource, index: number) => {
         list.push({
           id: `ext_${catId}_${index}`,
           name: res.name,
           category: categoryTitle,
-          location: 'כל הארץ',
+          location: t('donations:moneyScreen.allCountry'),
           rating: 4.7,
           donors: 500 + (index * 7),
           description: res.description || categoryTitle,
@@ -188,8 +174,8 @@ export default function MoneyScreen({
     const mapFromStore = charitiesStore.map((c, index) => ({
       id: `store_${c.id}`,
       name: c.name,
-      category: (c.categories && c.categories[0]) ? String(c.categories[0]) : 'כללי',
-      location: c.location?.city || 'כל הארץ',
+      category: (c.categories && c.categories[0]) ? String(c.categories[0]) : t('donations:moneyScreen.general'),
+      location: c.location?.city || t('donations:moneyScreen.allCountry'),
       rating: 4.8,
       donors: 100 + index * 5,
       description: c.description || '',
@@ -199,7 +185,7 @@ export default function MoneyScreen({
     }));
     const dummies = isRealAuth ? [] : dummyCharitiesBase;
     return [...mapFromStore, ...dummies, ...externalCharities];
-  }, [externalCharities, isRealAuth]);
+  }, [externalCharities, isRealAuth, t]);
 
   const [filteredCharities, setFilteredCharities] = useState(combinedCharities); // Search results
 
@@ -210,7 +196,7 @@ export default function MoneyScreen({
 
   // Charity modal state
   const [isCharityModalVisible, setIsCharityModalVisible] = useState(false);
-  const [selectedCharityForModal, setSelectedCharityForModal] = useState<any | null>(null);
+  const [selectedCharityForModal, setSelectedCharityForModal] = useState<{ name: string; description?: string; location?: string; category?: string; minDonation?: number } | null>(null);
   const [charityModalIsOfferMode, setCharityModalIsOfferMode] = useState<boolean>(true);
   const [charityModalAmount, setCharityModalAmount] = useState<string>('50');
 
@@ -221,7 +207,7 @@ export default function MoneyScreen({
       id: `store_${charitiesStore[0].id}`,
       name: charitiesStore[0].name,
       category: (charitiesStore[0].categories && charitiesStore[0].categories[0]) ? String(charitiesStore[0].categories[0]) : 'כללי',
-      location: charitiesStore[0].location?.city || 'כל הארץ',
+      location: charitiesStore[0].location?.city || t('donations:moneyScreen.allCountry'),
       rating: 4.8,
       donors: 100,
       description: charitiesStore[0].description || '',
@@ -233,7 +219,7 @@ export default function MoneyScreen({
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('💰 MoneyScreen - Screen focused, refreshing data...');
+      logger.debug('MoneyScreen', 'Screen focused, refreshing data');
       // Reset form when returning to screen
       setAmount('');
       setSelectedRecipient('');
@@ -241,12 +227,13 @@ export default function MoneyScreen({
       setRefreshKey(prev => prev + 1);
     }, [])
   );
-  const PAYBOX_WEB_URL = 'https://payboxapp.com/transfer?phone=0528616878&amount={AMOUNT}&note=תרומה%20לקהילה';
+  const getPayboxWebUrl = (amt: number) =>
+    `https://payboxapp.com/transfer?phone=0528616878&amount=${amt}&note=${encodeURIComponent(t('donations:moneyScreen.donateToCommunity'))}`;
   const PAYBOX_GROUP_LINK: string | null = 'https://payboxapp.page.link/tfzsUhNpZzRqqe1g8';
   const BIT_GROUP_LINK: string | null = 'https://www.bitpay.co.il/app/share-info?i=192485429007_19klqS2v';
 
   const openPaymentApp = async (amount: number) => {
-    const encodedReason = encodeURIComponent('תרומה לקהילה');
+    const encodedReason = encodeURIComponent(t('donations:moneyScreen.donateToCommunity'));
     const payboxGroupLink: string = (PAYBOX_GROUP_LINK ?? '').trim();
     const bitGroupLink: string = (BIT_GROUP_LINK ?? '').trim();
     const bitUrl = `bit://pay?phone=0528616878&amount=${amount}&reason=${encodedReason}`;
@@ -255,30 +242,34 @@ export default function MoneyScreen({
       // 1) עדיפות: פתיחה ישירה של קבוצת PayBox "Karma Community" אם סופק קישור (ננסה לפתוח ישר)
       if (payboxGroupLink.length > 0) {
         try {
-          if (Platform.OS === 'web') {
-            (window as any).open(payboxGroupLink, '_blank');
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            window.open(payboxGroupLink, '_blank');
             return;
           }
           await Linking.openURL(payboxGroupLink);
           return;
-        } catch { }
+        } catch (e) {
+          logger.debug('MoneyScreen', 'PayBox group link open failed', { error: e });
+        }
       }
 
       // 1b) עדיפות שנייה: פתיחה ישירה של קבוצת Bit אם יש קישור
       if (bitGroupLink.length > 0) {
         try {
-          if (Platform.OS === 'web') {
-            (window as any).open(bitGroupLink, '_blank');
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            window.open(bitGroupLink, '_blank');
             return;
           }
           await Linking.openURL(bitGroupLink);
           return;
-        } catch { }
+        } catch (e) {
+          logger.debug('MoneyScreen', 'Bit group link open failed', { error: e });
+        }
       }
 
       // 2) אם לא נפתח קישור קבוצה: נוודא שיש סכום חיובי לפני מסלולי סכום ישירים
       if (!amount || amount <= 0) {
-        Alert.alert('שגיאה', 'אנא בחר סכום חיובי לפני פתיחת התשלום.');
+        Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.selectPositiveAmount'));
         return;
       }
 
@@ -293,15 +284,17 @@ export default function MoneyScreen({
       // 4) ניסיון דרך דפדפן: אם יש קישור קבוצה — נשתמש בו; אחרת קישור העברה רגיל
       const webUrl = payboxGroupLink.length > 0
         ? payboxGroupLink
-        : PAYBOX_WEB_URL.replace('{AMOUNT}', String(amount));
+        : getPayboxWebUrl(amount);
       try {
-        if (Platform.OS === 'web') {
-          (window as any).open(webUrl, '_blank');
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.open(webUrl, '_blank');
           return;
         }
         await Linking.openURL(webUrl);
         return;
-      } catch { }
+      } catch (e) {
+        logger.debug('MoneyScreen', 'Web URL open failed', { error: e });
+      }
 
       // 5) Fallback אחרון: Bit
       const bitSupported = await Linking.canOpenURL(bitUrl);
@@ -310,9 +303,9 @@ export default function MoneyScreen({
         return;
       }
     } catch (error) {
-      console.error('Error opening payment link:', error);
+      logger.error('MoneyScreen', 'Error opening payment link', { error });
     }
-    Alert.alert('שגיאה', 'לא ניתן לפתוח את קישור התשלום במכשיר זה.');
+    Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.cannotOpenPayment'));
   };
 
   // Function to filter charities by search and filter
@@ -333,27 +326,19 @@ export default function MoneyScreen({
       filtered = filtered.filter(charity => charity.category === selectedFilter);
     }
 
-    // Sorting
-    switch (selectedSort) {
-      case "אלפביתי":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case "לפי מיקום":
-        filtered.sort((a, b) => a.location.localeCompare(b.location));
-        break;
-      case "לפי תחום":
-        filtered.sort((a, b) => a.category.localeCompare(b.category));
-        break;
-      case "לפי מספר תורמים":
-        filtered.sort((a, b) => b.donors - a.donors);
-        break;
-      case "לפי דירוג":
-        filtered.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
-        break;
-      case "לפי רלוונטיות":
-        // Default - by rating
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
+    // Sorting (compare with translated sort labels)
+    if (selectedSort === t('search:sort.alphabetical')) {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (selectedSort === t('search:sort.byLocation')) {
+      filtered.sort((a, b) => a.location.localeCompare(b.location));
+    } else if (selectedSort === t('search:sort.byCategory')) {
+      filtered.sort((a, b) => a.category.localeCompare(b.category));
+    } else if (selectedSort === t('search:sort.byDonors')) {
+      filtered.sort((a, b) => b.donors - a.donors);
+    } else if (selectedSort === t('search:sort.byRating')) {
+      filtered.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    } else if (selectedSort === t('search:sort.byRelevance') || selectedSort === t('search:sort.byEstablishedDate')) {
+      filtered.sort((a, b) => b.rating - a.rating);
     }
 
     return filtered;
@@ -380,44 +365,34 @@ export default function MoneyScreen({
     return filtered;
   };
 
-  // Function to show charity details in search mode
-  const _showCharityDetailsModal = (charity: any) => {
+  const _showCharityDetailsModal = (charity: { name: string; description: string }) => {
+    const msg = `${charity.description}\n\n📞 ${t('donations:moneyScreen.contact')}: 03-1234567 · info@${charity.name.replace(/\s+/g, '').toLowerCase()}.org.il`;
     Alert.alert(
       charity.name,
-      `${charity.description}\n\n📞 צור קשר: 03-1234567\n📧 אימייל: info@${charity.name.replace(/\s+/g, '').toLowerCase()}.org.il\n\nהאם תרצה לתרום לעמותה זו?`,
+      msg,
       [
-        {
-          text: 'לא עכשיו',
-          style: 'cancel',
-        },
-        {
-          text: 'תרום עכשיו',
-          onPress: () => showDonationAmountModal(charity),
-        },
+        { text: t('donations:moneyScreen.notNow'), style: 'cancel' as const },
+        { text: t('donations:moneyScreen.donateNow'), onPress: () => showDonationAmountModal(charity) },
       ]
     );
   };
 
-  // Function to select donation amount
-  const showDonationAmountModal = (charity: any) => {
+  const showDonationAmountModal = (charity: { name: string }) => {
     Alert.prompt(
-      'בחר סכום לתרומה',
-      `לתרומה ל: ${charity.name}\n\nהכנס סכום:`,
+      t('donations:moneyScreen.selectAmountForCharity'),
+      t('donations:moneyScreen.donateTo', { name: charity.name }) + '\n\n' + t('donations:moneyScreen.enterAmount'),
       [
+        { text: t('donations:moneyScreen.cancel'), style: 'cancel' as const },
         {
-          text: 'ביטול',
-          style: 'cancel',
-        },
-        {
-          text: 'תרום',
+          text: t('donations:moneyScreen.donate'),
           onPress: (amount?: string) => {
             if (amount && !isNaN(Number(amount))) {
               Alert.alert(
-                'תרומה בוצעה',
-                `תודה על תרומתך בסך ₪${amount} ל-${charity.name}!`
+                t('donations:moneyScreen.donationCompleted'),
+                t('donations:moneyScreen.thanksDonation', { amount, name: charity.name })
               );
             } else {
-              Alert.alert('שגיאה', 'אנא הכנס סכום תקין');
+              Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.enterValidAmount'));
             }
           },
         },
@@ -429,44 +404,22 @@ export default function MoneyScreen({
 
 
   const menuOptions = [
-    'חיסכון לתרומה',
-    'הוראות קבע',
-    'קבלות ודוחות',
-    'היסטוריית תרומות',
-    'הגדרות תשלום',
-    'עזרה',
-    'צור קשר'
+    t('donations:moneyScreen.menuSavings'),
+    t('donations:moneyScreen.menuRecurring'),
+    t('donations:moneyScreen.menuReceipts'),
+    t('donations:moneyScreen.menuHistory'),
+    t('donations:moneyScreen.menuPaymentSettings'),
+    t('donations:moneyScreen.menuHelp'),
+    t('donations:moneyScreen.menuContact'),
   ];
 
-  // Specific filter and sort options for money screen
-  const moneyFilterOptions = [
-    "חינוך",
-    "בריאות",
-    "רווחה",
-    "סביבה",
-    "בעלי חיים",
-    "נוער בסיכון",
-    "קשישים",
-    "נכים",
-    "חולים",
-    "משפחות במצוקה",
-    "עולים חדשים",
-    "קהילה",
-  ];
-
-  const moneySortOptions = [
-    "אלפביתי",
-    "לפי מיקום",
-    "לפי תחום",
-    "לפי תאריך הקמה",
-    "לפי מספר תורמים",
-    "לפי דירוג",
-    "לפי רלוונטיות",
-  ];
+  const moneyFilterOptions = filterOptions.map(opt => t(`search:filters.${opt}`) as string);
+  const moneySortOptions = sortOptions.map(opt => t(`search:sort.${opt}`) as string);
 
   // Function to handle search results from HeaderComp
-  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('💰 MoneyScreen - Search received:', {
+  type MoneyCharityItem = { id: string | number; name: string; category: string; location: string; rating: number; donors: number; description: string; image: string; minDonation: number; _extUrl?: string };
+  const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: MoneyCharityItem[]) => {
+    logger.debug('MoneyScreen', 'Search received', {
       query,
       filters: filters || [],
       sorts: sorts || [],
@@ -480,7 +433,7 @@ export default function MoneyScreen({
 
     // If results are provided from SearchBar, use them
     if (results && results.length > 0) {
-      setFilteredCharities(results);
+      setFilteredCharities(results as React.SetStateAction<typeof combinedCharities>);
     } else {
       // Otherwise, perform local filtering
       const filtered = getFilteredCharities();
@@ -490,20 +443,19 @@ export default function MoneyScreen({
 
   const _handleDonate = () => {
     if (!selectedRecipient || !amount) {
-      Alert.alert('שגיאה', 'אנא בחר נמען וסכום לפני התרומה.');
+      Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.selectRecipientAndAmount'));
     } else {
       Alert.alert(
-        'תרומה בוצעה',
-        `תודה על תרומתך בסך ₪${amount} ל-${selectedRecipient}!`
+        t('donations:moneyScreen.donationCompleted'),
+        t('donations:moneyScreen.thanksDonation', { amount, name: selectedRecipient })
       );
     }
   };
 
-  // Open Bit app to donate to a specific phone with optional amount and note
-  const _openBitDonation = async (phone: string, amountValue: number, note: string = 'תרומה לקהילה') => {
+  const _openBitDonation = async (phone: string, amountValue: number, note?: string) => {
+    const donationNote = note ?? t('donations:moneyScreen.donateToCommunity');
     try {
-      // Deep link patterns used by Bit app; try multiple known schemes
-      const encodedNote = encodeURIComponent(note);
+      const encodedNote = encodeURIComponent(donationNote);
       const attempts = [
         // iOS modern
         `bit://send?phone=${phone}&amount=${amountValue}&note=${encodedNote}`,
@@ -527,45 +479,46 @@ export default function MoneyScreen({
         : 'https://play.google.com/store/apps/details?id=com.poalim.bit';
       await Linking.openURL(appStoreLink);
     } catch (_e) {
-      Alert.alert('Bit', 'לא ניתן לפתוח את Bit במכשיר זה כרגע.');
+      Alert.alert('Bit', t('donations:moneyScreen.bitCannotOpen'));
     }
   };
 
   const handleToggleMode = useCallback(() => {
-    setMode(!mode);
-    console.log('Mode toggled:', !mode ? 'נזקק' : 'תורם');
-  }, [mode]);
+    const nextMode = !mode;
+    setLocalMode(nextMode);
+    navigation.setParams({ mode: nextMode ? 'offer' : 'search' } as Record<string, unknown>);
+  }, [mode, navigation]);
 
   const handleSelectMenuItem = useCallback((option: string) => {
-    if (option === 'חיסכון לתרומה') {
+    if (option === t('donations:moneyScreen.menuSavings')) {
       setIsSavingsModalVisible(true);
       return;
     }
-    if (option === 'הוראות קבע') {
+    if (option === t('donations:moneyScreen.menuRecurring')) {
       setIsRecurringModalVisible(true);
       return;
     }
-    if (option === 'קבלות ודוחות') {
+    if (option === t('donations:moneyScreen.menuReceipts')) {
       setIsReceiptsModalVisible(true);
       return;
     }
-    // Default fallback
-    Alert.alert('תפריט', `נבחר: ${option}`);
-  }, []);
+    Alert.alert(t('webOverlay:menu'), t('donations:moneyScreen.menuSelected', { option }));
+  }, [t]);
 
-  const openCharityModal = (charity: any, isOfferMode: boolean) => {
+  const openCharityModal = (charity: { name: string; description?: string; minDonation?: number; location?: string; category?: string }, isOfferMode: boolean) => {
     setSelectedCharityForModal(charity);
     setCharityModalIsOfferMode(isOfferMode);
-    setCharityModalAmount(String(charity.minDonation || 50));
+    setCharityModalAmount(String(charity.minDonation ?? 50));
     setIsCharityModalVisible(true);
   };
 
-  const renderCharityCard = ({ item }: { item: any }) => (
+  type CharityCardItem = { id: string | number; name: string; category: string; location: string; rating: number; donors: number; description: string; image: string; minDonation: number; _extUrl?: string };
+  const renderCharityCard = ({ item }: { item: CharityCardItem }) => (
     <TouchableOpacity
       style={localStyles.charityCard}
       onPress={() => {
         if (item._extUrl && typeof item._extUrl === 'string') {
-          Linking.openURL(item._extUrl).catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור'));
+          Linking.openURL(item._extUrl).catch(() => Alert.alert(t('donations:moneyScreen.error'), t('donations:moneyScreen.cannotOpenLink')));
           return;
         }
         openCharityModal(item, !!mode);
@@ -583,57 +536,54 @@ export default function MoneyScreen({
       </Text>
       <View style={localStyles.charityDetails}>
         <Text style={localStyles.charityLocation}>📍 {item.location}</Text>
-        <Text style={localStyles.charityCategory}>🏷️ {item.category}</Text>
+        <Text style={localStyles.charityCategory}>
+          🏷️ {item.category === 'general' ? t('donations:moneyScreen.general') : item.category}
+        </Text>
       </View>
       <View style={localStyles.charityStats}>
-        <Text style={localStyles.charityDonors}>👥 {item.donors} תורמים</Text>
-        <Text style={localStyles.charityMinDonation}>💰 מ-₪{item.minDonation}</Text>
+        <Text style={localStyles.charityDonors}>👥 {t('donations:moneyScreen.donorsCount', { count: item.donors })}</Text>
+        <Text style={localStyles.charityMinDonation}>💰 {t('donations:moneyScreen.fromAmount', { amount: item.minDonation })}</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const renderRecentDonationCard = ({ item }: { item: any }) => (
+  const renderRecentDonationCard = ({ item }: { item: { id: number; charityName: string; amount: number; date: string; status: string; category: string } }) => (
     <TouchableOpacity style={localStyles.recentDonationCard}>
       <View style={localStyles.recentDonationHeader}>
-        <Text style={localStyles.recentDonationCharity}>{item.charityName}</Text>
+        <Text style={localStyles.recentDonationCharity}>
+          {item.charityName === 'unknownCharity' ? t('donations:moneyScreen.unknownCharity') : item.charityName}
+        </Text>
         <Text style={localStyles.recentDonationAmount}>₪{item.amount}</Text>
       </View>
       <View style={localStyles.recentDonationDetails}>
         <Text style={localStyles.recentDonationDate}>📅 {item.date}</Text>
-        <Text style={localStyles.recentDonationCategory}>🏷️ {item.category}</Text>
+        <Text style={localStyles.recentDonationCategory}>
+          🏷️ {item.category === 'general' ? t('donations:moneyScreen.general') : item.category}
+        </Text>
       </View>
       <View style={localStyles.recentDonationStatus}>
-        <Text style={localStyles.recentDonationStatusText}>✅ {item.status}</Text>
+        <Text style={localStyles.recentDonationStatusText}>
+          ✅ {item.status === 'completed' ? t('donations:moneyScreen.completed') : item.status}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 
-  const FormHeader = () => (
-    <View>
-      {/* Mode toggle is now handled by HeaderComp */}
-
-      {mode ? (
-        <></>
-      ) : (
-        <View style={localStyles.formContainer}>
-          {/* Beneficiary mode - help search message */}
-          <View style={localStyles.searchHelpContainer}>
-            <Text style={localStyles.searchHelpTitle}>מחפש עזרה כספית?</Text>
-            <Text style={localStyles.searchHelpText}>
-              השתמש בסרגל החיפוש למעלה כדי למצוא עמותות שיכולות לעזור לך מבחינה כספית
-            </Text>
-            <View style={localStyles.searchHelpTipsContainer}>
-              <Text style={localStyles.searchHelpTipsTitle}>איך למצוא עזרה:</Text>
-              <Text style={localStyles.searchHelpTip}>• חפש לפי תחום: חינוך, בריאות, רווחה</Text>
-              <Text style={localStyles.searchHelpTip}>• חפש לפי מיקום: עיר, אזור</Text>
-              <Text style={localStyles.searchHelpTip}>• חפש לפי סוג עזרה: מזון, ביגוד, טיפול רפואי</Text>
-              <Text style={localStyles.searchHelpTip}>• פנה ישירות לעמותה דרך פרטי הקשר</Text>
-            </View>
-          </View>
+  const formHeaderContent = !mode ? (
+    <View style={localStyles.formContainer}>
+      <View style={localStyles.searchHelpContainer}>
+        <Text style={localStyles.searchHelpTitle}>{t('donations:moneyScreen.searchingFinancialHelp')}</Text>
+        <Text style={localStyles.searchHelpText}>{t('donations:moneyScreen.searchHelpText')}</Text>
+        <View style={localStyles.searchHelpTipsContainer}>
+          <Text style={localStyles.searchHelpTipsTitle}>{t('donations:moneyScreen.howToFindHelp')}</Text>
+          <Text style={localStyles.searchHelpTip}>{t('donations:moneyScreen.searchByField')}</Text>
+          <Text style={localStyles.searchHelpTip}>{t('donations:moneyScreen.searchByLocation')}</Text>
+          <Text style={localStyles.searchHelpTip}>{t('donations:moneyScreen.searchByType')}</Text>
+          <Text style={localStyles.searchHelpTip}>{t('donations:moneyScreen.contactDirectly')}</Text>
         </View>
-      )}
+      </View>
     </View>
-  );
+  ) : null;
 
   return (
     <SafeAreaView style={localStyles.safeArea}>
@@ -657,7 +607,7 @@ export default function MoneyScreen({
         contentStyle={localStyles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <FormHeader />
+        <View>{formHeaderContent}</View>
 
         {mode ? (
           // Donor mode - show charities for donation and donation history
@@ -680,9 +630,11 @@ export default function MoneyScreen({
                       <TouchableOpacity
                         disabled={isZeroAmount}
                         style={[localStyles.donateMainButton, isZeroAmount ? localStyles.donateMainButtonDisabled : localStyles.donateMainButtonActive]}
-                        onPress={() => Alert.alert('תרומה בוצעה', `תרומה בסך ₪${numericAmount} למען הקהילה`)}
+                        onPress={() => Alert.alert(t('donations:moneyScreen.donationCompleted'), t('donations:moneyScreen.donationAmount', { amount: numericAmount }))}
                       >
-                        <Text style={[localStyles.donateMainButtonText, isZeroAmount ? localStyles.donateMainButtonTextDisabled : localStyles.donateMainButtonTextActive]}>תרום</Text>
+                        <Text style={[localStyles.donateMainButtonText, isZeroAmount ? localStyles.donateMainButtonTextDisabled : localStyles.donateMainButtonTextActive]}>
+                          {t('donations:moneyScreen.donate')}
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={localStyles.bitCornerButton}
@@ -715,7 +667,7 @@ export default function MoneyScreen({
             </View>
 
             <View style={[localStyles.section, localStyles.sectionPanel]}>
-              <Text style={localStyles.sectionTitle}>היסטוריית תרומות שלך</Text>
+              <Text style={localStyles.sectionTitle}>{t('donations:moneyScreen.yourDonationHistory')}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -733,16 +685,16 @@ export default function MoneyScreen({
             <View style={[localStyles.section, localStyles.sectionPanel]}>
               <DonationStatsFooter
                 stats={[
-                  { label: 'תרמת עד עכשיו', value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'cash-outline' },
-                  { label: 'נתרם באפליקציה', value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'trending-up-outline' },
-                  { label: 'עמותות שנתמכו', value: new Set(getFilteredRecentDonations().map(d => d.charityName)).size, icon: 'business-outline' },
+                  { label: t('donations:moneyScreen.donatedSoFar'), value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'cash-outline' },
+                  { label: t('donations:moneyScreen.donatedInApp'), value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'trending-up-outline' },
+                  { label: t('donations:moneyScreen.charitiesSupported'), value: new Set(getFilteredRecentDonations().map(d => d.charityName)).size, icon: 'business-outline' },
                 ]}
               />
             </View>
 
             {/* Add Links Section */}
             <View style={[localStyles.section, localStyles.sectionPanel]}>
-              <Text style={localStyles.sectionTitle}>קישורים שימושיים</Text>
+              <Text style={localStyles.sectionTitle}>{t('donations:moneyScreen.usefulLinks')}</Text>
               <AddLinkComponent category="money" />
             </View>
           </View>
@@ -751,7 +703,7 @@ export default function MoneyScreen({
           <View style={localStyles.sectionsContainer}>
             <View style={[localStyles.section, localStyles.sectionPanel]}>
               <Text style={localStyles.sectionTitle}>
-                {searchQuery || selectedFilter ? 'עמותות שיכולות לעזור' : 'עמותות מומלצות לעזרה'}
+                {searchQuery || selectedFilter ? t('donations:moneyScreen.charitiesForHelp') : t('donations:moneyScreen.recommendedForHelp')}
               </Text>
               <ScrollView
                 horizontal
@@ -770,16 +722,16 @@ export default function MoneyScreen({
             <View style={[localStyles.section, localStyles.sectionPanel]}>
               <DonationStatsFooter
                 stats={[
-                  { label: 'תרמת עד עכשיו', value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'cash-outline' },
-                  { label: 'נתרם באפליקציה', value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'trending-up-outline' },
-                  { label: 'עמותות שנתמכו', value: new Set(getFilteredRecentDonations().map(d => d.charityName)).size, icon: 'business-outline' },
+                  { label: t('donations:moneyScreen.donatedSoFar'), value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'cash-outline' },
+                  { label: t('donations:moneyScreen.donatedInApp'), value: `₪${getFilteredRecentDonations().reduce((s, d) => s + (Number(d.amount) || 0), 0)}`, icon: 'trending-up-outline' },
+                  { label: t('donations:moneyScreen.charitiesSupported'), value: new Set(getFilteredRecentDonations().map(d => d.charityName)).size, icon: 'business-outline' },
                 ]}
               />
             </View>
 
             {/* Add Links Section */}
             <View style={[localStyles.section, localStyles.sectionPanel]}>
-              <Text style={localStyles.sectionTitle}>קישורים שימושיים</Text>
+              <Text style={localStyles.sectionTitle}>{t('donations:moneyScreen.usefulLinks')}</Text>
               <AddLinkComponent category="money" />
             </View>
           </View>
@@ -802,7 +754,7 @@ export default function MoneyScreen({
                 <Text style={localStyles.modalDescription} numberOfLines={6}>{selectedCharityForModal.description}</Text>
                 {charityModalIsOfferMode ? (
                   <>
-                    <Text style={localStyles.modalFieldLabel}>בחר סכום לתרומה</Text>
+                    <Text style={localStyles.modalFieldLabel}>{t('donations:moneyScreen.selectAmount')}</Text>
                     <TextInput
                       style={[localStyles.input, localStyles.modalAmountInput]}
                       keyboardType="number-pad"
@@ -813,25 +765,25 @@ export default function MoneyScreen({
                     <View style={localStyles.modalActionsRow}>
                       <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => {
                         setIsCharityModalVisible(false);
-                        Alert.alert('תרומה בוצעה', `תודה על תרומתך בסך ₪${charityModalAmount} ל-${selectedCharityForModal.name}!`);
+                        Alert.alert(t('donations:moneyScreen.donationCompleted'), t('donations:moneyScreen.thanksDonation', { amount: charityModalAmount, name: selectedCharityForModal.name }));
                       }}>
-                        <Text style={localStyles.modalPrimaryButtonText}>תרום עכשיו</Text>
+                        <Text style={localStyles.modalPrimaryButtonText}>{t('donations:moneyScreen.donateNow')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={localStyles.bitButton}
                         onPress={() => openPaymentApp(Number(charityModalAmount) || 0)}
                       >
-                        <Text style={localStyles.bitButtonText}>תרום עם Bit</Text>
+                        <Text style={localStyles.bitButtonText}>{t('donations:moneyScreen.donateWithBit')}</Text>
                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={localStyles.contactButton} onPress={() => Alert.alert('יצירת קשר', 'פרטי קשר: 03-1234567 · info@example.org')}>
-                      <Text style={localStyles.contactButtonText}>יצירת קשר</Text>
+                    <TouchableOpacity style={localStyles.contactButton} onPress={() => Alert.alert(t('donations:moneyScreen.contact'), t('donations:moneyScreen.contactDetails'))}>
+                      <Text style={localStyles.contactButtonText}>{t('donations:moneyScreen.contact')}</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <TouchableOpacity style={localStyles.contactButton} onPress={() => Alert.alert('יצירת קשר', 'פרטי קשר: 03-1234567 · info@example.org')}>
-                      <Text style={localStyles.contactButtonText}>יצירת קשר</Text>
+                    <TouchableOpacity style={localStyles.contactButton} onPress={() => Alert.alert(t('donations:moneyScreen.contact'), t('donations:moneyScreen.contactDetails'))}>
+                      <Text style={localStyles.contactButtonText}>{t('donations:moneyScreen.contact')}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -845,14 +797,14 @@ export default function MoneyScreen({
       <Modal animationType="fade" transparent visible={isSavingsModalVisible} onRequestClose={() => setIsSavingsModalVisible(false)}>
         <TouchableOpacity style={localStyles.modalOverlay} activeOpacity={1} onPressOut={() => setIsSavingsModalVisible(false)}>
           <View style={localStyles.centerModalContent}>
-            <Text style={localStyles.modalTitle}>חיסכון לתרומה</Text>
-            <Text style={localStyles.modalDescription}>קבע יעד חיסכון חודשי לתרומה עתידית. בכל חודש נוסיף את הסכום לקופת חיסכון ייעודית.</Text>
-            <Text style={localStyles.modalFieldLabel}>סכום חודשי (₪)</Text>
+            <Text style={localStyles.modalTitle}>{t('donations:moneyScreen.savingsTitle')}</Text>
+            <Text style={localStyles.modalDescription}>{t('donations:moneyScreen.savingsDescription')}</Text>
+            <Text style={localStyles.modalFieldLabel}>{t('donations:moneyScreen.monthlyAmount')}</Text>
             <TextInput style={[localStyles.input, localStyles.modalAmountInput]} keyboardType="number-pad" placeholder="50" />
-            <Text style={localStyles.modalFieldLabel}>יעד (עמותה/קטגוריה)</Text>
-            <TextInput style={[localStyles.input]} placeholder="לדוגמה: חינוך" />
-            <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => { setIsSavingsModalVisible(false); Alert.alert('נשמר', 'תוכנית חיסכון לתרומה נשמרה'); }}>
-              <Text style={localStyles.modalPrimaryButtonText}>שמור חיסכון</Text>
+            <Text style={localStyles.modalFieldLabel}>{t('donations:moneyScreen.targetLabel')}</Text>
+            <TextInput style={[localStyles.input]} placeholder={t('donations:moneyScreen.targetExample')} />
+            <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => { setIsSavingsModalVisible(false); Alert.alert(t('donations:moneyScreen.saved'), t('donations:moneyScreen.savingsPlanSaved')); }}>
+              <Text style={localStyles.modalPrimaryButtonText}>{t('donations:moneyScreen.saveSavings')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -862,17 +814,17 @@ export default function MoneyScreen({
       <Modal animationType="fade" transparent visible={isRecurringModalVisible} onRequestClose={() => setIsRecurringModalVisible(false)}>
         <TouchableOpacity style={localStyles.modalOverlay} activeOpacity={1} onPressOut={() => setIsRecurringModalVisible(false)}>
           <View style={localStyles.centerModalContent}>
-            <Text style={localStyles.modalTitle}>הוראות קבע</Text>
-            <Text style={localStyles.modalDescription}>קבע תרומה קבועה (חודשית/שבועית) לעמותה שבחרת.</Text>
-            <Text style={localStyles.modalFieldLabel}>סכום קבוע (₪)</Text>
+            <Text style={localStyles.modalTitle}>{t('donations:moneyScreen.recurringTitle')}</Text>
+            <Text style={localStyles.modalDescription}>{t('donations:moneyScreen.recurringDescription')}</Text>
+            <Text style={localStyles.modalFieldLabel}>{t('donations:moneyScreen.fixedAmount')}</Text>
             <TextInput style={[localStyles.input, localStyles.modalAmountInput]} keyboardType="number-pad" placeholder="36" />
-            <Text style={localStyles.modalFieldLabel}>תדירות</Text>
+            <Text style={localStyles.modalFieldLabel}>{t('donations:moneyScreen.frequency')}</Text>
             <View style={localStyles.modalActionsRow}>
-              <TouchableOpacity style={localStyles.quickAmountButton}><Text style={localStyles.quickAmountButtonText}>חודשי</Text></TouchableOpacity>
-              <TouchableOpacity style={localStyles.quickAmountButton}><Text style={localStyles.quickAmountButtonText}>שבועי</Text></TouchableOpacity>
+              <TouchableOpacity style={localStyles.quickAmountButton}><Text style={localStyles.quickAmountButtonText}>{t('donations:moneyScreen.monthly')}</Text></TouchableOpacity>
+              <TouchableOpacity style={localStyles.quickAmountButton}><Text style={localStyles.quickAmountButtonText}>{t('donations:moneyScreen.weekly')}</Text></TouchableOpacity>
             </View>
-            <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => { setIsRecurringModalVisible(false); Alert.alert('נשמר', 'הוראת הקבע נשמרה'); }}>
-              <Text style={localStyles.modalPrimaryButtonText}>שמור הוראה</Text>
+            <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => { setIsRecurringModalVisible(false); Alert.alert(t('donations:moneyScreen.saved'), t('donations:moneyScreen.recurringSaved')); }}>
+              <Text style={localStyles.modalPrimaryButtonText}>{t('donations:moneyScreen.saveInstruction')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -882,14 +834,14 @@ export default function MoneyScreen({
       <Modal animationType="fade" transparent visible={isReceiptsModalVisible} onRequestClose={() => setIsReceiptsModalVisible(false)}>
         <TouchableOpacity style={localStyles.modalOverlay} activeOpacity={1} onPressOut={() => setIsReceiptsModalVisible(false)}>
           <View style={localStyles.centerModalContent}>
-            <Text style={localStyles.modalTitle}>קבלות ודוחות</Text>
-            <Text style={localStyles.modalDescription}>ייצוא קבלות שנתיות, צפייה בסיכום חודשי והשוואת תרומות.</Text>
+            <Text style={localStyles.modalTitle}>{t('donations:moneyScreen.receiptsTitle')}</Text>
+            <Text style={localStyles.modalDescription}>{t('donations:moneyScreen.receiptsDescription')}</Text>
             <View style={localStyles.modalActionsRow}>
-              <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => Alert.alert('קבלות', 'קובץ קבלות ירוכז כאן')}>
-                <Text style={localStyles.modalPrimaryButtonText}>ייצא קבלות</Text>
+              <TouchableOpacity style={localStyles.modalPrimaryButton} onPress={() => Alert.alert(t('donations:moneyScreen.exportReceipts'), t('donations:moneyScreen.receiptsFile'))}>
+                <Text style={localStyles.modalPrimaryButtonText}>{t('donations:moneyScreen.exportReceipts')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={localStyles.bitButton} onPress={() => Alert.alert('דוח חודשי', 'נסכם עבורך את החודש האחרון')}>
-                <Text style={localStyles.bitButtonText}>דוח חודשי</Text>
+              <TouchableOpacity style={localStyles.bitButton} onPress={() => Alert.alert(t('donations:moneyScreen.monthlyReport'), t('donations:moneyScreen.monthlyReportDesc'))}>
+                <Text style={localStyles.bitButtonText}>{t('donations:moneyScreen.monthlyReport')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1571,7 +1523,7 @@ const localStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
   bitButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: colors.transparent,
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',

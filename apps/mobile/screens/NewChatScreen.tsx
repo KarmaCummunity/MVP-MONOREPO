@@ -27,8 +27,8 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import { getFollowing, getFollowers, getFollowSuggestions } from '../utils/followService';
-import { createConversation, getAllConversations, conversationExists, sendMessage } from '../utils/chatService';
+import { getFollowing, getFollowers, getFollowSuggestions } from '../src/services/follow.service';
+import { createConversation, getAllConversations, conversationExists, sendMessage } from '../src/services/chat.service';
 import { UserPreview as CharacterType } from '../globals/types';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
@@ -42,7 +42,7 @@ type NewChatRouteParams = Record<string, never>;
 export default function NewChatScreen() {
   const { t } = useTranslation(['newChatScreen']);
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<Record<string, NewChatRouteParams>, string>>();
+  const _route = useRoute<RouteProp<Record<string, NewChatRouteParams>, string>>();
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,7 +130,7 @@ export default function NewChatScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [selectedUser]);
+  }, [selectedUser, t]);
 
   const applyFilters = useCallback((friendsList: CharacterType[]) => {
     if (!selectedUser) return friendsList;

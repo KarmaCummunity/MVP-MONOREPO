@@ -1,7 +1,8 @@
-import { sendFollowNotification } from '../../utils/notificationService';
-import { db, DatabaseService } from '../../utils/databaseService';
-import { apiService } from '../../utils/apiService';
+import { sendFollowNotification } from './notification.service';
+import { db, DatabaseService } from '../infrastructure/database.service';
+import { apiService, ServerUser } from '../api/api.service';
 import { USE_BACKEND } from '../../utils/dbConfig';
+import { logger } from '../../utils/loggerService';
 
 export interface FollowRelationship {
   followerId: string;
@@ -25,7 +26,7 @@ export const getUpdatedFollowCounts = async (userId: string): Promise<{ follower
       followingCount: following.length,
     };
   } catch (error) {
-    console.error('❌ Get updated follow counts error:', error);
+    logger.error('follow.service', 'Get updated follow counts error', { error });
     return {
       followersCount: 0,
       followingCount: 0,
@@ -38,7 +39,7 @@ export const getFollowStats = async (userId: string, currentUserId: string): Pro
     const followers = await db.getFollowers(userId);
     const following = await db.getFollowing(userId);
 
-    const isFollowing = following.some((rel: any) => rel.followerId === currentUserId);
+    const isFollowing = (following as FollowRelationship[]).some((rel) => rel.followerId === currentUserId);
 
     return {
       followersCount: followers.length,
@@ -46,7 +47,7 @@ export const getFollowStats = async (userId: string, currentUserId: string): Pro
       isFollowing
     };
   } catch (error) {
-    console.error('❌ Get follow stats error:', error);
+    logger.error('follow.service', 'Get follow stats error', { error });
     return {
       followersCount: 0,
       followingCount: 0,
@@ -62,7 +63,7 @@ export const followUser = async (followerId: string, followingId: string): Promi
     }
 
     const existingFollowers = await db.getFollowers(followingId);
-    const isAlreadyFollowing = existingFollowers.some((rel: any) => rel.followerId === followerId);
+    const isAlreadyFollowing = (existingFollowers as FollowRelationship[]).some((rel) => rel.followerId === followerId);
 
     if (isAlreadyFollowing) {
       return false;
@@ -74,15 +75,17 @@ export const followUser = async (followerId: string, followingId: string): Promi
       followDate: new Date().toISOString()
     };
 
-    await db.addFollower(followingId, followerId, newFollow);
+    await db.addFollower(followingId, followerId, newFollow as unknown as Record<string, unknown>);
 
-    await db.addFollowing(followerId, followingId, newFollow);
+    await db.addFollowing(followerId, followingId, newFollow as unknown as Record<string, unknown>);
 
     // Optional: fetch follower name from backend; fallback to ID
     try {
       const followerName = followerId;
       await sendFollowNotification(followerName, followingId);
-    } catch { }
+    } catch {
+      // Notification send failed; follow still succeeded
+    }
 
     // Update follow counts for both users
     await updateFollowCounts(followerId);
@@ -90,7 +93,7 @@ export const followUser = async (followerId: string, followingId: string): Promi
 
     return true;
   } catch (error) {
-    console.error('❌ Follow user error:', error);
+    logger.error('follow.service', 'Follow user error', { error });
     return false;
   }
 };
@@ -107,15 +110,29 @@ export const unfollowUser = async (followerId: string, followingId: string): Pro
 
     return true;
   } catch (error) {
-    console.error('❌ Unfollow user error:', error);
+    logger.error('follow.service', 'Unfollow user error', { error });
     return false;
   }
 };
 
-export const getFollowers = async (userId: string): Promise<any[]> => {
+interface FollowerUser {
+  id: string;
+  name: string;
+  avatar: string;
+  bio: string;
+  email?: string;
+  karmaPoints: number;
+  followersCount: number;
+  completedTasks: number;
+  roles: string[];
+  isVerified: boolean;
+  isActive: boolean;
+}
+
+export const getFollowers = async (userId: string): Promise<FollowerUser[]> => {
   try {
     const followers = await db.getFollowers(userId);
-    const followerIds = (followers as any[]).map((rel: any) => rel.followerId);
+    const followerIds = (followers as FollowRelationship[]).map((rel) => rel.followerId);
 
     if (followerIds.length === 0) {
       return [];
@@ -128,10 +145,10 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
           try {
             const response = await apiService.getUserById(id);
             if (response.success && response.data) {
-              const user = response.data;
+              const user = response.data as ServerUser;
               return {
                 id: user.id || id,
-                name: user.name || 'ללא שם',
+                name: user.name || '',
                 avatar: user.avatar_url || user.avatar || 'https://i.pravatar.cc/150?img=1',
                 bio: user.bio || '',
                 karmaPoints: user.karma_points || 0,
@@ -143,12 +160,12 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
               };
             }
           } catch (error) {
-            console.warn(`Failed to fetch follower ${id}:`, error);
+            logger.warn('follow.service', `Failed to fetch follower ${id}`, { error });
           }
           // Fallback to minimal data if fetch fails
           return {
             id,
-            name: 'ללא שם',
+            name: '',
             avatar: 'https://i.pravatar.cc/150?img=1',
             bio: '',
             karmaPoints: 0,
@@ -163,14 +180,14 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
         const users = await Promise.all(userPromises);
         return users.filter(user => user !== null);
       } catch (error) {
-        console.error('❌ Get followers from backend error:', error);
+        logger.error('follow.service', 'Get followers from backend error', { error });
       }
     }
 
     // Fallback: return minimal data with IDs only
     return followerIds.map((id: string) => ({
       id,
-      name: 'ללא שם',
+      name: '',
       avatar: 'https://i.pravatar.cc/150?img=1',
       bio: '',
       karmaPoints: 0,
@@ -181,15 +198,15 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
       isActive: false,
     }));
   } catch (error) {
-    console.error('❌ Get followers error:', error);
+    logger.error('follow.service', 'Get followers error', { error });
     return [];
   }
 };
 
-export const getFollowing = async (userId: string): Promise<any[]> => {
+export const getFollowing = async (userId: string): Promise<FollowerUser[]> => {
   try {
     const following = await db.getFollowing(userId);
-    const followingIds = (following as any[]).map((rel: any) => rel.followingId);
+    const followingIds = (following as FollowRelationship[]).map((rel) => rel.followingId);
 
     if (followingIds.length === 0) {
       return [];
@@ -202,10 +219,10 @@ export const getFollowing = async (userId: string): Promise<any[]> => {
           try {
             const response = await apiService.getUserById(id);
             if (response.success && response.data) {
-              const user = response.data;
+              const user = response.data as ServerUser;
               return {
                 id: user.id || id,
-                name: user.name || 'ללא שם',
+                name: user.name || '',
                 avatar: user.avatar_url || user.avatar || 'https://i.pravatar.cc/150?img=1',
                 bio: user.bio || '',
                 karmaPoints: user.karma_points || 0,
@@ -217,12 +234,12 @@ export const getFollowing = async (userId: string): Promise<any[]> => {
               };
             }
           } catch (error) {
-            console.warn(`Failed to fetch following user ${id}:`, error);
+            logger.warn('follow.service', `Failed to fetch following user ${id}`, { error });
           }
           // Fallback to minimal data if fetch fails
           return {
             id,
-            name: 'ללא שם',
+            name: '',
             avatar: 'https://i.pravatar.cc/150?img=1',
             bio: '',
             karmaPoints: 0,
@@ -235,16 +252,16 @@ export const getFollowing = async (userId: string): Promise<any[]> => {
         });
 
         const users = await Promise.all(userPromises);
-        return users.filter(user => user !== null);
+        return users.filter((user): user is FollowerUser => user !== null);
       } catch (error) {
-        console.error('❌ Get following from backend error:', error);
+        logger.error('follow.service', 'Get following from backend error', { error });
       }
     }
 
     // Fallback: return minimal data with IDs only
     return followingIds.map((id: string) => ({
       id,
-      name: 'ללא שם',
+      name: '',
       avatar: 'https://i.pravatar.cc/150?img=1',
       bio: '',
       karmaPoints: 0,
@@ -255,12 +272,12 @@ export const getFollowing = async (userId: string): Promise<any[]> => {
       isActive: false,
     }));
   } catch (error) {
-    console.error('❌ Get following error:', error);
+    logger.error('follow.service', 'Get following error', { error });
     return [];
   }
 };
 
-export const getFollowSuggestions = async (currentUserId: string, limit: number = 10, currentUserEmail?: string): Promise<any[]> => {
+export const getFollowSuggestions = async (currentUserId: string, limit: number = 10, currentUserEmail?: string): Promise<FollowerUser[]> => {
   try {
     if (USE_BACKEND) {
       // Get ALL users (use high limit to get all users from database)
@@ -271,8 +288,8 @@ export const getFollowSuggestions = async (currentUserId: string, limit: number 
         // Filter out current user using strict string comparison (case-insensitive)
         const excludeId = String(currentUserId).trim().toLowerCase();
         const excludeEmail = currentUserEmail ? String(currentUserEmail).trim().toLowerCase() : '';
-        const users = (response.data as any[])
-          .filter((user: any) => {
+        const users = (response.data as Record<string, unknown>[])
+          .filter((user: Record<string, unknown>) => {
             const userId = String(user.id || '').trim().toLowerCase();
             const userEmail = user.email ? String(user.email).trim().toLowerCase() : '';
             const isCurrentUser = userId === excludeId ||
@@ -280,29 +297,30 @@ export const getFollowSuggestions = async (currentUserId: string, limit: number 
               userId === '';
 
             if (isCurrentUser) {
-              console.log('🚫 getFollowSuggestions - Filtered out current user:', { userId, userEmail, name: user.name });
+              logger.debug('follow.service', 'Filtered out current user in suggestions', { userId, userEmail });
             }
 
             return !isCurrentUser;
           })
-          .map((user: any) => ({
-            id: user.id,
-            name: user.name || 'ללא שם',
-            avatar: user.avatar_url || 'https://i.pravatar.cc/150?img=1',
-            bio: user.bio || '',
-            email: user.email || '', // Include email for additional filtering
-            karmaPoints: user.karma_points || 0,
-            completedTasks: 0, // TODO: Get from backend if available
-            roles: ['user'], // TODO: Get from backend if available
-            isVerified: false, // TODO: Get from backend if available
-            isActive: true, // Users from backend are active by default
+          .map((user: Record<string, unknown>) => ({
+            id: user.id as string,
+            name: (user.name as string) || '',
+            avatar: (user.avatar_url as string) || 'https://i.pravatar.cc/150?img=1',
+            bio: (user.bio as string) || '',
+            email: (user.email as string) || '',
+            karmaPoints: (user.karma_points as number) || 0,
+            followersCount: (user.followers_count as number) || 0,
+            completedTasks: 0,
+            roles: (user.roles as string[]) || ['user'],
+            isVerified: false,
+            isActive: true,
           }));
         return users.slice(0, limit);
       }
     }
     return [];
   } catch (error) {
-    console.error('❌ Get follow suggestions error:', error);
+    logger.error('follow.service', 'Get follow suggestions error', { error });
     return [];
   }
 };
@@ -310,18 +328,18 @@ export const getFollowSuggestions = async (currentUserId: string, limit: number 
 export const resetFollowRelationships = async (): Promise<void> => {
   try {
     await DatabaseService.clearAllData();
-    console.log('✅ All follow relationships reset');
+    logger.info('follow.service', 'All follow relationships reset');
   } catch (error) {
-    console.error('❌ Reset follow relationships error:', error);
+    logger.error('follow.service', 'Reset follow relationships error', { error });
   }
 };
 
 export const createSampleFollowData = async (): Promise<void> => {
   try {
     // Demo data creation removed
-    console.log('ℹ️ createSampleFollowData skipped (demo removed)');
+    logger.info('follow.service', 'createSampleFollowData skipped (demo removed)');
   } catch (error) {
-    console.error('❌ Create sample follow data error:', error);
+    logger.error('follow.service', 'Create sample follow data error', { error });
   }
 };
 
@@ -331,18 +349,18 @@ export const getFollowHistory = async (userId: string): Promise<FollowRelationsh
     const following = await db.getFollowing(userId);
 
     const allRelationships: FollowRelationship[] = [
-      ...(followers as any[]),
-      ...(following as any[])
+      ...(followers as FollowRelationship[]),
+      ...(following as FollowRelationship[])
     ];
 
     return allRelationships;
   } catch (error) {
-    console.error('❌ Get follow history error:', error);
+    logger.error('follow.service', 'Get follow history error', { error });
     return [];
   }
 };
 
-export const getPopularUsers = async (limit: number = 10, excludeUserId?: string, excludeUserEmail?: string): Promise<any[]> => {
+export const getPopularUsers = async (limit: number = 10, excludeUserId?: string, excludeUserEmail?: string): Promise<FollowerUser[]> => {
   try {
     if (USE_BACKEND) {
       // Get ALL users (use high limit to get all users from database)
@@ -354,8 +372,8 @@ export const getPopularUsers = async (limit: number = 10, excludeUserId?: string
         // Map to UserPreview format and filter out current user if provided (case-insensitive)
         const excludeId = excludeUserId ? String(excludeUserId).trim().toLowerCase() : null;
         const excludeEmail = excludeUserEmail ? String(excludeUserEmail).trim().toLowerCase() : '';
-        const users = (response.data as any[])
-          .filter((user: any) => {
+        const users = (response.data as Record<string, unknown>[])
+          .filter((user: Record<string, unknown>) => {
             if (!excludeId) return true;
             const userId = String(user.id || '').trim().toLowerCase();
             const userEmail = user.email ? String(user.email).trim().toLowerCase() : '';
@@ -364,29 +382,30 @@ export const getPopularUsers = async (limit: number = 10, excludeUserId?: string
               userId === '';
 
             if (isCurrentUser) {
-              console.log('🚫 getPopularUsers - Filtered out current user:', { userId, userEmail, name: user.name });
+              logger.debug('follow.service', 'Filtered out current user in popular users', { userId, userEmail });
             }
 
             return !isCurrentUser;
           })
-          .map((user: any) => ({
-            id: user.id,
-            name: user.name || 'ללא שם',
-            avatar: user.avatar_url || 'https://i.pravatar.cc/150?img=1',
-            bio: user.bio || '',
-            email: user.email || '', // Include email for additional filtering
-            karmaPoints: user.karma_points || 0,
-            completedTasks: 0, // TODO: Get from backend if available
-            roles: ['user'], // TODO: Get from backend if available
-            isVerified: false, // TODO: Get from backend if available
-            isActive: true, // Users from backend are active by default
+          .map((user: Record<string, unknown>) => ({
+            id: user.id as string,
+            name: (user.name as string) || '',
+            avatar: (user.avatar_url as string) || 'https://i.pravatar.cc/150?img=1',
+            bio: (user.bio as string) || '',
+            email: (user.email as string) || '',
+            karmaPoints: (user.karma_points as number) || 0,
+            followersCount: (user.followers_count as number) || 0,
+            completedTasks: 0,
+            roles: (user.roles as string[]) || ['user'],
+            isVerified: false,
+            isActive: true,
           }));
         return users.slice(0, limit);
       }
     }
     return [];
   } catch (error) {
-    console.error('❌ Get popular users error:', error);
+    logger.error('follow.service', 'Get popular users error', { error });
     return [];
   }
 };
@@ -394,18 +413,18 @@ export const getPopularUsers = async (limit: number = 10, excludeUserId?: string
 
 export const debugFollowRelationships = async (): Promise<void> => {
   try {
-    console.log('ℹ️ debugFollowRelationships skipped (demo users removed)');
+    logger.info('follow.service', 'debugFollowRelationships skipped (demo users removed)');
   } catch (error) {
-    console.error('❌ Debug follow relationships error:', error);
+    logger.error('follow.service', 'Debug follow relationships error', { error });
   }
 };
 
 
 export const comprehensiveSystemCheck = async (): Promise<void> => {
   try {
-    console.log('ℹ️ comprehensiveSystemCheck skipped (demo users removed)');
+    logger.info('follow.service', 'comprehensiveSystemCheck skipped (demo users removed)');
   } catch (error) {
-    console.error('❌ Comprehensive system check error:', error);
+    logger.error('follow.service', 'Comprehensive system check error', { error });
   }
 };
 
@@ -427,8 +446,8 @@ export const updateFollowCounts = async (userId: string): Promise<void> => {
     };
 
     await db.updateUser(userId, userData);
-    console.log('✅ Updated follow counts for user:', userId, userData);
+    logger.info('follow.service', 'Updated follow counts for user', { userId, userData });
   } catch (error) {
-    console.error('❌ Update follow counts error:', error);
+    logger.error('follow.service', 'Update follow counts error', { error });
   }
 }; 

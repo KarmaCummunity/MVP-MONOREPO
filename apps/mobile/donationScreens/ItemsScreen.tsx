@@ -10,13 +10,13 @@ import ScrollContainer from '../components/ScrollContainer';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { Ionicons as Icon } from '@expo/vector-icons';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 import { biDiTextAlign, rowDirection, isLandscape, marginStartEnd, getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
-import { getCategoryLabel } from '../utils/itemCategoryUtils';
+import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
 import { useToast } from '../utils/toastService';
 import VerticalGridSlider from '../components/VerticalGridSlider';
-import { postsService } from '../utils/postsService';
+import { postsService } from '../src/services/posts.service';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
@@ -378,7 +378,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         logger.debug('ItemsScreen', 'Offerer mode: loading user posts for history', { uid });
         try {
           // טוען את הפוסטים של המשתמש
-          const { apiService } = await import('../utils/apiService');
+          const { apiService } = await import('../src/api/api.service');
           const postsResponse = await apiService.getUserPosts(uid, 50, uid);
 
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
@@ -1418,7 +1418,7 @@ const localStyles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     alignItems: 'center',
   },

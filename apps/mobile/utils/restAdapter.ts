@@ -3,9 +3,9 @@
 // - Reached from: `DatabaseService` when `USE_BACKEND` is true, and some direct auth flows.
 // - Provides: create/read/update/delete/list for collections; auth check/register/login; generic POST helper.
 // utils/restAdapter.ts
-import { API_BASE_URL } from './config.constants';
+import { API_BASE_URL } from '../src/infrastructure/config';
 
-import { apiService } from './apiService';
+import { apiService } from '../src/api/api.service';
 
 export class RestAdapter {
   private _baseUrl: string | null = null;
@@ -47,7 +47,7 @@ export class RestAdapter {
     return API_BASE_URL.replace(/\/$/, '');
   }
 
-  async post<T>(path: string, body?: any): Promise<T> {
+  async post<T>(path: string, body?: unknown): Promise<T> {
     return this.http<T>(path, {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -144,14 +144,14 @@ export class RestAdapter {
     return this.http(`/auth/check-email?email=${encodeURIComponent(email)}`);
   }
 
-  async register(email: string, password: string, name?: string): Promise<{ ok?: boolean; user?: any; error?: string }> {
+  async register(email: string, password: string, name?: string): Promise<{ ok?: boolean; user?: unknown; error?: string }> {
     return this.http(`/auth/register`, {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     });
   }
 
-  async login(email: string, password: string): Promise<{ ok?: boolean; user?: any; error?: string }> {
+  async login(email: string, password: string): Promise<{ ok?: boolean; user?: unknown; error?: string }> {
     return this.http(`/auth/login`, {
       method: 'POST',
       body: JSON.stringify({ email, password }),

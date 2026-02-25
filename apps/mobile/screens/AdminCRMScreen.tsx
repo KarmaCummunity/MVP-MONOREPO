@@ -23,7 +23,7 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
 interface AdminCRMScreenProps {
@@ -213,7 +213,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                 <Text style={styles.title}>ניהול קשרים</Text>
                 {!viewOnly && (
                     <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-                        <Ionicons name="add" size={24} color="white" />
+                        <Ionicons name="add" size={24} color={colors.buttonText} />
                         <Text style={styles.addButtonText}>הוסף</Text>
                     </TouchableOpacity>
                 )}
@@ -349,7 +349,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                             </View>
 
                             <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isMutating}>
-                                {isMutating ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>שמור</Text>}
+                                {isMutating ? <ActivityIndicator color={colors.buttonText} /> : <Text style={styles.saveButtonText}>שמור</Text>}
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
@@ -378,48 +378,48 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: LAYOUT_CONSTANTS.SPACING.LG, backgroundColor: colors.background, paddingVertical: 20 },
     title: { fontSize: FontSizes.heading2, fontWeight: 'bold' },
     addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, padding: 8, borderRadius: 8 },
-    addButtonText: { color: 'white', marginLeft: 5, fontWeight: '600' },
+    addButtonText: { color: colors.buttonText, marginLeft: 5, fontWeight: '600' },
     filtersContainer: { padding: 10, backgroundColor: colors.background },
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.backgroundSecondary, borderRadius: 8, padding: 8, marginBottom: 10 },
     searchIcon: { marginRight: 8 },
     searchInput: { flex: 1, textAlign: 'right' },
     statusFilterContainer: { flexDirection: 'row', justifyContent: 'space-around' },
-    filterButton: { padding: 8, borderRadius: 15, width: '30%', alignItems: 'center', backgroundColor: '#eee' },
+    filterButton: { padding: 8, borderRadius: 15, width: '30%', alignItems: 'center', backgroundColor: colors.backgroundSecondary },
     filterButtonActive: { backgroundColor: colors.primary },
-    filterButtonText: { color: '#666' },
-    filterButtonTextActive: { color: 'white', fontWeight: 'bold' },
+    filterButtonText: { color: colors.textTertiary },
+    filterButtonTextActive: { color: colors.buttonText, fontWeight: 'bold' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     listContent: { padding: 15, paddingBottom: 100 },
-    card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 15, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, elevation: 2 },
+    card: { backgroundColor: colors.cardBackground, padding: 15, borderRadius: 10, marginBottom: 15, shadowColor: colors.shadow, shadowOpacity: 0.1, shadowRadius: 5, elevation: 2 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
     cardTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'left' },
-    cardDate: { fontSize: 12, color: '#999', textAlign: 'left' },
+    cardDate: { fontSize: 12, color: colors.textTertiary, textAlign: 'left' },
     cardActions: { flexDirection: 'row' },
     actionButton: { padding: 5, marginLeft: 10 },
     cardDetails: { marginBottom: 10 },
     detailText: { fontSize: 14, marginBottom: 4, textAlign: 'left' },
     bold: { fontWeight: 'bold' },
     statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-    statusActive: { backgroundColor: '#e6fffa' },
-    statusInactive: { backgroundColor: '#fff5f5' },
+    statusActive: { backgroundColor: colors.successLight },
+    statusInactive: { backgroundColor: colors.errorLight },
     statusText: { fontSize: 12, fontWeight: 'bold' },
     statusTextActive: { color: colors.success },
     statusTextInactive: { color: colors.error },
-    emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '80%' },
-    modalHeader: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    emptyText: { textAlign: 'center', marginTop: 50, color: colors.textTertiary },
+    modalOverlay: { flex: 1, backgroundColor: colors.dropdownModalOverlay, justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '80%' },
+    modalHeader: { padding: 20, borderBottomWidth: 1, borderBottomColor: colors.borderSecondary, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     modalTitle: { fontSize: 20, fontWeight: 'bold' },
     modalForm: { padding: 20 },
     formGroup: { marginBottom: 15 },
     label: { marginBottom: 5, fontWeight: '600', textAlign: 'left' },
-    input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, textAlign: 'right' },
+    input: { borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8, padding: 10, textAlign: 'right' },
     textArea: { height: 80 },
     saveButton: { backgroundColor: colors.primary, padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 20 },
-    saveButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+    saveButtonText: { color: colors.buttonText, fontWeight: 'bold', fontSize: 16 },
     statusSwitches: { flexDirection: 'row', marginTop: 5 },
     statusSwitch: { flex: 1, padding: 10, alignItems: 'center', borderColor: colors.primary, borderWidth: 1 },
     statusSwitchActive: { backgroundColor: colors.primary },
-    wt: { color: 'white' },
+    wt: { color: colors.buttonText },
     bt: { color: colors.primary },
 });

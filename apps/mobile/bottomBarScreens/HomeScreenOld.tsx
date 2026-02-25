@@ -54,11 +54,11 @@ import { FontSizes, LAYOUT_CONSTANTS } from "../globals/constants";
 import { useTranslation } from 'react-i18next';
 import PostsReelsScreen from "../components/PostsReelsScreen";
 import { useUser } from "../stores/userStore";
-import { shouldAutoOpenAboutScreen, markAboutScreenSeen } from "../utils/profileUtils";
+import { shouldAutoOpenAboutScreen, markAboutScreenSeen } from "../src/utils/helpers/profileUtils";
 import { StatDetails } from "../components/StatDetailsModal";
 import { createShadowStyle } from "../globals/styles";
 import { scaleSize } from "../globals/responsive";
-import { EnhancedStatsService, formatShortNumber } from "../utils/statsService";
+import { EnhancedStatsService, formatShortNumber } from "../src/services/stats.service";
 import FloatingBubblesOverlay from "../components/FloatingBubblesOverlay";
 // FloatingBubblesSkia imported dynamically to avoid Web bundle issues
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");

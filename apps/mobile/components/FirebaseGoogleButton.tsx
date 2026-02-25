@@ -12,7 +12,7 @@ import { getFirebase } from '../utils/firebaseClient';
 import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../utils/config.constants';
+import { API_BASE_URL } from '../src/infrastructure/config';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
@@ -21,8 +21,8 @@ import { logger } from '../utils/loggerService';
 
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
-  const { setSelectedUserWithMode, isAuthenticated, isGuestMode } = useUser();
-  const navigation = useNavigation<any>();
+  const { setSelectedUserWithMode } = useUser();
+  const _navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

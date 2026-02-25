@@ -48,7 +48,7 @@ import { useScrollPositionWithHandler } from '../hooks/useScrollPosition';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import { logger } from '../utils/loggerService';
-import { apiService } from '../utils/apiService';
+import { apiService } from '../src/api/api.service';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -305,8 +305,9 @@ export default function SettingsScreen() {
       try {
         // Method 1: Try resolving by email directly
         const resolveRes = await apiService.resolveUserId({ email: adminEmail });
-        if (resolveRes.success && resolveRes.data?.id) {
-          adminId = resolveRes.data.id;
+        const resolveData = resolveRes.data as { id?: string } | undefined;
+        if (resolveRes.success && resolveData?.id) {
+          adminId = resolveData.id;
         }
       } catch (e) {
         logger.warn('SettingsScreen', 'resolveUserId failed', { error: String(e) });
@@ -318,12 +319,12 @@ export default function SettingsScreen() {
           const searchRes = await apiService.getUsers({ search: adminEmail, limit: 1 });
           if (searchRes.success && searchRes.data && Array.isArray(searchRes.data) && searchRes.data.length > 0) {
             // Verify exact email match to be safe
-            const adminUser = searchRes.data.find((u: any) => u.email?.toLowerCase() === adminEmail.toLowerCase());
+            const adminUser = searchRes.data.find((u: Record<string, unknown>) => (u.email as string)?.toLowerCase() === adminEmail.toLowerCase());
             if (adminUser) {
-              adminId = adminUser.id;
+              adminId = (adminUser as Record<string, unknown>).id as string;
             } else {
               // Fallback to first result if it looks close enough (or just take it as the search should be specific)
-              adminId = searchRes.data[0].id;
+              adminId = (searchRes.data[0] as Record<string, unknown>).id as string;
             }
           }
         } catch (e) {

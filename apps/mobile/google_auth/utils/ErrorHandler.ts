@@ -91,7 +91,7 @@ export interface AuthError {
   readonly technicalDetails?: string;
   
   /** Original error object that caused this */
-  readonly originalError?: any;
+  readonly originalError?: unknown;
   
   /** Error timestamp */
   readonly timestamp: string;
@@ -125,7 +125,7 @@ export interface AuthError {
   };
   
   /** Additional metadata */
-  readonly metadata?: Record<string, any>;
+  readonly metadata?: Record<string, unknown>;
 }
 
 // ========================================
@@ -252,6 +252,12 @@ const ERROR_MESSAGES = {
   },
 } as const;
 
+/** Helper to safely access error-like object properties */
+function asErrorLike(e: unknown): Record<string, unknown> | null {
+  if (e == null || typeof e !== 'object') return null;
+  return e as Record<string, unknown>;
+}
+
 // ========================================
 // MAIN ERROR HANDLER CLASS
 // ========================================
@@ -297,12 +303,12 @@ class AuthErrorHandlerClass {
    * ```
    */
   public static handleError(
-    error: any,
+    error: unknown,
     context: {
       operation: string;
       userId?: string;
       sessionId?: string;
-      additionalContext?: Record<string, any>;
+      additionalContext?: Record<string, unknown>;
     }
   ): AuthError {
     const errorId = this.generateErrorId();
@@ -340,8 +346,8 @@ class AuthErrorHandlerClass {
       },
       recovery,
       metadata: {
-        errorSource: error?.constructor?.name || typeof error,
-        stackTrace: error?.stack ? error.stack.substring(0, 500) : undefined,
+        errorSource: (asErrorLike(error)?.constructor as { name?: string })?.name || typeof error,
+        stackTrace: typeof (asErrorLike(error)?.stack) === 'string' ? (asErrorLike(error)!.stack as string).substring(0, 500) : undefined,
       },
     };
 
@@ -375,7 +381,7 @@ class AuthErrorHandlerClass {
     const { showRetryButton = false, onRetry, onDismiss, autoHide = true } = options;
     
     // Determine alert buttons
-    const buttons: Array<{ text: string; onPress?: () => void; style?: any }> = [];
+    const buttons: Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }> = [];
     
     if (showRetryButton && authError.retryable && onRetry) {
       buttons.push({
@@ -422,83 +428,87 @@ class AuthErrorHandlerClass {
   /**
    * Categorize error based on its characteristics
    */
-  private static categorizeError(error: any): AuthErrorCategory {
-    if (!error) return AuthErrorCategory.UNKNOWN;
-    
+  private static categorizeError(error: unknown): AuthErrorCategory {
+    const err = asErrorLike(error);
+    if (!err) return AuthErrorCategory.UNKNOWN;
+
     const errorString = String(error).toLowerCase();
-    const errorMessage = error?.message?.toLowerCase() || '';
-    
+    const errorMessage = String(err.message || '').toLowerCase();
+
     // OAuth-related errors
-    if (errorString.includes('oauth') || 
+    if (errorString.includes('oauth') ||
         errorString.includes('cancelled') ||
         errorString.includes('id_token') ||
-        error?.type === 'cancel') {
+        err.type === 'cancel') {
       return AuthErrorCategory.OAUTH;
     }
-    
+
     // Network-related errors
-    if (error instanceof TypeError && errorMessage.includes('fetch') ||
+    if ((error instanceof TypeError && errorMessage.includes('fetch')) ||
         errorMessage.includes('network') ||
         errorMessage.includes('connection') ||
         errorMessage.includes('dns') ||
-        error?.name === 'NetworkError') {
+        err.name === 'NetworkError') {
       return AuthErrorCategory.NETWORK;
     }
-    
+
     // Server errors
-    if (error?.status >= 500 ||
+    if ((typeof err.status === 'number' && err.status >= 500) ||
         errorMessage.includes('server error') ||
         errorMessage.includes('internal error')) {
       return AuthErrorCategory.SERVER;
     }
-    
+
     // Rate limiting errors
-    if (error?.status === 429 ||
+    if (err.status === 429 ||
         errorMessage.includes('rate limit') ||
         errorMessage.includes('too many')) {
       return AuthErrorCategory.RATE_LIMIT;
     }
-    
-    // Token-related errors  
+
+    // Token-related errors
     if (errorMessage.includes('token') ||
         errorMessage.includes('expired') ||
         errorMessage.includes('invalid') ||
-        error?.status === 401) {
+        err.status === 401) {
       return AuthErrorCategory.TOKEN;
     }
-    
+
     // Storage errors
     if (errorMessage.includes('storage') ||
         errorMessage.includes('keychain') ||
         errorMessage.includes('secure store')) {
       return AuthErrorCategory.STORAGE;
     }
-    
+
     // Configuration errors
     if (errorMessage.includes('client id') ||
         errorMessage.includes('configuration') ||
         errorMessage.includes('redirect uri')) {
       return AuthErrorCategory.CONFIG;
     }
-    
+
     // Permission errors
-    if (error?.status === 403 ||
+    if (err.status === 403 ||
         errorMessage.includes('permission') ||
         errorMessage.includes('unauthorized') ||
         errorMessage.includes('forbidden')) {
       return AuthErrorCategory.PERMISSION;
     }
-    
+
     return AuthErrorCategory.UNKNOWN;
   }
 
   /**
    * Determine error severity level
    */
-  private static determineSeverity(category: AuthErrorCategory, error: any): AuthErrorSeverity {
+  private static determineSeverity(category: AuthErrorCategory, error: unknown): AuthErrorSeverity {
+    const err = asErrorLike(error);
+    const status = typeof err?.status === 'number' ? err.status : 0;
+
     // Critical errors that prevent core functionality
     if (category === AuthErrorCategory.CONFIG ||
-        (category === AuthErrorCategory.SERVER && error?.status >= 500)) {
+        (category === AuthErrorCategory.SERVER && status >= 500)) {
       return AuthErrorSeverity.CRITICAL;
     }
     
@@ -523,12 +533,12 @@ class AuthErrorHandlerClass {
   /**
    * Generate user-friendly error message
    */
-  private static generateUserMessage(error: any, category: AuthErrorCategory): string {
+  private static generateUserMessage(error: unknown, category: AuthErrorCategory): string {
     const locale = 'he'; // Default to Hebrew
     const errorType = this.getSpecificErrorType(error, category);
     
     // Get message from predefined messages
-    const categoryMessages = ERROR_MESSAGES[category] as any;
+    const categoryMessages = ERROR_MESSAGES[category] as Record<string, Record<string, string>> | undefined;
     if (categoryMessages && categoryMessages[errorType]) {
       return categoryMessages[errorType][locale] || categoryMessages[errorType].en;
     }
@@ -552,26 +562,27 @@ class AuthErrorHandlerClass {
   /**
    * Determine specific error type within category
    */
-  private static getSpecificErrorType(error: any, category: AuthErrorCategory): string {
-    const errorMessage = error?.message?.toLowerCase() || '';
-    
+  private static getSpecificErrorType(error: unknown, category: AuthErrorCategory): string {
+    const err = asErrorLike(error);
+    const errorMessage = String(err?.message || '').toLowerCase();
+
     switch (category) {
       case AuthErrorCategory.OAUTH:
-        if (error?.type === 'cancel') return 'CANCELLED';
+        if (err?.type === 'cancel') return 'CANCELLED';
         if (errorMessage.includes('token')) return 'INVALID_TOKEN';
         if (errorMessage.includes('expired')) return 'EXPIRED_TOKEN';
         return 'FLOW_ERROR';
-        
+
       case AuthErrorCategory.NETWORK:
-        if (error?.name === 'AbortError') return 'TIMEOUT';
+        if (err?.name === 'AbortError') return 'TIMEOUT';
         if (errorMessage.includes('dns')) return 'DNS_ERROR';
         return 'CONNECTION_FAILED';
-        
+
       case AuthErrorCategory.SERVER:
-        if (error?.status === 503) return 'MAINTENANCE';
-        if (error?.status === 502 || error?.status === 504) return 'OVERLOADED';
+        if (err?.status === 503) return 'MAINTENANCE';
+        if (err?.status === 502 || err?.status === 504) return 'OVERLOADED';
         return 'INTERNAL_ERROR';
-        
+
       default:
         return 'GENERIC';
     }
@@ -580,11 +591,14 @@ class AuthErrorHandlerClass {
   /**
    * Determine retry strategy for error
    */
-  private static determineRetryStrategy(category: AuthErrorCategory, error: any): {
+  private static determineRetryStrategy(category: AuthErrorCategory, error: unknown): {
     retryable: boolean;
     retryDelay?: number;
     maxRetries?: number;
   } {
+    const err = asErrorLike(error);
+    const status = typeof err?.status === 'number' ? err.status : 0;
+
     switch (category) {
       case AuthErrorCategory.NETWORK:
         return {
@@ -592,10 +606,10 @@ class AuthErrorHandlerClass {
           retryDelay: 2000, // 2 seconds
           maxRetries: 3,
         };
-        
+
       case AuthErrorCategory.SERVER:
         // Don't retry 4xx errors, do retry 5xx errors
-        if (error?.status >= 400 && error?.status < 500) {
+        if (status >= 400 && status < 500) {
           return { retryable: false };
         }
         return {
@@ -603,14 +617,14 @@ class AuthErrorHandlerClass {
           retryDelay: 5000, // 5 seconds
           maxRetries: 2,
         };
-        
+
       case AuthErrorCategory.TOKEN:
         // Token errors usually need re-authentication
         return { retryable: false };
-        
+
       case AuthErrorCategory.OAUTH:
         // OAuth cancellation is not retryable, but other OAuth errors might be
-        if (error?.type === 'cancel') {
+        if (err?.type === 'cancel') {
           return { retryable: false };
         }
         return {
@@ -618,11 +632,11 @@ class AuthErrorHandlerClass {
           retryDelay: 1000, // 1 second
           maxRetries: 2,
         };
-        
+
       case AuthErrorCategory.RATE_LIMIT:
         return {
           retryable: true,
-          retryDelay: error?.retryAfter || 60000, // Default 1 minute
+          retryDelay: (typeof err?.retryAfter === 'number' ? err.retryAfter : undefined) || 60000, // Default 1 minute
           maxRetries: 1, // Only retry once for rate limits
         };
         
@@ -649,7 +663,7 @@ class AuthErrorHandlerClass {
   /**
    * Generate recovery strategy suggestions
    */
-  private static generateRecoveryStrategy(category: AuthErrorCategory, error: any): AuthError['recovery'] {
+  private static generateRecoveryStrategy(category: AuthErrorCategory, _error: unknown): AuthError['recovery'] {
     switch (category) {
       case AuthErrorCategory.OAUTH:
         return {
@@ -703,29 +717,16 @@ class AuthErrorHandlerClass {
   /**
    * Extract technical details from error for debugging
    */
-  private static extractTechnicalDetails(error: any): string {
+  private static extractTechnicalDetails(error: unknown): string {
+    const err = asErrorLike(error);
+    if (!err) return 'No technical details available';
+
     const details: string[] = [];
-    
-    if (error?.message) {
-      details.push(`Message: ${error.message}`);
-    }
-    
-    if (error?.status) {
-      details.push(`Status: ${error.status}`);
-    }
-    
-    if (error?.code) {
-      details.push(`Code: ${error.code}`);
-    }
-    
-    if (error?.name) {
-      details.push(`Type: ${error.name}`);
-    }
-    
-    if (error?.url) {
-      details.push(`URL: ${error.url}`);
-    }
-    
+    if (err.message) details.push(`Message: ${err.message}`);
+    if (err.status !== undefined) details.push(`Status: ${err.status}`);
+    if (err.code !== undefined) details.push(`Code: ${err.code}`);
+    if (err.name) details.push(`Type: ${err.name}`);
+    if (err.url) details.push(`URL: ${err.url}`);
     return details.join(', ') || 'No technical details available';
   }
 
@@ -846,7 +847,7 @@ export const AuthErrorHandler = AuthErrorHandlerClass;
  * @param operation Operation context
  * @returns Processed AuthError
  */
-export const handleAuthError = (error: any, operation: string): AuthError => {
+export const handleAuthError = (error: unknown, operation: string): AuthError => {
   return AuthErrorHandlerClass.handleError(error, { operation });
 };
 
@@ -856,7 +857,7 @@ export const handleAuthError = (error: any, operation: string): AuthError => {
  * @param oauthResponse OAuth response from expo-auth-session
  * @returns Processed AuthError or null if no error
  */
-export const handleOAuthError = (oauthResponse: any): AuthError | null => {
+export const handleOAuthError = (oauthResponse: { type?: string; error?: unknown }): AuthError | null => {
   if (oauthResponse?.type === 'error') {
     return AuthErrorHandlerClass.handleError(oauthResponse.error, {
       operation: 'oauth_flow',
@@ -879,7 +880,7 @@ export const handleOAuthError = (oauthResponse: any): AuthError | null => {
  * @param endpoint API endpoint that failed
  * @returns Processed AuthError
  */
-export const handleNetworkError = (error: any, endpoint: string): AuthError => {
+export const handleNetworkError = (error: unknown, endpoint: string): AuthError => {
   return AuthErrorHandlerClass.handleError(error, {
     operation: `api_request_${endpoint}`,
   });
@@ -915,7 +916,7 @@ export async function withRetry<T>(
   maxAttempts: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {

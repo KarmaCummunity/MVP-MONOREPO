@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useNavigation } from '@react-navigation/native';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
 import { useUser } from '../stores/userStore';
 
 type OrgApplication = {
@@ -93,7 +93,7 @@ export default function OrgOnboardingScreen() {
         Alert.alert(t('auth:org.sentTitle') || 'נשלח', t('auth:org.sentMessage') || 'הבקשה נשלחה! לאחר אישור תקבלו גישה מורחבת.');
       }
       navigation.goBack();
-    } catch (e) {
+    } catch (_e) {
       Alert.alert(t('auth:org.errorTitle') || 'שגיאה', t('auth:org.errorSend') || 'שליחת הבקשה נכשלה');
     } finally {
       setIsSubmitting(false);
@@ -198,16 +198,16 @@ const styles = StyleSheet.create({
   webScrollContainer: {
     flex: 1,
     ...(Platform.OS === 'web' && {
-      overflow: 'auto' as any,
-      WebkitOverflowScrolling: 'touch' as any,
-      overscrollBehavior: 'contain' as any,
-      height: '100vh' as any,
-      maxHeight: '100vh' as any,
-      width: '100%' as any,
-      touchAction: 'auto' as any,
-      position: 'relative' as any,
+      overflow: 'auto' as const,
+      WebkitOverflowScrolling: 'touch' as const,
+      overscrollBehavior: 'contain' as const,
+      height: '100vh' as const,
+      maxHeight: '100vh' as const,
+      width: '100%' as const,
+      touchAction: 'auto' as const,
+      position: 'relative' as const,
     }),
-  } as any,
+  } as Record<string, unknown>,
   webScrollContent: {
     padding: 16,
     paddingBottom: 80,

@@ -5,6 +5,42 @@
 // - Behavior: Delegates to `restAdapter` when `USE_BACKEND` is true, else Firestore/AsyncStorage.
 // utils/databaseService.ts
 
+import { logger } from '../../utils/loggerService';
+
+/** Minimal interface for items that may have a timestamp for sorting */
+interface TimestampedRecord {
+  timestamp?: string;
+  [key: string]: unknown;
+}
+
+/** Ride API response shape from backend */
+interface RideApiResponse {
+  id: string;
+  driver_id?: string;
+  driverId?: string;
+  createdBy?: string;
+  driver_name?: string;
+  from_location?: { name?: string; city?: string };
+  to_location?: { name?: string; city?: string };
+  departure_time?: string;
+  date?: string;
+  time?: string;
+  available_seats?: number;
+  seats?: number;
+  price_per_seat?: number;
+  price?: number;
+  rating?: number;
+  image?: string;
+  category?: string;
+  status?: string;
+  requirements?: string;
+}
+
+/** Ride filters for listRides */
+interface RideListFilters {
+  include_past?: string;
+}
+
 // TODO: CRITICAL - This file is extremely complex (800+ lines). Split into specialized services:
 //   - UserDataService, PostDataService, ChatDataService, etc.
 // TODO: Add comprehensive error handling and retry mechanisms
@@ -17,15 +53,17 @@
 // TODO: Add unit tests for all CRUD operations and edge cases
 // TODO: Implement proper migration system for data schema changes
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from '../../utils/config.constants';
-import { apiService } from '../../utils/apiService';
+import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from './config';
+import { apiService } from '../api/api.service';
 import { restAdapter } from '../../utils/restAdapter';
 import { firestoreAdapter } from '../../utils/firestoreAdapter';
 import { DB_COLLECTIONS } from '../../utils/dbCollections';
 import axios from 'axios';
 
 export { DB_COLLECTIONS };
-let enhancedDbInstance: any = null;
+
+type EnhancedDBModule = typeof import('../../utils/enhancedDatabaseService');
+let enhancedDbInstance: EnhancedDBModule['enhancedDB'] | null = null;
 
 async function loadEnhancedDB() {
   if (enhancedDbInstance) return enhancedDbInstance;
@@ -98,9 +136,9 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.setItem(key, JSON.stringify(data));
       }
-      console.log(`✅ DatabaseService - Created ${collection} item:`, itemId);
+      logger.info('DatabaseService', `Created ${collection} item`, { itemId });
     } catch (error) {
-      console.error(`❌ DatabaseService - Create ${collection} error:`, error);
+      logger.error('DatabaseService', `Create ${collection} error`, { error });
       throw error;
     }
   }
@@ -122,7 +160,7 @@ export class DatabaseService {
         return item ? JSON.parse(item) : null;
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - Read ${collection} error:`, error);
+      logger.error('DatabaseService', `Read ${collection} error`, { error });
       return null;
     }
   }
@@ -136,20 +174,20 @@ export class DatabaseService {
     try {
       if (USE_BACKEND) {
         await restAdapter.update(collection, userId, itemId, data);
-        console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.info('DatabaseService', `Updated ${collection} item`, { itemId });
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.update(collection, userId, itemId, data);
-        console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.info('DatabaseService', `Updated ${collection} item`, { itemId });
       } else {
         const existing = await this.read<T>(collection, userId, itemId);
         if (existing) {
           const updated = { ...existing, ...data };
           await this.create(collection, userId, itemId, updated);
-          console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+          logger.info('DatabaseService', `Updated ${collection} item`, { itemId });
         }
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - Update ${collection} error:`, error);
+      logger.error('DatabaseService', `Update ${collection} error`, { error });
       throw error;
     }
   }
@@ -168,9 +206,9 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.removeItem(key);
       }
-      console.log(`✅ DatabaseService - Deleted ${collection} item:`, itemId);
+      logger.info('DatabaseService', `Deleted ${collection} item`, { itemId });
     } catch (error) {
-      console.error(`❌ DatabaseService - Delete ${collection} error:`, error);
+      logger.error('DatabaseService', `Delete ${collection} error`, { error });
       throw error;
     }
   }
@@ -203,14 +241,16 @@ export class DatabaseService {
           .map(([, value]) => value ? JSON.parse(value) : null)
           .filter((item): item is T => item !== null)
           .sort((a, b) => {
-            if ((a as any).timestamp && (b as any).timestamp) {
-              return new Date((b as any).timestamp).getTime() - new Date((a as any).timestamp).getTime();
+            const aTs = (a as TimestampedRecord).timestamp;
+            const bTs = (b as TimestampedRecord).timestamp;
+            if (aTs && bTs) {
+              return new Date(bTs).getTime() - new Date(aTs).getTime();
             }
             return 0;
           });
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - List ${collection} error:`, error);
+      logger.error('DatabaseService', `List ${collection} error`, { error });
       return [];
     }
   }
@@ -232,7 +272,7 @@ export class DatabaseService {
         return userKeys.length;
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - Count ${collection} error:`, error);
+      logger.error('DatabaseService', `Count ${collection} error`, { error });
       return 0;
     }
   }
@@ -247,7 +287,7 @@ export class DatabaseService {
       const items = await this.list<T>(collection, userId);
       return items.filter(query);
     } catch (error) {
-      console.error(`❌ DatabaseService - Search ${collection} error:`, error);
+      logger.error('DatabaseService', `Search ${collection} error`, { error });
       return [];
     }
   }
@@ -264,20 +304,20 @@ export class DatabaseService {
 
           await restAdapter.create(collection, userId, id, data);
         }
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items (Backend)`);
+        logger.info('DatabaseService', `Batch created ${items.length} ${collection} items (Backend)`, { count: items.length });
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.batchCreate(collection, userId, items);
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items (Firestore)`);
+        logger.info('DatabaseService', `Batch created ${items.length} ${collection} items (Firestore)`, { count: items.length });
       } else {
         const keyValuePairs: [string, string][] = items.map(({ id, data }) => [
           getDBKey(collection, userId, id),
           JSON.stringify(data)
         ]);
         await AsyncStorage.multiSet(keyValuePairs);
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items`);
+        logger.info('DatabaseService', `Batch created ${items.length} ${collection} items`, { count: items.length });
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - Batch create ${collection} error:`, error);
+      logger.error('DatabaseService', `Batch create ${collection} error`, { error });
       throw error;
     }
   }
@@ -293,17 +333,17 @@ export class DatabaseService {
 
           await restAdapter.delete(collection, userId, id);
         }
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Backend)`);
+        logger.info('DatabaseService', `Batch deleted ${itemIds.length} ${collection} items (Backend)`, { count: itemIds.length });
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.batchDelete(collection, userId, itemIds);
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Firestore)`);
+        logger.info('DatabaseService', `Batch deleted ${itemIds.length} ${collection} items (Firestore)`, { count: itemIds.length });
       } else {
         const keys = itemIds.map(id => getDBKey(collection, userId, id));
         await AsyncStorage.multiRemove(keys);
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items`);
+        logger.info('DatabaseService', `Batch deleted ${itemIds.length} ${collection} items`, { count: itemIds.length });
       }
     } catch (error) {
-      console.error(`❌ DatabaseService - Batch delete ${collection} error:`, error);
+      logger.error('DatabaseService', `Batch delete ${collection} error`, { error });
       throw error;
     }
   }
@@ -312,7 +352,7 @@ export class DatabaseService {
   static async getUserData(userId: string) {
     try {
       const collections = Object.values(DB_COLLECTIONS);
-      const userData: Record<string, any> = {};
+      const userData: Record<string, unknown[]> = {};
 
       for (const collection of collections) {
         userData[collection] = await this.list(collection, userId);
@@ -320,7 +360,7 @@ export class DatabaseService {
 
       return userData;
     } catch (error) {
-      console.error('❌ DatabaseService - Get user data error:', error);
+      logger.error('DatabaseService', 'Get user data error', { error });
       return {};
     }
   }
@@ -330,9 +370,9 @@ export class DatabaseService {
       const keys = await AsyncStorage.getAllKeys();
       const userKeys = keys.filter(key => key.includes(`_${userId}_`) || key.endsWith(`_${userId}`));
       await AsyncStorage.multiRemove(userKeys);
-      console.log(`✅ DatabaseService - Deleted all data for user: ${userId}`);
+      logger.info('DatabaseService', 'Deleted all data for user', { userId });
     } catch (error) {
-      console.error('❌ DatabaseService - Delete user data error:', error);
+      logger.error('DatabaseService', 'Delete user data error', { error });
       throw error;
     }
   }
@@ -341,9 +381,9 @@ export class DatabaseService {
   static async clearAllData(): Promise<void> {
     try {
       await AsyncStorage.clear();
-      console.log('✅ DatabaseService - Cleared all data');
+      logger.info('DatabaseService', 'Cleared all data');
     } catch (error) {
-      console.error('❌ DatabaseService - Clear all data error:', error);
+      logger.error('DatabaseService', 'Clear all data error', { error });
       throw error;
     }
   }
@@ -362,9 +402,9 @@ export class DatabaseService {
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove);
       }
-      console.log('✅ DatabaseService - Cleared local collection keys:', keysToRemove.length);
+      logger.info('DatabaseService', 'Cleared local collection keys', { count: keysToRemove.length });
     } catch (error) {
-      console.error('❌ DatabaseService - Clear local collections error:', error);
+      logger.error('DatabaseService', 'Clear local collections error', { error });
       throw error;
     }
   }
@@ -374,7 +414,7 @@ export class DatabaseService {
       const keys = await AsyncStorage.getAllKeys();
       return keys.length;
     } catch (error) {
-      console.error('❌ DatabaseService - Get database size error:', error);
+      logger.error('DatabaseService', 'Get database size error', { error });
       return 0;
     }
   }
@@ -384,30 +424,31 @@ export class DatabaseService {
       const userData = await this.getUserData(userId);
       return JSON.stringify(userData, null, 2);
     } catch (error) {
-      console.error('❌ DatabaseService - Export user data error:', error);
+      logger.error('DatabaseService', 'Export user data error', { error });
       throw error;
     }
   }
 
   static async importUserData(userId: string, dataJson: string): Promise<void> {
     try {
-      const userData = JSON.parse(dataJson);
+      const userData = JSON.parse(dataJson) as Record<string, unknown[]>;
       const collections = Object.keys(userData);
 
       for (const collection of collections) {
         const items = userData[collection];
         if (Array.isArray(items)) {
           for (const item of items) {
-            if (item.id) {
-              await this.create(collection, userId, item.id, item);
+            const record = item as Record<string, unknown>;
+            if (record.id) {
+              await this.create(collection, userId, String(record.id), record);
             }
           }
         }
       }
 
-      console.log(`✅ DatabaseService - Imported data for user: ${userId}`);
+      logger.info('DatabaseService', 'Imported data for user', { userId });
     } catch (error) {
-      console.error('❌ DatabaseService - Import user data error:', error);
+      logger.error('DatabaseService', 'Import user data error', { error });
       throw error;
     }
   }
@@ -416,17 +457,17 @@ export class DatabaseService {
 // Convenience functions for common operations
 export const db = {
   // Users
-  createUser: (userId: string, userData: any) =>
+  createUser: (userId: string, userData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.USERS, userId, userId, userData),
 
   getUser: (userId: string) =>
     DatabaseService.read(DB_COLLECTIONS.USERS, userId, userId),
 
-  updateUser: (userId: string, userData: Partial<any>) =>
+  updateUser: (userId: string, userData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.USERS, userId, userId, userData),
 
   // Posts
-  createPost: (userId: string, postId: string, postData: any) =>
+  createPost: (userId: string, postId: string, postData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.POSTS, userId, postId, postData),
 
   getPost: (userId: string, postId: string) =>
@@ -439,7 +480,7 @@ export const db = {
     DatabaseService.delete(DB_COLLECTIONS.POSTS, userId, postId),
 
   // Followers
-  addFollower: (userId: string, followerId: string, followerData: any) =>
+  addFollower: (userId: string, followerId: string, followerData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.FOLLOWERS, userId, followerId, followerData),
 
   removeFollower: (userId: string, followerId: string) =>
@@ -449,7 +490,7 @@ export const db = {
     DatabaseService.list(DB_COLLECTIONS.FOLLOWERS, userId),
 
   // Following
-  addFollowing: (userId: string, followingId: string, followingData: any) =>
+  addFollowing: (userId: string, followingId: string, followingData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.FOLLOWING, userId, followingId, followingData),
 
   removeFollowing: (userId: string, followingId: string) =>
@@ -459,7 +500,7 @@ export const db = {
     DatabaseService.list(DB_COLLECTIONS.FOLLOWING, userId),
 
   // Chats
-  createChat: (userId: string, chatId: string, chatData: any) =>
+  createChat: (userId: string, chatId: string, chatData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.CHATS, userId, chatId, chatData),
 
   getChat: (userId: string, chatId: string) =>
@@ -469,14 +510,14 @@ export const db = {
     DatabaseService.list(DB_COLLECTIONS.CHATS, userId),
 
   // Messages
-  createMessage: (userId: string, messageId: string, messageData: any) =>
+  createMessage: (userId: string, messageId: string, messageData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.MESSAGES, userId, messageId, messageData),
 
   getChatMessages: (userId: string, conversationId: string) =>
-    DatabaseService.search(DB_COLLECTIONS.MESSAGES, userId, (msg: any) => msg.conversationId === conversationId),
+    DatabaseService.search(DB_COLLECTIONS.MESSAGES, userId, (msg: Record<string, unknown>) => (msg.conversationId as string) === conversationId),
 
   // Notifications
-  createNotification: (userId: string, notificationId: string, notificationData: any) =>
+  createNotification: (userId: string, notificationId: string, notificationData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.NOTIFICATIONS, userId, notificationId, notificationData),
 
   getUserNotifications: async (userId: string) => {
@@ -504,7 +545,7 @@ export const db = {
   },
 
   // Bookmarks
-  addBookmark: (userId: string, bookmarkId: string, bookmarkData: any) =>
+  addBookmark: (userId: string, bookmarkId: string, bookmarkData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.BOOKMARKS, userId, bookmarkId, bookmarkData),
 
   removeBookmark: (userId: string, bookmarkId: string) =>
@@ -517,11 +558,11 @@ export const db = {
   getUserSettings: (userId: string) =>
     DatabaseService.read(DB_COLLECTIONS.SETTINGS, userId, 'settings'),
 
-  updateUserSettings: (userId: string, settings: any) =>
+  updateUserSettings: (userId: string, settings: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.SETTINGS, userId, 'settings', settings),
 
   // Media
-  saveMedia: (userId: string, mediaId: string, mediaData: any) =>
+  saveMedia: (userId: string, mediaId: string, mediaData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.MEDIA, userId, mediaId, mediaData),
 
   getMedia: (userId: string, mediaId: string) =>
@@ -531,7 +572,7 @@ export const db = {
     DatabaseService.delete(DB_COLLECTIONS.MEDIA, userId, mediaId),
 
   // Blocked Users
-  blockUser: (userId: string, blockedUserId: string, blockedData: any) =>
+  blockUser: (userId: string, blockedUserId: string, blockedData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.BLOCKED_USERS, userId, blockedUserId, blockedData),
 
   unblockUser: (userId: string, blockedUserId: string) =>
@@ -546,17 +587,17 @@ export const db = {
   },
 
   // Message Reactions
-  addReaction: (userId: string, reactionId: string, reactionData: any) =>
+  addReaction: (userId: string, reactionId: string, reactionData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.MESSAGE_REACTIONS, userId, reactionId, reactionData),
 
   removeReaction: (userId: string, reactionId: string) =>
     DatabaseService.delete(DB_COLLECTIONS.MESSAGE_REACTIONS, userId, reactionId),
 
   getMessageReactions: (userId: string, messageId: string) =>
-    DatabaseService.search(DB_COLLECTIONS.MESSAGE_REACTIONS, userId, (reaction: any) => reaction.messageId === messageId),
+    DatabaseService.search(DB_COLLECTIONS.MESSAGE_REACTIONS, userId, (reaction: Record<string, unknown>) => (reaction.messageId as string) === messageId),
 
   // Typing Status
-  setTypingStatus: (userId: string, conversationId: string, typingData: any) =>
+  setTypingStatus: (userId: string, conversationId: string, typingData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.TYPING_STATUS, userId, conversationId, typingData),
 
   clearTypingStatus: (userId: string, conversationId: string) =>
@@ -566,14 +607,14 @@ export const db = {
     DatabaseService.read(DB_COLLECTIONS.TYPING_STATUS, userId, conversationId),
 
   // Read Receipts
-  markAsRead: (userId: string, receiptId: string, receiptData: any) =>
+  markAsRead: (userId: string, receiptId: string, receiptData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.READ_RECEIPTS, userId, receiptId, receiptData),
 
   getReadReceipts: (userId: string, messageId: string) =>
-    DatabaseService.search(DB_COLLECTIONS.READ_RECEIPTS, userId, (receipt: any) => receipt.messageId === messageId),
+    DatabaseService.search(DB_COLLECTIONS.READ_RECEIPTS, userId, (receipt: Record<string, unknown>) => (receipt.messageId as string) === messageId),
 
   // Voice Messages
-  saveVoiceMessage: (userId: string, voiceId: string, voiceData: any) =>
+  saveVoiceMessage: (userId: string, voiceId: string, voiceData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.VOICE_MESSAGES, userId, voiceId, voiceData),
 
   getVoiceMessage: (userId: string, voiceId: string) =>
@@ -583,33 +624,33 @@ export const db = {
     DatabaseService.delete(DB_COLLECTIONS.VOICE_MESSAGES, userId, voiceId),
 
   // Conversation Metadata
-  updateConversationMetadata: (userId: string, conversationId: string, metadata: any) =>
+  updateConversationMetadata: (userId: string, conversationId: string, metadata: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.CONVERSATION_METADATA, userId, conversationId, metadata),
 
   getConversationMetadata: (userId: string, conversationId: string) =>
     DatabaseService.read(DB_COLLECTIONS.CONVERSATION_METADATA, userId, conversationId),
 
   // Advanced Message Operations
-  updateMessage: (userId: string, messageId: string, messageData: any) =>
+  updateMessage: (userId: string, messageId: string, messageData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.MESSAGES, userId, messageId, messageData),
 
   deleteMessage: (userId: string, messageId: string) =>
     DatabaseService.delete(DB_COLLECTIONS.MESSAGES, userId, messageId),
 
   searchMessages: (userId: string, searchQuery: string) =>
-    DatabaseService.search(DB_COLLECTIONS.MESSAGES, userId, (msg: any) =>
-      msg.text?.toLowerCase().includes(searchQuery.toLowerCase())
+    DatabaseService.search(DB_COLLECTIONS.MESSAGES, userId, (msg: Record<string, unknown>) =>
+      (msg.text as string)?.toLowerCase().includes(searchQuery.toLowerCase())
     ),
 
   // Batch Message Operations
-  batchCreateMessages: (userId: string, messages: Array<{ id: string; data: any }>) =>
+  batchCreateMessages: (userId: string, messages: Array<{ id: string; data: Record<string, unknown> }>) =>
     DatabaseService.batchCreate(DB_COLLECTIONS.MESSAGES, userId, messages),
 
   batchDeleteMessages: (userId: string, messageIds: string[]) =>
     DatabaseService.batchDelete(DB_COLLECTIONS.MESSAGES, userId, messageIds),
 
   // Rides (Trump)
-  createRide: async (userId: string, rideId: string, rideData: any) => {
+  createRide: async (userId: string, rideId: string, rideData: Record<string, unknown>) => {
     try {
       if (USE_BACKEND) {
         const departureIso = (() => {
@@ -639,7 +680,7 @@ export const db = {
             // The server should store this as-is, treating it as the intended local time
             const isoString = localDate.toISOString();
 
-            console.log('🕐 Converting time:', { dateStr, timeStr, localDate: localDate.toLocaleString('he-IL'), isoString });
+            logger.debug('DatabaseService', 'Converting time for ride', { dateStr, timeStr, isoString });
 
             // Check if date is valid
             if (isNaN(localDate.getTime())) {
@@ -648,7 +689,7 @@ export const db = {
 
             return isoString;
           } catch (error) {
-            console.error('Date parsing error:', error);
+            logger.error('DatabaseService', 'Date parsing error for ride', { error });
             // Fallback to current time if date parsing fails
             return new Date().toISOString();
           }
@@ -691,7 +732,7 @@ export const db = {
           metadata: { source: 'legacy-app', legacy_id: rideId },
         };
 
-        console.log('🚗 Creating ride with payload:', JSON.stringify(payload, null, 2));
+        logger.debug('DatabaseService', 'Creating ride with payload', { payload });
         const res = await apiService.createRide(payload);
         if (!res.success) throw new Error(res.error || 'Failed to create ride');
 
@@ -701,14 +742,14 @@ export const db = {
           await enhancedDB.clearCachePattern('rides_list');
           await enhancedDB.clearCachePattern('user_rides');
         } catch (cacheError) {
-          console.warn('Failed to clear ride cache:', cacheError);
+          logger.warn('DatabaseService', 'Failed to clear ride cache', { cacheError });
         }
 
         return;
       }
       return DatabaseService.create(DB_COLLECTIONS.RIDES, userId, rideId, rideData);
     } catch (error) {
-      console.error('❌ DatabaseService.db.createRide error:', error);
+      logger.error('DatabaseService', 'createRide error', { error });
       throw error;
     }
   },
@@ -718,14 +759,15 @@ export const db = {
       if (USE_BACKEND) {
         const res = await apiService.getRideById(rideId);
         if (!res.success || !res.data) return null;
-        const r: any = res.data;
+        const r = res.data as RideApiResponse;
+        const depTime = r.departure_time ? new Date(r.departure_time) : new Date();
         return {
           id: r.id,
           driverName: r.driver_name || '',
           from: r.from_location?.name || r.from_location?.city || '',
           to: r.to_location?.name || r.to_location?.city || '',
-          date: new Date(r.departure_time).toISOString().slice(0, 10),
-          time: new Date(r.departure_time).toISOString().slice(11, 16),
+          date: depTime.toISOString().slice(0, 10),
+          time: depTime.toISOString().slice(11, 16),
           seats: r.available_seats,
           price: Number(r.price_per_seat) || 0,
           rating: 5,
@@ -734,7 +776,7 @@ export const db = {
       }
       return DatabaseService.read(DB_COLLECTIONS.RIDES, _userId, rideId);
     } catch (error) {
-      console.error('❌ DatabaseService.db.getRide error:', error);
+      logger.error('DatabaseService', 'getRide error', { error });
       return null;
     }
   },
@@ -744,25 +786,25 @@ export const db = {
       if (USE_BACKEND) {
         const enhancedDB = await loadEnhancedDB();
         // Pass include_past parameter to get all rides including past ones
-        const filters: any = {};
+        const filters: RideListFilters = {};
         if (_options?.includePast) {
           filters.include_past = 'true';
         }
         // Don't set status filter - let server return all active/published rides
         // The server defaults to 'active' but we want to see all published rides too
-        console.log('🔍 listRides filters:', filters);
-        const apiRides = await enhancedDB.getRides(filters);
-        console.log('📋 listRides returned:', apiRides?.length || 0, 'rides');
+        logger.debug('DatabaseService', 'listRides filters', { filters });
+        const apiRides = await enhancedDB.getRides(filters as Record<string, unknown>);
+        logger.debug('DatabaseService', 'listRides returned', { count: apiRides?.length || 0 });
         if (apiRides && apiRides.length > 0) {
-          console.log('📋 First ride sample:', JSON.stringify({
+          logger.debug('DatabaseService', 'First ride sample', {
             id: apiRides[0].id,
             status: apiRides[0].status,
-            from: apiRides[0].from_location?.name,
-            to: apiRides[0].to_location?.name,
-            departure_time: apiRides[0].departure_time
-          }, null, 2));
+            from: (apiRides[0] as RideApiResponse).from_location?.name ?? (apiRides[0] as unknown as Record<string, unknown>).from,
+            to: (apiRides[0] as RideApiResponse).to_location?.name ?? (apiRides[0] as unknown as Record<string, unknown>).to,
+            departure_time: (apiRides[0] as RideApiResponse).departure_time
+          });
         }
-        return (apiRides || []).map((r: any) => {
+        return (apiRides || []).map((r: RideApiResponse) => {
           // Convert UTC time to local time for display
           let dateStr = '';
           let timeStr = '00:00';
@@ -783,8 +825,8 @@ export const db = {
             id: r.id,
             driverId: r.driver_id || r.driverId || r.createdBy,
             driverName: r.driver_name || r.driverId || 'Driver',
-            from: r.from_location?.name || r.from || '',
-            to: r.to_location?.name || r.to || '',
+            from: r.from_location?.name ?? (r as unknown as Record<string, unknown>).from ?? '',
+            to: r.to_location?.name ?? (r as unknown as Record<string, unknown>).to ?? '',
             date: dateStr,
             time: timeStr,
             seats: r.available_seats ?? r.seats ?? 1,
@@ -801,7 +843,7 @@ export const db = {
       }
       return DatabaseService.list(DB_COLLECTIONS.RIDES, _userId);
     } catch (error) {
-      console.error('❌ DatabaseService.db.listRides error:', error);
+      logger.error('DatabaseService', 'listRides error', { error });
       return [];
     }
   },
@@ -811,7 +853,7 @@ export const db = {
       if (USE_BACKEND) {
         const enhancedDB = await loadEnhancedDB();
         const apiRides = await enhancedDB.getUserRides(_userId, _role);
-        return (apiRides || []).map((r: any) => {
+        return (apiRides || []).map((r: RideApiResponse) => {
           // Convert UTC time to local time for display
           let dateStr = '';
           let timeStr = '00:00';
@@ -832,8 +874,8 @@ export const db = {
             id: r.id,
             driverId: r.driver_id || r.driverId || r.createdBy,
             driverName: r.driver_name || r.driverId || 'Driver',
-            from: r.from_location?.name || r.from || '',
-            to: r.to_location?.name || r.to || '',
+            from: r.from_location?.name || (r as unknown as Record<string, unknown>).from || '',
+            to: r.to_location?.name || (r as unknown as Record<string, unknown>).to || '',
             date: dateStr,
             time: timeStr,
             seats: r.available_seats ?? r.seats ?? 1,
@@ -847,26 +889,26 @@ export const db = {
       }
       return DatabaseService.list(DB_COLLECTIONS.RIDES, _userId);
     } catch (error) {
-      console.error('❌ DatabaseService.db.getUserRides error:', error);
+      logger.error('DatabaseService', 'getUserRides error', { error });
       return [];
     }
   },
 
-  updateRide: async (_userId: string, rideId: string, rideData: Partial<any>) => {
+  updateRide: async (_userId: string, rideId: string, rideData: Partial<Record<string, unknown>>) => {
     try {
       if (USE_BACKEND) {
-        const payload: any = {};
+        const payload: Record<string, unknown> = {};
         if (rideData.title) payload.title = rideData.title;
         if (rideData.seats !== undefined) payload.available_seats = rideData.seats;
         if (rideData.price !== undefined) payload.price_per_seat = Number(rideData.price);
         if (rideData.status) payload.status = rideData.status;
-        const res = await apiService.updateDonation(rideId as any, payload as any); // reuse generic update if exists
+        const res = await apiService.updateDonation(rideId, payload);
         if (!res.success) throw new Error(res.error || 'Failed to update ride');
         return;
       }
       return DatabaseService.update(DB_COLLECTIONS.RIDES, _userId, rideId, rideData);
     } catch (error) {
-      console.error('❌ DatabaseService.db.updateRide error:', error);
+      logger.error('DatabaseService', 'updateRide error', { error });
       throw error;
     }
   },
@@ -875,18 +917,18 @@ export const db = {
     try {
       if (USE_BACKEND) {
         // RidesController uses status update for cancel; no direct delete endpoint in apiService
-        await apiService.updateBookingStatus(rideId as any, 'cancelled');
+        await apiService.updateBookingStatus(rideId, 'cancelled');
         return;
       }
       return DatabaseService.delete(DB_COLLECTIONS.RIDES, _userId, rideId);
     } catch (error) {
-      console.error('❌ DatabaseService.db.deleteRide error:', error);
+      logger.error('DatabaseService', 'deleteRide error', { error });
       throw error;
     }
   },
 
   // Donations / Items (generic items postings)
-  createDonation: (userId: string, donationId: string, donationData: any) =>
+  createDonation: (userId: string, donationId: string, donationData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.DONATIONS, userId, donationId, donationData),
 
   getDonation: (userId: string, donationId: string) =>
@@ -895,14 +937,14 @@ export const db = {
   listDonations: (userId: string) =>
     DatabaseService.list(DB_COLLECTIONS.DONATIONS, userId),
 
-  updateDonation: (userId: string, donationId: string, donationData: Partial<any>) =>
+  updateDonation: (userId: string, donationId: string, donationData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.DONATIONS, userId, donationId, donationData),
 
   deleteDonation: (userId: string, donationId: string) =>
     DatabaseService.delete(DB_COLLECTIONS.DONATIONS, userId, donationId),
 
   // Items (furniture, clothes, general items)
-  createItem: (userId: string, itemId: string, itemData: any) =>
+  createItem: (userId: string, itemId: string, itemData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.ITEMS, userId, itemId, itemData),
 
   getItem: (userId: string, itemId: string) =>
@@ -911,33 +953,33 @@ export const db = {
   listItems: (userId: string) =>
     DatabaseService.list(DB_COLLECTIONS.ITEMS, userId),
 
-  updateItem: (userId: string, itemId: string, itemData: Partial<any>) =>
+  updateItem: (userId: string, itemId: string, itemData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.ITEMS, userId, itemId, itemData),
 
   deleteItem: (userId: string, itemId: string) =>
     DatabaseService.delete(DB_COLLECTIONS.ITEMS, userId, itemId),
 
   // Organizations
-  createOrganization: (ownerUserId: string, orgId: string, orgData: any) =>
+  createOrganization: (ownerUserId: string, orgId: string, orgData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.ORGANIZATIONS, ownerUserId, orgId, orgData),
 
   getOrganization: (ownerUserId: string, orgId: string) =>
     DatabaseService.read(DB_COLLECTIONS.ORGANIZATIONS, ownerUserId, orgId),
 
-  updateOrganization: (ownerUserId: string, orgId: string, orgData: Partial<any>) =>
+  updateOrganization: (ownerUserId: string, orgId: string, orgData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.ORGANIZATIONS, ownerUserId, orgId, orgData),
 
   listOrganizations: (ownerUserId: string) =>
     DatabaseService.list(DB_COLLECTIONS.ORGANIZATIONS, ownerUserId),
 
   // Org Applications (onboarding requests)
-  createOrgApplication: (ownerUserId: string, applicationId: string, applicationData: any) =>
+  createOrgApplication: (ownerUserId: string, applicationId: string, applicationData: Record<string, unknown>) =>
     DatabaseService.create(DB_COLLECTIONS.ORG_APPLICATIONS, ownerUserId, applicationId, applicationData),
 
   getOrgApplication: (ownerUserId: string, applicationId: string) =>
     DatabaseService.read(DB_COLLECTIONS.ORG_APPLICATIONS, ownerUserId, applicationId),
 
-  updateOrgApplication: (ownerUserId: string, applicationId: string, applicationData: Partial<any>) =>
+  updateOrgApplication: (ownerUserId: string, applicationId: string, applicationData: Record<string, unknown>) =>
     DatabaseService.update(DB_COLLECTIONS.ORG_APPLICATIONS, ownerUserId, applicationId, applicationData),
 
   listOrgApplications: (ownerUserId: string) =>
@@ -947,32 +989,28 @@ export const db = {
   // Dedicated Items API (separate columns)
   // ========================================
 
-  createDedicatedItem: async (itemData: any) => {
-    console.log('📤 API: Creating dedicated item to:', `${API_BASE_URL}/api/dedicated-items`);
-    console.log('📦 Item data:', JSON.stringify(itemData, null, 2));
+  createDedicatedItem: async (itemData: Record<string, unknown>) => {
+    logger.info('DatabaseService', 'Creating dedicated item', { url: `${API_BASE_URL}/api/dedicated-items` });
     const response = await axios.post(`${API_BASE_URL}/api/dedicated-items`, itemData);
-    console.log('✅ API: Item created:', response.data);
+    logger.info('DatabaseService', 'Dedicated item created');
     return response.data;
   },
 
   getDedicatedItemsByOwner: async (ownerId: string) => {
-    console.log('📥 API: Fetching items for owner:', ownerId);
+    logger.debug('DatabaseService', 'Fetching items for owner', { ownerId });
     const response = await axios.get(`${API_BASE_URL}/api/dedicated-items/owner/${ownerId}`);
-    console.log('✅ API: Received items:', response.data.length || 0);
     return response.data;
   },
 
   getDedicatedItemById: async (id: string) => {
-    console.log('📥 API: Fetching item by ID:', id);
+    logger.debug('DatabaseService', 'Fetching item by ID', { id });
     const response = await axios.get(`${API_BASE_URL}/api/dedicated-items/${id}`);
-    console.log('✅ API: Item received');
     return response.data;
   },
 
-  updateDedicatedItem: async (id: string, itemData: any) => {
-    console.log('✏️ API: Updating item:', id);
+  updateDedicatedItem: async (id: string, itemData: Record<string, unknown>) => {
+    logger.info('DatabaseService', 'Updating dedicated item', { id });
     const response = await axios.put(`${API_BASE_URL}/api/dedicated-items/${id}`, itemData);
-    console.log('✅ API: Item updated');
     return response.data;
   },
 
@@ -980,9 +1018,8 @@ export const db = {
   // All user data is now unified in user_profiles table with UUID identifiers
 
   deleteDedicatedItem: async (id: string) => {
-    console.log('🗑️ API: Deleting item:', id);
+    logger.info('DatabaseService', 'Deleting dedicated item', { id });
     const response = await axios.delete(`${API_BASE_URL}/api/dedicated-items/${id}`);
-    console.log('✅ API: Item deleted');
     return response.data;
   },
 
@@ -1003,9 +1040,8 @@ export const db = {
     difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
     category?: string;
   }) => {
-    console.log('📤 API: Creating community challenge:', challengeData.title);
+    logger.info('DatabaseService', 'Creating community challenge', { title: challengeData.title });
     const response = await axios.post(`${API_BASE_URL}/api/community-challenges`, challengeData);
-    console.log('✅ API: Challenge created:', response.data);
     return response.data;
   },
 
@@ -1022,7 +1058,7 @@ export const db = {
     limit?: number;
     offset?: number;
   } = {}) => {
-    console.log('📥 API: Fetching community challenges with filters:', filters);
+    logger.debug('DatabaseService', 'Fetching community challenges with filters', { filters });
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -1030,23 +1066,20 @@ export const db = {
       }
     });
     const response = await axios.get(`${API_BASE_URL}/api/community-challenges?${params.toString()}`);
-    console.log('✅ API: Received challenges:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeDetails: async (challengeId: string) => {
-    console.log('📥 API: Fetching challenge details:', challengeId);
+    logger.debug('DatabaseService', 'Fetching challenge details', { challengeId });
     const response = await axios.get(`${API_BASE_URL}/api/community-challenges/${challengeId}`);
-    console.log('✅ API: Challenge details received');
     return response.data;
   },
 
   joinChallenge: async (challengeId: string, userId: string) => {
-    console.log('🤝 API: Joining challenge:', challengeId, 'User:', userId);
+    logger.info('DatabaseService', 'Joining challenge', { challengeId, userId });
     const response = await axios.post(`${API_BASE_URL}/api/community-challenges/${challengeId}/join`, {
       user_id: userId
     });
-    console.log('✅ API: Joined challenge successfully');
     return response.data;
   },
 
@@ -1057,17 +1090,16 @@ export const db = {
     notes?: string;
   }) => {
     const body = { challenge_id: challengeId, ...entryData };
-    console.log('📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
+    logger.debug('DatabaseService', 'Adding challenge entry', { challengeId, entryDate: entryData.entry_date, value: entryData.value });
     const response = await axios.post(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`,
       body
     );
-    console.log('✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
     return response.data;
   },
 
   getChallengeEntries: async (challengeId: string, userId: string, limit = 100, offset = 0) => {
-    console.log('📥 API: Fetching challenge entries:', challengeId, 'User:', userId);
+    logger.debug('DatabaseService', 'Fetching challenge entries', { challengeId, userId });
     const params = new URLSearchParams({
       user_id: userId,
       limit: String(limit),
@@ -1076,14 +1108,12 @@ export const db = {
     const response = await axios.get(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries?${params.toString()}`
     );
-    console.log('✅ API: Received entries:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeStatistics: async (userId: string) => {
-    console.log('📊 API: Fetching challenge statistics for user:', userId);
+    logger.debug('DatabaseService', 'Fetching challenge statistics for user', { userId });
     const response = await axios.get(`${API_BASE_URL}/api/community-challenges/user/${userId}/stats`);
-    console.log('✅ API: Statistics received');
     return response.data;
   },
 
@@ -1098,23 +1128,20 @@ export const db = {
     category?: string;
     is_active?: boolean;
   }) => {
-    console.log('✏️ API: Updating challenge:', challengeId);
+    logger.info('DatabaseService', 'Updating challenge', { challengeId });
     const params = new URLSearchParams({ user_id: userId });
     const response = await axios.put(
       `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`,
       updateData
     );
-    console.log('✅ API: Challenge updated');
     return response.data;
   },
 
   deleteCommunityChallenge: async (challengeId: string, userId: string) => {
-    console.log('🗑️ API: Deleting challenge:', challengeId, 'User:', userId);
+    logger.info('DatabaseService', 'Deleting challenge', { challengeId, userId });
     const params = new URLSearchParams({ user_id: userId });
     const url = `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`;
-    console.log('🔗 API: DELETE URL:', url);
     const response = await axios.delete(url);
-    console.log('✅ API: Challenge deleted:', response.data);
     return response.data;
   },
 
@@ -1123,8 +1150,7 @@ export const db = {
   // ========================================
 
   getDailyTrackerData: async (userId: string, startDate?: string, endDate?: string) => {
-    console.log('📊 API: Fetching daily tracker data for user:', userId);
-    console.log('📅 Date range:', startDate, '-', endDate);
+    logger.debug('DatabaseService', 'Fetching daily tracker data', { userId, startDate, endDate });
 
     const params = new URLSearchParams({ user_id: userId });
     if (startDate) params.append('start_date', startDate);
@@ -1135,13 +1161,10 @@ export const db = {
     );
 
     const payload = response.data?.data ?? response.data;
-    console.log('✅ API: Tracker data received');
-    console.log('   Challenges:', payload?.challenges?.length ?? 0);
-    console.log('   Success rate:', payload?.stats?.total_success_rate ?? 'N/A');
-    if (payload?.entries_by_date && typeof __DEV__ !== 'undefined' && __DEV__) {
-      const dates = Object.keys(payload.entries_by_date);
-      console.log('   Dates with entries:', dates.join(', '));
-    }
+    logger.debug('DatabaseService', 'Tracker data received', {
+      challengesCount: payload?.challenges?.length ?? 0,
+      successRate: payload?.stats?.total_success_rate ?? 'N/A'
+    });
     return response.data;
   },
 };

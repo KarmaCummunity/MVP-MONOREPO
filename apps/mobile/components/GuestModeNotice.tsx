@@ -14,11 +14,11 @@ interface GuestModeNoticeProps {
   showLoginButton?: boolean;
 }
 
-const GuestModeNotice: React.FC<GuestModeNoticeProps> = ({ 
-  variant = 'default',
-  showLoginButton = true 
+const GuestModeNotice: React.FC<GuestModeNoticeProps> = ({
+  variant: _variant = 'default',
+  showLoginButton = true
 }) => {
-  const navigation = useNavigation<any>();
+  const _navigation = useNavigation<any>();
   const { signOut } = useUser();
   const { mode } = useWebMode();
   const { t } = useTranslation(['common']);

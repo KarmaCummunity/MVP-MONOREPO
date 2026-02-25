@@ -3,10 +3,10 @@
 // - Reached from: `FloatingBubblesOverlay`, `HomeScreen`, analytics components.
 // - Provides: Default stats, getters/savers, number format/parse, and backend-coordinated methods.
 // utils/statsService.ts
-import { DatabaseService, DB_COLLECTIONS } from '../../utils/databaseService';
+import { DatabaseService, DB_COLLECTIONS } from '../infrastructure/database.service';
 import { enhancedDB } from '../../utils/enhancedDatabaseService';
-import { apiService } from '../../utils/apiService';
-import { USE_BACKEND } from '../../utils/config.constants';
+import { apiService } from '../api/api.service';
+import { USE_BACKEND } from '../infrastructure/config';
 import { logger } from '../../utils/loggerService';
 
 export type CommunityStats = Record<string, number>;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { postsService } from '../utils/postsService';
+import { postsService } from '../src/services/posts.service';
 import { logger } from '../utils/loggerService';
 import { FeedItem } from '../types/feed';
 import { useUser } from '../stores/userStore';
@@ -96,7 +96,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : post.metadata;
                 metadataItemId = metadata?.item_id;
             }
-        } catch (e) {
+        } catch (_e) {
             // Ignore parse errors
         }
 
@@ -199,7 +199,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
             // 4. Fetch Tasks (Match ProfileScreen logic - independent tasks)
             try {
-                const { apiService } = require('../utils/apiService');
+                const { apiService } = require('../src/api/api.service');
                 const [openTasksRes, progressTasksRes] = await Promise.all([
                     apiService.getTasks({ status: 'open', limit: 20 }),
                     apiService.getTasks({ status: 'in_progress', limit: 20 })

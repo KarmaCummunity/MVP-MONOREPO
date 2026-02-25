@@ -17,16 +17,18 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import { DailyHabitsQuickView } from '../components/Challenges/DailyHabitsQuickView';
-import { db } from '../utils/databaseService';
+import { db } from '../src/infrastructure/database.service';
+import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge, ChallengeParticipant } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
+import type { RouteProp } from '@react-navigation/native';
 
 export interface MyChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: any;
+  route?: RouteProp<DonationsStackParamList, 'MyChallengesScreen'>;
 }
 
 const CHALLENGE_TYPE_OPTIONS = [
@@ -46,7 +48,7 @@ type ChallengeWithParticipation = CommunityChallenge & {
   participation?: ChallengeParticipant;
 };
 
-export default function MyChallengesScreen({ navigation, route }: MyChallengesScreenProps) {
+export default function MyChallengesScreen({ navigation, route: _route }: MyChallengesScreenProps) {
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
@@ -57,11 +59,64 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load challenges when screen focuses
+  const loadChallenges = useCallback(async () => {
+    if (!user?.id) {
+      showToast(t('messages.loginRequired'), 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const statsResponse = await db.getChallengeStatistics(user.id);
+
+      if (statsResponse.success && statsResponse.data && statsResponse.data.challenges) {
+        const participations = statsResponse.data.challenges;
+
+        const challengesWithParticipation = participations.map((item: Record<string, unknown>) => ({
+          id: item.challenge_id as string,
+          creator_id: '',
+          title: item.title as string,
+          description: '',
+          type: item.type as CommunityChallenge['type'],
+          frequency: item.frequency as CommunityChallenge['frequency'],
+          difficulty: item.difficulty as string,
+          category: item.category as string,
+          goal_value: item.goal_value as number | undefined,
+          deadline: item.deadline as string | undefined,
+          is_active: true,
+          participants_count: 0,
+          created_at: '',
+          updated_at: '',
+          participation: {
+            id: item.id as string,
+            challenge_id: item.challenge_id as string,
+            user_id: item.user_id as string,
+            joined_at: item.joined_at as string,
+            current_streak: (item.current_streak as number) || 0,
+            best_streak: (item.best_streak as number) || 0,
+            total_entries: (item.total_entries as number) || 0,
+            last_entry_date: item.last_entry_date as string | undefined,
+          },
+        }));
+
+        setChallenges(challengesWithParticipation);
+      } else {
+        setChallenges([]);
+      }
+    } catch (error) {
+      logger.error('MyChallengesScreen', 'Error loading challenges', { error });
+      showToast(t('messages.errorLoading'), 'error');
+      setChallenges([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, t, showToast]);
+
   useFocusEffect(
     useCallback(() => {
-      loadChallenges();
-    }, [])
+      void loadChallenges();
+    }, [loadChallenges])
   );
 
   // Apply search filter
@@ -81,62 +136,6 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
     }
   }, [searchQuery, challenges]);
 
-  const loadChallenges = async () => {
-    if (!user?.id) {
-      showToast(t('messages.loginRequired'), 'error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Get user statistics which includes participations
-      const statsResponse = await db.getChallengeStatistics(user.id);
-      
-      if (statsResponse.success && statsResponse.data && statsResponse.data.challenges) {
-        const participations = statsResponse.data.challenges;
-        
-        // Map to our format
-        const challengesWithParticipation = participations.map((item: any) => ({
-          id: item.challenge_id,
-          creator_id: '',
-          title: item.title,
-          description: '',
-          type: item.type,
-          frequency: item.frequency,
-          difficulty: item.difficulty,
-          category: item.category,
-          goal_value: item.goal_value,
-          deadline: item.deadline,
-          is_active: true,
-          participants_count: 0,
-          created_at: '',
-          updated_at: '',
-          participation: {
-            id: item.id,
-            challenge_id: item.challenge_id,
-            user_id: item.user_id,
-            joined_at: item.joined_at,
-            current_streak: item.current_streak || 0,
-            best_streak: item.best_streak || 0,
-            total_entries: item.total_entries || 0,
-            last_entry_date: item.last_entry_date,
-          },
-        }));
-        
-        setChallenges(challengesWithParticipation);
-      } else {
-        setChallenges([]);
-      }
-    } catch (error) {
-      console.error('Error loading challenges:', error);
-      showToast(t('messages.errorLoading'), 'error');
-      setChallenges([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const onRefresh = async () => {
     setRefreshing(true);
     await loadChallenges();
@@ -144,15 +143,14 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
   };
 
   const handleAddEntry = (challenge: ChallengeWithParticipation) => {
-    // Navigate to challenge details to add entry
-    (navigation as any).navigate('ChallengeDetailsScreen', {
+    navigation.navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
       openEntryForm: true,
     });
   };
 
   const handleViewDetails = (challenge: ChallengeWithParticipation) => {
-    (navigation as any).navigate('ChallengeDetailsScreen', {
+    navigation.navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
     });
   };
@@ -232,7 +230,7 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
       <Text style={styles.emptySubtitle}>{t('messages.noJoinedChallengesSubtitle')}</Text>
       <TouchableOpacity
         style={styles.browseButton}
-        onPress={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
+        onPress={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
       >
         <Ionicons name="search-outline" size={24} color={colors.white} />
         <Text style={styles.browseButtonText}>{t('browseChallenges')}</Text>
@@ -249,14 +247,14 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
           t('challenges:browseChallenges', 'עיון באתגרים'),
           t('challenges:myCreatedChallenges', 'האתגרים שיצרתי'),
         ]}
-        onToggleMode={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
+        onToggleMode={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            (navigation as any).navigate('ChallengeStatisticsScreen');
+            navigation.navigate('ChallengeStatisticsScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
+            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')) {
-            (navigation as any).navigate('MyCreatedChallengesScreen');
+            navigation.navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('myChallenges')}
@@ -269,7 +267,7 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
       />
 
       <DailyHabitsQuickView
-        onBrowseChallenges={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
+        onBrowseChallenges={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
       />
 
       {/* Screen Title */}

@@ -16,10 +16,10 @@
 // TODO: Add request/response transformation middleware
 // TODO: Add comprehensive logging and monitoring
 import type { ApiResponse as BaseApiResponse } from '@kc/shared-types';
-import { API_BASE_URL as CONFIG_API_BASE_URL } from '../../utils/config.constants';
+import { API_BASE_URL as CONFIG_API_BASE_URL } from '../infrastructure/config';
 import { logger } from '../../utils/loggerService';
 
-type ApiResponse<T = any> = BaseApiResponse<T>;
+type ApiResponse<T = unknown> = BaseApiResponse<T>;
 export type { ApiResponse };
 
 export interface ServerUser {
@@ -51,7 +51,7 @@ export interface ServerUser {
   followersCount?: number;
   following_count?: number;
   followingCount?: number;
-  settings?: any;
+  settings?: Record<string, unknown>;
   email_verified?: boolean;
 }
 
@@ -113,14 +113,14 @@ class ApiService {
     return this.request(`/api/tasks${qs ? `?${qs}` : ''}`);
   }
 
-  async createTask(taskData: any): Promise<ApiResponse> {
+  async createTask(taskData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/tasks', {
       method: 'POST',
       body: JSON.stringify(taskData),
     });
   }
 
-  async updateTask(taskId: string, updateData: any): Promise<ApiResponse> {
+  async updateTask(taskId: string, updateData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/tasks/${taskId}`, {
       method: 'PATCH',
       body: JSON.stringify(updateData),
@@ -277,7 +277,7 @@ class ApiService {
     return null;
   }
 
-  private async request<T = any>(
+  private async request<T = unknown>(
     endpoint: string,
     options: RequestInit = {},
     retryOn401: boolean = true
@@ -352,11 +352,11 @@ class ApiService {
 
         logger.debug('API', `Response ${endpoint}`, { success: true }, isPeriodic ? { periodic: true } : undefined);
         return data;
-      } catch (fetchError: any) {
+      } catch (fetchError: unknown) {
         clearTimeout(timeoutId);
 
         // Check if error is due to abort (timeout)
-        if (fetchError.name === 'AbortError') {
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
           logger.error('API', 'Request timeout', { endpoint });
           return {
             success: false,
@@ -441,14 +441,14 @@ class ApiService {
     return this.request(`/api/users/eligible-for-promotion/${adminId}`);
   }
 
-  async registerUser(userData: any): Promise<ApiResponse> {
+  async registerUser(userData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/users/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
   }
 
-  async loginUser(credentials: any): Promise<ApiResponse> {
+  async loginUser(credentials: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/users/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
@@ -491,7 +491,7 @@ class ApiService {
     return this.request(`/api/users?${params.toString()}`);
   }
 
-  async updateUser(userId: string, updateData: any): Promise<ApiResponse> {
+  async updateUser(userId: string, updateData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -556,7 +556,7 @@ class ApiService {
     return this.request(`/api/donations?${params.toString()}`);
   }
 
-  async createDonation(donationData: any): Promise<ApiResponse> {
+  async createDonation(donationData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/donations', {
       method: 'POST',
       body: JSON.stringify(donationData),
@@ -567,7 +567,7 @@ class ApiService {
     return this.request(`/api/donations/${donationId}`);
   }
 
-  async updateDonation(donationId: string, updateData: any): Promise<ApiResponse> {
+  async updateDonation(donationId: string, updateData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/donations/${donationId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -608,7 +608,7 @@ class ApiService {
     return this.request(`/api/rides?${params.toString()}`);
   }
 
-  async createRide(rideData: any): Promise<ApiResponse> {
+  async createRide(rideData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/rides', {
       method: 'POST',
       body: JSON.stringify(rideData),
@@ -619,7 +619,7 @@ class ApiService {
     return this.request(`/api/rides/${rideId}`);
   }
 
-  async bookRide(rideId: string, bookingData: any): Promise<ApiResponse> {
+  async bookRide(rideId: string, bookingData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/rides/${rideId}/book`, {
       method: 'POST',
       body: JSON.stringify(bookingData),
@@ -642,7 +642,7 @@ class ApiService {
     return this.request('/api/rides/stats/summary');
   }
 
-  async updateRide(rideId: string, updateData: any): Promise<ApiResponse> {
+  async updateRide(rideId: string, updateData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/rides/${rideId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -650,7 +650,7 @@ class ApiService {
   }
 
   // Items Delivery APIs
-  async updateItem(itemId: string, updateData: any): Promise<ApiResponse> {
+  async updateItem(itemId: string, updateData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request(`/api/items-delivery/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -807,14 +807,14 @@ class ApiService {
     return this.request(`/api/chat/conversations/user/${userId}`);
   }
 
-  async createConversation(conversationData: any): Promise<ApiResponse> {
+  async createConversation(conversationData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/chat/conversations', {
       method: 'POST',
       body: JSON.stringify(conversationData),
     });
   }
 
-  async sendMessage(messageData: any): Promise<ApiResponse> {
+  async sendMessage(messageData: Record<string, unknown>): Promise<ApiResponse> {
     return this.request('/api/chat/messages', {
       method: 'POST',
       body: JSON.stringify(messageData),
@@ -875,7 +875,7 @@ class ApiService {
     contact_info?: {
       email?: string;
       phone?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
     status?: 'active' | 'inactive';
     created_by?: string;
@@ -895,7 +895,7 @@ class ApiService {
       contact_info?: {
         email?: string;
         phone?: string;
-        [key: string]: any;
+        [key: string]: unknown;
       };
       status?: 'active' | 'inactive';
     }
@@ -915,7 +915,7 @@ class ApiService {
   // CRM APIs
   get crm() {
     return {
-      getAll: (filters: any) => {
+      getAll: (filters?: Record<string, unknown>) => {
         const params = new URLSearchParams();
         Object.entries(filters || {}).forEach(([k, v]) => {
           if (v !== undefined && v !== null && String(v).length > 0) {
@@ -924,8 +924,8 @@ class ApiService {
         });
         return this.request(`/api/crm?${params.toString()}`);
       },
-      create: (data: any) => this.request('/api/crm', { method: 'POST', body: JSON.stringify(data) }),
-      update: (id: string, data: any) => this.request(`/api/crm/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      create: (data: Record<string, unknown>) => this.request('/api/crm', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: Record<string, unknown>) => this.request(`/api/crm/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
       delete: (id: string) => this.request(`/api/crm/${id}`, { method: 'DELETE' }),
     };
   }
@@ -933,7 +933,7 @@ class ApiService {
   // Admin Files APIs
   get adminFiles() {
     return {
-      getAll: (filters: any) => {
+      getAll: (filters?: Record<string, unknown>) => {
         const params = new URLSearchParams();
         Object.entries(filters || {}).forEach(([k, v]) => {
           if (v !== undefined && v !== null && String(v).length > 0) {
@@ -942,7 +942,7 @@ class ApiService {
         });
         return this.request(`/api/admin-files?${params.toString()}`);
       },
-      create: (data: any) => this.request('/api/admin-files', { method: 'POST', body: JSON.stringify(data) }),
+      create: (data: Record<string, unknown>) => this.request('/api/admin-files', { method: 'POST', body: JSON.stringify(data) }),
       delete: (id: string) => this.request(`/api/admin-files/${id}`, { method: 'DELETE' }),
     };
   }
@@ -958,8 +958,8 @@ class ApiService {
         if (limit) params.append('limit', String(limit));
         return this.request(`/api/admin/tables/${id}?${params.toString()}`);
       },
-      create: (data: any) => this.request('/api/admin/tables', { method: 'POST', body: JSON.stringify(data) }),
-      update: (id: string, data: any) => this.request(`/api/admin/tables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      create: (data: Record<string, unknown>) => this.request('/api/admin/tables', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: Record<string, unknown>) => this.request(`/api/admin/tables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
       delete: (id: string) => this.request(`/api/admin/tables/${id}`, { method: 'DELETE' }),
       getRows: (tableId: string, page?: number, limit?: number) => {
         const params = new URLSearchParams();
@@ -967,8 +967,8 @@ class ApiService {
         if (limit) params.append('limit', String(limit));
         return this.request(`/api/admin/tables/${tableId}/rows?${params.toString()}`);
       },
-      createRow: (tableId: string, data: any) => this.request(`/api/admin/tables/${tableId}/rows`, { method: 'POST', body: JSON.stringify(data) }),
-      updateRow: (tableId: string, rowId: string, data: any) => this.request(`/api/admin/tables/${tableId}/rows/${rowId}`, { method: 'PUT', body: JSON.stringify(data) }),
+      createRow: (tableId: string, data: Record<string, unknown>) => this.request(`/api/admin/tables/${tableId}/rows`, { method: 'POST', body: JSON.stringify(data) }),
+      updateRow: (tableId: string, rowId: string, data: Record<string, unknown>) => this.request(`/api/admin/tables/${tableId}/rows/${rowId}`, { method: 'PUT', body: JSON.stringify(data) }),
       deleteRow: (tableId: string, rowId: string) => this.request(`/api/admin/tables/${tableId}/rows/${rowId}`, { method: 'DELETE' }),
     };
   }
@@ -1017,7 +1017,7 @@ function getApiServiceInstance(): ApiService {
 export const apiService = new Proxy({} as ApiService, {
   get(target, prop) {
     const instance = getApiServiceInstance();
-    const value = (instance as any)[prop];
+    const value = (instance as unknown as Record<string, unknown>)[prop as string];
     return typeof value === 'function' ? value.bind(instance) : value;
   }
 });

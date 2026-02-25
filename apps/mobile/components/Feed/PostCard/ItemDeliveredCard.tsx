@@ -58,11 +58,10 @@ const ItemDeliveredCard: React.FC<BaseCardProps> = ({
             : '';
         const descPart = item.description && item.description.trim() !== '' ? item.description : '';
         
-        // Build full text: "פריט [שם] שנמסר - [תיאור]"
         if (titlePart && descPart) {
-            return `פריט ${titlePart} שנמסר - ${descPart}`;
+            return t('donations.categories.items.deliveredWithDesc', { title: titlePart, description: descPart });
         } else if (titlePart) {
-            return `פריט ${titlePart} שנמסר`;
+            return t('donations.categories.items.deliveredTitleOnly', { title: titlePart });
         } else if (descPart) {
             return descPart;
         }
@@ -253,7 +252,7 @@ const styles = StyleSheet.create({
         padding: 16,
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceLight,
     },
     headerRight: {
         alignItems: 'center',
@@ -325,7 +324,7 @@ const styles = StyleSheet.create({
     },
     gradientOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        backgroundColor: colors.overlayImage,
         justifyContent: 'flex-end',
         padding: 20,
     },
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
         color: colors.white,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.textShadowOverlay,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
@@ -344,7 +343,7 @@ const styles = StyleSheet.create({
         fontSize: FontSizes.body,
         color: colors.white,
         lineHeight: 22,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.textShadowOverlay,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
     },
@@ -355,7 +354,7 @@ const styles = StyleSheet.create({
     detailBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        backgroundColor: colors.badgeOverlay,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
@@ -374,7 +373,7 @@ const styles = StyleSheet.create({
     },
     placeholderContainer: {
         height: 280,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: colors.surfaceLighter,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
@@ -399,7 +398,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopWidth: 1,
         borderTopColor: colors.backgroundSecondary,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceLight,
     },
     actionsLeft: {
         alignItems: 'center',

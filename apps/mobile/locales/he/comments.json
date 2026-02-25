@@ -1,0 +1,16 @@
+{
+  "title": "תגובות",
+  "reply": "תגובה",
+  "placeholder": "הוסף תגובה...",
+  "loadError": "שגיאה בטעינת התגובות",
+  "sendError": "שגיאה בשליחת התגובה",
+  "empty": "אין תגובות עדיין",
+  "beFirst": "היה הראשון להגיב!",
+  "deleteTitle": "מחיקת תגובה",
+  "deleteConfirm": "האם אתה בטוח שברצונך למחוק את התגובה?",
+  "deleteSuccess": "התגובה נמחקה",
+  "deleteError": "לא הצלחנו למחוק את התגובה",
+  "loginRequiredToComment": "יש להתחבר כדי להגיב",
+  "loginRequiredToLike": "יש להתחבר כדי לעשות לייק",
+  "commentTooLong": "התגובה ארוכה מדי (מקסימום 2000 תווים)"
+}

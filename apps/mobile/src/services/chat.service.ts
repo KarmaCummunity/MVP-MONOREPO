@@ -1,9 +1,9 @@
-import { USE_FIRESTORE, USE_BACKEND } from '../../utils/config.constants';
+import { USE_FIRESTORE, USE_BACKEND } from '../infrastructure/config';
 import { getFirebase } from '../../utils/firebaseClient';
 import { collection as fsCollection, query as fsQuery, where as fsWhere, onSnapshot } from 'firebase/firestore';
-import { sendMessageNotification } from '../../utils/notificationService';
-import { db, DB_COLLECTIONS, DatabaseService } from '../../utils/databaseService';
-import { apiService } from '../../utils/apiService';
+import { sendMessageNotification } from './notification.service';
+import { db, DB_COLLECTIONS, DatabaseService } from '../infrastructure/database.service';
+import { apiService } from '../api/api.service';
 
 // TODO: CRITICAL - This file is extremely complex (735 lines). Split into specialized services:
 //   - ConversationService for conversation management
@@ -102,7 +102,8 @@ export const createConversation = async (participants: string[]): Promise<string
         throw new Error(response.error || 'Failed to create conversation on backend');
       }
 
-      conversationId = response.data.id;
+      const data = response.data as { id?: string };
+      conversationId = data?.id ?? generateId('conv');
       logger.info('ChatService', 'Conversation created on backend', { conversationId });
     } else {
       // Fallback to local storage
@@ -146,13 +147,13 @@ export const getConversations = async (userId: string): Promise<Conversation[]> 
 
       if (response.success && response.data && Array.isArray(response.data)) {
         // Map backend format to frontend format
-        const conversations: Conversation[] = response.data.map((conv: any) => ({
-          id: conv.id,
-          participants: conv.participants || [],
-          lastMessageText: conv.last_message_content || '',
-          lastMessageTime: conv.last_message_time || conv.updated_at || conv.created_at,
-          unreadCount: conv.unread_count || 0,
-          createdAt: conv.created_at,
+        const conversations: Conversation[] = response.data.map((conv: Record<string, unknown>) => ({
+          id: conv.id as string,
+          participants: (conv.participants as string[]) || [],
+          lastMessageText: (conv.last_message_content as string) || '',
+          lastMessageTime: (conv.last_message_time as string) || (conv.updated_at as string) || (conv.created_at as string),
+          unreadCount: (conv.unread_count as number) || 0,
+          createdAt: conv.created_at as string,
         }));
 
         // Deduplicate conversations: keep only one conversation per set of participants
@@ -183,7 +184,7 @@ export const getConversations = async (userId: string): Promise<Conversation[]> 
 
         // Also save locally for offline support
         for (const conv of uniqueConversations) {
-          await db.createChat(userId, conv.id, conv);
+          await db.createChat(userId, conv.id, conv as unknown as Record<string, unknown>);
         }
 
         logger.debug('ChatService', 'Got conversations from backend', { count: uniqueConversations.length, originalCount: conversations.length });
@@ -235,7 +236,7 @@ export const sendMessage = async (
 ): Promise<string | { messageId: string; newConversationId?: string }> => {
   try {
     let messageId: string;
-    let backendMessage: any = null;
+    let backendMessage: Record<string, unknown> | null = null;
 
     // Get conversation to find participants
     let senderView = await getConversationById(message.conversationId, message.senderId);
@@ -247,19 +248,19 @@ export const sendMessage = async (
         // Try to get conversation from backend
         const convResponse = await apiService.getUserConversations(message.senderId);
         if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
-          const backendConv = convResponse.data.find((c: any) => c.id === message.conversationId);
+          const backendConv = convResponse.data.find((c: Record<string, unknown>) => (c.id as string) === message.conversationId);
           if (backendConv && backendConv.participants) {
             participants = backendConv.participants;
             // Save locally for future use
             senderView = {
-              id: backendConv.id,
-              participants: backendConv.participants,
+              id: backendConv.id as string,
+              participants: backendConv.participants as string[],
               lastMessageText: backendConv.last_message_content || '',
               lastMessageTime: backendConv.last_message_time || backendConv.created_at,
               unreadCount: backendConv.unread_count || 0,
               createdAt: backendConv.created_at,
             };
-            await db.createChat(message.senderId, message.conversationId, senderView);
+            await db.createChat(message.senderId, message.conversationId, senderView as unknown as Record<string, unknown>);
           }
         }
       } catch (error) {
@@ -280,13 +281,13 @@ export const sendMessage = async (
           const allConvsResponse = await apiService.getUserConversations(message.senderId);
           if (allConvsResponse.success && allConvsResponse.data && Array.isArray(allConvsResponse.data)) {
             // Look for conversation by ID or by legacy_id in metadata
-            const foundConv = allConvsResponse.data.find((c: any) =>
-              c.id === message.conversationId ||
-              (c.metadata && c.metadata.legacy_id === message.conversationId)
+            const foundConv = allConvsResponse.data.find((c: Record<string, unknown>) =>
+              (c.id as string) === message.conversationId ||
+              ((c.metadata as Record<string, unknown>)?.legacy_id === message.conversationId)
             );
 
-            if (foundConv && foundConv.participants && foundConv.participants.length > 0) {
-              participants = foundConv.participants;
+            if (foundConv && (foundConv.participants as string[])?.length > 0) {
+              participants = foundConv.participants as string[];
               logger.info('ChatService', 'Recovered participants from backend', { participants });
             }
           }
@@ -311,7 +312,7 @@ export const sendMessage = async (
         };
 
         for (const participantId of fallbackParticipants) {
-          await db.createChat(participantId, message.conversationId, fallbackConversation);
+          await db.createChat(participantId, message.conversationId, fallbackConversation as unknown as Record<string, unknown>);
         }
       }
 
@@ -325,7 +326,7 @@ export const sendMessage = async (
     if (USE_BACKEND) {
       try {
         // Convert frontend format to backend format
-        const backendMessageData: any = {
+        const backendMessageData: Record<string, unknown> = {
           conversation_id: message.conversationId,
           sender_id: message.senderId,
           content: message.text || '',
@@ -354,12 +355,13 @@ export const sendMessage = async (
         const response = await apiService.sendMessage(backendMessageData);
 
         if (response.success && response.data) {
-          backendMessage = response.data;
-          messageId = response.data.id;
+          const respData = response.data as { id?: string; conversation_created?: boolean; conversation_id?: string };
+          backendMessage = response.data as Record<string, unknown>;
+          messageId = respData?.id ?? generateId('msg');
 
           // If backend created a new conversation (with new UUID), update local storage
-          if (response.data.conversation_created && response.data.conversation_id) {
-            const newConversationId = response.data.conversation_id;
+          if (respData?.conversation_created && respData?.conversation_id) {
+            const newConversationId = respData.conversation_id;
             logger.info('ChatService', 'Backend created new conversation', {
               oldId: message.conversationId,
               newId: newConversationId
@@ -369,22 +371,22 @@ export const sendMessage = async (
             try {
               const convResponse = await apiService.getUserConversations(message.senderId);
               if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
-                const newConv = convResponse.data.find((c: any) => c.id === newConversationId);
+                const newConv = convResponse.data.find((c: Record<string, unknown>) => (c.id as string) === newConversationId);
                 if (newConv) {
                   // Map backend format to frontend format
                   const updatedConversation: Conversation = {
                     id: newConversationId,
-                    participants: newConv.participants || participants,
+                    participants: (newConv.participants as string[]) || participants,
                     lastMessageText: message.text || '',
                     lastMessageTime: message.timestamp,
-                    unreadCount: newConv.unread_count || 0,
-                    createdAt: newConv.created_at || new Date().toISOString(),
+                    unreadCount: (newConv.unread_count as number) || 0,
+                    createdAt: (newConv.created_at as string) || new Date().toISOString(),
                   };
 
                   // Save new conversation for all participants
-                  const finalParticipants = newConv.participants || participants;
+                  const finalParticipants = (newConv.participants as string[]) || participants;
                   for (const participantId of finalParticipants) {
-                    await db.createChat(participantId, newConversationId, updatedConversation);
+                    await db.createChat(participantId, newConversationId, updatedConversation as unknown as Record<string, unknown>);
                     // Also delete old conversation if it exists
                     try {
                       await DatabaseService.delete(DB_COLLECTIONS.CHATS, participantId, message.conversationId);
@@ -422,7 +424,7 @@ export const sendMessage = async (
               };
 
               for (const participantId of participants) {
-                await db.createChat(participantId, newConversationId, updatedConversation);
+                await db.createChat(participantId, newConversationId, updatedConversation as unknown as Record<string, unknown>);
               }
 
               message.conversationId = newConversationId;
@@ -454,7 +456,7 @@ export const sendMessage = async (
 
     // Save locally for all participants (for offline support and real-time updates)
     for (const participantId of participants) {
-      await db.createMessage(participantId, messageId, newMessage);
+      await db.createMessage(participantId, messageId, newMessage as unknown as Record<string, unknown>);
     }
 
     let displayText = message.text;
@@ -465,14 +467,17 @@ export const sendMessage = async (
     // Update conversation for all participants
     for (const participantId of participants) {
       const existing = await db.getChat(participantId, message.conversationId);
-      const baseConv: Conversation = (existing as Conversation) || {
-        id: message.conversationId,
-        participants,
-        lastMessageText: '',
-        lastMessageTime: new Date().toISOString(),
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-      };
+      const existingConv = existing as Record<string, unknown> | null;
+      const baseConv: Conversation = (existingConv?.id && existingConv?.participants)
+        ? (existingConv as unknown as Conversation)
+        : {
+            id: message.conversationId,
+            participants,
+            lastMessageText: '',
+            lastMessageTime: new Date().toISOString(),
+            unreadCount: 0,
+            createdAt: new Date().toISOString(),
+          };
 
       const isRecipient = participantId !== message.senderId;
       const unreadCount = isRecipient ? (baseConv.unreadCount || 0) + 1 : 0;
@@ -484,7 +489,7 @@ export const sendMessage = async (
         unreadCount,
       };
 
-      await db.createChat(participantId, message.conversationId, updatedConversation);
+      await db.createChat(participantId, message.conversationId, updatedConversation as unknown as Record<string, unknown>);
       logger.debug('ChatService', 'Updated conversation for participant', { participantId });
     }
 
@@ -541,41 +546,47 @@ export const getMessages = async (conversationId: string, userId: string): Promi
 
         if (response.success && response.data && Array.isArray(response.data)) {
           // Map backend format to frontend format
-          const messages: Message[] = response.data.map((msg: any) => {
+          const messages: Message[] = response.data.map((msg: Record<string, unknown>) => {
             const frontendMessage: Message = {
-              id: msg.id,
-              conversationId: msg.conversation_id,
-              senderId: msg.sender_id,
-              text: msg.content || '',
-              timestamp: msg.created_at,
+              id: msg.id as string,
+              conversationId: msg.conversation_id as string,
+              senderId: msg.sender_id as string,
+              text: (msg.content as string) || '',
+              timestamp: msg.created_at as string,
               read: false, // TODO: Check read receipts
               type: (msg.message_type || 'text') as Message['type'],
               status: 'sent',
-              replyTo: msg.reply_to_id || undefined,
-              edited: msg.is_edited || false,
-              editedAt: msg.edited_at || undefined,
-              deleted: msg.is_deleted || false,
-              deletedAt: msg.deleted_at || undefined,
+              replyTo: (msg.reply_to_id as string) || undefined,
+              edited: (msg.is_edited as boolean) || false,
+              editedAt: (msg.edited_at as string) || undefined,
+              deleted: (msg.is_deleted as boolean) || false,
+              deletedAt: (msg.deleted_at as string) || undefined,
             };
 
             // Handle file data if present
             if (msg.file_url) {
               frontendMessage.fileData = {
-                id: msg.id,
-                name: msg.file_name || 'file',
-                uri: msg.file_url,
+                id: msg.id as string,
+                name: (msg.file_name as string) || 'file',
+                uri: msg.file_url as string,
                 type: (msg.file_type || msg.message_type || 'file') as 'image' | 'video' | 'file' | 'voice',
-                size: msg.file_size || undefined,
-                mimeType: msg.file_type || undefined,
+                size: typeof msg.file_size === 'number' ? msg.file_size : undefined,
+                mimeType: typeof msg.file_type === 'string' ? msg.file_type : undefined,
               };
 
               // Parse metadata if present
-              if (msg.metadata) {
+              if (msg.metadata && frontendMessage.fileData) {
                 try {
-                  const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
-                  if (metadata.thumbnail) frontendMessage.fileData.thumbnail = metadata.thumbnail;
-                  if (metadata.duration) frontendMessage.fileData.duration = metadata.duration;
-                  if (metadata.dimensions) frontendMessage.fileData.dimensions = metadata.dimensions;
+                  const metadata = (typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata) as Record<string, unknown>;
+                  if (metadata.thumbnail != null && typeof metadata.thumbnail === 'string') {
+                    frontendMessage.fileData!.thumbnail = metadata.thumbnail;
+                  }
+                  if (metadata.duration != null && typeof metadata.duration === 'number') {
+                    frontendMessage.fileData!.duration = metadata.duration;
+                  }
+                  if (metadata.dimensions && typeof metadata.dimensions === 'object' && metadata.dimensions !== null && 'width' in metadata.dimensions && 'height' in metadata.dimensions) {
+                    frontendMessage.fileData!.dimensions = metadata.dimensions as { width: number; height: number };
+                  }
                 } catch (e) {
                   logger.warn('ChatService', 'Failed to parse message metadata', { error: e });
                 }
@@ -587,7 +598,7 @@ export const getMessages = async (conversationId: string, userId: string): Promi
 
           // Save messages locally for offline support
           for (const msg of messages) {
-            await db.createMessage(userId, msg.id, msg);
+            await db.createMessage(userId, msg.id, msg as unknown as Record<string, unknown>);
           }
 
           logger.debug('ChatService', 'Got messages from backend', { count: messages.length });
@@ -603,7 +614,7 @@ export const getMessages = async (conversationId: string, userId: string): Promi
 
     // Fallback to local storage
     const messages = await db.getChatMessages(userId, conversationId);
-    return (messages as Message[]).sort((a, b) =>
+    return (messages as unknown as Message[]).sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
   } catch (error) {
@@ -622,9 +633,10 @@ export const markMessagesAsRead = async (conversationId: string, userId: string)
         const response = await apiService.markAllMessagesAsRead(conversationId, userId);
 
         if (response.success) {
+          const markData = response.data as { marked_read?: number } | undefined;
           logger.info('ChatService', 'Messages marked as read on backend', {
             conversationId,
-            markedCount: response.data?.marked_read || 0
+            markedCount: markData?.marked_read ?? 0
           });
 
           // Update local cache - mark all messages as read
@@ -913,11 +925,11 @@ export const createSampleChatData = async (userId: string): Promise<void> => {
     }
 
     for (const conversation of sampleConversations) {
-      await db.createChat(userId, conversation.id, conversation);
+      await db.createChat(userId, conversation.id, conversation as unknown as Record<string, unknown>);
     }
 
     for (const message of sampleMessages) {
-      await db.createMessage(userId, message.id, message);
+      await db.createMessage(userId, message.id, message as unknown as Record<string, unknown>);
     }
 
     logger.info('ChatService', 'Sample chat data created for user', { userId, conversationCount: sampleConversations.length, messageCount: sampleMessages.length });
@@ -1072,7 +1084,7 @@ export const searchMessages = async (
 ): Promise<Message[]> => {
   try {
     const results = await db.searchMessages(userId, searchQuery);
-    return results as Message[];
+    return results as unknown as Message[];
   } catch (error) {
     logger.error('ChatService', 'Search messages error', { error });
     return [];
@@ -1086,7 +1098,7 @@ export const getMessageReactions = async (
 ): Promise<Array<{ userId: string; emoji: string; timestamp: string }>> => {
   try {
     const reactions = await db.getMessageReactions(userId, messageId);
-    return reactions as any[];
+    return reactions as Array<{ userId: string; emoji: string; timestamp: string }>;
   } catch (error) {
     logger.error('ChatService', 'Get reactions error', { error });
     return [];
@@ -1155,12 +1167,13 @@ export const debugDatabaseContent = async (userId: string) => {
     // Get all chats
     const chats = await db.getUserChats(userId);
     logger.debug('ChatService', 'Total Chats', { count: chats.length });
-    chats.forEach((chat: any) => {
+    (chats as unknown[]).forEach((chat: unknown) => {
+      const c = chat as Record<string, unknown>;
       logger.debug('ChatService', 'Chat', {
-        id: chat.id,
-        participants: chat.participants,
-        lastMessage: chat.lastMessageText,
-        lastTime: chat.lastMessageTime,
+        id: c.id,
+        participants: c.participants,
+        lastMessage: c.lastMessageText,
+        lastTime: c.lastMessageTime,
       });
     });
 

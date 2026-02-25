@@ -41,7 +41,7 @@ const WebModeToggleOverlay: React.FC = () => {
   const { t } = useTranslation('webOverlay'); // Use specific namespace
   const { mode, setMode } = useWebMode();
   const { isAuthenticated, isGuestMode, selectedUser, isAdmin } = useUser();
-  const navigation: any = useNavigation<NavigationProp<ParamListBase>>();
+  const _navigation: any = useNavigation<NavigationProp<ParamListBase>>();
 
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

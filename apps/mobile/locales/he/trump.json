@@ -1,0 +1,126 @@
+{
+  "sorts": [
+    "אלפביתי",
+    "לפי מיקום",
+    "לפי תאריך",
+    "לפי שעה",
+    "לפי דירוג",
+    "לפי רלוונטיות"
+  ],
+  "sort": {
+    "alphabetical": "אלפביתי",
+    "byLocation": "לפי מיקום",
+    "byCategory": "לפי תחום",
+    "byDate": "לפי תאריך",
+    "byTime": "לפי שעה",
+    "byPrice": "לפי מחיר",
+    "byRating": "לפי דירוג",
+    "byRelevance": "לפי רלוונטיות"
+  },
+  "status": {
+    "published": "פורסם",
+    "completed": "הושלם"
+  },
+  "rideOf": "טרמפ של {{name}}",
+  "from": "מ",
+  "to": "אל",
+  "date": "תאריך",
+  "time": "שעה",
+  "price": "מחיר",
+  "seatsAvailable": "מקומות פנויים",
+  "joinQuestion": "האם תרצה להצטרף לטרמפ זה?",
+  "joinRide": "הצטרף לטרמפ",
+  "requestSentTitle": "בקשה נשלחה",
+  "requestSentBody": "בקשה להצטרף לטרמפ של {{name}} נשלחה בהצלחה!",
+  "currentLocation": "מיקום נוכחי",
+  "near": "ליד",
+  "filters": {
+    "noCostSharing": "בלי השתתפות בהוצאות",
+    "noSmoking": "בלי עישון",
+    "withPets": "עם חיות",
+    "withKids": "עם ילדים",
+    "includePast": "כולל נסיעות שעברו"
+  },
+  "category": {
+    "other": "אחר"
+  },
+  "success": {
+    "title": "הצלחה",
+    "ridePublished": "הטרמפ פורסם בהצלחה!"
+  },
+  "errors": {
+    "fillDestination": "אנא הזן יעד",
+    "fillFromOrCurrent": "אנא הזן נקודת יציאה או בחר שימוש במיקום הנוכחי",
+    "saveFailed": "שמירת הטרמפ נכשלה",
+    "noGroupLink": "אין קישור לקבוצה",
+    "locationNotResolved": "אנא המתן לזיהוי המיקום או הזן כתובת ידנית",
+    "locationPermissionDenied": "הרשאת מיקום נדחתה",
+    "locationFetchFailed": "שליפת המיקום נכשלה"
+  },
+  "ui": {
+    "timePickerPlaceholder": "שעת יציאה",
+    "immediateDeparture": "יציאה מיידית",
+    "useCurrentLocation": "שימוש במיקום הנוכחי",
+    "fromLocationLabel": "נקודת יציאה",
+    "fromPointLabel": "מוצא",
+    "fromPlaceholder": "נקודת יציאה",
+    "enterDepartureAddress": "הזן כתובת יציאה",
+    "leavingToday": "יוצא היום",
+    "selectDate": "בחר תאריך",
+    "seatsLabel": "מקומות",
+    "fuelContributionLabel": "השתתפות בדלק",
+    "publishRide": "פרסום טרמפ",
+    "recurringRide": "טרמפ חוזר",
+    "recurrenceConfigLabel": "הגדרות חזרה",
+    "recurrenceFrequencyLabel": "תדירות",
+    "recurrenceUnitLabel": "יחידה",
+    "recurrenceDay": "יום",
+    "recurrenceWeek": "שבוע",
+    "recurrenceMonth": "חודש",
+    "recurrenceDays": "ימים",
+    "recurrenceWeeks": "שבועות",
+    "recurrenceMonths": "חודשים",
+    "recurrencePreview": "הטרמפ יחזור כל {{frequency}} {{unit}}",
+    "yourHistoryTitle": "הנסיעות האחרונות שלך",
+    "yourRecentRides": "הנסיעות האחרונות שלך",
+    "ridesAvailableTitle": "טרמפים זמינים",
+    "ridesRecommendedTitle": "טרמפים מומלצים",
+    "groupsTitle": "קבוצות",
+    "whatsappGroups": "קבוצות וואטסאפ",
+    "noRecentRides": "אין נסיעות אחרונות",
+    "searchResultsPrefix": "תוצאות חיפוש עבור",
+    "availableRides": "טרמפים זמינים",
+    "noRidesFoundTitle": "לא נמצאו טרמפים",
+    "noRidesFoundBody": "נסה לשנות את קריטריוני החיפוש",
+    "searchPlaceholder": {
+      "offer": "לאן? יעד...",
+      "seek": "מצא טרמפ: יעד..."
+    }
+  },
+  "menu": {
+    "history": "היסטוריה",
+    "settings": "הגדרות",
+    "help": "עזרה",
+    "contact": "צור קשר",
+    "title": "תפריט",
+    "selected": "נבחר: {{option}}"
+  },
+  "alerts": {
+    "rideSelectedTitle": "טרמפ נבחר",
+    "rideSelectedBody": "בחרת בטרמפ של {{name}}",
+    "restoreDoneTitle": "שוחזר",
+    "restoreDoneBody": "המסלול מ-{{from}} אל {{to}} שוחזר לטופס",
+    "deleteRideTitle": "מחיקת טרמפ",
+    "deleteRideBody": "האם למחוק טרמפ זה?"
+  },
+  "restore": "שחזר",
+  "groups": {
+    "whatsapp": "קבוצות וואטסאפ",
+    "facebook": "קבוצות פייסבוק"
+  },
+  "stats": {
+    "availableRides": "טרמפים זמינים",
+    "noCost": "ללא עלות",
+    "groupMembers": "חברי קבוצות"
+  }
+}

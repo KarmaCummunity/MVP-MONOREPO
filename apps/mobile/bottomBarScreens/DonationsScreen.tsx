@@ -49,7 +49,7 @@ import { useTranslation } from 'react-i18next';
 import { getScreenInfo, isLandscape, responsiveSpacing, scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
 import { restAdapter } from '../utils/restAdapter';
-import { EnhancedStatsService } from '../utils/statsService';
+import { EnhancedStatsService } from '../src/services/stats.service';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,7 +120,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   const { isGuestMode, isRealAuth } = useUser();
   const { t } = useTranslation(['donations','common']);
 
-  // חישוב מידות responsive לכרטיסים
+  // חישוב מידות responsive 
   const { isTablet: isTabletScreen, isDesktop: isDesktopScreen } = getScreenInfo();
   const landscapeMode = isLandscape();
   

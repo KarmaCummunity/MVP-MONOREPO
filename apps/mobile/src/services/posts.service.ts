@@ -3,10 +3,10 @@
 // - Provides: toggleLike, getComments, addComment, deleteComment, toggleCommentLike
 // - Communicates with: /api/posts/* endpoints on the backend
 
-import { API_BASE_URL } from '../../utils/config.constants';
+import { API_BASE_URL } from '../infrastructure/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface PostsApiResponse<T = any> {
+export interface PostsApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -161,7 +161,7 @@ class PostsService {
     postType?: string,
     itemId?: string,
     rideId?: string
-  ): Promise<PostsApiResponse<any[]>> {
+  ): Promise<PostsApiResponse<unknown[]>> {
     let url = `/api/posts?limit=${limit}&offset=${offset}`;
     if (userId) {
       url += `&user_id=${userId}`;
@@ -175,7 +175,7 @@ class PostsService {
     if (rideId) {
       url += `&ride_id=${encodeURIComponent(rideId)}`;
     }
-    return this.request<any[]>(url);
+    return this.request<unknown[]>(url);
   }
 
   /**
@@ -184,14 +184,14 @@ class PostsService {
    * @param viewerId - The ID of the current viewer (to check likes)
    * @param limit
    */
-  async getUserPosts(targetUserId: string, viewerId?: string, limit = 20): Promise<PostsApiResponse<any[]>> {
+  async getUserPosts(targetUserId: string, viewerId?: string, limit = 20): Promise<PostsApiResponse<unknown[]>> {
     let url = `/api/posts/user/${targetUserId}?limit=${limit}`;
     if (viewerId) {
       url += `&viewer_id=${viewerId}`;
     }
     // Note: Pagination offset support might need to be added to backend getUserPosts if missing, 
     // likely it supports it or we rely on limit for now.
-    return this.request<any[]>(url);
+    return this.request<unknown[]>(url);
   }
 
   // ============================================
@@ -226,8 +226,8 @@ class PostsService {
    * @param limit - Max number of results (default 50)
    * @param offset - Pagination offset (default 0)
    */
-  async getPostLikes(postId: string, limit = 50, offset = 0): Promise<PostsApiResponse<any[]>> {
-    return this.request<any[]>(`/api/posts/${postId}/likes?limit=${limit}&offset=${offset}`);
+  async getPostLikes(postId: string, limit = 50, offset = 0): Promise<PostsApiResponse<unknown[]>> {
+    return this.request<unknown[]>(`/api/posts/${postId}/likes?limit=${limit}&offset=${offset}`);
   }
 
   // ============================================
@@ -337,8 +337,8 @@ class PostsService {
     postId: string,
     userId: string,
     updates: { title?: string; description?: string; image?: string }
-  ): Promise<PostsApiResponse<any>> {
-    return this.request<any>(`/api/posts/${postId}`, {
+  ): Promise<PostsApiResponse<Record<string, unknown>>> {
+    return this.request<Record<string, unknown>>(`/api/posts/${postId}`, {
       method: 'PUT',
       body: JSON.stringify({ user_id: userId, ...updates }),
     });

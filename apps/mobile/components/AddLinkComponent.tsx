@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
 import { FontSizes } from '../globals/constants';
 import { scaleSize } from '../globals/responsive';
 import { useUser } from '../stores/userStore';
@@ -42,19 +43,19 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       // NOTE: Links functionality has been removed - links table was deleted
       // All user data is now unified in user_profiles table with UUID identifiers
       // TODO: Implement alternative storage if links functionality is still needed
-      console.log('⚠️ Links functionality has been removed');
+      logger.warn('AddLinkComponent', 'Links functionality has been removed');
 
       // Filter by category if provided
       const filteredLinks: any[] = [];
 
       setAllLinks(filteredLinks);
     } catch (error) {
-      console.error('Error loading links:', error);
+      logger.error('AddLinkComponent', 'Error loading links', { error });
       setAllLinks([]);
     } finally {
       setIsLoading(false);
     }
-  }, [category]);
+  }, []);
 
   // Load all links when component mounts or screen is focused
   useFocusEffect(
@@ -133,7 +134,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       // NOTE: Links functionality has been removed - links table was deleted
       // All user data is now unified in user_profiles table with UUID identifiers
       // TODO: Implement alternative storage if links functionality is still needed
-      console.warn('⚠️ Links functionality has been removed - link not saved');
+      logger.warn('AddLinkComponent', 'Links functionality has been removed - link not saved');
 
       // Reload all links to show the new one
       await loadAllLinks();
@@ -150,7 +151,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
 
       handleCloseModal();
     } catch (error) {
-      console.error('Error saving link:', error);
+      logger.error('AddLinkComponent', 'Error saving link', { error });
       Alert.alert(
         t('common:errorTitle', { defaultValue: 'שגיאה' }) as string,
         t('trump:errors.saveFailed', { defaultValue: 'שמירת הקישור נכשלה' }) as string
@@ -216,11 +217,6 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
   // Filter links by type (group or organization)
   const groupLinks = allLinks.filter(link => link.type === 'group');
   const organizationLinks = allLinks.filter(link => link.type === 'organization');
-
-  console.log('🔗 AddLinkComponent render - allLinks:', allLinks.length);
-  console.log('🔗 AddLinkComponent render - groupLinks:', groupLinks.length);
-  console.log('🔗 AddLinkComponent render - organizationLinks:', organizationLinks.length);
-  console.log('🔗 AddLinkComponent render - isLoading:', isLoading);
 
   return (
     <View style={styles.container}>

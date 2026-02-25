@@ -1,0 +1,372 @@
+{
+  "title": "הקהילה במעשים",
+  "searchCharitiesForHelp": "חפש עמותות",
+  "searchCharitiesForDonation": "חפש עמותות",
+  "forYou": "בשבילך",
+  "popular": "פופולריים",
+  "all": "הכל",
+  "statistics": "סטטיסטיקות",
+  "others": "שאר הקטגוריות",
+  "allWays": "כל הדרכים לפעול בקהילה",
+  "comingSoonTitle": "בקרוב",
+  "comingSoonMessage": "הקטגוריה תהיה זמינה בקרוב!",
+  "activeDonors": "תורמים פעילים",
+  "weeklyDonations": "תרומות השבוע",
+  "activeCharities": "עמותות פעילות",
+  "categoriesTitle": "קטגוריות תרומות",
+  "details": {
+    "itemTitle": "פרטי הפריט",
+    "rideTitle": "פרטי הטרמפ",
+    "description": "תיאור:",
+    "condition": "מצב:",
+    "quantity": "כמות:",
+    "location": "מיקום:",
+    "dateTime": "תאריך ושעה:",
+    "route": "מסלול:",
+    "free": "בחינם",
+    "availableSeats": "מקומות פנויים:",
+    "seats": "מקומות",
+    "notes": "הערות:",
+    "tags": "תגיות:",
+    "publishedBy": "פורסם על ידי:",
+    "driver": "נהג:",
+    "viewProfile": "לחץ לצפייה בפרופיל ←",
+    "noInfo": "מידע לא זמין",
+    "ride": "טרמפ",
+    "journey": "נסיעה",
+    "notSpecified": "לא צויין",
+    "conditions": {
+      "new": "🆕 חדש",
+      "like_new": "✨ כמו חדש",
+      "used": "📦 משומש",
+      "parts": "🔧 לחלפים"
+    }
+  },
+  "share": "שתף",
+  "searchWithin": "חיפוש בתוך",
+  "filter": {
+    "nearMe": "קרוב אליי",
+    "popular": "פופולרי",
+    "new": "חדש"
+  },
+  "sort": {
+    "name": "שם",
+    "date": "תאריך",
+    "rating": "דירוג"
+  },
+  "section": {
+    "content": "תוכן",
+    "contentBody": "אזור זה יכיל תוכן מותאם לקטגוריית \"{{title}}\". נוכל להציג כאן רשימות, טפסים, פרויקטים קהילתיים, ומידע רלוונטי. כרגע זה תוכן התחלתי שניתן להרחיב.",
+    "relatedStats": "סטטיסטיקות קשורות"
+  },
+  "stats": {
+    "newPosts": "פרסומים חדשים",
+    "activeRequests": "בקשות פעילות",
+    "activePartners": "שותפים פעילים"
+  },
+  "statsSummary": "סיכום סטטיסטיקות למסך זה",
+  "statsScreen": {
+    "title": "סטטיסטיקות תרומות",
+    "subtitle": "הקהילה במספרים השבוע",
+    "noQuotes": "אין ציטוטי מוטיבציה זמינים"
+  },
+  "categories": {
+    "money": {
+      "title": "כסף",
+      "subtitle": "תרומה כספית",
+      "description": "תרומה כספית לארגונים ופרויקטים"
+    },
+    "trump": {
+      "title": "טרמפים",
+      "subtitle": "הסעות וטרמפים",
+      "description": "הסעת אנשים וטרמפים לקהילה"
+    },
+    "knowledge": {
+      "title": "ידע",
+      "subtitle": "חונכות ולימוד",
+      "description": "חונכות, הדרכה ושיתוף ידע"
+    },
+    "time": {
+      "title": "זמן",
+      "subtitle": "התנדבות",
+      "description": "התנדבות ועזרה בזמן"
+    },
+    "food": {
+      "title": "אוכל",
+      "subtitle": "תרומת מזון",
+      "description": "תרומת מזון לנזקקים"
+    },
+    "clothes": {
+      "title": "בגדים",
+      "subtitle": "תרומת בגדים",
+      "description": "תרומת בגדים לנזקקים"
+    },
+    "books": {
+      "title": "ספרים",
+      "subtitle": "תרומת ספרים",
+      "description": "תרומת ספרים לספרייה"
+    },
+    "furniture": {
+      "title": "רהיטים",
+      "subtitle": "תרומת רהיטים",
+      "description": "תרומת רהיטים לבית"
+    },
+    "medical": {
+      "title": "רפואה",
+      "subtitle": "עזרה רפואית",
+      "description": "עזרה רפואית וטיפולים"
+    },
+    "animals": {
+      "title": "חיות",
+      "subtitle": "עזרה לחיות",
+      "description": "אימוץ, עזרה לחיות משוטטות ותמיכה בעמותות"
+    },
+    "housing": {
+      "title": "דיור",
+      "subtitle": "עזרה בדיור",
+      "description": "עזרה בדיור וקורת גג"
+    },
+    "support": {
+      "title": "תמיכה",
+      "subtitle": "תמיכה נפשית",
+      "description": "תמיכה נפשית ורגשית"
+    },
+    "education": {
+      "title": "חינוך",
+      "subtitle": "עזרה בלימודים",
+      "description": "עזרה בלימודים וקורסים"
+    },
+    "environment": {
+      "title": "סביבה",
+      "subtitle": "פרויקטים ירוקים",
+      "description": "פרויקטים סביבתיים, נטיעות, ניקיון ושמירה על הטבע"
+    },
+    "technology": {
+      "title": "טכנולוגיה",
+      "subtitle": "עזרה טכנית",
+      "description": "עזרה טכנית, הדרכה דיגיטלית ותרומת ציוד"
+    },
+    "music": {
+      "title": "מוזיקה",
+      "subtitle": "נגינה ושיתוף מוזיקלי",
+      "description": "נגינה, שיתופי פעולה והופעות קהילתיות"
+    },
+    "games": {
+      "title": "משחקים",
+      "subtitle": "פעילויות ומשחקי חברה",
+      "description": "פעילויות קהילה ומשחקי חברה לכל הגילאים"
+    },
+    "riddles": {
+      "title": "חידות",
+      "subtitle": "חשיבה ואתגר",
+      "description": "חידות, אתגרים ומשימות חשיבה"
+    },
+    "recipes": {
+      "title": "מתכונים",
+      "subtitle": "בישול ושיתוף",
+      "description": "שיתוף מתכונים וארוחות קהילתיות"
+    },
+    "plants": {
+      "title": "צמחים",
+      "subtitle": "גינון ושתילה",
+      "description": "גינון קהילתי, שתילים והחלפת צמחים"
+    },
+    "waste": {
+      "title": "פסולת",
+      "subtitle": "מיחזור והפרדה",
+      "description": "פרויקטי ניקיון, מיחזור והפרדת פסולת"
+    },
+    "art": {
+      "title": "אמנות",
+      "subtitle": "יצירה ושיתוף",
+      "description": "יצירה אומנותית, סדנאות ושיתופי קהילה"
+    },
+    "sports": {
+      "title": "ספורט",
+      "subtitle": "אורח חיים פעיל",
+      "description": "מפגשי ספורט ופעילות"
+    },
+    "items": {
+      "title": "פריט",
+      "subtitle": "חפצים",
+      "description": "תרומות של פריטים",
+      "deliveredWithDesc": "פריט {{title}} שנמסר - {{description}}",
+      "deliveredTitleOnly": "פריט {{title}} שנמסר"
+    },
+    "dreams": {
+      "title": "הגשמת חלומות",
+      "subtitle": "לרגש וליצור רגעים",
+      "description": "הגשמת חלומות לילדים, בני נוער ומבוגרים – חוויות מיוחדות, מפגשים והפתעות"
+    },
+    "fertility": {
+      "title": "פוריות",
+      "subtitle": "סיוע במסע להורות",
+      "description": "סיוע ותמיכה במסע הפוריות: ליווי, מימון טיפולים, קהילה ותמיכה רגשית"
+    },
+    "jobs": {
+      "title": "דרושים",
+      "subtitle": "תעסוקה לקהילה",
+      "description": "סיוע במציאת עבודה, התאמת משרות ושיתופי פעולה עם מעסיקים לטובת הקהילה"
+    },
+    "matchmaking": {
+      "title": "שידוכים",
+      "subtitle": "להכיר אנשים טובים לקשר משמעותי",
+      "description": "חיבורים לקשר זוגי איכותי בתוך הקהילה: היכרות, אירועים, ליווי ועדכונים"
+    },
+    "mentalHealth": {
+      "title": "בריאות הנפש",
+      "subtitle": "תמיכה נפשית ורגשית",
+      "description": "משאבים, קהילה וליווי רגשי: קווים חמים, קבוצות תמיכה וטיפול נגיש"
+    },
+    "goldenAge": {
+      "title": "גיל הזהב",
+      "subtitle": "קהילה פעילה לגיל השלישי",
+      "description": "פעילויות, התנדבות, ליווי וסיוע מותאם לבני הגיל השלישי וניצולי שואה"
+    },
+    "languages": {
+      "title": "שפות",
+      "subtitle": "לימוד ושיתוף שפות",
+      "description": "קהילה ותמיכה בלימוד שפות: מפגשי שפה, חונכות ותרגול יחד"
+    },
+    "challenges": {
+      "title": "אתגרים קהילתיים",
+      "subtitle": "אתגרים ומעקב התקדמות",
+      "description": "הצטרף לאתגרים קהילתיים, עקוב אחר ההתקדמות שלך והשג מטרות יחד עם הקהילה"
+    }
+  },
+  "timeScreen": {
+    "menuSettings": "הגדרות",
+    "menuHelp": "עזרה",
+    "menuContact": "צור קשר",
+    "placeholder": "חפש הזדמנויות התנדבות...",
+    "emergencyTitle": "התנדבות דחופה",
+    "emergencyDescription": "מצא הזדמנויות התנדבות דחופות באזור שלך",
+    "categoriesTitle": "קטגוריות",
+    "allCategories": "כל הקטגוריות",
+    "opportunitiesTitle": "הזדמנויות התנדבות",
+    "opportunitiesDescription": "מצא הזדמנויות התנדבות מתאימות לך",
+    "findSimilar": "מצא התנדבויות דומות",
+    "volunteersCount": "{{current}}/{{needed}} מתנדבים",
+    "join": "הצטרף",
+    "statActiveVolunteers": "מתנדבים פעילים",
+    "statVolunteerHours": "שעות התנדבות",
+    "statActiveOrgs": "ארגונים פעילים",
+    "usefulLinks": "קישורים שימושיים",
+    "joinVolunteerTitle": "הצטרפות להתנדבות",
+    "joinVolunteerConfirm": "האם תרצה להצטרף להתנדבות \"{{title}}\"?",
+    "joinSuccessTitle": "הצלחה!",
+    "joinSuccessBody": "הצטרפת להתנדבות בהצלחה. נציג הארגון יצור איתך קשר בקרוב.",
+    "error": "שגיאה",
+    "cannotOpenLink": "לא ניתן לפתוח את הקישור",
+    "linkError": "שגיאה בפתיחת הקישור",
+    "categories": {
+      "all": "כל הקטגוריות",
+      "elderly": "קשישים",
+      "education": "חינוך",
+      "welfare": "רווחה",
+      "animals": "חיות",
+      "environment": "סביבה",
+      "health": "בריאות"
+    },
+    "filterOptions": {
+      "elderly": "קשישים",
+      "education": "חינוך",
+      "welfare": "רווחה",
+      "animals": "חיות",
+      "environment": "סביבה",
+      "health": "בריאות",
+      "youth": "נוער",
+      "community": "קהילה",
+      "sports": "ספורט",
+      "culture": "תרבות",
+      "food": "מזון",
+      "clothing": "ביגוד"
+    },
+    "sortOptions": {
+      "alphabetical": "אלפביתי",
+      "byLocation": "לפי מיקום",
+      "byField": "לפי תחום",
+      "byDuration": "לפי משך זמן",
+      "byFrequency": "לפי תדירות",
+      "byVolunteersNeeded": "לפי מספר מתנדבים נדרש",
+      "byRelevance": "לפי רלוונטיות"
+    }
+  },
+  "moneyScreen": {
+    "menuSavings": "חיסכון לתרומה",
+    "menuRecurring": "הוראות קבע",
+    "menuReceipts": "קבלות ודוחות",
+    "menuHistory": "היסטוריית תרומות",
+    "menuPaymentSettings": "הגדרות תשלום",
+    "menuHelp": "עזרה",
+    "menuContact": "צור קשר",
+    "donateToCommunity": "תרומה לקהילה",
+    "donate": "תרום",
+    "searchResults": "תוצאות חיפוש",
+    "recommendedCharities": "עמותות מומלצות לתרומה",
+    "charitiesForHelp": "עמותות שיכולות לעזור",
+    "recommendedForHelp": "עמותות מומלצות לעזרה",
+    "yourDonationHistory": "היסטוריית תרומות שלך",
+    "usefulLinks": "קישורים שימושיים",
+    "donorsCount": "{{count}} תורמים",
+    "fromAmount": "מ-₪{{amount}}",
+    "selectAmount": "בחר סכום לתרומה",
+    "donateNow": "תרום עכשיו",
+    "notNow": "לא עכשיו",
+    "donationCompleted": "תרומה בוצעה",
+    "thanksDonation": "תודה על תרומתך בסך ₪{{amount}} ל-{{name}}!",
+    "donationAmount": "תרומה בסך ₪{{amount}} למען הקהילה",
+    "error": "שגיאה",
+    "selectPositiveAmount": "אנא בחר סכום חיובי לפני פתיחת התשלום.",
+    "cannotOpenPayment": "לא ניתן לפתוח את קישור התשלום במכשיר זה.",
+    "selectRecipientAndAmount": "אנא בחר נמען וסכום לפני התרומה.",
+    "selectAmountForCharity": "בחר סכום לתרומה",
+    "donateTo": "לתרומה ל: {{name}}",
+    "enterAmount": "הכנס סכום:",
+    "cancel": "ביטול",
+    "enterValidAmount": "אנא הכנס סכום תקין",
+    "menuSelected": "נבחר: {{option}}",
+    "cannotOpenLink": "לא ניתן לפתוח את הקישור",
+    "searchingFinancialHelp": "מחפש עזרה כספית?",
+    "searchHelpText": "השתמש בסרגל החיפוש למעלה כדי למצוא עמותות שיכולות לעזור לך מבחינה כספית",
+    "howToFindHelp": "איך למצוא עזרה:",
+    "searchByField": "• חפש לפי תחום: חינוך, בריאות, רווחה",
+    "searchByLocation": "• חפש לפי מיקום: עיר, אזור",
+    "searchByType": "• חפש לפי סוג עזרה: מזון, ביגוד, טיפול רפואי",
+    "contactDirectly": "• פנה ישירות לעמותה דרך פרטי הקשר",
+    "contactDetails": "פרטי קשר: 03-1234567 · info@example.org",
+    "contact": "יצירת קשר",
+    "savingsTitle": "חיסכון לתרומה",
+    "savingsDescription": "קבע יעד חיסכון חודשי לתרומה עתידית. בכל חודש נוסיף את הסכום לקופת חיסכון ייעודית.",
+    "monthlyAmount": "סכום חודשי (₪)",
+    "targetLabel": "יעד (עמותה/קטגוריה)",
+    "targetExample": "לדוגמה: חינוך",
+    "saveSavings": "שמור חיסכון",
+    "saved": "נשמר",
+    "savingsPlanSaved": "תוכנית חיסכון לתרומה נשמרה",
+    "recurringTitle": "הוראות קבע",
+    "recurringDescription": "קבע תרומה קבועה (חודשית/שבועית) לעמותה שבחרת.",
+    "fixedAmount": "סכום קבוע (₪)",
+    "frequency": "תדירות",
+    "monthly": "חודשי",
+    "weekly": "שבועי",
+    "saveInstruction": "שמור הוראה",
+    "recurringSaved": "הוראת הקבע נשמרה",
+    "receiptsTitle": "קבלות ודוחות",
+    "receiptsDescription": "ייצוא קבלות שנתיות, צפייה בסיכום חודשי והשוואת תרומות.",
+    "exportReceipts": "ייצא קבלות",
+    "receiptsFile": "קובץ קבלות ירוכז כאן",
+    "monthlyReport": "דוח חודשי",
+    "monthlyReportDesc": "נסכם עבורך את החודש האחרון",
+    "bitCannotOpen": "לא ניתן לפתוח את Bit במכשיר זה כרגע.",
+    "allCountry": "כל הארץ",
+    "general": "כללי",
+    "completed": "הושלמה",
+    "unknownCharity": "עמותה לא ידועה",
+    "donatedSoFar": "תרמת עד עכשיו",
+    "donatedInApp": "נתרם באפליקציה",
+    "charitiesSupported": "עמותות שנתמכו",
+    "donateWithBit": "תרום עם Bit",
+    "screenFocused": "MoneyScreen - Screen focused, refreshing data"
+  }
+}

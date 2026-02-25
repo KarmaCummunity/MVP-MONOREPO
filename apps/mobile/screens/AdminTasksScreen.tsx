@@ -23,8 +23,9 @@ import {
 import colors from "../globals/colors";
 import { FontSizes, LAYOUT_CONSTANTS } from "../globals/constants";
 import { Ionicons } from "@expo/vector-icons";
-import apiService, { ApiResponse } from "../utils/apiService";
+import apiService, { ApiResponse } from "../src/api/api.service";
 import { useUser } from "../stores/userStore";
+import { logger } from "../utils/loggerService";
 import { useAdminProtection } from "../hooks/useAdminProtection";
 import UserSelector from "../components/UserSelector";
 import TaskHoursModal from "../components/TaskHoursModal";
@@ -89,9 +90,9 @@ export default function AdminTasksScreen() {
     }, [viewOnly, navigation]),
   );
   const [tasks, setTasks] = useState<AdminTask[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [_loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState<boolean>(false);
+  const [_creating, setCreating] = useState<boolean>(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -118,7 +119,7 @@ export default function AdminTasksScreen() {
   const [query, setQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "">("");
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "">("");
-  const [filterCategory, setFilterCategory] = useState<string | "">("");
+  const [filterCategory, _setFilterCategory] = useState<string | "">("");
   const [filterAssignee, setFilterAssignee] = useState<"all" | "me">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -134,10 +135,10 @@ export default function AdminTasksScreen() {
   const [loadingSubtasks, setLoadingSubtasks] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(
-      "📋 Tasks List Updated in Component:",
-      tasks.map((t) => `${t.id.substring(0, 8)}:${t.title}`).join(", "),
-    );
+    logger.debug("AdminTasksScreen", "Tasks list updated", {
+      count: tasks.length,
+      ids: tasks.map((t) => t.id.substring(0, 8)).join(","),
+    });
   }, [tasks]);
 
   const sortedTasks = useMemo(() => {
@@ -168,7 +169,7 @@ export default function AdminTasksScreen() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
-    console.log("🔄 Fetching tasks...", {
+    logger.debug("AdminTasksScreen", "Fetching tasks", {
       query,
       filterStatus,
       filterPriority,
@@ -177,21 +178,24 @@ export default function AdminTasksScreen() {
       selectedUserId: selectedUser?.id,
     });
     try {
-      const res: ApiResponse<AdminTask[]> = await apiService.getTasks({
+      const res = (await apiService.getTasks({
         q: query || undefined,
         status: filterStatus || undefined,
         priority: filterPriority || undefined,
         category: filterCategory || undefined,
         assignee: filterAssignee === "me" ? selectedUser?.id : undefined,
+      })) as ApiResponse<AdminTask[]>;
+      logger.debug("AdminTasksScreen", "Fetch tasks response", {
+        success: res.success,
+        count: res.data?.length,
       });
-      console.log("✅ Fetch tasks response:", res.success, res.data?.length);
       if (!res.success) {
         setError(res.error || "שגיאה בטעינת משימות");
       } else {
         setTasks(res.data || []);
       }
     } catch (err) {
-      console.error("Error fetching tasks:", err);
+      logger.error("AdminTasksScreen", "Error fetching tasks", { err });
       setError("שגיאה בטעינת משימות - נסה שוב");
     } finally {
       setLoading(false);
@@ -244,15 +248,16 @@ export default function AdminTasksScreen() {
     // Check if task has incomplete subtasks, if so, set to 'stuck'
     try {
       const res = await apiService.getSubtasks(taskId);
-      if (res.success && res.data && res.data.length > 0) {
+      const subtasks = Array.isArray(res.data) ? res.data : [];
+      if (res.success && subtasks.length > 0) {
         // If there are any subtasks, automatically set parent to 'stuck'
-        const hasIncompleteSubtasks = res.data.some(
+        const hasIncompleteSubtasks = subtasks.some(
           (st: AdminTask) => st.status !== "done",
         );
         if (hasIncompleteSubtasks) {
-          console.log(
-            `⚠️ Setting task ${taskId} to 'stuck' - has incomplete subtasks`,
-          );
+          logger.warn("AdminTasksScreen", "Setting task to stuck - has incomplete subtasks", {
+            taskId,
+          });
           await apiService.updateTask(taskId, {
             status: "stuck" as TaskStatus,
           });
@@ -260,7 +265,7 @@ export default function AdminTasksScreen() {
         }
       }
     } catch (err) {
-      console.error("Failed to check parent status:", err);
+      logger.error("AdminTasksScreen", "Failed to check parent status", { err });
     }
     return false;
   };
@@ -277,7 +282,8 @@ export default function AdminTasksScreen() {
       try {
         const res = await apiService.getSubtasks(taskId);
         if (res.success && res.data) {
-          setSubtasks((prev) => ({ ...prev, [taskId]: res.data }));
+          const data = Array.isArray(res.data) ? res.data : [];
+          setSubtasks((prev) => ({ ...prev, [taskId]: data }));
           // Check if parent should be marked as stuck
           const updated = await checkAndUpdateParentStatus(taskId);
           if (updated) {
@@ -289,7 +295,7 @@ export default function AdminTasksScreen() {
         newExpanded.add(taskId);
         setExpandedTasks(newExpanded);
       } catch (err) {
-        console.error("Failed to load subtasks:", err);
+        logger.error("AdminTasksScreen", "Failed to load subtasks", { err });
       } finally {
         setLoadingSubtasks(null);
       }
@@ -377,8 +383,8 @@ export default function AdminTasksScreen() {
     setCreating(true);
     setError(null);
     try {
-      console.log("📤 Creating task with payload:", body);
-      const res: ApiResponse<AdminTask> = await apiService.createTask(body);
+      logger.debug("AdminTasksScreen", "Creating task", { payload: body });
+      const res = (await apiService.createTask(body)) as ApiResponse<AdminTask>;
 
       if (!res.success) {
         if (res.error?.includes("הרשאה")) {
@@ -397,7 +403,7 @@ export default function AdminTasksScreen() {
         setShowForm(false);
       }
     } catch (err) {
-      console.error("Error creating task:", err);
+      logger.error("AdminTasksScreen", "Error creating task", { err });
       setError("שגיאה ביצירת משימה - נסה שוב");
     } finally {
       setCreating(false);
@@ -418,16 +424,16 @@ export default function AdminTasksScreen() {
     setUpdating(task.id);
     setError(null);
     try {
-      const res: ApiResponse<AdminTask> = await apiService.updateTask(task.id, {
+      const res = (await apiService.updateTask(task.id, {
         status: "open",
-      });
+      })) as ApiResponse<AdminTask>;
       if (res.success && res.data) {
         await fetchTasks();
       } else {
         setError(res.error || "שגיאה בעדכון סטטוס המשימה");
       }
     } catch (err) {
-      console.error("Error toggling task status:", err);
+      logger.error("AdminTasksScreen", "Error toggling task status", { err });
       setError("שגיאה בעדכון סטטוס המשימה - נסה שוב");
     } finally {
       setUpdating(null);
@@ -850,7 +856,7 @@ export default function AdminTasksScreen() {
         }
       }
     } catch (err) {
-      console.error("Error updating task:", err);
+      logger.error("AdminTasksScreen", "Error updating task", { err });
       setError("שגיאה בעדכון משימה - נסה שוב");
     } finally {
       setUpdating(null);
@@ -868,7 +874,7 @@ export default function AdminTasksScreen() {
         setError(res.error || "שגיאה במחיקת משימה");
       }
     } catch (err) {
-      console.error("Error deleting task:", err);
+      logger.error("AdminTasksScreen", "Error deleting task", { err });
       setError("שגיאה במחיקת משימה - נסה שוב");
     } finally {
       setDeleting(null);
@@ -1299,7 +1305,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorLight,
     borderColor: colors.error,
   },
-  status_testing: { backgroundColor: "#E8F5E9", borderColor: "#4CAF50" },
+  status_testing: { backgroundColor: colors.successLight, borderColor: colors.success },
   status_done: {
     backgroundColor: colors.successLight,
     borderColor: colors.success,
@@ -1373,7 +1379,7 @@ const styles = StyleSheet.create({
     marginLeft: 24,
     borderLeftWidth: 3,
     borderLeftColor: colors.info,
-    backgroundColor: "#F0F8FF",
+    backgroundColor: colors.infoLight,
   },
   subtaskIndicator: {
     flexDirection: "row",
@@ -1438,7 +1444,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOpacity: 0.3,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -1448,7 +1454,7 @@ const styles = StyleSheet.create({
 
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: colors.modalOverlay,
     justifyContent: "center",
     padding: 20,
   },

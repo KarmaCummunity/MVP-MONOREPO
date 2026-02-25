@@ -132,7 +132,7 @@ const containsActiveUserProfileScreen = (state: NavigationState): boolean => {
 
   // Recursively check nested states
   if (activeRoute.state) {
-    return containsActiveUserProfileScreen(activeRoute.state as any);
+    return containsActiveUserProfileScreen(activeRoute.state as NavigationState);
   }
 
   return false;
@@ -176,10 +176,10 @@ export const loadNavigationState = async (
     }
 
     // Remove metadata if present (it's not part of NavigationState type)
-    const metadata = (state as any)._metadata;
+    const stateWithMeta = state as NavigationState & { _metadata?: { userId?: string } };
+    const metadata = stateWithMeta._metadata;
     if (metadata) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to omit _metadata
-    const { _metadata: _, ...stateWithoutMetadata } = state as any;
+      const { _metadata: _meta, ...stateWithoutMetadata } = stateWithMeta;
       state = stateWithoutMetadata as NavigationState;
     }
 

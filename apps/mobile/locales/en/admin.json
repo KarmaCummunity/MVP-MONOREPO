@@ -1,0 +1,39 @@
+{
+  "hierarchy": {
+    "loadError": "Error loading manager tree",
+    "connectionError": "Error connecting to server",
+    "loading": "Loading management structure...",
+    "retry": "Try again",
+    "noManagers": "No managers to display",
+    "managersCount": "{{count}} managers",
+    "roleSuperAdmin": "Super Admin",
+    "roleAdmin": "Admin",
+    "roleVolunteer": "Volunteer",
+    "roleUser": "User",
+    "expandHint": "Tap to expand",
+    "salary": "Salary",
+    "seniority": "Seniority",
+    "level": "Level"
+  },
+  "tables": {
+    "loadError": "Unable to load table",
+    "fetchError": "Error loading table",
+    "deleteConfirm": "Are you sure you want to delete this record?",
+    "deleteTitle": "Delete Record",
+    "deleteFailed": "Error deleting record",
+    "deleteSuccess": "Record deleted successfully",
+    "editRow": "Edit Record",
+    "addRow": "New Record",
+    "saveFailed": "Error saving record",
+    "saveSuccess": "Record saved successfully",
+    "requiredField": "Required field: {{name}}",
+    "noData": "No records",
+    "selectDate": "Select Date",
+    "tableNotFound": "Table not found",
+    "fieldPlaceholder": "Enter {{name}}",
+    "updateSuccess": "Record updated successfully",
+    "createSuccess": "Record added successfully",
+    "updateError": "Error updating record",
+    "createError": "Error creating record"
+  }
+}

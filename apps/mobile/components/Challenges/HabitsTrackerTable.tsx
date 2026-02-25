@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { HabitsTrackerCell } from './HabitsTrackerCell';
 import { DailyTrackerData, ViewMode } from '../../globals/types';
+import colors from '../../globals/colors';
+import { FontSizes } from '../../globals/constants';
 
 interface HabitsTrackerTableProps {
   data: DailyTrackerData;
@@ -134,25 +136,25 @@ const styles = StyleSheet.create({
   },
   table: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   headerRow: {
     flexDirection: 'row',
     borderBottomWidth: 2,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#F9F9F9',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   challengeNameColumn: {
     width: 150,
     padding: 12,
     justifyContent: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
+    borderRightColor: colors.border,
   },
   headerText: {
-    fontSize: 14,
+    fontSize: FontSizes.body,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
   },
   datesContainer: {
     flexDirection: 'row',
@@ -165,29 +167,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   dateHeaderText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   dateHeaderTextToday: {
-    color: '#2196F3',
+    color: colors.info,
     fontWeight: 'bold',
   },
   challengeRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.borderSecondary,
     minHeight: 70,
   },
   challengeName: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: FontSizes.body,
+    color: colors.textPrimary,
     fontWeight: '500',
     marginBottom: 4,
   },
   streakBadge: {
-    fontSize: 11,
-    color: '#FF9800',
+    fontSize: FontSizes.extraSmall + 3,
+    color: colors.accent,
     fontWeight: 'bold',
   },
   cellsContainer: {
@@ -203,15 +205,15 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: FontSizes.large,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: FontSizes.body,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
 });
