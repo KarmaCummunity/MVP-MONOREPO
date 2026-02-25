@@ -6,9 +6,8 @@ import { useTranslation } from 'react-i18next';
 import type { StatDetails } from './StatDetailsModal';
 import { useUser } from '../stores/userStore';
 import { useEffect, useState } from 'react';
-import { getGlobalStats, formatShortNumber, parseShortNumber, CommunityStats, EnhancedStatsService } from '../utils/statsService';
+import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../utils/statsService';
 import { USE_BACKEND } from '../utils/dbConfig';
-import { enhancedDB } from '../utils/enhancedDatabaseService';
 
 export type CommunityStat = {
   key: string;

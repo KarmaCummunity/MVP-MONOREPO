@@ -9,7 +9,6 @@ import {
   NavigateAction,
   ResetAction,
   ReplaceAction,
-  GoBackAction,
   SetParamsAction
 } from '../types/navigation';
 import { logger } from './loggerService';
@@ -144,7 +143,7 @@ class NavigationQueue {
         await this.executeReplace(action);
         break;
       case 'goBack':
-        await this.executeGoBack(action);
+        await this.executeGoBack();
         break;
       case 'setParams':
         await this.executeSetParams(action);
@@ -196,7 +195,7 @@ class NavigationQueue {
   /**
    * Execute goBack action
    */
-  private async executeGoBack(_action: GoBackAction): Promise<void> {
+  private async executeGoBack(): Promise<void> {
     if (!this.navigationRef) {
       throw new Error('Navigation ref not initialized');
     }

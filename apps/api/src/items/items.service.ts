@@ -6,9 +6,45 @@
 // - Cache keys: item:{collection}:{userId}:{itemId}, list:{collection}:{userId}, activity:{userId}, daily_activity:{userId}:{YYYY-MM-DD}, popular_collections:*.
 import { Inject, Injectable } from "@nestjs/common";
 import { PG_POOL } from "../database/database.module";
+import { format } from "../database/query-builder";
 import { Pool } from "pg";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import type { UserActivity } from "./user-activity";
+
+/** Allowlist of collection names; used for validation to prevent SQL injection. */
+export const ALLOWED_COLLECTIONS = new Set([
+  "users",
+  "posts",
+  "followers",
+  "following",
+  "chats",
+  "messages",
+  "notifications",
+  "bookmarks",
+  "donations",
+  "items",
+  "tasks",
+  "settings",
+  "media",
+  "blocked_users",
+  "message_reactions",
+  "typing_status",
+  "read_receipts",
+  "voice_messages",
+  "conversation_metadata",
+  "rides",
+  "organizations",
+  "org_applications",
+  "links",
+  "analytics",
+  "stats",
+  "community_stats",
+  "challenges",
+  "deleted_challenges",
+  "challenge_reset_logs",
+  "challenge_record_breaks",
+  "challenge_global_stats",
+]);
 
 @Injectable()
 export class ItemsService {
@@ -20,46 +56,7 @@ export class ItemsService {
   ) {}
 
   private tableFor(collection: string): string {
-    // map collection names to table names; default: use as-is
-    const allowed = new Set([
-      "users",
-      "posts",
-      "followers",
-      "following",
-      "chats",
-      "messages",
-      "notifications",
-      "bookmarks",
-      "donations",
-      "items",
-      "tasks",
-      "settings",
-      "media",
-      "blocked_users",
-      "message_reactions",
-      "typing_status",
-      "read_receipts",
-      "voice_messages",
-      "conversation_metadata",
-      "rides",
-      // Organizations / NGO onboarding
-      "organizations",
-      "org_applications",
-      // Links (for groups and organizations)
-      "links",
-      // App analytics (e.g., category open counters)
-      "analytics",
-      // Stats
-      "stats",
-      "community_stats",
-      // Challenges
-      "challenges",
-      "deleted_challenges",
-      "challenge_reset_logs",
-      "challenge_record_breaks",
-      "challenge_global_stats",
-    ]);
-    if (!allowed.has(collection)) {
+    if (!ALLOWED_COLLECTIONS.has(collection)) {
       throw new Error(`Unknown collection: ${collection}`);
     }
     return collection;
@@ -82,10 +79,13 @@ export class ItemsService {
       }
 
       await client.query(
-        `INSERT INTO ${table} (user_id, item_id, data, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (user_id, item_id)
-         DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        format(
+          `INSERT INTO %I (user_id, item_id, data, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           ON CONFLICT (user_id, item_id)
+           DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+          table,
+        ),
         [userId, itemId, data],
       );
 
@@ -134,7 +134,10 @@ export class ItemsService {
     // Cache miss - get from database
     const table = this.tableFor(collection);
     const { rows } = await this.pool.query(
-      `SELECT data FROM ${table} WHERE user_id = $1 AND item_id = $2 LIMIT 1`,
+      format(
+        `SELECT data FROM %I WHERE user_id = $1 AND item_id = $2 LIMIT 1`,
+        table,
+      ),
       [userId, itemId],
     );
 
@@ -158,8 +161,11 @@ export class ItemsService {
   ) {
     const table = this.tableFor(collection);
     const { rowCount } = await this.pool.query(
-      `UPDATE ${table} SET data = jsonb_strip_nulls(data || $1::jsonb), updated_at = NOW()
-       WHERE user_id = $2 AND item_id = $3`,
+      format(
+        `UPDATE %I SET data = jsonb_strip_nulls(data || $1::jsonb), updated_at = NOW()
+         WHERE user_id = $2 AND item_id = $3`,
+        table,
+      ),
       [data, userId, itemId],
     );
     return { ok: (rowCount ?? 0) > 0 };
@@ -173,13 +179,13 @@ export class ItemsService {
 
     // First check if item exists
     const checkResult = await this.pool.query(
-      `SELECT * FROM ${table} WHERE user_id = $1 AND item_id = $2`,
+      format(`SELECT * FROM %I WHERE user_id = $1 AND item_id = $2`, table),
       [userId, itemId],
     );
     console.log(`🔍 Item exists check: ${checkResult.rowCount} rows found`);
 
     const { rowCount } = await this.pool.query(
-      `DELETE FROM ${table} WHERE user_id = $1 AND item_id = $2`,
+      format(`DELETE FROM %I WHERE user_id = $1 AND item_id = $2`, table),
       [userId, itemId],
     );
     console.log(`✅ DELETE result: ${rowCount} rows deleted`);
@@ -196,17 +202,23 @@ export class ItemsService {
     const table = this.tableFor(collection);
     if (q) {
       const { rows } = await this.pool.query(
-        `SELECT data FROM ${table}
-         WHERE user_id = $1 AND (data::text ILIKE $2)
-         ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
+        format(
+          `SELECT data FROM %I
+           WHERE user_id = $1 AND (data::text ILIKE $2)
+           ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
+          table,
+        ),
         [userId, `%${q}%`],
       );
       return rows.map((r) => r.data);
     }
     const { rows } = await this.pool.query(
-      `SELECT data FROM ${table}
-       WHERE user_id = $1
-       ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
+      format(
+        `SELECT data FROM %I
+         WHERE user_id = $1
+         ORDER BY COALESCE((data->>'timestamp')::timestamptz, NOW()) DESC`,
+        table,
+      ),
       [userId],
     );
     return rows.map((r) => r.data);
@@ -221,9 +233,12 @@ export class ItemsService {
 
     if (q) {
       const { rows } = await this.pool.query(
-        `SELECT data FROM ${table}
-         WHERE (data::text ILIKE $1)
-         ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
+        format(
+          `SELECT data FROM %I
+           WHERE (data::text ILIKE $1)
+           ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
+          table,
+        ),
         [`%${q}%`],
       );
       console.log(
@@ -232,8 +247,11 @@ export class ItemsService {
       return rows.map((r) => r.data);
     }
     const { rows } = await this.pool.query(
-      `SELECT data FROM ${table}
-       ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
+      format(
+        `SELECT data FROM %I
+         ORDER BY COALESCE((data->>'createdAt')::timestamptz, (data->>'timestamp')::timestamptz, NOW()) DESC`,
+        table,
+      ),
     );
     console.log(`📊 ItemsService - listAll found ${rows.length} items`);
     if (rows.length > 0) {
@@ -247,7 +265,7 @@ export class ItemsService {
       );
       // Debug: Check if table exists and has data
       const countResult = await this.pool.query(
-        `SELECT COUNT(*) as count FROM ${table}`,
+        format(`SELECT COUNT(*) as count FROM %I`, table),
       );
       console.log(
         `📊 ItemsService - Table ${table} has ${countResult.rows[0]?.count || 0} total rows`,

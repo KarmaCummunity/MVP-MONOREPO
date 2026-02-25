@@ -11,8 +11,7 @@ import {
   ActivityIndicator,
   View,
   Platform,
-  Text, // Needed for loading message on web
-  TouchableOpacity // Added for retry button
+  Text // Added for retry button
 } from 'react-native';
 
 // Re-import WebView for native platforms (iOS/Android)

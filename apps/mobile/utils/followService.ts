@@ -1,5 +1,5 @@
 import { sendFollowNotification } from './notificationService';
-import { db, DB_COLLECTIONS, DatabaseService } from './databaseService';
+import { db, DatabaseService } from './databaseService';
 import { apiService } from './apiService';
 import { USE_BACKEND } from './dbConfig';
 

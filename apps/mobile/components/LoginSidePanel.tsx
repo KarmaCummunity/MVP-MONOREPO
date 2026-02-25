@@ -10,8 +10,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
-  Platform,
   ScrollView,
   TextInput,
   Alert,
@@ -22,7 +20,6 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { scaleSize } from '../globals/responsive';
 import { getLoginSidePanelWidth } from '../globals/responsive';
 
 interface LoginSidePanelProps {

@@ -8,7 +8,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 
 import HomeScreen from '../bottomBarScreens/HomeScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
@@ -30,24 +30,8 @@ import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
+import { HomeTabStackParamList } from '../globals/types';
 
-type HomeTabStackParamList = {
-  HomeMain: undefined;
-  LandingSiteScreen: undefined;
-  ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
-  NewChatScreen: undefined;
-  NotificationsScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  SettingsScreen: undefined;
-  BookmarksScreen: undefined;
-  PostsReelsScreen: undefined;
-  CommunityStatsScreen: undefined;
-  WebViewScreen: { url?: string } | undefined;
-  UserProfileScreen: { userId: string; userName: string; characterData?: any } | undefined;
-  FollowersScreen: { userId?: string } | undefined;
-  DiscoverPeopleScreen: undefined;
-};
 
 const Stack = createStackNavigator<HomeTabStackParamList>();
 

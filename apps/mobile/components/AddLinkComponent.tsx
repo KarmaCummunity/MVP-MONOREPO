@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { scaleSize } from '../globals/responsive';
-import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';

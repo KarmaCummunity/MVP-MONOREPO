@@ -8,13 +8,12 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
   Dimensions,
   Animated,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, BarChart, ProgressChart, PieChart } from 'react-native-chart-kit';
+import { BarChart, ProgressChart, PieChart } from 'react-native-chart-kit';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';

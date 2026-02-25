@@ -17,6 +17,7 @@ import {
 } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
+import { format } from "../database/query-builder";
 import { validate } from "class-validator";
 import {
   CreateCommunityGroupChallengeDto,
@@ -225,10 +226,25 @@ export class CommunityGroupChallengesController {
         paramCount++;
       }
 
-      // Sorting
-      const sortBy = filters.sort_by || "created_at";
-      const sortOrder = filters.sort_order || "DESC";
-      query += ` ORDER BY c.${sortBy} ${sortOrder}`;
+      // Sorting - allowlist to prevent SQL injection
+      const allowedSortColumns = [
+        "created_at",
+        "updated_at",
+        "title",
+        "type",
+        "frequency",
+        "difficulty",
+        "category",
+        "is_active",
+      ];
+      const sortBy =
+        filters.sort_by && allowedSortColumns.includes(filters.sort_by)
+          ? filters.sort_by
+          : "created_at";
+      const sortOrder =
+        filters.sort_order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+      // sortBy validated against allowlist; quote identifier via pg-format.
+      query += ` ORDER BY ${format("c.%I", sortBy)} ${sortOrder}`;
 
       // Pagination
       const limit = filters.limit || 50;

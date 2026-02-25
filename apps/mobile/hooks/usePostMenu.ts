@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Platform, ActionSheetIOS, Alert } from 'react-native';
+import { Platform, ActionSheetIOS } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FeedItem } from '../types/feed';
 import { usePostDeletion } from './usePostDeletion';

@@ -6,7 +6,7 @@
 // - Navigation side-effects: On tapping a 'message' notification with `conversationId`, navigates to 'ChatDetailScreen'.
 // - External deps/services: `notificationService` (CRUD + subscribe), i18n.
 // screens/NotificationsScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -31,8 +31,6 @@ import {
   clearAllNotifications,
   NotificationData,
   getUnreadNotificationCount,
-  getNotificationSettings,
-  updateNotificationSettings,
   subscribeToNotificationEvents,
 } from '../utils/notificationService';
 import colors from '../globals/colors';

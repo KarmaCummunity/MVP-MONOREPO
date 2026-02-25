@@ -2,22 +2,15 @@
 // - Purpose: Stats/analytics endpoints for community, trends, city-level, category/user analytics, dashboard, and real-time metrics.
 // - Reached from: Routes under '/api/stats'.
 // - Provides: Aggregations over `community_stats`, donations/rides/users; caches responses with TTL; cache invalidation helpers.
-
-// TODO: CRITICAL - This file is extremely long (529+ lines). Split into specialized services:
-//   - CommunityStatsService for community-wide analytics
-//   - TrendsAnalyticsService for trend analysis
-//   - UserStatsService for user-specific analytics
-//   - DashboardStatsService for dashboard data
-//   - StatsCache service for cache management
-// TODO: Add comprehensive DTO validation for all query parameters
-// TODO: Implement proper pagination for large datasets
-// TODO: Add comprehensive error handling and validation
-// TODO: Replace hardcoded SQL queries with proper query builder
-// TODO: Add comprehensive caching strategies with proper invalidation
-// TODO: Implement proper authorization for sensitive stats
-// TODO: Add comprehensive logging and monitoring for analytics queries
-// TODO: Add comprehensive unit tests for all statistical calculations
-// TODO: Implement proper data privacy and anonymization
+//
+// Future improvements:
+// - Split into specialized services (CommunityStatsService, TrendsAnalyticsService, UserStatsService, DashboardStatsService)
+// - Add DTO validation for all query parameters
+// - Implement pagination for large datasets
+// - Replace hardcoded SQL queries with proper query builder
+// - Add authorization for sensitive stats
+// - Add comprehensive unit tests for statistical calculations
+// - Implement data privacy and anonymization
 import {
   Controller,
   Get,
@@ -27,8 +20,8 @@ import {
   Param,
   UseGuards,
   Logger,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
@@ -115,8 +108,6 @@ export class StatsController {
   ) {}
 
   @Get("community")
-  // שינוי: הוספת תמיכה ב-forceRefresh parameter לטעינה מחדש של נתונים
-  // Change: Added support for forceRefresh parameter to reload data
   async getCommunityStats(
     @Query("city") city?: string,
     @Query("period") period?: string,
@@ -128,107 +119,122 @@ export class StatsController {
     message?: string;
   }> {
     try {
-      // TODO: Add comprehensive input validation for city and period parameters
-      // TODO: Implement proper DTO for query parameters with validation
-      // TODO: Add proper cache key generation utility to prevent key collisions
-      // TODO: Add comprehensive error handling for cache operations
-      const cacheKey = `community_stats_${city || "global"}_${period || "current"}`;
+      const cacheKey = this.buildCacheKey("community_stats", city, period);
+      const cachedStats = await this.tryGetCachedStats(cacheKey, forceRefresh);
 
-      // Only use cache if forceRefresh is not true
-      // שינוי: תמיכה ב-forceRefresh לדילוג על cache וטעינה מחדש מהמסד נתונים
-      // Change: Support for forceRefresh to skip cache and reload from database
-      if (forceRefresh !== "true") {
-        try {
-          const cached = await this.redisCache.get<CommunityStats>(cacheKey);
-
-          if (cached) {
-            return { success: true, data: cached };
-          }
-        } catch (cacheError) {
-          // Log cache error but continue to fetch from database
-          this.logger.warn(
-            "Cache get error, continuing to database:",
-            cacheError,
-          );
-        }
-      } else {
-        // Clear cache when force refresh is requested
-        // ניקוי cache כאשר מתבקש force refresh
-        try {
-          await this.redisCache.delete(cacheKey);
-        } catch (cacheError) {
-          // Log cache error but continue
-          this.logger.warn("Cache delete error:", cacheError);
-        }
+      if (cachedStats) {
+        return { success: true, data: cachedStats };
       }
 
-      let dateFilter = "";
-      if (period === "week") {
-        dateFilter = "AND date_period >= CURRENT_DATE - INTERVAL '7 days'";
-      } else if (period === "month") {
-        dateFilter = "AND date_period >= CURRENT_DATE - INTERVAL '30 days'";
-      } else if (period === "year") {
-        dateFilter = "AND date_period >= CURRENT_DATE - INTERVAL '365 days'";
-      }
-
-      let query = `
-        SELECT 
-          stat_type,
-          SUM(stat_value) as total_value,
-          COUNT(DISTINCT date_period) as days_tracked
-        FROM community_stats 
-        WHERE 1=1
-      `;
-
-      const params: unknown[] = [];
-      if (city) {
-        query += ` AND city = $1`;
-        params.push(city);
-      } else {
-        query += ` AND city IS NULL`;
-      }
-
-      query += dateFilter;
-      query += ` GROUP BY stat_type ORDER BY stat_type`;
-
-      const { rows } = await this.pool.query(query, params);
-
-      // Format response
-      // שינוי: פורמט תגובה עם מבנה value object לתמיכה במיפוי בצד הלקוח
-      // Change: Response format with value object structure for client-side mapping support
-      // TODO: Replace 'any' type with proper statistics response interface
-      // TODO: Add proper data validation and error handling
-      // TODO: Implement proper data transformation utilities
-      const stats: CommunityStats = {};
-      rows.forEach((row) => {
-        stats[row.stat_type] = {
-          value: parseInt(row.total_value) || 0, // TODO: Add proper number parsing with validation
-          days_tracked: parseInt(row.days_tracked) || 0, // TODO: Add proper number parsing with validation
-        };
-      });
-
-      // Add computed stats
-      // הוספת סטטיסטיקות מחושבות (unique_donors, total_money_donated, וכו')
-      // Adding computed stats (unique_donors, total_money_donated, etc.)
+      const stats = await this.fetchCommunityStatsFromDb(city, period);
       await this.addComputedStats(stats, city);
-
-      try {
-        await this.redisCache.set(cacheKey, stats, this.CACHE_TTL);
-      } catch (cacheError) {
-        // Log cache error but still return the stats
-        this.logger.warn("Cache set error:", cacheError);
-      }
+      await this.tryCacheStats(cacheKey, stats);
 
       return { success: true, data: stats };
     } catch (error) {
       this.logger.error("Error in getCommunityStats:", error);
-      // Return a meaningful error response
       return {
         success: false,
         error: "Failed to fetch community stats",
         message: error instanceof Error ? error.message : "Unknown error",
-        data: {}, // Return empty stats to prevent client-side crashes
+        data: {},
       };
+    }
+  }
+
+  private buildCacheKey(
+    prefix: string,
+    city?: string,
+    period?: string,
+  ): string {
+    return `${prefix}_${city || "global"}_${period || "current"}`;
+  }
+
+  private async tryGetCachedStats(
+    cacheKey: string,
+    forceRefresh?: string,
+  ): Promise<CommunityStats | null> {
+    if (forceRefresh === "true") {
+      await this.tryClearCache(cacheKey);
+      return null;
+    }
+
+    try {
+      return await this.redisCache.get<CommunityStats>(cacheKey);
+    } catch (cacheError) {
+      this.logger.warn("Cache get error, continuing to database:", cacheError);
+      return null;
+    }
+  }
+
+  private async tryClearCache(cacheKey: string): Promise<void> {
+    try {
+      await this.redisCache.delete(cacheKey);
+    } catch (cacheError) {
+      this.logger.warn("Cache delete error:", cacheError);
+    }
+  }
+
+  private buildDateFilter(period?: string): string {
+    switch (period) {
+      case "week":
+        return "AND date_period >= CURRENT_DATE - INTERVAL '7 days'";
+      case "month":
+        return "AND date_period >= CURRENT_DATE - INTERVAL '30 days'";
+      case "year":
+        return "AND date_period >= CURRENT_DATE - INTERVAL '365 days'";
+      default:
+        return "";
+    }
+  }
+
+  private async fetchCommunityStatsFromDb(
+    city?: string,
+    period?: string,
+  ): Promise<CommunityStats> {
+    const dateFilter = this.buildDateFilter(period);
+    const params: unknown[] = [];
+
+    let query = `
+      SELECT 
+        stat_type,
+        SUM(stat_value) as total_value,
+        COUNT(DISTINCT date_period) as days_tracked
+      FROM community_stats 
+      WHERE 1=1
+    `;
+
+    if (city) {
+      query += ` AND city = $1`;
+      params.push(city);
+    } else {
+      query += ` AND city IS NULL`;
+    }
+
+    query += dateFilter;
+    query += ` GROUP BY stat_type ORDER BY stat_type`;
+
+    const { rows } = await this.pool.query(query, params);
+
+    const stats: CommunityStats = {};
+    rows.forEach((row) => {
+      stats[row.stat_type] = {
+        value: parseInt(row.total_value as string, 10) || 0,
+        days_tracked: parseInt(row.days_tracked as string, 10) || 0,
+      };
+    });
+
+    return stats;
+  }
+
+  private async tryCacheStats(
+    cacheKey: string,
+    stats: CommunityStats,
+  ): Promise<void> {
+    try {
+      await this.redisCache.set(cacheKey, stats, this.CACHE_TTL);
+    } catch (cacheError) {
+      this.logger.warn("Cache set error:", cacheError);
     }
   }
 
@@ -294,12 +300,12 @@ export class StatsController {
       return { success: true, data: cached };
     }
 
-    const daysBack = parseInt(days || "30");
+    const daysBack = parseInt(days || "30", 10);
     let query = `
       SELECT date_period, SUM(stat_value) as value
       FROM community_stats 
-      WHERE stat_type = $1
-        AND date_period >= CURRENT_DATE - INTERVAL '${daysBack} days'
+        WHERE stat_type = $1
+        AND date_period >= CURRENT_DATE - INTERVAL '${daysBack.toString()} days'
     `;
 
     const params = [statType];
@@ -346,13 +352,18 @@ export class StatsController {
 
     const { rows } = await this.pool.query(query, params);
 
-    // Group by city
-    const citiesData: Record<string, Record<string, number>> = {};
+    // Group by city – use Object.create(null) to prevent prototype pollution
+    // when row values (city, stat_type) originate from user-controlled query params.
+    const citiesData: Record<string, Record<string, number>> = Object.create(
+      null,
+    );
     rows.forEach((row) => {
-      if (!citiesData[row.city]) {
-        citiesData[row.city] = {};
+      const city = String(row.city);
+      const statType = String(row.stat_type);
+      if (!Object.prototype.hasOwnProperty.call(citiesData, city)) {
+        citiesData[city] = Object.create(null);
       }
-      citiesData[row.city][row.stat_type] = parseInt(row.total_value);
+      citiesData[city][statType] = parseInt(row.total_value as string, 10);
     });
 
     await this.redisCache.set(cacheKey, citiesData, this.CACHE_TTL);
@@ -465,7 +476,7 @@ export class StatsController {
     const analytics: Record<string, { clicks: number }> = {};
     analyticsData.rows.forEach((row) => {
       analytics[row.category_slug] = {
-        clicks: parseInt(row.click_count) || 0,
+        clicks: parseInt(row.click_count as string, 10) || 0,
       };
     });
 
@@ -732,8 +743,6 @@ export class StatsController {
   @Get("details/:statType")
   @UseGuards(JwtAuthGuard)
   async getStatDetails(@Param("statType") statType: string) {
-    // TODO: Add proper pagination for large datasets
-    // TODO: Add proper data anonymization for sensitive data
     const cacheKey = `stat_details_${statType}`;
     const cached = await this.redisCache.get(cacheKey);
 
@@ -940,14 +949,12 @@ export class StatsController {
         cacheKey: string,
         queryFn: () => Promise<unknown>,
         ttl: number = 10 * 60,
-      ) => {
+      ): Promise<{ rows: MetricsRow[] }> => {
         const cached = cachedMetrics.get(cacheKey);
         if (cached) {
-          // Return in the same format as pool.query would
-          return { rows: [cached] };
+          return { rows: [cached as MetricsRow] };
         }
-        const result = (await queryFn()) as { rows: unknown[] };
-        // Cache only the first row (query results are arrays with one object)
+        const result = (await queryFn()) as { rows: MetricsRow[] };
         if (result && result.rows && result.rows.length > 0) {
           await this.redisCache.set(cacheKey, result.rows[0], ttl);
         }
@@ -1156,79 +1163,115 @@ export class StatsController {
       const computed: CommunityStats = {
         // User stats
         total_users: {
-          value: parseInt(getVal(userMetrics.rows[0], "total_users")),
+          value: parseInt(getVal(userMetrics.rows[0], "total_users"), 10),
           days_tracked: 1,
         },
         active_members: {
-          value: parseInt(getVal(userMetrics.rows[0], "active_members")),
+          value: parseInt(getVal(userMetrics.rows[0], "active_members"), 10),
           days_tracked: 1,
         },
         daily_active_users: {
-          value: parseInt(getVal(userMetrics.rows[0], "daily_active_users")),
+          value: parseInt(
+            getVal(userMetrics.rows[0], "daily_active_users"),
+            10,
+          ),
           days_tracked: 1,
         },
         weekly_active_users: {
-          value: parseInt(getVal(userMetrics.rows[0], "weekly_active_users")),
+          value: parseInt(
+            getVal(userMetrics.rows[0], "weekly_active_users"),
+            10,
+          ),
           days_tracked: 1,
         },
         new_users_this_week: {
-          value: parseInt(getVal(userMetrics.rows[0], "new_users_this_week")),
+          value: parseInt(
+            getVal(userMetrics.rows[0], "new_users_this_week"),
+            10,
+          ),
           days_tracked: 1,
         },
         new_users_this_month: {
-          value: parseInt(getVal(userMetrics.rows[0], "new_users_this_month")),
+          value: parseInt(
+            getVal(userMetrics.rows[0], "new_users_this_month"),
+            10,
+          ),
           days_tracked: 1,
         },
         total_organizations: {
-          value: parseInt(getVal(userMetrics.rows[0], "total_organizations")),
+          value: parseInt(
+            getVal(userMetrics.rows[0], "total_organizations"),
+            10,
+          ),
           days_tracked: 1,
         },
         cities_with_users: {
-          value: parseInt(getVal(userMetrics.rows[0], "cities_with_users")),
+          value: parseInt(getVal(userMetrics.rows[0], "cities_with_users"), 10),
           days_tracked: 1,
         },
 
         // Donation stats
         total_donations: {
-          value: parseInt(getVal(donationMetrics.rows[0], "total_donations")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "total_donations"),
+            10,
+          ),
           days_tracked: 1,
         },
         donations_this_week: {
           value: parseInt(
             getVal(donationMetrics.rows[0], "donations_this_week"),
+            10,
           ),
           days_tracked: 1,
         },
         donations_this_month: {
           value: parseInt(
             getVal(donationMetrics.rows[0], "donations_this_month"),
+            10,
           ),
           days_tracked: 1,
         },
         active_donations: {
-          value: parseInt(getVal(donationMetrics.rows[0], "active_donations")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "active_donations"),
+            10,
+          ),
           days_tracked: 1,
         },
         completed_donations: {
           value: parseInt(
             getVal(donationMetrics.rows[0], "completed_donations"),
+            10,
           ),
           days_tracked: 1,
         },
         money_donations: {
-          value: parseInt(getVal(donationMetrics.rows[0], "money_donations")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "money_donations"),
+            10,
+          ),
           days_tracked: 1,
         },
         item_donations: {
-          value: parseInt(getVal(donationMetrics.rows[0], "item_donations")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "item_donations"),
+            10,
+          ),
           days_tracked: 1,
         },
         service_donations: {
-          value: parseInt(getVal(donationMetrics.rows[0], "service_donations")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "service_donations"),
+            10,
+          ),
           days_tracked: 1,
         },
         volunteer_hours: {
-          value: parseInt(getVal(donationMetrics.rows[0], "volunteer_hours")),
+          value: parseInt(
+            getVal(donationMetrics.rows[0], "volunteer_hours"),
+            10,
+          ),
           days_tracked: 1,
         },
         total_money_donated: {
@@ -1244,164 +1287,193 @@ export class StatsController {
           days_tracked: 1,
         },
         unique_donors: {
-          value: parseInt(getVal(donationMetrics.rows[0], "unique_donors")),
+          value: parseInt(getVal(donationMetrics.rows[0], "unique_donors"), 10),
           days_tracked: 1,
         },
 
         // Ride stats
         total_rides: {
-          value: parseInt(getVal(rideMetrics.rows[0], "total_rides")),
+          value: parseInt(getVal(rideMetrics.rows[0], "total_rides"), 10),
           days_tracked: 1,
         },
         rides_this_week: {
-          value: parseInt(getVal(rideMetrics.rows[0], "rides_this_week")),
+          value: parseInt(getVal(rideMetrics.rows[0], "rides_this_week"), 10),
           days_tracked: 1,
         },
         rides_this_month: {
-          value: parseInt(getVal(rideMetrics.rows[0], "rides_this_month")),
+          value: parseInt(getVal(rideMetrics.rows[0], "rides_this_month"), 10),
           days_tracked: 1,
         },
         active_rides: {
-          value: parseInt(getVal(rideMetrics.rows[0], "active_rides")),
+          value: parseInt(getVal(rideMetrics.rows[0], "active_rides"), 10),
           days_tracked: 1,
         },
         completed_rides: {
-          value: parseInt(getVal(rideMetrics.rows[0], "completed_rides")),
+          value: parseInt(getVal(rideMetrics.rows[0], "completed_rides"), 10),
           days_tracked: 1,
         },
         total_seats_offered: {
-          value: parseInt(getVal(rideMetrics.rows[0], "total_seats_offered")),
+          value: parseInt(
+            getVal(rideMetrics.rows[0], "total_seats_offered"),
+            10,
+          ),
           days_tracked: 1,
         },
         unique_drivers: {
-          value: parseInt(getVal(rideMetrics.rows[0], "unique_drivers")),
+          value: parseInt(getVal(rideMetrics.rows[0], "unique_drivers"), 10),
           days_tracked: 1,
         },
 
         // Event stats
         total_events: {
-          value: parseInt(getVal(eventMetrics.rows[0], "total_events")),
+          value: parseInt(getVal(eventMetrics.rows[0], "total_events"), 10),
           days_tracked: 1,
         },
         events_this_week: {
-          value: parseInt(getVal(eventMetrics.rows[0], "events_this_week")),
+          value: parseInt(getVal(eventMetrics.rows[0], "events_this_week"), 10),
           days_tracked: 1,
         },
         events_this_month: {
-          value: parseInt(getVal(eventMetrics.rows[0], "events_this_month")),
+          value: parseInt(
+            getVal(eventMetrics.rows[0], "events_this_month"),
+            10,
+          ),
           days_tracked: 1,
         },
         active_events: {
-          value: parseInt(getVal(eventMetrics.rows[0], "active_events")),
+          value: parseInt(getVal(eventMetrics.rows[0], "active_events"), 10),
           days_tracked: 1,
         },
         completed_events: {
-          value: parseInt(getVal(eventMetrics.rows[0], "completed_events")),
+          value: parseInt(getVal(eventMetrics.rows[0], "completed_events"), 10),
           days_tracked: 1,
         },
         total_event_attendees: {
           value: parseInt(
             getVal(eventMetrics.rows[0], "total_event_attendees"),
+            10,
           ),
           days_tracked: 1,
         },
         virtual_events: {
-          value: parseInt(getVal(eventMetrics.rows[0], "virtual_events")),
+          value: parseInt(getVal(eventMetrics.rows[0], "virtual_events"), 10),
           days_tracked: 1,
         },
 
         // Activity stats
         total_activities: {
-          value: parseInt(getVal(activityMetrics.rows[0], "total_activities")),
+          value: parseInt(
+            getVal(activityMetrics.rows[0], "total_activities"),
+            10,
+          ),
           days_tracked: 1,
         },
         activities_today: {
-          value: parseInt(getVal(activityMetrics.rows[0], "activities_today")),
+          value: parseInt(
+            getVal(activityMetrics.rows[0], "activities_today"),
+            10,
+          ),
           days_tracked: 1,
         },
         activities_this_week: {
           value: parseInt(
             getVal(activityMetrics.rows[0], "activities_this_week"),
+            10,
           ),
           days_tracked: 1,
         },
         total_logins: {
-          value: parseInt(getVal(activityMetrics.rows[0], "total_logins")),
+          value: parseInt(getVal(activityMetrics.rows[0], "total_logins"), 10),
           days_tracked: 1,
         },
         donation_activities: {
           value: parseInt(
             getVal(activityMetrics.rows[0], "donation_activities"),
+            10,
           ),
           days_tracked: 1,
         },
         chat_activities: {
-          value: parseInt(getVal(activityMetrics.rows[0], "chat_activities")),
+          value: parseInt(
+            getVal(activityMetrics.rows[0], "chat_activities"),
+            10,
+          ),
           days_tracked: 1,
         },
         active_users_tracked: {
           value: parseInt(
             getVal(activityMetrics.rows[0], "active_users_tracked"),
+            10,
           ),
           days_tracked: 1,
         },
 
         // Chat stats
         total_messages: {
-          value: parseInt(getVal(chatMetrics.rows[0], "total_messages")),
+          value: parseInt(getVal(chatMetrics.rows[0], "total_messages"), 10),
           days_tracked: 1,
         },
         total_conversations: {
-          value: parseInt(getVal(chatMetrics.rows[0], "total_conversations")),
+          value: parseInt(
+            getVal(chatMetrics.rows[0], "total_conversations"),
+            10,
+          ),
           days_tracked: 1,
         },
         messages_this_week: {
-          value: parseInt(getVal(chatMetrics.rows[0], "messages_this_week")),
+          value: parseInt(
+            getVal(chatMetrics.rows[0], "messages_this_week"),
+            10,
+          ),
           days_tracked: 1,
         },
         group_conversations: {
-          value: parseInt(getVal(chatMetrics.rows[0], "group_conversations")),
+          value: parseInt(
+            getVal(chatMetrics.rows[0], "group_conversations"),
+            10,
+          ),
           days_tracked: 1,
         },
         direct_conversations: {
-          value: parseInt(getVal(chatMetrics.rows[0], "direct_conversations")),
+          value: parseInt(
+            getVal(chatMetrics.rows[0], "direct_conversations"),
+            10,
+          ),
           days_tracked: 1,
         },
 
-        // Site visits - use existing value from getCommunityStats if available, otherwise compute
-        // ביקורים באתר - השתמש בערך הקיים מ-getCommunityStats אם קיים, אחרת חשב
         site_visits: stats.site_visits || {
-          value: parseInt(getVal(siteVisitsMetrics.rows[0], "site_visits")),
+          value: parseInt(getVal(siteVisitsMetrics.rows[0], "site_visits"), 10),
           days_tracked: 1,
         },
 
-        // Task stats - community tasks (all tasks are community tasks)
-        // סטטיסטיקות משימות קהילתיות
         total_tasks: {
-          value: parseInt(getVal(taskMetrics.rows[0], "total_tasks")),
+          value: parseInt(getVal(taskMetrics.rows[0], "total_tasks"), 10),
           days_tracked: 1,
         },
         completed_tasks: {
-          value: parseInt(getVal(taskMetrics.rows[0], "completed_tasks")),
+          value: parseInt(getVal(taskMetrics.rows[0], "completed_tasks"), 10),
           days_tracked: 1,
         },
         open_tasks: {
-          value: parseInt(getVal(taskMetrics.rows[0], "open_tasks")),
+          value: parseInt(getVal(taskMetrics.rows[0], "open_tasks"), 10),
           days_tracked: 1,
         },
         in_progress_tasks: {
-          value: parseInt(getVal(taskMetrics.rows[0], "in_progress_tasks")),
+          value: parseInt(getVal(taskMetrics.rows[0], "in_progress_tasks"), 10),
           days_tracked: 1,
         },
         completed_tasks_this_week: {
           value: parseInt(
             getVal(taskMetrics.rows[0], "completed_tasks_this_week"),
+            10,
           ),
           days_tracked: 1,
         },
         completed_tasks_this_month: {
           value: parseInt(
             getVal(taskMetrics.rows[0], "completed_tasks_this_month"),
+            10,
           ),
           days_tracked: 1,
         },

@@ -1,10 +1,9 @@
 // LandingSiteScreen.tsx
 // Web-only marketing landing page for KarmaCommunity
-import React, { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
-import { Platform, View, Text, StyleSheet, Image, TouchableOpacity, Linking, Dimensions, ActivityIndicator, ScrollView, Animated, Modal, FlatList, Alert } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Platform, View, Text, StyleSheet, Image, TouchableOpacity, Linking, Dimensions, ActivityIndicator, ScrollView, Animated, Modal, FlatList } from 'react-native';
 import { WebView } from 'react-native-webview';
 import colors from '../globals/colors';
-import { FontSizes } from '../globals/constants';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '../utils/loggerService';
 import ScrollContainer from '../components/ScrollContainer';

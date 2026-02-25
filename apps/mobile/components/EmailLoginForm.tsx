@@ -10,7 +10,7 @@
  * @since 1.0.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,8 @@ import {
   TextInput,
   Alert,
   Animated,
-  Platform,
   Linking,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +31,6 @@ import {
   sendVerification as fbSendVerification,
   sendPasswordReset
 } from '../utils/authService';
-import { restAdapter } from '../utils/restAdapter';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 

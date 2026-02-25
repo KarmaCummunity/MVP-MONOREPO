@@ -33,7 +33,7 @@
  */
 
 import { Platform } from 'react-native';
-import { googleAuthService, AuthResponse } from './GoogleAuthService';
+import { googleAuthService } from './GoogleAuthService';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL } from '../utils/dbConfig';
 

@@ -21,8 +21,6 @@
     "node": ">=18.0.0"
   },
   "overrides": {
-    "@types/react": "~19.0.10",
-    "@types/react-dom": "~19.0.4",
     "ajv": "^8.18.0",
     "undici": "^6.21.1",
     "cross-spawn": "^7.0.6",
@@ -36,5 +34,8 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3"
+  },
+  "devDependencies": {
+    "@types/pg-format": "^1.0.5"
   }
 }

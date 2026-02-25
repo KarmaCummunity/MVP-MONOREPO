@@ -23,20 +23,8 @@ import SettingsScreen from '../topBarScreens/SettingsScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
+import { SearchTabStackParamList } from '../globals/types';
 
-type SearchTabStackParamList = {
-  SearchScreen: { q?: string } | undefined;
-  UserProfileScreen: { userId?: string } | undefined;
-  FollowersScreen: { userId?: string } | undefined;
-  DiscoverPeopleScreen: undefined;
-  ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
-  NewChatScreen: undefined;
-  NotificationsScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
-  SettingsScreen: undefined;
-};
 
 const Stack = createStackNavigator<SearchTabStackParamList>();
 

@@ -26,10 +26,6 @@ import {
   StyleSheet,
   Dimensions,
   Text,
-  TouchableOpacity,
-
-  Image,
-  Alert,
   SafeAreaView,
   StatusBar,
   Platform,
@@ -56,13 +52,10 @@ import { Ionicons } from "@expo/vector-icons";
 import colors from "../globals/colors";
 import { FontSizes, LAYOUT_CONSTANTS } from "../globals/constants";
 import { useTranslation } from 'react-i18next';
-import CommunityStatsPanel from "../components/CommunityStatsPanel";
 import PostsReelsScreen from "../components/PostsReelsScreen";
 import { useUser } from "../stores/userStore";
 import { shouldAutoOpenAboutScreen, markAboutScreenSeen } from "../utils/profileUtils";
-import GuestModeNotice from "../components/GuestModeNotice";
-import CommunityStatsGrid from "../components/CommunityStatsGrid";
-import StatDetailsModal, { StatDetails } from "../components/StatDetailsModal";
+import { StatDetails } from "../components/StatDetailsModal";
 import { createShadowStyle } from "../globals/styles";
 import { scaleSize } from "../globals/responsive";
 import { EnhancedStatsService, formatShortNumber } from "../utils/statsService";

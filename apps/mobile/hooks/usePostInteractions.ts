@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Share, Alert, Platform } from 'react-native';
+import { Share } from 'react-native';
 import { postsService } from '../utils/postsService';
 import { isBookmarked, addBookmark, removeBookmark } from '../utils/bookmarksService';
 import { toastService } from '../utils/toastService';

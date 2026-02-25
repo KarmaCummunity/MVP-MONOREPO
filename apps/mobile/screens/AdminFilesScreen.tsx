@@ -6,7 +6,6 @@ import {
     SafeAreaView,
     TouchableOpacity,
     Modal,
-    TextInput,
     Alert,
     ScrollView,
     RefreshControl,
@@ -16,7 +15,6 @@ import {
 import { NavigationProp, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import { apiService } from '../utils/apiService';

@@ -1,4 +1,4 @@
-// בדיקות ל-HealthController - בדיקה ראשונית פשוטה
+// HealthController e2e tests
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
@@ -26,7 +26,7 @@ describe("HealthController (e2e)", () => {
         end: jest.fn(),
       } as unknown as Pool)
       .overrideProvider(REDIS)
-      .useValue(null) // Redis הוא optional
+      .useValue(null) // Redis is optional
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -37,7 +37,7 @@ describe("HealthController (e2e)", () => {
     if (app) {
       await app.close();
     }
-    // ניקוי environment variables
+    // Clean up environment variables
     delete process.env.GOOGLE_CLIENT_ID;
     delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   });
@@ -47,7 +47,7 @@ describe("HealthController (e2e)", () => {
       const response = await request(app.getHttpServer()).get("/").expect(200);
 
       expect(response.body).toHaveProperty("status");
-      // Status יכול להיות 'ok' או 'OK' - בודקים שהמפתח קיים
+      // Status can be 'ok' or 'OK' - just check the key exists
       expect(["ok", "OK"]).toContain(response.body.status);
     });
   });

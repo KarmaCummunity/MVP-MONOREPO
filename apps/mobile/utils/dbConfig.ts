@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 // Re-export basic constants from the minimal config file to avoid circular dependencies
 import { IS_DEVELOPMENT, IS_PRODUCTION, API_BASE_URL as RESOLVED_API_BASE_URL, USE_BACKEND, USE_FIRESTORE } from './config.constants';
 export { IS_DEVELOPMENT, IS_PRODUCTION, USE_BACKEND, USE_FIRESTORE };
@@ -212,7 +211,7 @@ export const validateConfig = (): boolean => {
       apiUrl: isRelativeUrl ? '(current origin)' : apiUrl,
       environment: IS_PRODUCTION ? 'production' : 'development',
       features: Object.entries(FEATURE_FLAGS)
-        .filter(([_, enabled]) => enabled)
+        .filter(([, enabled]) => enabled)
         .map(([feature]) => feature)
     });
     

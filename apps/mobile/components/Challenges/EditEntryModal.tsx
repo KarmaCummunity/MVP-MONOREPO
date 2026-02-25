@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ChallengeType, DailyTrackerChallenge } from '../../globals/types';
+import { DailyTrackerChallenge } from '../../globals/types';
 
 interface EditEntryModalProps {
   visible: boolean;

@@ -111,14 +111,14 @@ export const validateNavigationState = (
       }
 
       // Validate nested routes
-      route.state.routes.forEach((nestedRoute: any, _nestedIndex: number) => {
+      route.state.routes.forEach((nestedRoute: any) => {
         validateRoute(nestedRoute, nestedStackName, depth + 1);
       });
     }
   };
 
   // Validate all routes
-  state.routes.forEach((route, _index) => {
+  state.routes.forEach((route) => {
     validateRoute(route, 'RootStack', 0);
   });
 

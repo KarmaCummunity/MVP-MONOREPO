@@ -3,7 +3,7 @@
 // Works with both ScrollView and FlatList components
 // Session-only persistence - position is cleared when app closes
 
-import { useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Platform, ScrollView, FlatList } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';

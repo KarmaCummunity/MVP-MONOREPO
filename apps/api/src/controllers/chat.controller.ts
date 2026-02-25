@@ -341,9 +341,9 @@ export class ChatController {
   @Get("conversations/:conversationId/messages")
   async getConversationMessages(
     @Param("conversationId") conversationId: string,
+    @Request() req: import("express").Request,
     @Query("limit") limit = "100",
     @Query("offset") offset = "0",
-    @Request() req: import("express").Request,
   ) {
     try {
       const limitNum = parseInt(limit, 10) || 100;

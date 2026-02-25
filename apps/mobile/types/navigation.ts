@@ -2,7 +2,7 @@
 // TypeScript types for navigation system
 // This file provides comprehensive type definitions for the navigation queue, guards, and state management
 
-import { NavigationState, NavigationAction } from '@react-navigation/native';
+import { NavigationState } from '@react-navigation/native';
 import { RootStackParamList, BottomTabNavigatorParamList, HomeTabStackParamList, SearchTabStackParamList, ProfileTabStackParamList, DonationsStackParamList, AdminStackParamList } from '../globals/types';
 
 // Navigation Queue Types
@@ -51,7 +51,7 @@ export interface NavigationQueueItem {
 }
 
 // Navigation Guard Types
-export type GuardResult = 
+export type GuardResult =
   | { allowed: true }
   | { allowed: false; reason: string; redirectTo?: string };
 
@@ -245,7 +245,7 @@ export interface CommonNavigationParams {
 }
 
 // Type helpers
-export type AllRouteNames = 
+export type AllRouteNames =
   | keyof RootStackParamList
   | keyof BottomTabNavigatorParamList
   | keyof HomeTabStackParamList

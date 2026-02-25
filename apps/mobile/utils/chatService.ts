@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { USE_FIRESTORE, USE_BACKEND } from './config.constants';
 import { getFirebase } from './firebaseClient';
 import { collection as fsCollection, query as fsQuery, where as fsWhere, onSnapshot } from 'firebase/firestore';

@@ -35,18 +35,18 @@
  * Main authentication service (singleton)
  * Handles all Google OAuth operations, token management, and session handling
  */
-export { 
+export {
   googleAuthService,
-  GoogleAuthService 
+  GoogleAuthService
 } from './GoogleAuthService';
 
 /**
  * Secure API service for authenticated requests
  * Automatically handles authentication headers, token refresh, and error handling
  */
-export { 
+export {
   secureApiService,
-  SecureApiService 
+  SecureApiService
 } from './SecureApiService';
 
 // ========================================
@@ -57,9 +57,7 @@ export {
  * Secure Google authentication button component
  * Drop-in replacement for old authentication buttons with enterprise-grade security
  */
-export { 
-  default as SecureGoogleAuthButton
-} from './SecureGoogleAuthButton';
+export { default as SecureGoogleAuthButton } from './SecureGoogleAuthButton';
 
 // ========================================
 // CONFIGURATION
@@ -108,9 +106,7 @@ export type {
 /**
  * Component prop types
  */
-export type {
-  SecureGoogleAuthButtonProps as GoogleAuthButtonProps,
-} from './SecureGoogleAuthButton';
+export type { SecureGoogleAuthButtonProps as GoogleAuthButtonProps } from './SecureGoogleAuthButton';
 
 // ========================================
 // UTILITY FUNCTIONS
@@ -139,7 +135,7 @@ export const initializeGoogleAuth = async (): Promise<{
     // Import services dynamically to avoid circular dependencies
     const { googleAuthService } = await import('./GoogleAuthService');
     const { validateAuthConfiguration } = await import('./AuthConfiguration');
-    
+
     // Validate configuration
     const validation = validateAuthConfiguration();
     if (!validation.isValid) {
@@ -148,9 +144,9 @@ export const initializeGoogleAuth = async (): Promise<{
 
     // Initialize the service
     await googleAuthService.initialize();
-    
+
     return { success: true };
-    
+
   } catch (error) {
     return {
       success: false,
@@ -181,7 +177,7 @@ export const getAuthStatus = (): {
 } => {
   // Import services dynamically to avoid circular dependencies
   const { googleAuthService } = require('./GoogleAuthService');
-  
+
   return {
     isAuthenticated: googleAuthService.isAuthenticated(),
     user: googleAuthService.getCurrentUser(),
@@ -239,30 +235,30 @@ export const checkAuthHealth = async (): Promise<{
     const { validateAuthConfiguration } = await import('./AuthConfiguration');
     const { googleAuthService } = await import('./GoogleAuthService');
     const { secureApiService } = await import('./SecureApiService');
-    
+
     // Check configuration
     const configValidation = validateAuthConfiguration();
-    
+
     // Check stored authentication
     const authStatus = getAuthStatus();
-    
+
     // Check server connectivity
     const serverHealth = await secureApiService.healthCheck();
-    
+
     // Determine component health
     const components = {
       authService: (authStatus.state !== 'error' ? 'healthy' : 'unhealthy') as 'healthy' | 'unhealthy',
       apiService: 'healthy' as const, // API service is always functional
       serverConnection: (serverHealth.success ? 'healthy' : 'unhealthy') as 'healthy' | 'unhealthy',
     };
-    
+
     // Determine overall health
     const healthyComponents = Object.values(components).filter(h => h === 'healthy').length;
-    const overall = 
+    const overall =
       healthyComponents === 3 ? 'healthy' :
-      healthyComponents >= 2 ? 'degraded' : 
-      'unhealthy';
-    
+        healthyComponents >= 2 ? 'degraded' :
+          'unhealthy';
+
     return {
       overall,
       components,
@@ -272,13 +268,13 @@ export const checkAuthHealth = async (): Promise<{
         serverReachable: serverHealth.success,
       }
     };
-    
+
   } catch (error) {
     return {
       overall: 'unhealthy',
       components: {
         authService: 'unhealthy',
-        apiService: 'unhealthy', 
+        apiService: 'unhealthy',
         serverConnection: 'unhealthy',
       },
       details: {
@@ -310,22 +306,22 @@ export const migrateFromLegacyAuth = async (): Promise<{
   clearedData: string[];
 }> => {
   const clearedData: string[] = [];
-  
+
   try {
     // List of old authentication storage keys to clean up
     const oldKeys = [
       'current_user',
       'guest_mode',
-      'auth_mode', 
+      'auth_mode',
       'oauth_success_flag',
       'google_auth_user',
       'google_auth_token',
       'oauth_in_progress',
     ];
-    
+
     // Clear old authentication data from AsyncStorage
     const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
-    
+
     for (const key of oldKeys) {
       const value = await AsyncStorage.getItem(key);
       if (value !== null) {
@@ -333,25 +329,25 @@ export const migrateFromLegacyAuth = async (): Promise<{
         clearedData.push(key);
       }
     }
-    
+
     if (clearedData.length > 0) {
       const { logger } = await import('../utils/loggerService');
       logger.info('GoogleAuth', 'Legacy authentication data cleared', {
         clearedKeys: clearedData
       });
     }
-    
+
     return {
       migrated: true,
       clearedData
     };
-    
+
   } catch (error) {
     const { logger } = await import('../utils/loggerService');
     logger.error('GoogleAuth', 'Failed to migrate from legacy auth', {
       error: String(error)
     });
-    
+
     return {
       migrated: false,
       clearedData

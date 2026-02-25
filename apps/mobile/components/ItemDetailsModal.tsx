@@ -10,7 +10,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { NavigationProp, ParamListBase, CommonActions } from '@react-navigation/native';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
 
 type NavigationPropType = NavigationProp<ParamListBase> | any;
 import { Ionicons as Icon } from '@expo/vector-icons';

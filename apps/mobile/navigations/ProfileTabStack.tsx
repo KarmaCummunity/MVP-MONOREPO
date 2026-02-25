@@ -23,19 +23,8 @@ import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
+import { ProfileTabStackParamList } from '../globals/types';
 
-type ProfileTabStackParamList = {
-  ProfileMain: { userId?: string } | undefined;
-  SettingsScreen: undefined;
-  ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
-  NewChatScreen: undefined;
-  NotificationsScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
-  DiscoverPeopleScreen: undefined;
-  EditProfileScreen: undefined;
-};
 
 const Stack = createStackNavigator<ProfileTabStackParamList>();
 

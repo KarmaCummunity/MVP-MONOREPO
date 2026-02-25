@@ -91,6 +91,51 @@ export type DonationsStackParamList = {
   FollowersScreen: { userId: string; type: 'followers' | 'following'; title: string } | undefined;
 };
 
+export type HomeTabStackParamList = {
+  HomeMain: undefined;
+  LandingSiteScreen: undefined;
+  ChatListScreen: undefined;
+  ChatDetailScreen: { chatId?: string } | undefined;
+  NewChatScreen: undefined;
+  NotificationsScreen: undefined;
+  AboutKarmaCommunityScreen: undefined;
+  SettingsScreen: undefined;
+  BookmarksScreen: undefined;
+  PostsReelsScreen: undefined;
+  CommunityStatsScreen: undefined;
+  WebViewScreen: { url?: string } | undefined;
+  UserProfileScreen: { userId: string; userName: string; characterData?: any } | undefined;
+  FollowersScreen: { userId?: string } | undefined;
+  DiscoverPeopleScreen: undefined;
+};
+
+export type SearchTabStackParamList = {
+  SearchScreen: { q?: string } | undefined;
+  UserProfileScreen: { userId?: string } | undefined;
+  FollowersScreen: { userId?: string } | undefined;
+  DiscoverPeopleScreen: undefined;
+  ChatListScreen: undefined;
+  ChatDetailScreen: { chatId?: string } | undefined;
+  NewChatScreen: undefined;
+  NotificationsScreen: undefined;
+  AboutKarmaCommunityScreen: undefined;
+  LandingSiteScreen: undefined;
+  SettingsScreen: undefined;
+};
+
+export type ProfileTabStackParamList = {
+  ProfileMain: { userId?: string } | undefined;
+  SettingsScreen: undefined;
+  ChatListScreen: undefined;
+  ChatDetailScreen: { chatId?: string } | undefined;
+  NewChatScreen: undefined;
+  NotificationsScreen: undefined;
+  AboutKarmaCommunityScreen: undefined;
+  LandingSiteScreen: undefined;
+  DiscoverPeopleScreen: undefined;
+  EditProfileScreen: undefined;
+};
+
 export type SettingItemType = "navigate" | "toggle" | "button" | "value";
 
 export interface SettingsItemProps {

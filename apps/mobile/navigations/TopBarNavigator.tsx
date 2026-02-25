@@ -15,7 +15,6 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-na
 import colors from '../globals/colors';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { rowDirection } from '../globals/responsive';
 import { useTranslation } from 'react-i18next';
 import AboutButton from '../components/AboutButton';
 import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';

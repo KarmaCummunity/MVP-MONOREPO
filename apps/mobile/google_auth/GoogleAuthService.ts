@@ -111,7 +111,7 @@ export interface AuthResponse<T = any> {
 /**
  * Authentication state for reactive UI updates
  */
-export type AuthState = 
+export type AuthState =
   | 'initializing'    // Service is starting up and checking stored credentials
   | 'unauthenticated' // No valid authentication found
   | 'authenticating'  // OAuth flow in progress
@@ -135,12 +135,14 @@ type AuthEventListener = (state: AuthState, user?: SecureAuthUser | null) => voi
 // ========================================
 
 /**
- * Secure storage keys for different types of authentication data
- * Using prefixed keys to avoid conflicts with other app data
+ * Storage key names for persistent auth data (AsyncStorage / SecureStore).
+ * These are identifiers only – not secrets. Actual auth tokens are stored as
+ * values at these keys and are never hardcoded. Snyk: HardcodedNonCryptoSecret
+ * is a false positive for key names.
  */
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'karma_secure_auth_access_token',
-  REFRESH_TOKEN: 'karma_secure_auth_refresh_token', 
+  REFRESH_TOKEN: 'karma_secure_auth_refresh_token',
   USER_DATA: 'karma_secure_auth_user_data',
   TOKEN_EXPIRY: 'karma_secure_auth_token_expiry',
   SESSION_ID: 'karma_secure_auth_session_id',
@@ -196,9 +198,9 @@ class GoogleAuthService {
   // ========================================
   // SINGLETON IMPLEMENTATION
   // ========================================
-  
+
   private static instance: GoogleAuthService | null = null;
-  
+
   /**
    * Get the singleton instance of GoogleAuthService
    * Ensures consistent state across the entire application
@@ -215,41 +217,41 @@ class GoogleAuthService {
   // ========================================
   // PRIVATE PROPERTIES
   // ========================================
-  
+
   /** Current authentication state */
   private authState: AuthState = 'initializing';
-  
+
   /** Current authenticated user (null if not authenticated) */
   private currentUser: SecureAuthUser | null = null;
-  
+
   /** Current access token for API requests */
   private accessToken: string | null = null;
-  
+
   /** Current refresh token for obtaining new access tokens */
   private refreshToken: string | null = null;
-  
+
   /** Timestamp when the current access token expires */
   private tokenExpiry: number = 0;
-  
+
   /** Current session ID for tracking */
   private sessionId: string | null = null;
-  
+
   /** Event listeners for state changes */
   private listeners: Set<AuthEventListener> = new Set();
-  
+
   /** Whether the service has been initialized */
   private isInitialized: boolean = false;
-  
+
   /** Timer for automatic token validation */
   private validationTimer: ReturnType<typeof setInterval> | null = null;
-  
+
   /** Counter for consecutive failed refresh attempts */
   private refreshAttempts: number = 0;
 
   // ========================================
   // PRIVATE CONSTRUCTOR (Singleton)
   // ========================================
-  
+
   /**
    * Private constructor to enforce singleton pattern
    * Sets up app state change listeners for token validation
@@ -257,14 +259,14 @@ class GoogleAuthService {
   private constructor() {
     // Listen for app state changes to validate tokens when app becomes active
     AppState.addEventListener('change', this.handleAppStateChange.bind(this));
-    
+
     logger.info('GoogleAuthService', 'Service instance created');
   }
 
   // ========================================
   // PUBLIC INITIALIZATION
   // ========================================
-  
+
   /**
    * Initialize the authentication service
    * 
@@ -295,10 +297,10 @@ class GoogleAuthService {
 
     try {
       logger.info('GoogleAuthService', 'Initializing secure authentication service');
-      
+
       // Step 1: Restore authentication data from secure storage
       await this.restoreStoredAuthentication();
-      
+
       // Step 2: Validate restored tokens if they exist
       if (this.accessToken && this.refreshToken) {
         const isValid = await this.validateStoredTokens();
@@ -307,31 +309,31 @@ class GoogleAuthService {
           await this.clearAuthenticationData();
         }
       }
-      
+
       // Step 3: Set final authentication state
       this.updateAuthState();
-      
+
       // Step 4: Start automatic token validation
       this.startTokenValidation();
-      
+
       // Step 5: Mark as initialized
       this.isInitialized = true;
-      
+
       logger.info('GoogleAuthService', 'Authentication service initialized successfully', {
         hasTokens: !!this.accessToken,
         hasUser: !!this.currentUser,
         authState: this.authState
       });
-      
+
     } catch (error) {
       logger.error('GoogleAuthService', 'Failed to initialize authentication service', {
         error: String(error)
       });
-      
+
       // Clear potentially corrupted data
       await this.clearAuthenticationData();
       this.setAuthState('error');
-      
+
       throw new Error('Failed to initialize authentication service');
     }
   }
@@ -339,7 +341,7 @@ class GoogleAuthService {
   // ========================================
   // MAIN AUTHENTICATION METHOD
   // ========================================
-  
+
   /**
    * Authenticate user with Google using server-side verification
    * 
@@ -380,10 +382,10 @@ class GoogleAuthService {
       }
 
       logger.info('GoogleAuthService', 'Starting secure Google authentication');
-      
+
       // Set authenticating state to update UI
       this.setAuthState('authenticating');
-      
+
       // Prepare request to our authentication server
       const requestBody = {
         idToken: idToken.trim(),
@@ -401,7 +403,7 @@ class GoogleAuthService {
       // Send ID token to server for verification with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), CONFIG.AUTH_TIMEOUT);
-      
+
       try {
         const response = await fetch(`${CONFIG.API_BASE_URL}/auth/google`, {
           method: 'POST',
@@ -412,7 +414,7 @@ class GoogleAuthService {
           body: JSON.stringify(requestBody),
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
 
         // Parse server response
@@ -425,9 +427,9 @@ class GoogleAuthService {
             status: response.status,
             error: errorMessage
           });
-          
+
           this.setAuthState('error');
-          
+
           return {
             success: false,
             error: errorMessage,
@@ -446,9 +448,9 @@ class GoogleAuthService {
             hasTokens: !!serverResponse.tokens,
             hasUser: !!serverResponse.user
           });
-          
+
           this.setAuthState('error');
-          
+
           return {
             success: false,
             error: 'Invalid response from authentication server',
@@ -458,13 +460,13 @@ class GoogleAuthService {
 
         // Store authentication data securely
         await this.storeAuthenticationData(serverResponse.tokens, serverResponse.user);
-        
+
         // Update service state
         this.updateAuthState();
-        
+
         // Start token validation
         this.startTokenValidation();
-        
+
         // Reset refresh attempts counter
         this.refreshAttempts = 0;
 
@@ -496,9 +498,9 @@ class GoogleAuthService {
       logger.error('GoogleAuthService', 'Google authentication failed', {
         error: String(error)
       });
-      
+
       this.setAuthState('error');
-      
+
       // Handle specific error types
       if (error instanceof TypeError && error.message.includes('fetch')) {
         return {
@@ -507,7 +509,7 @@ class GoogleAuthService {
           details: 'Please check your internet connection and try again'
         };
       }
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           success: false,
@@ -515,7 +517,7 @@ class GoogleAuthService {
           details: 'The server took too long to respond. Please try again.'
         };
       }
-      
+
       return {
         success: false,
         error: 'Authentication failed',
@@ -527,7 +529,7 @@ class GoogleAuthService {
   // ========================================
   // TOKEN MANAGEMENT
   // ========================================
-  
+
   /**
    * Refresh the access token using the stored refresh token
    * 
@@ -569,7 +571,7 @@ class GoogleAuthService {
     try {
       this.setAuthState('refreshing');
       this.refreshAttempts++;
-      
+
       logger.info('GoogleAuthService', 'Refreshing access token', {
         attempt: this.refreshAttempts,
         maxAttempts: CONFIG.MAX_REFRESH_ATTEMPTS
@@ -594,14 +596,14 @@ class GoogleAuthService {
       // Update access token and expiry
       this.accessToken = result.accessToken;
       this.tokenExpiry = Date.now() + (result.expiresIn * 1000);
-      
+
       // Store updated token securely
       await this.storeSecurely(STORAGE_KEYS.ACCESS_TOKEN, result.accessToken);
       await this.storeSecurely(STORAGE_KEYS.TOKEN_EXPIRY, this.tokenExpiry.toString());
 
       // Reset refresh attempts counter on success
       this.refreshAttempts = 0;
-      
+
       // Update authentication state
       this.updateAuthState();
 
@@ -632,7 +634,7 @@ class GoogleAuthService {
   // ========================================
   // LOGOUT AND SESSION MANAGEMENT  
   // ========================================
-  
+
   /**
    * Log out the current user and clean up all authentication data
    * 
@@ -663,7 +665,7 @@ class GoogleAuthService {
               sessionId: this.sessionId,
             }),
           });
-          
+
           logger.info('GoogleAuthService', 'Server logout notification sent');
         } catch (error) {
           // Server logout failure is not critical for client-side cleanup
@@ -675,17 +677,17 @@ class GoogleAuthService {
 
       // Clear all local authentication data
       await this.clearAuthenticationData();
-      
+
       // Stop token validation
       this.stopTokenValidation();
-      
+
       logger.info('GoogleAuthService', 'User logout completed successfully');
-      
+
     } catch (error) {
       logger.error('GoogleAuthService', 'Logout error', {
         error: String(error)
       });
-      
+
       // Even if logout fails, clear local data to ensure user is logged out
       await this.clearAuthenticationData();
     }
@@ -694,7 +696,7 @@ class GoogleAuthService {
   // ========================================
   // PUBLIC GETTERS
   // ========================================
-  
+
   /**
    * Check if user is currently authenticated
    * @returns true if user has valid authentication
@@ -727,7 +729,7 @@ class GoogleAuthService {
     if (!this.accessToken) {
       return {};
     }
-    
+
     return {
       'Authorization': `Bearer ${this.accessToken}`,
     };
@@ -744,7 +746,7 @@ class GoogleAuthService {
   // ========================================
   // EVENT MANAGEMENT
   // ========================================
-  
+
   /**
    * Add event listener for authentication state changes
    * @param listener Function to call when state changes
@@ -770,7 +772,7 @@ class GoogleAuthService {
   // ========================================
   // PRIVATE HELPER METHODS
   // ========================================
-  
+
   /**
    * Restore authentication data from secure storage
    * Called during service initialization
@@ -778,7 +780,7 @@ class GoogleAuthService {
   private async restoreStoredAuthentication(): Promise<void> {
     try {
       logger.debug('GoogleAuthService', 'Restoring authentication data from storage');
-      
+
       const [accessToken, refreshToken, userData, tokenExpiry, sessionId] = await Promise.all([
         this.getFromSecureStorage(STORAGE_KEYS.ACCESS_TOKEN),
         this.getFromSecureStorage(STORAGE_KEYS.REFRESH_TOKEN),
@@ -792,7 +794,7 @@ class GoogleAuthService {
         this.refreshToken = refreshToken;
         this.sessionId = sessionId;
         this.tokenExpiry = tokenExpiry ? parseInt(tokenExpiry, 10) : 0;
-        
+
         try {
           this.currentUser = JSON.parse(userData);
           logger.info('GoogleAuthService', 'Authentication data restored successfully', {
@@ -810,7 +812,7 @@ class GoogleAuthService {
       } else {
         logger.debug('GoogleAuthService', 'No stored authentication data found');
       }
-      
+
     } catch (error) {
       logger.error('GoogleAuthService', 'Failed to restore authentication data', {
         error: String(error)
@@ -843,7 +845,7 @@ class GoogleAuthService {
       ]);
 
       logger.debug('GoogleAuthService', 'Authentication data stored securely');
-      
+
     } catch (error) {
       logger.error('GoogleAuthService', 'Failed to store authentication data', {
         error: String(error)
@@ -877,9 +879,9 @@ class GoogleAuthService {
 
       // Update authentication state
       this.setAuthState('unauthenticated');
-      
+
       logger.debug('GoogleAuthService', 'Authentication data cleared successfully');
-      
+
     } catch (error) {
       logger.error('GoogleAuthService', 'Failed to clear authentication data', {
         error: String(error)
@@ -967,11 +969,11 @@ class GoogleAuthService {
    */
   private updateAuthState(): void {
     const newState: AuthState = this.determineAuthState();
-    
+
     if (newState !== this.authState) {
       const oldState = this.authState;
       this.setAuthState(newState);
-      
+
       logger.debug('GoogleAuthService', 'Authentication state changed', {
         from: oldState,
         to: newState,
@@ -987,16 +989,16 @@ class GoogleAuthService {
     if (!this.isInitialized) {
       return 'initializing';
     }
-    
+
     if (!this.accessToken || !this.refreshToken || !this.currentUser) {
       return 'unauthenticated';
     }
-    
+
     // Check if access token is expired
     if (Date.now() >= this.tokenExpiry) {
       return 'refreshing'; // Will trigger automatic refresh
     }
-    
+
     return 'authenticated';
   }
 
@@ -1006,9 +1008,9 @@ class GoogleAuthService {
    */
   private setAuthState(newState: AuthState): void {
     this.authState = newState;
-    
+
     // Notify all listeners of state change
-    for (const listener of this.listeners) {
+    this.listeners.forEach(listener => {
       try {
         listener(newState, this.currentUser);
       } catch (error) {
@@ -1016,7 +1018,7 @@ class GoogleAuthService {
           error: String(error)
         });
       }
-    }
+    });
   }
 
   /**
@@ -1036,7 +1038,7 @@ class GoogleAuthService {
       });
 
       return response.ok;
-      
+
     } catch (error) {
       logger.warn('GoogleAuthService', 'Token validation failed', {
         error: String(error)
@@ -1050,11 +1052,11 @@ class GoogleAuthService {
    */
   private startTokenValidation(): void {
     this.stopTokenValidation(); // Clear any existing timer
-    
+
     this.validationTimer = setInterval(() => {
       this.performPeriodicValidation();
     }, CONFIG.TOKEN_VALIDATION_INTERVAL);
-    
+
     logger.debug('GoogleAuthService', 'Token validation timer started');
   }
 
@@ -1092,7 +1094,7 @@ class GoogleAuthService {
   private async handleAppStateChange(nextAppState: string): Promise<void> {
     if (nextAppState === 'active' && this.isAuthenticated()) {
       logger.debug('GoogleAuthService', 'App became active, validating tokens');
-      
+
       // Validate tokens when app becomes active
       const isValid = await this.validateStoredTokens();
       if (!isValid && this.refreshToken) {

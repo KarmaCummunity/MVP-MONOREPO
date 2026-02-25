@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   FlatList,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';

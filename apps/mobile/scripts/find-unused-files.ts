@@ -159,7 +159,7 @@ class UnusedFileFinder {
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
 
-      return crypto.createHash('md5').update(normalized).digest('hex');
+      return crypto.createHash('sha256').update(normalized).digest('hex');
     } catch (error) {
       return '';
     }

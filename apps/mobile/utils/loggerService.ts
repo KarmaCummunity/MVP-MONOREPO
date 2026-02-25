@@ -36,7 +36,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 class LoggerService {
   private logs: LogEntry[] = [];
   private pendingLogs: LogEntry[] = [];
-  private saveTimer: number | null = null;
+  private saveTimer: ReturnType<typeof setInterval> | null = null;
   private isInitialized = false;
 
   // Production-friendly: Higher log level in production

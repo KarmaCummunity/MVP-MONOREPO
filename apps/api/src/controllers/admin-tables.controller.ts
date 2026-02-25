@@ -3,6 +3,7 @@
 // - Routes: /api/admin/tables (GET, POST), /api/admin/tables/:id (GET, PUT, DELETE), /api/admin/tables/:id/rows (GET, POST), /api/admin/tables/:id/rows/:rowId (PUT, DELETE)
 // - Storage: PostgreSQL tables admin_tables, admin_table_columns, admin_table_rows
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,22 +12,31 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
   Request,
+  UseGuards,
 } from "@nestjs/common";
 import {
   AdminTablesService,
   CreateTableDto,
-  UpdateTableDto,
   CreateRowDto,
+  UpdateTableDto,
   UpdateRowDto,
 } from "../services/admin-tables.service";
 import { AdminAuthGuard } from "../auth/jwt-auth.guard";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Controller("/api/admin/tables")
 @UseGuards(AdminAuthGuard)
 export class AdminTablesController {
   constructor(private readonly adminTablesService: AdminTablesService) {}
+
+  private validateUuid(value: string, name: string): void {
+    if (!value || !UUID_REGEX.test(value)) {
+      throw new BadRequestException(`Invalid ${name}`);
+    }
+  }
 
   @Get()
   async getAllTables() {
@@ -46,6 +56,7 @@ export class AdminTablesController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
+    this.validateUuid(id, "table id");
     try {
       const includeRowsBool = includeRows === "true";
       const pagination =
@@ -101,6 +112,7 @@ export class AdminTablesController {
     @Body() dto: UpdateTableDto,
     @Request() req: import("express").Request,
   ) {
+    this.validateUuid(id, "table id");
     try {
       const userId = req.user?.userId;
       if (!userId) {
@@ -117,6 +129,7 @@ export class AdminTablesController {
 
   @Delete(":id")
   async deleteTable(@Param("id") id: string) {
+    this.validateUuid(id, "table id");
     try {
       await this.adminTablesService.deleteTable(id);
       return { success: true, message: "טבלה נמחקה בהצלחה" };
@@ -132,6 +145,7 @@ export class AdminTablesController {
     @Query("page") page?: string,
     @Query("limit") limit?: string,
   ) {
+    this.validateUuid(tableId, "table id");
     try {
       const pagination =
         page && limit
@@ -158,6 +172,7 @@ export class AdminTablesController {
     @Body() dto: CreateRowDto,
     @Request() req: import("express").Request,
   ) {
+    this.validateUuid(tableId, "table id");
     try {
       const userId = req.user?.userId;
       if (!userId) {
@@ -183,6 +198,8 @@ export class AdminTablesController {
     @Body() dto: UpdateRowDto,
     @Request() req: import("express").Request,
   ) {
+    this.validateUuid(tableId, "table id");
+    this.validateUuid(rowId, "row id");
     try {
       const userId = req.user?.userId;
       if (!userId) {
@@ -208,6 +225,8 @@ export class AdminTablesController {
 
   @Delete(":id/rows/:rowId")
   async deleteRow(@Param("id") tableId: string, @Param("rowId") rowId: string) {
+    this.validateUuid(tableId, "table id");
+    this.validateUuid(rowId, "row id");
     try {
       await this.adminTablesService.deleteRow(tableId, rowId);
       return { success: true, message: "רשומה נמחקה בהצלחה" };

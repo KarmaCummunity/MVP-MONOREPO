@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, PanResponder, Platform } from 'react-native';
+import { View, StyleSheet, PanResponder, Platform } from 'react-native';
 import colors from '../globals/colors';
 
 interface VerticalGridSliderProps {

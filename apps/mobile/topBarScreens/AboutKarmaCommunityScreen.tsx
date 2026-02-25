@@ -7,10 +7,8 @@ import React, { memo } from 'react' // Import memo here
 import colors from '../globals/colors'
 import { FontSizes } from '../globals/constants';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
-import { Ionicons as Icon } from '@expo/vector-icons';
-import styles from '../globals/styles';
 import ScreenWrapper from '../components/ScreenWrapper';
 
 // Changed this line to use const and wrap with memo

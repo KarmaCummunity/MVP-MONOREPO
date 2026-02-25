@@ -5,7 +5,6 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
-  ScrollView,
   FlatList,
   Dimensions,
   Platform,
@@ -28,8 +27,6 @@ import { useToast } from '../utils/toastService';
 import { getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
 
 // New Modular Components
-import RideCard from '../components/rides/RideCard';
-import RideHistoryCard from '../components/rides/RideHistoryCard';
 import RideOfferForm from '../components/rides/RideOfferForm';
 import VerticalGridSlider from '../components/VerticalGridSlider';
 import { postsService } from '../utils/postsService';

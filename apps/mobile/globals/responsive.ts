@@ -1,4 +1,4 @@
-import { Dimensions, Platform, I18nManager, ScaledSize } from 'react-native';
+import { Dimensions, Platform, I18nManager } from 'react-native';
 
 // TODO: Add comprehensive TypeScript interfaces for all responsive utilities
 // TODO: Implement proper breakpoint system with named breakpoints

@@ -4,7 +4,7 @@
 // - Provides: Real-time search with tabs for different entities, debounced input, and detailed result cards.
 // - Reads from: `enhancedDatabaseService`, `apiService`.
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -66,7 +66,7 @@ const SearchScreen = () => {
     const route = useRoute();
     const tabBarHeight = useBottomTabBarHeight();
     const { t } = useTranslation(['search', 'common', 'donations', 'trump']);
-    const { selectedUser } = useUser();
+    const { selectedUser: _selectedUser } = useUser();
     const { ToastComponent } = useToast();
 
     // Get initial query from route params (from deep link)
@@ -102,7 +102,7 @@ const SearchScreen = () => {
 
     // --- Search Logic ---
 
-    const performSearch = async (searchQuery: string, tab: SearchTab) => {
+    const performSearch = useCallback(async (searchQuery: string, tab: SearchTab) => {
         if (!searchQuery.trim()) {
             setResults([]);
             setHasSearched(false);
@@ -237,7 +237,7 @@ const SearchScreen = () => {
         } finally {
             setIsSearching(false);
         }
-    };
+    }, []);
 
     // Debounce the search
     const debouncedSearch = useMemo(

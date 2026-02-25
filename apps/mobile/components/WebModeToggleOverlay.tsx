@@ -13,14 +13,13 @@
 // - Toggle button is SHOWN for guest users and non-authenticated users
 // - This provides a cleaner UI for logged-in users who don't need to switch modes
 import React, { useState, useEffect } from 'react';
-import { Platform, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, ScrollView, Modal, I18nManager } from 'react-native';
+import { Platform, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, ScrollView, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebMode } from '../stores/webModeStore';
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
-import { FontSizes } from '../globals/constants';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 
