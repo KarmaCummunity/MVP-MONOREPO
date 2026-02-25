@@ -185,13 +185,11 @@ type LazySectionProps = {
 
 const LazySection: React.FC<LazySectionProps> = ({ section: SectionComponent, ...props }) => {
   // On web, load immediately to ensure DOM elements exist for navigation
-  // ב-web, טעינה מיידית כדי להבטיח שאלמנטי DOM קיימים לניווט
   const [isVisible, setIsVisible] = useState(isWeb);
   const ref = useRef<View>(null);
 
   useEffect(() => {
     // On web, sections are loaded immediately, so no need for lazy loading
-    // ב-web, הסעיפים נטענים מיד, אז אין צורך ב-lazy loading
     if (isWeb) {
       return;
     }
@@ -209,13 +207,14 @@ const LazySection: React.FC<LazySectionProps> = ({ section: SectionComponent, ..
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current as any);
+    const node = ref.current;
+    if (node) {
+      observer.observe(node as any);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current as any);
+      if (node) {
+        observer.unobserve(node as any);
       }
     };
   }, []);
@@ -309,7 +308,7 @@ const HeroSection: React.FC<{ onDonate: () => void }> = ({ onDonate }) => {
   );
 }
 
-const VisionSection: React.FC<{ onGoToApp: () => void }> = ({ onGoToApp }) => (
+const VisionSection: React.FC<{ onGoToApp: () => void }> = ({ onGoToApp: _onGoToApp }) => (
   <Section id="section-vision" title="החזון שלנו" subtitle="הקיבוץ הקפיטליסטי" style={styles.sectionAltBackground}>
     <Text style={styles.paragraph}>
       <Text style={styles.emphasis}>קיבוץ דגיטלי בעולם קפיטליסטי. </Text>רשת חברתית לאיחוד, ריכוז, הנגשה, והפצת פילנתרופיה ועשייה חברתית מכל הסוגים ולכל האנשים.
@@ -657,7 +656,7 @@ const DonationModal: React.FC<{
   );
 };
 
-const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boolean; onGoToApp: () => void }> = ({ stats, isLoadingStats, onGoToApp }) => {
+const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boolean; onGoToApp: () => void }> = ({ stats, isLoadingStats, onGoToApp: _onGoToApp }) => {
   const [selectedStat, setSelectedStat] = useState<{
     type: string;
     title: string;
@@ -1014,7 +1013,7 @@ const CoreMottosSection = () => (
 // Admin Hierarchy Section - Visual tree of the management structure
 const AdminHierarchySection = () => {
   const navigation = useNavigation<any>();
-  const { isAuthenticated, isGuestMode } = useUser();
+  useUser();
 
   const handleViewAdminDashboard = () => {
     // Allow everyone to view, including unauthenticated users
@@ -1192,6 +1191,7 @@ const PartnersSection = () => (
   </Section>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars -- section kept for future use
 const InstagramSection = () => {
   const [webViewKey, setWebViewKey] = useState(0);
 
@@ -1676,16 +1676,11 @@ const LandingSiteScreen: React.FC = () => {
     logger.info('LandingSite', 'useEffect triggered - Landing page mounted', { isWeb, USE_BACKEND });
 
     // Use sessionStorage to prevent double tracking across all instances
-    // שימוש ב-sessionStorage למניעת ספירה כפולה בכל ה-instances
     const VISIT_TRACKED_KEY = 'kc_site_visit_tracked';
 
-    // Track site visit - only on web and if backend is available
-    // ספירת ביקור באתר - רק ב-web ואם השרת זמין
-    // שינוי: שימוש ב-sessionStorage למניעת כפילות בכל ה-instances
-    // Change: Use sessionStorage to prevent double tracking across all instances
+    // Track site visit - only on web and if backend is available. Use sessionStorage to prevent double tracking.
     const trackVisitAndLoadStats = async () => {
       // Check if visit already tracked in this session (shared across all component instances)
-      // בדיקה אם הביקור כבר נספר ב-session זה (משותף לכל ה-instances של הקומפוננטה)
       const visitTracked = isWeb && typeof window !== 'undefined'
         ? sessionStorage.getItem(VISIT_TRACKED_KEY) === 'true'
         : false;
@@ -1699,7 +1694,6 @@ const LandingSiteScreen: React.FC = () => {
       if (isWeb && USE_BACKEND) {
         try {
           // Mark as tracked immediately in sessionStorage to prevent double calls
-          // סימון כנספר מיד ב-sessionStorage כדי למנוע קריאות כפולות
           if (typeof window !== 'undefined') {
             sessionStorage.setItem(VISIT_TRACKED_KEY, 'true');
           }
@@ -1709,12 +1703,10 @@ const LandingSiteScreen: React.FC = () => {
           if (response.success) {
             logger.info('LandingSite', 'Site visit tracked successfully');
             // Reload stats with forceRefresh to get updated site_visits count
-            // טעינה מחדש של סטטיסטיקות עם forceRefresh כדי לקבל את מספר הביקורים המעודכן
             await loadStats(true);
           } else {
             logger.warn('LandingSite', 'Site visit tracking failed', { error: response.error });
             // Reset flag on failure so we can retry
-            // איפוס הדגל בכשל כדי שנוכל לנסות שוב
             if (typeof window !== 'undefined') {
               sessionStorage.removeItem(VISIT_TRACKED_KEY);
             }
@@ -1724,7 +1716,6 @@ const LandingSiteScreen: React.FC = () => {
         } catch (error) {
           logger.error('LandingSite', 'Failed to track site visit', { error });
           // Reset flag on error so we can retry
-          // איפוס הדגל בשגיאה כדי שנוכל לנסות שוב
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem(VISIT_TRACKED_KEY);
           }
@@ -1743,7 +1734,7 @@ const LandingSiteScreen: React.FC = () => {
     return () => {
       logger.info('LandingSite', 'Landing page unmounted');
     };
-  }, []);
+  }, [loadStats]);
 
 
   // Scroll Spy - Track which section is currently in view
@@ -1791,7 +1782,6 @@ const LandingSiteScreen: React.FC = () => {
       }
 
       // Retry if element not found yet (DOM might still be rendering)
-      // ניסיון חוזר אם האלמנט עדיין לא נמצא (DOM עדיין יכול להיות בתהליך רינדור)
       if (retryCount < 20) {
         setTimeout(() => observeSection(id, retryCount + 1), 100);
         if (retryCount === 0) {
@@ -1824,7 +1814,8 @@ const LandingSiteScreen: React.FC = () => {
       scrollSpyObserverRef.current = null;
       mutationObserver?.disconnect();
     };
-  }, [isWeb]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- isWeb is from outer scope; effect runs on mount for scroll spy
+  }, []);
 
   return (
     <ScreenWrapper style={styles.container}>

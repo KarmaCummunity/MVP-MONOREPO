@@ -29,7 +29,7 @@ interface AdminAdminsScreenProps {
 
 const LOG_SOURCE = 'AdminAdminsScreen';
 
-export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps) {
+export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdminsScreenProps) {
     const route = useRoute();
     const routeParams = (route.params as any) || {};
     const viewOnly = routeParams?.viewOnly === true;
@@ -52,13 +52,9 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
     // Store all managers for manager assignment
     const [allManagers, setAllManagers] = useState<any[]>([]);
 
-    useEffect(() => {
-        loadUsers();
-    }, [searchQuery, selectedUser?.id]);
-
-    const loadUsers = async (forceRefresh: boolean = false) => {
+    const loadUsers = React.useCallback(async (forceRefresh: boolean = false) => {
         if (!selectedUser?.id) {
-            console.log('[AdminAdminsScreen] No selectedUser.id, skipping load');
+            logger.info(LOG_SOURCE, 'No selectedUser.id, skipping load');
             return;
         }
 
@@ -72,19 +68,15 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
             // Force refresh after admin operations to ensure fresh data
             if (forceRefresh) {
                 filters.forceRefresh = true;
-                console.log('[AdminAdminsScreen] 🔄 FORCE REFRESH - Loading users with filters:', filters);
+                logger.info(LOG_SOURCE, 'Force refresh - loading users', { filters });
             } else {
-                console.log('[AdminAdminsScreen] 🔄 Loading users with filters:', filters);
+                logger.info(LOG_SOURCE, 'Loading users', { filters });
             }
 
             // Load all users for display
             const response = await apiService.getUsers(filters);
 
-            console.log('[AdminAdminsScreen] 📡 Response from getUsers:', {
-                success: response.success,
-                dataLength: response.data?.length,
-                error: response.error
-            });
+            logger.info(LOG_SOURCE, 'getUsers response', { success: response.success, dataLength: response.data?.length, error: response.error });
 
             if (response.success && Array.isArray(response.data)) {
                 // Keep only other users (not current user)
@@ -98,49 +90,40 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                 });
                 setAllManagers(managers);
 
-                console.log(`[AdminAdminsScreen] ✅ Loaded ${otherUsers.length} users, ${managers.length} managers`);
-                console.log(`[AdminAdminsScreen] 📊 Sample user data:`, otherUsers.slice(0, 2).map(u => ({
-                    id: u.id,
-                    name: u.name,
-                    email: u.email,
-                    roles: u.roles,
-                    parent_manager_id: u.parent_manager_id,
-                    manager_details: u.manager_details
-                })));
+                logger.info(LOG_SOURCE, 'Loaded users', { usersCount: otherUsers.length, managersCount: managers.length, sample: otherUsers.slice(0, 2) });
             } else {
                 setUsersList([]);
                 setAllManagers([]);
-                console.log('[AdminAdminsScreen] ❌ Failed to load users:', response.error);
+                logger.warn(LOG_SOURCE, 'Failed to load users', { error: response.error });
             }
 
             // Load eligible users for promotion (to know who can be promoted)
             const eligibleResponse = await apiService.getEligibleForPromotion(selectedUser.id);
             if (eligibleResponse.success && Array.isArray(eligibleResponse.data)) {
                 setEligibleUsers(eligibleResponse.data);
-                console.log(`[AdminAdminsScreen] Loaded ${eligibleResponse.data.length} eligible users for promotion`);
+                logger.info(LOG_SOURCE, 'Loaded eligible users', { count: eligibleResponse.data.length });
             } else {
                 setEligibleUsers([]);
-                console.log('[AdminAdminsScreen] Failed to load eligible users:', eligibleResponse.error);
+                logger.warn(LOG_SOURCE, 'Failed to load eligible users', { error: eligibleResponse.error });
             }
         } catch (error) {
-            console.error('[AdminAdminsScreen] Error loading users:', error);
+            logger.error(LOG_SOURCE, 'Error loading users', { error });
             Alert.alert('שגיאה', 'לא ניתן היה לטעון את המשתמשים');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [searchQuery, selectedUser?.id, selectedUser?.email]);
+
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
 
     // Check if current user is super admin - based on roles, not email
     const currentUserRoles = selectedUser?.roles || [];
     const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin') ||
         currentUserRoles.includes('admin');
 
-    console.log('[AdminAdminsScreen] 🔐 Current user check:', {
-        userId: selectedUser?.id,
-        email: selectedUser?.email,
-        roles: selectedUser?.roles,
-        isAdmin: isCurrentUserSuperAdmin
-    });
+    logger.info(LOG_SOURCE, 'Current user check', { userId: selectedUser?.id, email: selectedUser?.email, roles: selectedUser?.roles, isAdmin: isCurrentUserSuperAdmin });
 
     // Check if a user can be promoted by current admin
     const canPromote = (user: any): boolean => {
@@ -337,7 +320,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                 console.log('[AdminAdminsScreen] ❌ Failed to update manager:', res.error);
             }
         } catch (e) {
-            console.error('[AdminAdminsScreen] ❌ Error saving manager:', e);
+            logger.error(LOG_SOURCE, 'Error saving manager', { error: e });
             Alert.alert('שגיאה', 'אירעה שגיאה');
         }
     };
@@ -366,7 +349,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                 Alert.alert('שגיאה', res.error || 'נכשל בהסרת שיוך מנהל');
             }
         } catch (e) {
-            console.error('[AdminAdminsScreen] ❌ Error removing manager:', e);
+            logger.error(LOG_SOURCE, 'Error removing manager', { error: e });
             Alert.alert('שגיאה', 'אירעה שגיאה בהסרת שיוך מנהל');
         } finally {
             setIsRemovingManager(false);
@@ -374,7 +357,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
     };
 
     // Remove manager with confirmation (used from outside modal)
-    const removeManager = async () => {
+    const _removeManager = async () => {
         if (!selectedForManager) {
             console.log('[AdminAdminsScreen] removeManager called but no selectedForManager');
             return;
@@ -462,7 +445,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                                 error: e?.message || String(e),
                                 stack: e?.stack
                             });
-                            console.error('[AdminAdminsScreen] Error promoting to volunteer:', e);
+                            logger.error(LOG_SOURCE, 'Error promoting to volunteer', { error: e });
                             Alert.alert('שגיאה', 'נכשל בהפיכה למתנדב');
                         }
                     }
@@ -491,7 +474,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
 
         if (!selectedUser?.id) {
             logger.warn(LOG_SOURCE, 'handleDemoteToVolunteer: No selectedUser.id', {});
-            console.error('[AdminAdminsScreen] ❌ No selectedUser.id');
+            logger.warn(LOG_SOURCE, 'No selectedUser.id');
             Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
             return;
         }
@@ -549,7 +532,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                                     targetUserId: targetUser.id,
                                     error: demoteRes.error
                                 });
-                                console.error('[AdminAdminsScreen] ❌ Failed:', demoteRes.error);
+                                logger.error(LOG_SOURCE, 'Demote to volunteer failed', { error: demoteRes.error });
                                 Alert.alert('שגיאה', demoteRes.error || 'נכשל בהסרת הרשאות מנהל והפיכה למתנדב');
                             }
                         } catch (e: any) {
@@ -558,7 +541,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                                 error: e?.message || String(e),
                                 stack: e?.stack
                             });
-                            console.error('[AdminAdminsScreen] ❌ Exception:', e);
+                            logger.error(LOG_SOURCE, 'Demote to volunteer exception', { error: e });
                             Alert.alert('שגיאה', 'נכשל בהסרת הרשאות מנהל');
                         }
                     }
@@ -645,7 +628,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                     const userRoles = user.roles || [];
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
-                    const isSameUser = user.id === selectedUser?.id;
+                    const _isSameUser = user.id === selectedUser?.id;
                     const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com'; // המנהל הראשי - מוגן לחלוטין
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);

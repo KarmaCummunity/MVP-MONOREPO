@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 import type { StatDetails } from './StatDetailsModal';
 import { useUser } from '../stores/userStore';
 import { useEffect, useState } from 'react';
@@ -47,55 +48,50 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
   const { t } = useTranslation(['home']);
   const { isRealAuth } = useUser();
   const [statsState, setStatsState] = useState<CommunityStats | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     const POLLING_INTERVAL = 60000; // 60 seconds - stats don't change frequently
-    
+
     const loadStats = async (forceRefresh = false) => {
       if (!mounted) return;
-      
-      console.log(`[CommunityStatsGrid] Loading stats, forceRefresh: ${forceRefresh}`);
-      setLoading(true);
-      
+
+      logger.debug('CommunityStatsGrid', 'Loading stats', { forceRefresh });
+
       try {
         let stats: CommunityStats;
-        
+
         if (USE_BACKEND && isRealAuth) {
           // Use enhanced backend service for real users
-          console.log('[CommunityStatsGrid] Fetching from backend with forceRefresh:', forceRefresh);
+          logger.debug('CommunityStatsGrid', 'Fetching from backend', { forceRefresh });
           stats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
-          console.log('[CommunityStatsGrid] Stats received from backend:', Object.keys(stats).length, 'keys');
+          logger.debug('CommunityStatsGrid', 'Stats received from backend', { keysCount: Object.keys(stats).length });
         } else {
-          // Use legacy local stats for guests or if backend unavailable
-          console.log('[CommunityStatsGrid] Using local stats (no backend or not authenticated)');
+          logger.debug('CommunityStatsGrid', 'Using local stats (no backend or not authenticated)');
           stats = await getGlobalStats();
         }
-        
+
         if (mounted) {
           setStatsState(stats);
-          console.log('[CommunityStatsGrid] Stats state updated');
+          logger.debug('CommunityStatsGrid', 'Stats state updated');
         }
       } catch (error) {
-        console.error('[CommunityStatsGrid] Failed to load community stats:', error);
-        
+        logger.error('CommunityStatsGrid', 'Failed to load community stats', { error });
+
         // Fallback to legacy stats
         const fallbackStats = await getGlobalStats();
         if (mounted) setStatsState(fallbackStats);
       }
-      
-      setLoading(false);
     };
-    
+
     // Initial load
     loadStats();
-    
+
     // Auto-refresh every 60 seconds (but use cache - don't force refresh)
     const intervalId = setInterval(() => {
       loadStats(false); // Normal refresh with cache
     }, POLLING_INTERVAL);
-    
+
     return () => {
       mounted = false;
       clearInterval(intervalId);
@@ -103,40 +99,40 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
   }, [isRealAuth]);
   const realStats: CommunityStat[] = statsState
     ? (() => {
-        const cfg: Array<{ key: keyof CommunityStats | 'activeMembers'; icon: string; color: string; labelKey?: string }> = [
-          { key: 'moneyDonations', icon: '💵', color: colors.legacyDarkGreen },
-          { key: 'volunteerHours', icon: '⏰', color: colors.warning },
-          { key: 'rides', icon: '🚗', color: colors.info },
-          { key: 'events', icon: '🎉', color: colors.secondary },
-          { key: 'activeMembers', icon: '👥', color: colors.info, labelKey: 'appActiveUsers' },
-          // Extended 15+
-          { key: 'foodKg', icon: '🍎', color: colors.success },
-          { key: 'clothingKg', icon: '👕', color: colors.info },
-          { key: 'bloodLiters', icon: '🩸', color: colors.error },
-          { key: 'courses', icon: '📚', color: colors.success },
-          { key: 'treesPlanted', icon: '🌳', color: colors.legacyDarkGreen },
-          { key: 'animalsAdopted', icon: '🐕', color: colors.warning },
-          { key: 'recyclingBags', icon: '♻️', color: colors.success },
-          { key: 'culturalEvents', icon: '🎭', color: colors.info },
-          { key: 'appDownloads', icon: '📲', color: colors.info },
-          { key: 'activeVolunteers', icon: '🙋', color: colors.success },
-          { key: 'kmCarpooled', icon: '🚗', color: colors.info },
-          { key: 'fundsRaised', icon: '💰', color: colors.success },
-          { key: 'mealsServed', icon: '🍽️', color: colors.secondary },
-          { key: 'booksDonated', icon: '📚', color: colors.legacyMediumPurple },
-        ];
-        return cfg.map((c) => {
-          const labelKey = c.labelKey || String(c.key);
-          const valueNum = (statsState as any)[c.key] ?? 0;
-          return {
-            key: String(c.key),
-            icon: c.icon,
-            label: t(`home:stats.${labelKey}`),
-            value: formatShortNumber(typeof valueNum === 'number' ? valueNum : 0),
-            color: c.color,
-          } as CommunityStat;
-        });
-      })()
+      const cfg: Array<{ key: keyof CommunityStats | 'activeMembers'; icon: string; color: string; labelKey?: string }> = [
+        { key: 'moneyDonations', icon: '💵', color: colors.legacyDarkGreen },
+        { key: 'volunteerHours', icon: '⏰', color: colors.warning },
+        { key: 'rides', icon: '🚗', color: colors.info },
+        { key: 'events', icon: '🎉', color: colors.secondary },
+        { key: 'activeMembers', icon: '👥', color: colors.info, labelKey: 'appActiveUsers' },
+        // Extended 15+
+        { key: 'foodKg', icon: '🍎', color: colors.success },
+        { key: 'clothingKg', icon: '👕', color: colors.info },
+        { key: 'bloodLiters', icon: '🩸', color: colors.error },
+        { key: 'courses', icon: '📚', color: colors.success },
+        { key: 'treesPlanted', icon: '🌳', color: colors.legacyDarkGreen },
+        { key: 'animalsAdopted', icon: '🐕', color: colors.warning },
+        { key: 'recyclingBags', icon: '♻️', color: colors.success },
+        { key: 'culturalEvents', icon: '🎭', color: colors.info },
+        { key: 'appDownloads', icon: '📲', color: colors.info },
+        { key: 'activeVolunteers', icon: '🙋', color: colors.success },
+        { key: 'kmCarpooled', icon: '🚗', color: colors.info },
+        { key: 'fundsRaised', icon: '💰', color: colors.success },
+        { key: 'mealsServed', icon: '🍽️', color: colors.secondary },
+        { key: 'booksDonated', icon: '📚', color: colors.legacyMediumPurple },
+      ];
+      return cfg.map((c) => {
+        const labelKey = c.labelKey || String(c.key);
+        const valueNum = (statsState as any)[c.key] ?? 0;
+        return {
+          key: String(c.key),
+          icon: c.icon,
+          label: t(`home:stats.${labelKey}`),
+          value: formatShortNumber(typeof valueNum === 'number' ? valueNum : 0),
+          color: c.color,
+        } as CommunityStat;
+      });
+    })()
     : [];
 
   // Demo-only extra categories (לא יתנגשו עם keys שכבר קיימים ב-realStats)

@@ -37,6 +37,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -46,20 +47,20 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
+  const [_showSettings, _setShowSettings] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
   const maxListHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  console.log('🔔 NotificationsScreen - Component rendered, selectedUser:', selectedUser?.name || 'null');
+  logger.debug('NotificationsScreen', 'Component rendered', { selectedUserName: selectedUser?.name ?? 'null' });
 
   const loadNotifications = useCallback(async () => {
-    console.log('🔔 NotificationsScreen - loadNotifications - selectedUser:', selectedUser?.name || 'null');
+    logger.debug('NotificationsScreen', 'loadNotifications', { selectedUserName: selectedUser?.name ?? 'null' });
 
     if (!selectedUser) {
-      console.log('🔔 NotificationsScreen - No selected user, cannot load notifications');
+      logger.debug('NotificationsScreen', 'No selected user, cannot load notifications');
       return;
     }
 
@@ -70,22 +71,21 @@ export default function NotificationsScreen() {
       const count = await getUnreadNotificationCount(selectedUser.id);
       setUnreadCount(count);
     } catch (error) {
-      console.error('❌ Load notifications error:', error);
+      logger.error('NotificationsScreen', 'Load notifications error', { error: String(error) });
       Alert.alert(t('common:errorTitle'), t('notifications:loadError'));
     }
-  }, [selectedUser]);
+  }, [selectedUser, t]);
 
   useFocusEffect(
     useCallback(() => {
-      console.log('🔔 NotificationsScreen - Screen focused, loading notifications...');
-      console.log('🔔 NotificationsScreen - selectedUser in useFocusEffect:', selectedUser?.name || 'null');
+      logger.debug('NotificationsScreen', 'Screen focused, loading notifications', { selectedUserName: selectedUser?.name ?? 'null' });
       loadNotifications();
 
       // Subscribe to in-app notification events for real-time updates
       const unsubscribe = subscribeToNotificationEvents((notification) => {
         if (!selectedUser) return;
         if (notification.userId !== selectedUser.id) return;
-        console.log('🔔 NotificationsScreen - Realtime notification received');
+        logger.debug('NotificationsScreen', 'Realtime notification received');
         // Prepend the new notification and update unread counter
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + (notification.read ? 0 : 1));
@@ -100,7 +100,7 @@ export default function NotificationsScreen() {
           const count = userNotifications.filter(n => !n.read).length;
           setUnreadCount(count);
         } catch (e) {
-          console.warn('⚠️ NotificationsScreen - polling error', e);
+          logger.warn('NotificationsScreen', 'Polling error', { error: String(e) });
         }
       }, 3000);
 
@@ -116,14 +116,14 @@ export default function NotificationsScreen() {
     loadNotifications().finally(() => setRefreshing(false));
   }, [loadNotifications]);
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const _handleMarkAsRead = async (notificationId: string) => {
     if (!selectedUser) return;
 
     try {
       await markNotificationAsRead(notificationId, selectedUser.id);
       await loadNotifications();
     } catch (error) {
-      console.error('❌ Mark as read error:', error);
+      logger.error('NotificationsScreen', 'Mark as read error', { error: String(error) });
     }
   };
 
@@ -135,7 +135,7 @@ export default function NotificationsScreen() {
       await loadNotifications();
       Alert.alert(t('notifications:markAllDoneTitle'), t('notifications:markAllDoneBody'));
     } catch (error) {
-      console.error('❌ Mark all as read error:', error);
+      logger.error('NotificationsScreen', 'Mark all as read error', { error: String(error) });
       Alert.alert(t('common:errorTitle'), t('notifications:markAllError'));
     }
   };
@@ -147,16 +147,16 @@ export default function NotificationsScreen() {
       await deleteNotification(notificationId, selectedUser.id);
       await loadNotifications();
     } catch (error) {
-      console.error('❌ Delete notification error:', error);
+      logger.error('NotificationsScreen', 'Delete notification error', { error: String(error) });
     }
   };
 
   const handleClearAllNotifications = async () => {
-    console.log('🔔 Clear all pressed');
+    logger.debug('NotificationsScreen', 'Clear all pressed');
     if (!selectedUser) return;
 
     if (notifications.length === 0) {
-      console.log('ℹ️ No notifications to clear');
+      logger.debug('NotificationsScreen', 'No notifications to clear');
       return;
     }
 
@@ -164,10 +164,8 @@ export default function NotificationsScreen() {
       try {
         await clearAllNotifications(selectedUser.id);
         await loadNotifications();
-        // Optional: Show success message or just let the list clear
-        // Alert.alert(t('notifications:clearAllDoneTitle'), t('notifications:clearAllDoneBody'));
       } catch (error) {
-        console.error('❌ Clear all notifications error:', error);
+        logger.error('NotificationsScreen', 'Clear all notifications error', { error: String(error) });
         Alert.alert(t('common:errorTitle'), t('notifications:clearAllError'));
       }
     };

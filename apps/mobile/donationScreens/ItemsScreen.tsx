@@ -23,6 +23,7 @@ import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 
 type ItemType = 'furniture' | 'clothes' | 'general' | 'books' | 'dry_food' | 'games' | 'electronics' | 'toys' | 'sports' | 'art' | 'kitchen' | 'bathroom' | 'garden' | 'tools' | 'baby' | 'pet' | 'other';
 
@@ -121,7 +122,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   } = usePostMenu();
 
   // Report submit handler
-  const handleReportSubmit = async (reason: string) => {
+  const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
     // Report functionality can be implemented here if needed
     setReportModalVisible(false);
@@ -136,7 +137,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -155,18 +156,16 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       (navigation as any).setParams({ mode: newMode });
     }
   }, [mode, navigation, routeParams?.mode]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const [allItems, setAllItems] = useState<DonationItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<DonationItem[]>([]);
-  const [recentMine, setRecentMine] = useState<DonationItem[]>([]);
-  // Posts state for search mode
+  // Records of all items for both modes
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
-  // Posts state for offer mode history
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const titleInputRef = useRef<TextInput | null>(null);
   const loadItemsRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const [title, setTitle] = useState('');
@@ -200,7 +199,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   // Convert image URI to base64 with compression
   const convertImageToBase64 = async (uri: string): Promise<string | null> => {
     try {
-      console.log('🖼️ Converting and compressing image...');
+      logger.debug('ItemsScreen', 'Converting and compressing image');
 
       // Fetch the image
       const response = await fetch(uri);
@@ -214,32 +213,32 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
           // Check size and compress if needed
           const sizeInMB = (base64.length * 0.75) / (1024 * 1024); // Approximate size
-          console.log(`📏 Image size: ${sizeInMB.toFixed(2)} MB`);
+          logger.debug('ItemsScreen', 'Image size (MB)', { sizeInMB: sizeInMB.toFixed(2) });
 
           if (sizeInMB > 5) {
-            console.warn('⚠️ Image too large, it may fail to upload. Consider using a smaller image.');
+            logger.warn('ItemsScreen', 'Image too large, may fail to upload');
             Alert.alert(
-              'תמונה גדולה',
-              'התמונה שבחרת גדולה מאוד. מומלץ להשתמש בתמונה קטנה יותר.',
+              t('common:error'),
+              t('items:imageTooLarge', { defaultValue: 'The image you selected is very large. Consider using a smaller image.' }),
               [
-                { text: 'המשך בכל זאת', onPress: () => resolve(base64) },
-                { text: 'בטל', onPress: () => resolve(null), style: 'cancel' }
+                { text: t('items:continueAnyway', { defaultValue: 'Continue anyway' }), onPress: () => resolve(base64) },
+                { text: t('common:cancel'), onPress: () => resolve(null), style: 'cancel' }
               ]
             );
           } else {
-            console.log('✅ Image converted to base64');
+            logger.debug('ItemsScreen', 'Image converted to base64');
             resolve(base64);
           }
         };
         reader.onerror = (error) => {
-          console.error('❌ Error converting image:', error);
+          logger.error('ItemsScreen', 'Error converting image', { error });
           reject(error);
         };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error('❌ Error in convertImageToBase64:', error);
-      Alert.alert('שגיאה', 'לא הצלחנו להמיר את התמונה');
+      logger.error('ItemsScreen', 'Error in convertImageToBase64', { error });
+      Alert.alert(t('common:error'), t('items:convertImageError', { defaultValue: 'Failed to convert the image' }));
       return null;
     }
   };
@@ -256,23 +255,21 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     return [...allCategories, ...typeSpecific, ...itemsFilterOptionsBase];
   }, [itemType]);
 
-  const dummyItems: DonationItem[] = useMemo(() => [], []);
-
   // Helper to map API post to FeedItem (same as useFeedData.mapPostToItem)
-  const mapPostToFeedItem = (post: any): FeedItem | null => {
+  const mapPostToFeedItem = useCallback((post: any): FeedItem | null => {
     // הגנה מפני post null/undefined
     if (!post || !post.id) {
-      console.warn('⚠️ mapPostToFeedItem: post is null or missing id', post);
+      logger.warn('ItemsScreen', 'mapPostToFeedItem: post is null or missing id', { post });
       return null;
     }
 
     // Extract item data if available
     const itemData = post.item_data || {};
-    let metadata = {};
+    let _metadata = {};
     try {
-      metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : (post.metadata || {});
+      _metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : (post.metadata || {});
     } catch (e) {
-      console.warn('⚠️ Failed to parse metadata:', e);
+      logger.warn('ItemsScreen', 'Failed to parse metadata', { error: e });
     }
 
     // Ensure user is always defined (same format as useFeedData)
@@ -286,12 +283,12 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     }
 
     const userId = author?.id || post.author_id || 'unknown';
-    const userName = author?.name || 'common.unknownUser';
+    const userName = author?.name || t('common.unknownUser') || 'משתמש';
     const userAvatar = author?.avatar_url || undefined;
 
     // וידוא שה-user תמיד מוגדר
     if (!userId || userId === 'unknown') {
-      console.warn('⚠️ mapPostToFeedItem: post without valid user', { postId: post.id, author, author_id: post.author_id });
+      logger.warn('ItemsScreen', 'mapPostToFeedItem: post without valid user', { postId: post.id, author_id: post.author_id });
     }
 
     // Get status from item_data or ride_data
@@ -306,7 +303,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       id: post.id,
       type: post.post_type || 'post',
       subtype: post.post_type, // Same as useFeedData - e.g. 'item', 'donation', 'ride'
-      title: post.title || 'post.noTitle', // Same as useFeedData
+      title: post.title || t('common.post.noTitle') || 'פוסט ללא כותרת', // Same as useFeedData
       description: post.description || '',
       thumbnail: post.images && post.images.length > 0 ? post.images[0] : null, // Same as useFeedData
       user: {
@@ -321,7 +318,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         ? new Date(post.created_at).toISOString()
         : new Date().toISOString(),
       // Item-specific fields
-      category: itemData?.category || (metadata as any)?.category,
+      category: itemData?.category || (_metadata as any)?.category,
       // Add status for items and donations
       status: itemStatus,
       // Add IDs for updating posts
@@ -331,82 +328,80 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       rideId: post.ride_id || post.ride_data?.id,
       taskId: post.task_id || post.task?.id,
     };
-  };
+  }, [t]);
 
   // פונקציה נפרדת לטעינת פריטים/פוסטים שנוכל לקרוא לה גם אחרי שמירה
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
-      console.log('📥 טוען פריטים/פוסטים מהשרת...', { mode, itemType });
+      logger.debug('ItemsScreen', 'Loading items/posts from server', { mode, itemType });
       const uid = selectedUser?.id || 'guest';
 
       if (mode) {
-        // מצב "מחפש" - טוען פוסטים של פריטים (item או donation)
-        console.log('🔍 מצב מחפש - טוען פוסטים של פריטים');
+        logger.debug('ItemsScreen', 'Seeker mode: loading item posts');
         try {
           // טוען את כל הפוסטים ואז מסנן לפי post_type
           const postsResponse = await postsService.getPosts(200, 0, uid);
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => 
+            const itemPosts = postsResponse.data.filter((post: any) =>
               post.post_type === 'item' || post.post_type === 'donation' || post.item_id
             );
-            
-            console.log('📊 סה"כ פוסטים:', postsResponse.data.length, 'פוסטים של פריטים:', itemPosts.length);
-            
+
+            logger.debug('ItemsScreen', 'Posts loaded', { total: postsResponse.data.length, itemPosts: itemPosts.length });
+
             // ממפה את הפוסטים עם הגנה מפני user undefined
             const mappedPosts = itemPosts
               .map(mapPostToFeedItem)
-              .filter((post: FeedItem | null): post is FeedItem => 
+              .filter((post: FeedItem | null): post is FeedItem =>
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
               ); // מסנן פוסטים ללא user תקין
-            
+
             setAllPosts(mappedPosts);
             setFilteredPosts(mappedPosts);
-            console.log('✅ טעינת פוסטים הצליחה:', mappedPosts.length, 'פוסטים');
-            
+            logger.debug('ItemsScreen', 'Item posts loaded successfully', { count: mappedPosts.length });
+
             if (mappedPosts.length === 0 && itemPosts.length > 0) {
-              console.warn('⚠️ יש פוסטים אבל הם לא נמפו נכון. דוגמה:', itemPosts[0]);
+              logger.warn('ItemsScreen', 'Posts exist but mapping failed', { sample: itemPosts[0] });
             }
           } else {
-            console.warn('⚠️ טעינת פוסטים נכשלה:', postsResponse.error);
+            logger.warn('ItemsScreen', 'Loading posts failed', { error: postsResponse.error });
             setAllPosts([]);
             setFilteredPosts([]);
           }
         } catch (error) {
-          console.error('❌ שגיאה בטעינת פוסטים:', error);
+          logger.error('ItemsScreen', 'Error loading posts', { error });
           setAllPosts([]);
           setFilteredPosts([]);
         }
-        return; // Don't load items in search mode
+        return;
       } else {
-        // מצב "מציע" - טוען את הפוסטים של המשתמש להיסטוריה
-        console.log('🔵 מצב מציע - טוען פוסטים של המשתמש להיסטוריה:', uid);
+        logger.debug('ItemsScreen', 'Offerer mode: loading user posts for history', { uid });
         try {
           // טוען את הפוסטים של המשתמש
           const { apiService } = await import('../utils/apiService');
           const postsResponse = await apiService.getUserPosts(uid, 50, uid);
-          
+
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => 
+            const itemPosts = postsResponse.data.filter((post: any) =>
               post.post_type === 'item' || post.post_type === 'donation' || post.item_id
             );
-            
+
             // ממפה את הפוסטים
             const mappedPosts = itemPosts
               .map(mapPostToFeedItem)
-              .filter((post: FeedItem | null): post is FeedItem => 
+              .filter((post: FeedItem | null): post is FeedItem =>
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
               );
-            
+
             setRecentPosts(mappedPosts);
-            console.log('✅ טעינת פוסטים להיסטוריה הצליחה:', mappedPosts.length, 'פוסטים');
+            logger.debug('ItemsScreen', 'User posts for history loaded', { count: mappedPosts.length });
           } else {
-            console.warn('⚠️ טעינת פוסטים להיסטוריה נכשלה:', postsResponse.error);
+            logger.warn('ItemsScreen', 'Loading user posts for history failed', { error: postsResponse.error });
             setRecentPosts([]);
           }
         } catch (error) {
-          console.error('❌ שגיאה בטעינת פוסטים להיסטוריה:', error);
+          logger.error('ItemsScreen', 'Error loading user posts for history', { error });
           setRecentPosts([]);
         }
 
@@ -441,27 +436,23 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
         const forType = displayItems.filter(i => itemType === 'general' ? true : i.category === itemType);
         setAllItems(forType);
-        setRecentMine(forType);
       }
 
     } catch (error) {
-      console.error('❌ שגיאה בטעינת פריטים:', error);
-      Alert.alert('שגיאה', 'לא הצלחנו לטעון את הפריטים');
+      logger.error('ItemsScreen', 'Error loading items', { error });
+      Alert.alert(t('common:error'), t('items:loadItemsError', { defaultValue: 'Failed to load items' }));
       setAllItems([]);
-      setRecentMine([]);
-    } finally {
-      setIsRefreshing(false);
     }
-  };
+  }, [mode, itemType, selectedUser?.id, mapPostToFeedItem, t]);
 
   // Store loadItems in ref so it can be used in callbacks without dependency issues
   useEffect(() => {
     loadItemsRef.current = loadItems;
-  });
+  }, [loadItems]);
 
   useEffect(() => {
     loadItems();
-  }, [selectedUser, itemType, mode]);
+  }, [loadItems]);
 
   const getFilteredItems = useCallback(() => {
     // In search mode, filter posts instead of items
@@ -507,73 +498,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       return filtered;
     }
 
-    // In offer mode, filter items as before
-    let filtered = [...allItems];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(i =>
-        i.title.toLowerCase().includes(q) ||
-        (i.city || '').toLowerCase().includes(q) ||
-        (i.address || '').toLowerCase().includes(q) ||
-        (i.description || '').toLowerCase().includes(q) ||
-        (i.tags || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (selectedFilters.length > 0) {
-      selectedFilters.forEach(f => {
-        // סינון לפי מחיר
-        if (f === 'בחינם') filtered = filtered.filter(i => (i.price ?? 0) === 0);
-
-        // סינון לפי מצב
-        if (f === 'כמו חדש') filtered = filtered.filter(i => i.condition === 'like_new' || i.condition === 'new');
-        if (f === 'משומש') filtered = filtered.filter(i => i.condition === 'used');
-        if (f === 'לחלפים') filtered = filtered.filter(i => i.condition === 'for_parts');
-
-        // סינון לפי קטגוריה - בודק אם הפילטר תואם לאחת הקטגוריות
-        const matchingCategory = ITEM_CATEGORIES.find(cat => cat.label === f);
-        if (matchingCategory) {
-          filtered = filtered.filter(item => item.category === matchingCategory.id);
-        }
-
-        // סינון לפי תגיות ספציפיות לסוג
-        if (['ספות', 'ארונות', 'מיטות', 'גברים', 'נשים', 'ילדים', 'מטבח', 'חשמל', 'צעצועים'].includes(f)) {
-          filtered = filtered.filter(item => {
-            const tagsArray = typeof item.tags === 'string' ? item.tags.split(',') : (item.tags || []);
-            return tagsArray.includes(f);
-          });
-        }
-      });
-    }
-
-    const selectedSort = selectedSorts[0];
-    switch (selectedSort) {
-      case 'אלפביתי':
-        filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
-        break;
-      case 'לפי מיקום':
-        filtered.sort((a, b) => (a.city || '').localeCompare((b.city || ''), 'he'));
-        break;
-      case 'לפי תאריך':
-        filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        break;
-      case 'לפי דירוג':
-        filtered.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-        break;
-      case 'לפי רלוונטיות':
-        filtered.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-        break;
-    }
-
-    return filtered;
-  }, [allItems, searchQuery, selectedFilters, selectedSorts]);
+    return []; // Return empty in offer mode as we don't use filteredItems state anymore
+  }, [mode, allPosts, searchQuery, selectedFilters, selectedSorts]);
 
   // Update filtered items/posts whenever search/filter/sort changes
   useEffect(() => {
     if (mode) {
       setFilteredPosts(getFilteredItems() as FeedItem[]);
-    } else {
-      setFilteredItems(getFilteredItems() as DonationItem[]);
     }
   }, [getFilteredItems, mode]);
 
@@ -588,25 +519,20 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
   // Use same padding values as PostsReelsScreen for consistency
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
-  const COLUMN_GAP = isMobile ? 8 : 16;
+  const _COLUMN_GAP = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
-  const cardGap = COLUMN_GAP;
-  // Calculate card width: full width minus padding on both sides, minus gaps between columns
-  const cardWidth = numColumns === 1 
-    ? width - (screenPadding * 2) 
-    : (width - (screenPadding * 2) - (cardGap * (numColumns - 1))) / numColumns;
 
-  const handleSearch = (query: string, filters: string[] = [], sorts: string[] = [], _results?: any[]) => {
+  const handleSearch = useCallback((query: string, filters: string[] = [], sorts: string[] = [], _results?: any[]) => {
     setSearchQuery(query);
     setSelectedFilters(filters);
     setSelectedSorts(sorts);
-  };
+  }, []);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     setSearchQuery('');
     setSelectedFilters([]);
     setSelectedSorts([]);
-  };
+  }, []);
 
   const pickImage = async () => {
     try {
@@ -627,16 +553,16 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
       if (!result.canceled && result.assets[0]) {
         setImageUri(result.assets[0].uri);
-        console.log('✅ תמונה נבחרה:', result.assets[0].uri);
+        logger.debug('ItemsScreen', 'Image selected', { uri: result.assets[0].uri });
       }
     } catch (e) {
-      console.error('❌ שגיאה בבחירת תמונה:', e);
+      logger.error('ItemsScreen', 'Error selecting image', { error: e });
       Alert.alert('שגיאה', 'לא הצלחנו לטעון את התמונה');
     }
   };
 
   const handleDeleteItem = async (item: DonationItem) => {
-    console.warn('🗑️ מחיקת פריט - Soft Delete', { itemId: item.id, title: item.title });
+    logger.warn('ItemsScreen', 'Soft delete item', { itemId: item.id, title: item.title });
 
     Alert.alert(
       '🗑️ מחיקת פריט',
@@ -651,21 +577,19 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🗑️ מוחק פריט:', item.id);
+              logger.debug('ItemsScreen', 'Deleting item', { itemId: item.id });
 
               // Soft Delete דרך ה-API החדש
               await db.deleteDedicatedItem(item.id);
 
-              console.log('✅ פריט נמחק בשרת');
+              logger.debug('ItemsScreen', 'Item deleted on server');
 
               // הסרה מה-UI
-              setAllItems(prev => prev.filter(i => i.id !== item.id));
-              setFilteredItems(prev => prev.filter(i => i.id !== item.id));
-              setRecentMine(prev => prev.filter(i => i.id !== item.id));
+              setAllItems((prev: DonationItem[]) => prev.filter(i => i.id !== item.id));
 
               Alert.alert('✅ הצלחה', 'הפריט נמחק!');
             } catch (error: any) {
-              console.error('❌ שגיאה במחיקה:', error);
+              logger.error('ItemsScreen', 'Error deleting item', { error });
               Alert.alert('שגיאה', `לא הצלחנו למחוק את הפריט:\n${error.message || 'שגיאה לא ידועה'}`);
             }
           }
@@ -682,7 +606,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         return;
       }
 
-      console.log('🔵 מתחיל תהליך שמירת פריט...');
+      logger.debug('ItemsScreen', 'Starting save item flow');
 
       // Ensure we have a valid UUID - guests cannot create items
       if (!selectedUser?.id) {
@@ -696,10 +620,10 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       // המרת תמונה ל-base64
       let imageBase64 = null;
       if (imageUri) {
-        console.log('🖼️ ממיר תמונה ל-base64...');
+        logger.debug('ItemsScreen', 'Converting image to base64');
         imageBase64 = await convertImageToBase64(imageUri);
         if (imageBase64) {
-          console.log('✅ התמונה הומרה בהצלחה (גודל:', imageBase64.length, 'תווים)');
+          logger.debug('ItemsScreen', 'Image converted to base64', { length: imageBase64.length });
         }
       }
 
@@ -743,7 +667,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       // Backend will use defaults: 'pickup' for delivery_method and 'available' for status
       // If you want to customize these, add state variables and UI inputs for them
 
-      console.log('📤 שולח לשרת:', {
+      logger.debug('ItemsScreen', 'Sending to server', {
         title: itemData.title,
         city: itemData.city,
         address: itemData.address,
@@ -754,7 +678,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       // שליחה לשרת דרך API החדש
       const savedItem = await db.createDedicatedItem(itemData);
 
-      console.log('✅ נשמר בהצלחה בשרת:', savedItem);
+      logger.debug('ItemsScreen', 'Item saved successfully on server', { savedItem });
 
       // Optimistic Update: Add to local state immediately
       // Use the ID returned from the server (savedItem.id) - this is the proper ID generated by backend
@@ -779,7 +703,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         isDeleted: false,
       };
 
-      setAllItems(prev => [newItemForState, ...prev]);
+      setAllItems((prev: DonationItem[]) => [newItemForState, ...prev]);
       // Filter logic will run via useEffect but we can also update explicitly if needed
       // With optimistic update, we don't strictly need to await loadItems
       // But we can trigger it in background
@@ -798,24 +722,22 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       setSelectedFilters([]);
 
       Alert.alert(
-        '✅ נשמר בהצלחה!',
-        `הפריט "${savedItem.title}" נשמר במערכת`,
-        [{ text: 'אישור', style: 'default' }]
+        t('items:saveSuccessTitle', { defaultValue: 'Saved successfully!' }),
+        t('items:saveSuccessBody', { defaultValue: 'Item "{{title}}" was saved.', title: savedItem.title }),
+        [{ text: t('common:confirm'), style: 'default' }]
       );
 
     } catch (error: any) {
-      console.error('❌ שגיאה בשמירת פריט:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'שגיאה לא ידועה';
-      console.error('❌ Error details:', {
-        message: errorMessage,
-        status: error.response?.status,
-        data: error.response?.data,
-        fullError: error
+      logger.error('ItemsScreen', 'Error saving item', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
       });
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || t('items:unknownError', { defaultValue: 'Unknown error' });
       Alert.alert(
-        '❌ שגיאה',
-        `לא הצלחנו לשמור את הפריט:\n${errorMessage}`,
-        [{ text: 'סגור', style: 'cancel' }]
+        t('common:error'),
+        t('items:saveErrorBody', { defaultValue: 'Failed to save item', errorMessage }),
+        [{ text: t('common:close', { defaultValue: 'Close' }), style: 'cancel' }]
       );
     }
   };
@@ -838,13 +760,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setAllPosts(prev => prev.filter(p => p.id !== postId));
     setFilteredPosts(prev => prev.filter(p => p.id !== postId));
     setRecentPosts(prev => prev.filter(p => p.id !== postId));
-    
+
     // Background reload to ensure consistency (non-blocking)
     // The UI is already updated, so this is just for data sync
     setTimeout(() => {
       if (loadItemsRef.current) {
         loadItemsRef.current().catch(err => {
-          console.error('Error reloading items after close:', err);
+          logger.error('ItemsScreen', 'Error reloading items after close', { error: err });
         });
       }
     }, 100);
@@ -854,10 +776,10 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const renderPostItem = useCallback(({ item }: { item: FeedItem }) => {
     // Calculate available width: screen width minus horizontal padding on both sides
     const availableWidth = width - (screenPadding * 2);
-    
+
     // For grid view: with justifyContent: 'space-between', FlatList distributes items automatically
     // So each item gets availableWidth / numColumns (no need to account for gaps)
-    const itemWidth = numColumns > 1 
+    const itemWidth = numColumns > 1
       ? availableWidth / numColumns
       : availableWidth; // Full available width for list view
 
@@ -867,12 +789,10 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         cardWidth={itemWidth}
         numColumns={numColumns}
         onPress={(item) => {
-          // Navigate to post details or open modal
-          console.log('Post pressed:', item.id);
+          logger.debug('ItemsScreen', 'Post pressed', { postId: item.id });
         }}
         onCommentPress={(item) => {
-          // Handle comment press
-          console.log('Comment pressed:', item.id);
+          logger.debug('ItemsScreen', 'Comment pressed', { postId: item.id });
         }}
         onMorePress={handleMorePress}
         onPostClosed={handlePostClosed}
@@ -894,7 +814,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     </View>
   ), [searchQuery, selectedFilters, selectedSorts, handleClearAll]);
 
-  const renderItemCard = ({ item }: { item: DonationItem }) => (
+  const _renderItemCard = ({ item }: { item: DonationItem }) => (
     <TouchableOpacity style={localStyles.itemCard} onPress={() => handleItemPress(item)}>
       {/* תמונה base64 */}
       {item.image_base64 && (
@@ -923,7 +843,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     </TouchableOpacity>
   );
 
-  const renderRecentCard = ({ item }: { item: DonationItem }) => (
+  const _renderRecentCard = ({ item }: { item: DonationItem }) => (
     <View style={localStyles.itemCard}>
       {/* תמונה base64 */}
       {item.image_base64 && (
@@ -1294,10 +1214,10 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
                         cardWidth={recentCardWidth}
                         numColumns={1}
                         onPress={(item) => {
-                          console.log('Post pressed:', item.id);
+                          logger.debug('ItemsScreen', 'Post pressed', { postId: item.id });
                         }}
                         onCommentPress={(item) => {
-                          console.log('Comment pressed:', item.id);
+                          logger.debug('ItemsScreen', 'Comment pressed', { postId: item.id });
                         }}
                         onMorePress={handleMorePress}
                         onPostClosed={handlePostClosed}

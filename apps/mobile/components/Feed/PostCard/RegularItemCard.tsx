@@ -33,8 +33,8 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
     const isTranslationKey = (str: string | undefined | null): boolean => {
         if (!str) return false;
         // Check for both dot notation and colon notation
-        return (str.includes('.') || str.includes(':')) && 
-               (str.startsWith('post.') || str.startsWith('post:') ||
+        return (str.includes('.') || str.includes(':')) &&
+            (str.startsWith('post.') || str.startsWith('post:') ||
                 str.startsWith('donations.') || str.startsWith('donations:') ||
                 str.startsWith('common.') || str.startsWith('common:'));
     };
@@ -46,32 +46,32 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
 
     const displayTitle = !item.title || item.title.trim() === '' || item.title === 'donations.categories.items.title' || item.title === 'donations:categories.items.title'
         ? t('donations.categories.items.title')
-        : item.title === 'post.noTitle' 
+        : item.title === 'post.noTitle'
             ? t('post.noTitle')
             : isTranslationKey(item.title)
                 ? t(normalizeTranslationKey(item.title))
                 : item.title;
-    
+
     // Build full description for items
     const fullItemDescription = React.useMemo(() => {
         if (!item.title && !item.description) return '';
-        
-        const titlePart = item.title && item.title.trim() !== '' 
+
+        const titlePart = item.title && item.title.trim() !== ''
             ? (isTranslationKey(item.title) ? t(normalizeTranslationKey(item.title)) : item.title)
             : '';
         const descPart = item.description && item.description.trim() !== '' ? item.description : '';
-        
-        // Build full text: "בפריט [שם הפריט] למסירה - [תיאור]"
+
+        // Build full text using translation keys with interpolation
         if (titlePart && descPart) {
-            return `בפריט ${titlePart} למסירה - ${descPart}`;
+            return t('post.itemForDeliveryWithDesc', { title: titlePart, description: descPart });
         } else if (titlePart) {
-            return `בפריט ${titlePart} למסירה`;
+            return t('post.itemForDelivery', { title: titlePart });
         } else if (descPart) {
             return descPart;
         }
         return '';
     }, [item.title, item.description, t]);
-    
+
     // Safe access to user.name with fallback
     const userName = item.user?.name || 'common.unknownUser';
     const displayName = userName === 'common.unknownUser' ? t('common.unknownUser') : userName;
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     },
     placeholderContainer: {
         height: isMobile ? 180 : 280,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         padding: isMobile ? 16 : 24,

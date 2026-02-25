@@ -38,6 +38,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 
 type ChatDetailRouteParams = {
   conversationId: string;
@@ -94,7 +95,7 @@ export default function ChatDetailScreen() {
         setUserAvatar(newAvatar);
       } else {
         // If user not found, keep initial values but log warning
-        console.warn('User not found:', otherUserId);
+        logger.warn('ChatDetailScreen', 'User not found', { otherUserId });
         if (initialUserName && initialUserName !== t('chat:unknownUser')) {
           // Keep the initial name if it's not "unknown user"
           setUserName(initialUserName);
@@ -102,7 +103,7 @@ export default function ChatDetailScreen() {
         }
       }
     } catch (error) {
-      console.warn('Failed to load user profile:', error);
+      logger.warn('ChatDetailScreen', 'Failed to load user profile', { error });
       // Keep the initial values if loading fails, but only if they're not "unknown user"
       if (initialUserName && initialUserName !== t('chat:unknownUser')) {
         setUserName(initialUserName);
@@ -111,7 +112,7 @@ export default function ChatDetailScreen() {
     } finally {
       setIsLoadingProfile(false);
     }
-  }, [otherUserId, initialUserName, initialUserAvatar, t]);
+  }, [otherUserId, initialUserName, initialUserAvatar, t, isLoadingProfile]);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -123,7 +124,7 @@ export default function ChatDetailScreen() {
         await markMessagesAsRead(conversationId, selectedUser.id);
       }
     } catch (error) {
-      console.error('❌ Load messages error:', error);
+      logger.error('ChatDetailScreen', 'Load messages error', { error });
       Alert.alert('שגיאה', 'שגיאה בטעינת ההודעות');
     } finally {
       setIsLoading(false);
@@ -170,7 +171,7 @@ export default function ChatDetailScreen() {
         setMessages(newMessages);
 
         // Mark messages as read when they arrive
-        markMessagesAsRead(conversationId, selectedUser.id).catch(console.error);
+        markMessagesAsRead(conversationId, selectedUser.id).catch((err) => logger.error('ChatDetailScreen', 'Mark messages read failed', { err }));
       });
     }
 
@@ -181,7 +182,7 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId, selectedUser, loadMessages]);
 
-  const generateFakeResponse = async () => {
+  const _generateFakeResponse = async () => {
     const responses = [
       'תודה על המידע! מתי אפשר לבוא לקחת?',
       'האם אפשר לקבל תמונה של הספה?',
@@ -202,7 +203,7 @@ export default function ChatDetailScreen() {
         status: 'sent',
       });
     } catch (error) {
-      console.error('❌ Send fake response error:', error);
+      logger.error('ChatDetailScreen', 'Send fake response error', { error });
     }
   };
 
@@ -257,7 +258,7 @@ export default function ChatDetailScreen() {
       ));
 
     } catch (error) {
-      console.error('❌ Send message error:', error);
+      logger.error('ChatDetailScreen', 'Send message error', { error });
 
       // Remove the temp message and restore the text
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
@@ -311,15 +312,14 @@ export default function ChatDetailScreen() {
         );
         uploadedUrl = uploadResult.url;
       } catch (uploadError: any) {
-        console.error('❌ Upload file error:', uploadError);
-        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
-        console.error('❌ Upload error details:', {
+        logger.error('ChatDetailScreen', 'Upload file error', {
           error: uploadError,
           fullPath,
           fileName: fileData.name,
           fileSize: fileData.size,
           mimeType: fileData.mimeType,
         });
+        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
@@ -353,13 +353,13 @@ export default function ChatDetailScreen() {
         fileData: updatedFileData,
       }, [selectedUser.id, otherUserId]);
 
-      console.log('✅ File message sent');
+      logger.info('ChatDetailScreen', 'File message sent');
 
       // Reload messages to show the new message
       await loadMessages();
 
     } catch (error) {
-      console.error('❌ Send file error:', error);
+      logger.error('ChatDetailScreen', 'Send file error', { error });
       setShowUploadModal(false);
       setUploadingFile(null);
       setUploadProgress(0);
@@ -527,13 +527,12 @@ export default function ChatDetailScreen() {
                 return { paddingBottom };
               })()
             ]}
-            onContentSizeChange={(contentWidth, contentHeight) => {
-              // Use setTimeout to ensure scroll happens after layout
+            onContentSizeChange={(_contentWidth, _contentHeight) => {
               setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
               }, 100);
             }}
-            onLayout={(event) => {
+            onLayout={(_event) => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }}
             showsVerticalScrollIndicator={false}

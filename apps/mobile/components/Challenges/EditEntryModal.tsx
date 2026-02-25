@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { DailyTrackerChallenge } from '../../globals/types';
+import colors from '../../globals/colors';
+import { FontSizes } from '../../globals/constants';
 
 interface EditEntryModalProps {
   visible: boolean;
@@ -116,8 +118,8 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
             <Switch
               value={value === 1}
               onValueChange={(val) => setValue(val ? 1 : 0)}
-              trackColor={{ false: '#F44336', true: '#4CAF50' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ false: colors.error, true: colors.success }}
+              thumbColor={colors.white}
             />
           </View>
         </View>
@@ -267,22 +269,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: '80%',
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSizes.heading2,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   dateText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -290,25 +292,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 14,
+    fontSize: FontSizes.small,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
+    fontSize: FontSizes.medium,
+    backgroundColor: colors.backgroundSecondary,
+    color: colors.textPrimary,
   },
   notesInput: {
     height: 80,
   },
   hint: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: FontSizes.caption,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   booleanContainer: {
@@ -319,13 +322,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
-    color: '#333',
+    color: colors.textPrimary,
   },
   timeRow: {
     flexDirection: 'row',
@@ -336,15 +339,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timeLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: FontSizes.caption,
+    color: colors.textSecondary,
     marginBottom: 4,
     textAlign: 'center',
   },
   timeSeparator: {
-    fontSize: 24,
+    fontSize: FontSizes.heading1,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginHorizontal: 8,
   },
   buttonRow: {
@@ -360,27 +363,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonCancel: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.backgroundSecondary,
   },
   buttonDelete: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: `${colors.error}18`,
   },
   buttonSave: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.success,
   },
   buttonTextCancel: {
-    color: '#666',
-    fontSize: 16,
+    color: colors.textSecondary,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
   },
   buttonTextDelete: {
-    color: '#F44336',
-    fontSize: 16,
+    color: colors.error,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
   },
   buttonTextSave: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.white,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
   },
 });

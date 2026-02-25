@@ -47,7 +47,6 @@ const { width, height } = Dimensions.get("window");
 
 // --- Constants ---
 const kcStats = charities[0]?.statistics || [];
-const STATS_BUBBLE_COUNT = kcStats.length;
 const BACKGROUND_BUBBLES_COUNT = 15;
 const MIN_SIZE = 60;
 const MAX_SIZE = 160;
@@ -274,7 +273,7 @@ const AnimatedStatsBubble: React.FC<AnimatedStatsBubbleProps> = ({
   value,
   name,
   icon,
-  category,
+  category: _category,
   color,
   directionX,
   directionY,
@@ -327,7 +326,7 @@ const AnimatedStatsBubble: React.FC<AnimatedStatsBubbleProps> = ({
   }, [isSelected, animatedOpacity, animatedScale]);
 
   const handleInternalPress = useCallback(
-    (event: GestureResponderEvent) => {
+    (_event: GestureResponderEvent) => {
       if (!isBackground) {
         onPress(id);
       }

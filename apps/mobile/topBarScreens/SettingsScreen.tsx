@@ -60,7 +60,7 @@ export default function SettingsScreen() {
     enabled: true,
   });
   const scrollViewRef = scrollRef;
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_refreshKey, setRefreshKey] = useState(0);
   const { t } = useTranslation(['settings', 'common']);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'he');
   const [showLangModal, setShowLangModal] = useState(false);
@@ -72,19 +72,18 @@ export default function SettingsScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('⚙️ SettingsScreen - Screen focused, refreshing data...');
-      // Force re-render by updating refresh key
+      logger.debug('SettingsScreen', 'Screen focused, refreshing data');
       setRefreshKey(prev => prev + 1);
     }, [])
   );
 
   // Listen for authentication state changes
   useEffect(() => {
-    console.log('⚙️ SettingsScreen - Auth state changed:', {
+    logger.debug('SettingsScreen', 'Auth state changed', {
       isAuthenticated,
       isGuestMode,
-      selectedUser: selectedUser?.name || 'null',
-      mode
+      selectedUserName: selectedUser?.name ?? 'null',
+      mode,
     });
 
     // If user is no longer authenticated, navigate based on web mode
@@ -120,37 +119,27 @@ export default function SettingsScreen() {
     }
   }, [isAuthenticated, isGuestMode, selectedUser, navigation, mode]);
 
-  // Debug logs for development
-  console.log('⚙️ SettingsScreen - Rendered with isGuestMode:', isGuestMode);
-  console.log('⚙️ SettingsScreen - Platform:', Platform.OS);
-  console.log('⚙️ SettingsScreen - Screen dimensions:', { width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
+  logger.debug('SettingsScreen', 'Rendered', { isGuestMode, platform: Platform.OS, width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
 
-  const handleBackPress = () => {
-    console.log('⚙️ SettingsScreen - Back pressed');
+  const _handleBackPress = () => {
+    logger.debug('SettingsScreen', 'Back pressed');
     navigation.goBack();
   };
 
   const handleAboutPress = () => {
-    console.log('⚙️ SettingsScreen - About pressed');
+    logger.debug('SettingsScreen', 'About pressed');
     navigation.navigate('LandingSiteScreen' as never);
   };
 
-  /**
- * מטפל בלחיצה על כפתור היציאה
- * לוגיקה שונה למצב אורח ולמשתמש מחובר:
- * - מצב אורח: יציאה ישירה ללא התראה (רק חזרה למסך הכניסה)
- * - משתמש מחובר: הצגת התראה לפני היציאה (פעולה מסוכנת)
- */
+  /** Handles logout button press. Guest: direct logout; authenticated: show confirmation. */
   const handleLogoutPress = () => {
-    console.log('⚙️ 14SettingsScreen - Logout pressed');
-    console.log('⚙️ SettingsScreen - Platform:', Platform.OS);
-    console.log('⚙️ SettingsScreen - isGuestMode:', isGuestMode);
+    logger.debug('SettingsScreen', 'Logout pressed', { platform: Platform.OS, isGuestMode });
 
     // Guest mode - direct logout without warning as it's not dangerous
     if (isGuestMode) {
-      console.log('⚙️ SettingsScreen - Guest mode detected, direct logout without confirmation');
+      logger.debug('SettingsScreen', 'Guest mode, direct logout without confirmation');
       signOut().then(() => {
-        console.log('⚙️ SettingsScreen - Guest logout completed');
+        logger.debug('SettingsScreen', 'Guest logout completed');
         setTimeout(() => {
           navigateAfterLogout();
         }, 100);
@@ -159,8 +148,7 @@ export default function SettingsScreen() {
     }
 
     // Authenticated user - show warning as this is a dangerous action
-    // Use Modal for both web and native for consistent behavior
-    console.log('⚙️ SettingsScreen - Showing logout confirmation modal');
+    logger.debug('SettingsScreen', 'Showing logout confirmation modal');
     setShowLogoutModal(true);
   };
 
@@ -198,11 +186,10 @@ export default function SettingsScreen() {
 
   // Helper function to handle logout confirmation
   const handleLogoutConfirm = async () => {
-    console.log('⚙️ SettingsScreen - Logout confirmed');
+    logger.debug('SettingsScreen', 'Logout confirmed');
     setShowLogoutModal(false);
-    console.log('⚙️ SettingsScreen - Calling signOut()');
     await signOut();
-    console.log('⚙️ SettingsScreen - signOut() completed');
+    logger.debug('SettingsScreen', 'signOut completed');
 
     // Short delay to ensure state is updated before navigation
     setTimeout(() => {
@@ -212,12 +199,12 @@ export default function SettingsScreen() {
 
   // Helper function to handle logout cancellation
   const handleLogoutCancel = () => {
-    console.log('⚙️ SettingsScreen - Logout cancelled');
+    logger.debug('SettingsScreen', 'Logout cancelled');
     setShowLogoutModal(false);
   };
 
   const handleNotificationsPress = () => {
-    console.log('⚙️ SettingsScreen - Notifications pressed');
+    logger.debug('SettingsScreen', 'Notifications pressed');
     if (Platform.OS === 'web') {
       alert(t('settings:notificationsComingSoon'));
     } else {
@@ -226,7 +213,7 @@ export default function SettingsScreen() {
   };
 
   const handlePrivacyPress = () => {
-    console.log('⚙️ SettingsScreen - Privacy pressed');
+    logger.debug('SettingsScreen', 'Privacy pressed');
     if (Platform.OS === 'web') {
       alert(t('settings:privacyComingSoon'));
     } else {
@@ -235,7 +222,7 @@ export default function SettingsScreen() {
   };
 
   const handleThemePress = () => {
-    console.log('⚙️ SettingsScreen - Theme pressed');
+    logger.debug('SettingsScreen', 'Theme pressed');
     if (Platform.OS === 'web') {
       alert(t('settings:themeComingSoon'));
     } else {
@@ -263,12 +250,12 @@ export default function SettingsScreen() {
   };
 
   const handleClearCachePress = () => {
-    console.log('⚙️ SettingsScreen - Clear cache pressed');
+    logger.debug('SettingsScreen', 'Clear cache pressed');
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(t('settings:clearCacheConfirm'));
       if (confirmed) {
-        console.log('⚙️ SettingsScreen - Cache cleared');
+        logger.debug('SettingsScreen', 'Cache cleared');
         alert(t('settings:cacheCleared'));
       }
     } else {
@@ -284,7 +271,7 @@ export default function SettingsScreen() {
             text: t('settings:clear'),
             style: 'destructive',
             onPress: () => {
-              console.log('⚙️ SettingsScreen - Cache cleared');
+              logger.debug('SettingsScreen', 'Cache cleared');
               Alert.alert(t('common:done'), t('settings:cacheCleared'));
             },
           },
@@ -322,7 +309,7 @@ export default function SettingsScreen() {
           adminId = resolveRes.data.id;
         }
       } catch (e) {
-        console.warn('Method 1 (resolveUserId) failed', e);
+        logger.warn('SettingsScreen', 'resolveUserId failed', { error: String(e) });
       }
 
       if (!adminId) {
@@ -340,13 +327,12 @@ export default function SettingsScreen() {
             }
           }
         } catch (e) {
-          console.warn('Method 2 (getUsers) failed', e);
+          logger.warn('SettingsScreen', 'getUsers failed', { error: String(e) });
         }
       }
 
       if (!adminId) {
-        console.error('Admin user not found for report via any method');
-        // Fallback for development/testing if needed, or throw
+        logger.error('SettingsScreen', 'Admin user not found for report via any method');
         throw new Error('Admin not found');
       }
 
@@ -385,7 +371,7 @@ export default function SettingsScreen() {
       }
 
     } catch (error) {
-      console.error('Failed to send report:', error);
+      logger.error('SettingsScreen', 'Failed to send report', { error: String(error) });
       if (Platform.OS === 'web') {
         alert(t('settings:reportError'));
       } else {
@@ -399,13 +385,12 @@ export default function SettingsScreen() {
 
   // Test function for scroll functionality (development only)
   const handleScrollTest = () => {
-    console.log('🧪 SettingsScreen - Testing scroll functionality');
+    logger.debug('SettingsScreen', 'Testing scroll functionality');
     if (scrollViewRef.current) {
-      console.log('🧪 SettingsScreen - ScrollView ref exists, attempting to scroll');
+      logger.debug('SettingsScreen', 'ScrollView ref exists, attempting to scroll');
       if ('scrollTo' in scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 200, animated: true });
         setTimeout(() => {
-          console.log('🧪 SettingsScreen - Scrolling back to top');
           if (scrollViewRef.current && 'scrollTo' in scrollViewRef.current) {
             scrollViewRef.current.scrollTo({ y: 0, animated: true });
           }
@@ -413,14 +398,13 @@ export default function SettingsScreen() {
       } else if ('scrollToOffset' in scrollViewRef.current) {
         (scrollViewRef.current as any).scrollToOffset({ offset: 200, animated: true });
         setTimeout(() => {
-          console.log('🧪 SettingsScreen - Scrolling back to top');
           if (scrollViewRef.current && 'scrollToOffset' in scrollViewRef.current) {
             (scrollViewRef.current as any).scrollToOffset({ offset: 0, animated: true });
           }
         }, 2000);
       }
     } else {
-      console.log('🧪 SettingsScreen - ScrollView ref is null!');
+      logger.debug('SettingsScreen', 'ScrollView ref is null');
     }
   };
 
@@ -678,27 +662,24 @@ export default function SettingsScreen() {
           onScroll={(event) => {
             onScroll(event);
             const _offsetY = event.nativeEvent.contentOffset.y;
-            // console.log('📜 SettingsScreen - Layout measurement:', event.nativeEvent.layoutMeasurement);
           }}
           onScrollBeginDrag={() => {
-            console.log('📜 SettingsScreen - Scroll begin drag detected!');
+            logger.debug('SettingsScreen', 'Scroll begin drag');
           }}
           onScrollEndDrag={() => {
-            console.log('📜 SettingsScreen - Scroll end drag detected!');
+            logger.debug('SettingsScreen', 'Scroll end drag');
           }}
           onMomentumScrollBegin={() => {
-            console.log('📜 SettingsScreen - Momentum scroll begin!');
+            logger.debug('SettingsScreen', 'Momentum scroll begin');
           }}
           onMomentumScrollEnd={() => {
-            console.log('📜 SettingsScreen - Momentum scroll end!');
+            logger.debug('SettingsScreen', 'Momentum scroll end');
           }}
           onContentSizeChange={(contentWidth, contentHeight) => {
-            console.log('📜 SettingsScreen - Content size changed:', { contentWidth, contentHeight });
-            console.log('📜 SettingsScreen - Screen height:', SCREEN_HEIGHT);
-            console.log('📜 SettingsScreen - Should scroll:', contentHeight > SCREEN_HEIGHT);
+            logger.debug('SettingsScreen', 'Content size changed', { contentWidth, contentHeight, screenHeight: SCREEN_HEIGHT, shouldScroll: contentHeight > SCREEN_HEIGHT });
           }}
           onLayout={(event) => {
-            console.log('📜 SettingsScreen - ScrollView layout:', event.nativeEvent.layout);
+            logger.debug('SettingsScreen', 'ScrollView layout', { layout: event.nativeEvent.layout });
           }}
           scrollEventThrottle={16}
         >

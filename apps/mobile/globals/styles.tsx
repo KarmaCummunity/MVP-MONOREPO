@@ -1,8 +1,8 @@
 import { StyleSheet, Platform } from "react-native";
 import colors from "./colors";
-import { 
-  biDiTextAlign, 
-  rowDirection, 
+import {
+  biDiTextAlign,
+  rowDirection,
   scaleSize
 } from "./responsive";
 import { FontSizes, LAYOUT_CONSTANTS } from "./constants";
@@ -29,7 +29,7 @@ const colorToRgba = (color: string, opacity: number): string => {
   if (!color || typeof color !== 'string') {
     return `rgba(0, 0, 0, ${opacity})`;
   }
-  
+
   // If color is already rgba/rgb, extract RGB values
   if (color.startsWith('rgba(')) {
     const matches = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -37,7 +37,7 @@ const colorToRgba = (color: string, opacity: number): string => {
       return `rgba(${matches[1]}, ${matches[2]}, ${matches[3]}, ${opacity})`;
     }
   }
-  
+
   // If color is hex (#RRGGBB or #RGB)
   if (color.startsWith('#')) {
     const hex = color.slice(1);
@@ -46,7 +46,7 @@ const colorToRgba = (color: string, opacity: number): string => {
     const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   }
-  
+
   // Fallback to black with opacity
   return `rgba(0, 0, 0, ${opacity})`;
 };
@@ -513,8 +513,8 @@ export const styles = StyleSheet.create({
       web: {
         alignSelf: "stretch", // Use full width on web
         width: "100%", // Full width
-        maxWidth: "100vw", // Use viewport width
-        minHeight: "100vh", // Ensure full height
+        maxWidth: "100%", // Use full width
+        minHeight: "100%", // Ensure full height
       },
     }),
     backgroundColor: colors.background,

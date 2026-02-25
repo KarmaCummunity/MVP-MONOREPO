@@ -133,7 +133,7 @@ export default function KnowledgeScreen({
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
 
-  const { selectedUser, isRealAuth } = useUser();
+  const { isRealAuth } = useUser();
 
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to teach/share), false = seeker (needs learning)
@@ -145,23 +145,20 @@ export default function KnowledgeScreen({
   // If no mode in URL, set it to search (default) and update URL
   useEffect(() => {
     if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null' || routeParams.mode === '') {
-      // URL doesn't have mode, so we're in default search mode
-      // Make sure state reflects this and update URL
       if (mode !== false) {
         setMode(false);
       }
-      // Update URL to include /search
       (navigation as any).setParams({ mode: 'search' });
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode, navigation]);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("");
-  const [selectedSort, setSelectedSort] = useState("");
+  const [_searchQuery, setSearchQuery] = useState("");
+  const [_selectedFilter, setSelectedFilter] = useState("");
+  const [_selectedSort, setSelectedSort] = useState("");
   const [filteredEducationalLinks, setFilteredEducationalLinks] = useState(educationalLinks);
   const [filteredCommunityContent, setFilteredCommunityContent] = useState(communityContent);
-  const [selectedMentorship, setSelectedMentorship] = useState<any>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_selectedMentorship, setSelectedMentorship] = useState<any>(null);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
@@ -171,7 +168,7 @@ export default function KnowledgeScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {

@@ -14,30 +14,12 @@ import {
   IsBoolean,
 } from "class-validator";
 
-// Challenge types
-export enum ChallengeType {
-  BOOLEAN = "BOOLEAN",
-  NUMERIC = "NUMERIC",
-  DURATION = "DURATION",
-}
-
-export enum ChallengeFrequency {
-  DAILY = "DAILY",
-  WEEKLY = "WEEKLY",
-  FLEXIBLE = "FLEXIBLE",
-}
-
-export enum ChallengeDifficulty {
-  EASY = "easy",
-  MEDIUM = "medium",
-  HARD = "hard",
-  EXPERT = "expert",
-}
-
-export enum GoalDirection {
-  MAXIMIZE = "maximize",
-  MINIMIZE = "minimize",
-}
+import {
+  ChallengeType,
+  ChallengeFrequency,
+  ChallengeDifficulty,
+  GoalDirection,
+} from "@kc/shared-types";
 
 // DTO for creating a new community challenge
 export class CreateCommunityGroupChallengeDto {

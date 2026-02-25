@@ -32,7 +32,7 @@ const AutocompleteInputOnly: React.FC<AutocompleteInputOnlyProps> = ({
 }) => {
   const inputRef = useRef<TextInput>(null);
 
-  const handleLayout = (event: LayoutChangeEvent) => {
+  const handleLayout = (_event: LayoutChangeEvent) => {
     // We're measuring the current element, so inputRef.current won't be null here
     inputRef.current?.measureInWindow((x, y, width, height) => {
       onLayoutMeasure(x, y, width, height, inputRef); // Pass the ref as is

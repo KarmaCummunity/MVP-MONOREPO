@@ -21,6 +21,7 @@ import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
+import { useTranslation } from 'react-i18next';
 import { apiService, ApiResponse } from '../utils/apiService';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 
@@ -50,12 +51,14 @@ interface AdminTable {
   name: string;
   description?: string;
   columns: TableColumn[];
+  rows?: TableRow[];
 }
 
 export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProps) {
   useAdminProtection();
   const { selectedUser } = useUser();
   const { tableId, tableName } = route.params;
+  const { t } = useTranslation(['admin', 'common']);
 
   const [table, setTable] = useState<AdminTable | null>(null);
   const [rows, setRows] = useState<TableRow[]>([]);
@@ -78,11 +81,11 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
         setTable(res.data);
         setRows(res.data.rows || []);
       } else {
-        Alert.alert('שגיאה', res.error || 'לא ניתן לטעון טבלה');
+        Alert.alert(t('common:error'), res.error || t('admin:tables.loadError'));
       }
     } catch (error) {
       console.error('Error fetching table:', error);
-      Alert.alert('שגיאה', 'שגיאה בטעינת טבלה');
+      Alert.alert(t('common:error'), t('admin:tables.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -116,7 +119,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
   const openEditModal = (row: TableRow) => {
     const rowData = { ...row.data };
     const dates: Record<string, Date> = {};
-    
+
     if (table) {
       table.columns.forEach((col) => {
         if (col.data_type === 'date' && rowData[col.name]) {
@@ -143,7 +146,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
       if (col.is_required) {
         const value = formData[col.name];
         if (value === undefined || value === null || value === '') {
-          Alert.alert('שגיאה', `שדה חובה: ${col.name}`);
+          Alert.alert(t('common:error'), t('admin:tables.requiredField', { name: col.name }));
           return;
         }
       }
@@ -176,12 +179,12 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
           { data: rowData }
         );
         if (res.success) {
-          Alert.alert('הצלחה', 'רשומה עודכנה בהצלחה');
+          Alert.alert(t('common:done'), t('admin:tables.updateSuccess'));
           setShowRowModal(false);
           resetForm();
           await fetchTable();
         } else {
-          Alert.alert('שגיאה', res.error || 'שגיאה בעדכון רשומה');
+          Alert.alert(t('common:error'), res.error || t('admin:tables.updateError'));
         }
         setUpdating(null);
       } else {
@@ -190,18 +193,18 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
           data: rowData,
         });
         if (res.success) {
-          Alert.alert('הצלחה', 'רשומה נוספה בהצלחה');
+          Alert.alert(t('common:done'), t('admin:tables.createSuccess'));
           setShowRowModal(false);
           resetForm();
           await fetchTable();
         } else {
-          Alert.alert('שגיאה', res.error || 'שגיאה ביצירת רשומה');
+          Alert.alert(t('common:error'), res.error || t('admin:tables.createError'));
         }
         setCreating(false);
       }
     } catch (error) {
       console.error('Error saving row:', error);
-      Alert.alert('שגיאה', 'שגיאה בשמירת רשומה');
+      Alert.alert(t('common:error'), t('admin:tables.saveFailed'));
       if (editingRowId) {
         setUpdating(null);
       } else {
@@ -211,24 +214,24 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
   };
 
   const handleDeleteRow = (row: TableRow) => {
-    Alert.alert('מחיקת רשומה', 'למחוק את הרשומה?', [
-      { text: 'ביטול', style: 'cancel' },
+    Alert.alert(t('admin:tables.deleteTitle'), t('admin:tables.deleteConfirm'), [
+      { text: t('common:cancel'), style: 'cancel' },
       {
-        text: 'מחק',
+        text: t('common:delete'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(row.id);
           try {
             const res = await apiService.adminTables.deleteRow(tableId, row.id);
             if (res.success) {
-              Alert.alert('הצלחה', 'רשומה נמחקה בהצלחה');
+              Alert.alert(t('common:done'), t('admin:tables.deleteSuccess'));
               await fetchTable();
             } else {
-              Alert.alert('שגיאה', res.error || 'שגיאה במחיקת רשומה');
+              Alert.alert(t('common:error'), res.error || t('admin:tables.deleteFailed'));
             }
           } catch (error) {
             console.error('Error deleting row:', error);
-            Alert.alert('שגיאה', 'שגיאה במחיקת רשומה');
+            Alert.alert(t('common:error'), t('admin:tables.deleteFailed'));
           } finally {
             setDeleting(null);
           }
@@ -311,7 +314,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>טבלה לא נמצאה</Text>
+          <Text style={styles.emptyText}>{t('admin:tables.tableNotFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -326,7 +329,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
         )}
         <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
           <Ionicons name="add" size={20} color={colors.white} />
-          <Text style={styles.addText}>רשומה חדשה</Text>
+          <Text style={styles.addText}>{t('admin:tables.addRow')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -339,7 +342,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
             </View>
           ) : rows.length === 0 ? (
             <View style={styles.emptyRow}>
-              <Text style={styles.emptyText}>אין רשומות</Text>
+              <Text style={styles.emptyText}>{t('admin:tables.noData')}</Text>
             </View>
           ) : (
             <FlatList
@@ -366,7 +369,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
           <View style={styles.modalCard}>
             <ScrollView>
               <Text style={styles.modalTitle}>
-                {editingRowId ? 'עריכת רשומה' : 'רשומה חדשה'}
+                {editingRowId ? t('admin:tables.editRow') : t('admin:tables.addRow')}
               </Text>
 
               {table.columns.map((col) => (
@@ -386,7 +389,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                             updateFormField(col.name, date.toISOString());
                           }
                         }}
-                        placeholder="בחר תאריך"
+                        placeholder={t('admin:tables.selectDate')}
                       />
                     ) : (
                       <TouchableOpacity
@@ -397,8 +400,8 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                           {dateValues[col.name]
                             ? dateValues[col.name].toLocaleDateString('he-IL')
                             : formData[col.name]
-                            ? new Date(formData[col.name]).toLocaleDateString('he-IL')
-                            : 'בחר תאריך'}
+                              ? new Date(formData[col.name]).toLocaleDateString('he-IL')
+                              : t('admin:tables.selectDate')}
                         </Text>
                         <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                       </TouchableOpacity>
@@ -406,7 +409,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                   ) : col.data_type === 'number' ? (
                     <TextInput
                       style={styles.input}
-                      placeholder={`הכנס ${col.name}`}
+                      placeholder={t('admin:tables.fieldPlaceholder', { name: col.name })}
                       placeholderTextColor={colors.textSecondary}
                       value={formData[col.name]?.toString() || ''}
                       onChangeText={(text) => updateFormField(col.name, text)}
@@ -415,7 +418,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                   ) : (
                     <TextInput
                       style={[styles.input, styles.textArea]}
-                      placeholder={`הכנס ${col.name}`}
+                      placeholder={t('admin:tables.fieldPlaceholder', { name: col.name })}
                       placeholderTextColor={colors.textSecondary}
                       value={formData[col.name]?.toString() || ''}
                       onChangeText={(text) => updateFormField(col.name, text)}
@@ -434,7 +437,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                     resetForm();
                   }}
                 >
-                  <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>ביטול</Text>
+                  <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>{t('common:cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtn, styles.modalSave]}
@@ -444,7 +447,7 @@ export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProp
                   {creating || updating !== null ? (
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : (
-                    <Text style={styles.modalBtnText}>שמור</Text>
+                    <Text style={styles.modalBtnText}>{t('common:done')}</Text>
                   )}
                 </TouchableOpacity>
               </View>

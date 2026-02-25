@@ -42,7 +42,6 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
       // NOTE: Links functionality has been removed - links table was deleted
       // All user data is now unified in user_profiles table with UUID identifiers
       // TODO: Implement alternative storage if links functionality is still needed
-      const allLinksData: any[] = []; // db.listAllLinks() is no longer available
       console.log('⚠️ Links functionality has been removed');
 
       // Filter by category if provided
@@ -174,7 +173,7 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
           t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string
         );
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert(
         t('common:error', { defaultValue: 'שגיאה' }) as string,
         t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string

@@ -33,8 +33,8 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const { t } = useTranslation(['common']);
-  const { setSelectedUserWithMode, setGuestMode, selectedUser, isGuestMode } = useUser();
+  const { t: _t } = useTranslation(['common']);
+  const { setSelectedUserWithMode, setGuestMode } = useUser();
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -45,9 +45,9 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
   const [emailValue, setEmailValue] = useState('');
   const [passwordValue, setPasswordValue] = useState('');
   const [isEmailBusy, setIsEmailBusy] = useState(false);
-  const [emailExists, setEmailExists] = useState<boolean | null>(null);
-  const [emailStatusMessage, setEmailStatusMessage] = useState<string | null>(null);
-  const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
+  const [_emailExists, setEmailExists] = useState<boolean | null>(null);
+  const [_emailStatusMessage, setEmailStatusMessage] = useState<string | null>(null);
+  const [_emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
 
   // Organization login state
   const [orgLoginOpen, setOrgLoginOpen] = useState(false);

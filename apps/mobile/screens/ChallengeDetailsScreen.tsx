@@ -149,7 +149,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
     }
 
     if (!isJoined) {
-      Alert.alert(t('common:error'), 'נא להצטרף לאתגר תחילה');
+      Alert.alert(t('common:error'), t('challenges:messages.loginToJoin')); // Better than hardcoded Hebrew
       return;
     }
 
@@ -160,7 +160,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
     } else {
       const parsedValue = parseFloat(entryValue);
       if (isNaN(parsedValue) || parsedValue < 0) {
-        Alert.alert(t('common:error'), 'נא להזין ערך חוקי');
+        Alert.alert(t('common:error'), t('challenges:fields.valuePlaceholder'));
         return;
       }
       value = parsedValue;
@@ -339,7 +339,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
             <View style={styles.participationHeader}>
               <Ionicons name="checkmark-circle" size={24} color={colors.success} />
               <Text style={styles.participationText}>
-                {t('challenges:messages.youAreParticipating', 'אתה משתתף באתגר זה')}
+                {t('challenges:messages.youAreParticipating')}
               </Text>
             </View>
             <TouchableOpacity
@@ -418,9 +418,9 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         {/* Recent Activity (Anonymous - shows activity without personal data) */}
         {isJoined && (
           <View style={styles.activityCard}>
-            <Text style={styles.sectionTitle}>{t('challenges:details.recentActivity', 'פעילות אחרונה')}</Text>
+            <Text style={styles.sectionTitle}>{t('challenges:details.recentActivity')}</Text>
             <Text style={styles.activitySubtitle}>
-              {t('challenges:messages.anonymousActivity', 'הביצועים שלך פרטיים ואנונימיים')}
+              {t('challenges:messages.anonymousActivity')}
             </Text>
             {recentEntries.length > 0 ? (
               recentEntries.slice(0, 5).map((entry) => (
@@ -495,7 +495,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
           postTitle={challenge.title || 'אתגר'}
           postUser={{
             id: challenge.creator_id || '',
-            name: challenge.creator_name || 'משתמש',
+            name: challenge.creator_name || t('common:unknownUser'),
             avatar: 'https://picsum.photos/seed/user/100/100',
           }}
           onClose={() => setShowCommentsModal(false)}

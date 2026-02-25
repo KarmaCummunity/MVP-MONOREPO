@@ -17,6 +17,9 @@
     },
     "error": "שגיאה",
     "errorTitle": "שגיאה",
+    "success": "הצלחה",
+    "reportSent": "הדיווח נשלח בהצלחה",
+    "reportFailed": "שליחת הדיווח נכשלה",
     "time": {
       "now": "עכשיו",
       "minutesAgo": "לפני {{count}} דקות",
@@ -94,7 +97,9 @@
       "closedSuccess": "הפוסט נסגר בהצלחה",
       "closeError": "שגיאה בסגירת הפוסט",
       "hideSuccess": "הפוסט הוסתר בהצלחה",
-      "hideError": "שגיאה בהסתרת הפוסט"
+      "hideError": "שגיאה בהסתרת הפוסט",
+      "itemForDelivery": "בפריט {{title}} למסירה",
+      "itemForDeliveryWithDesc": "בפריט {{title}} למסירה - {{description}}"
     },
     "edit_post": {
       "title": "עריכת פוסט",
@@ -254,7 +259,14 @@
     "loadError": "שגיאה בטעינת התגובות",
     "sendError": "שגיאה בשליחת התגובה",
     "empty": "אין תגובות עדיין",
-    "beFirst": "היה הראשון להגיב!"
+    "beFirst": "היה הראשון להגיב!",
+    "deleteTitle": "מחיקת תגובה",
+    "deleteConfirm": "האם אתה בטוח שברצונך למחוק את התגובה?",
+    "deleteSuccess": "התגובה נמחקה",
+    "deleteError": "לא הצלחנו למחוק את התגובה",
+    "loginRequiredToComment": "יש להתחבר כדי להגיב",
+    "loginRequiredToLike": "יש להתחבר כדי לעשות לייק",
+    "commentTooLong": "התגובה ארוכה מדי (מקסימום 2000 תווים)"
   },
   "chat": {
     "title": "צ׳אטים",
@@ -453,6 +465,34 @@
     "weeklyDonations": "תרומות השבוע",
     "activeCharities": "עמותות פעילות",
     "categoriesTitle": "קטגוריות תרומות",
+    "details": {
+      "itemTitle": "פרטי הפריט",
+      "rideTitle": "פרטי הטרמפ",
+      "description": "תיאור:",
+      "condition": "מצב:",
+      "quantity": "כמות:",
+      "location": "מיקום:",
+      "dateTime": "תאריך ושעה:",
+      "route": "מסלול:",
+      "free": "בחינם",
+      "availableSeats": "מקומות פנויים:",
+      "seats": "מקומות",
+      "notes": "הערות:",
+      "tags": "תגיות:",
+      "publishedBy": "פורסם על ידי:",
+      "driver": "נהג:",
+      "viewProfile": "לחץ לצפייה בפרופיל ←",
+      "noInfo": "מידע לא זמין",
+      "ride": "טרמפ",
+      "journey": "נסיעה",
+      "notSpecified": "לא צויין",
+      "conditions": {
+        "new": "🆕 חדש",
+        "like_new": "✨ כמו חדש",
+        "used": "📦 משומש",
+        "parts": "🔧 לחלפים"
+      }
+    },
     "share": "שתף",
     "searchWithin": "חיפוש בתוך",
     "filter": {
@@ -641,6 +681,64 @@
         "title": "אתגרים קהילתיים",
         "subtitle": "אתגרים ומעקב התקדמות",
         "description": "הצטרף לאתגרים קהילתיים, עקוב אחר ההתקדמות שלך והשג מטרות יחד עם הקהילה"
+      }
+    },
+    "timeScreen": {
+      "menuSettings": "הגדרות",
+      "menuHelp": "עזרה",
+      "menuContact": "צור קשר",
+      "placeholder": "חפש הזדמנויות התנדבות...",
+      "emergencyTitle": "התנדבות דחופה",
+      "emergencyDescription": "מצא הזדמנויות התנדבות דחופות באזור שלך",
+      "categoriesTitle": "קטגוריות",
+      "allCategories": "כל הקטגוריות",
+      "opportunitiesTitle": "הזדמנויות התנדבות",
+      "opportunitiesDescription": "מצא הזדמנויות התנדבות מתאימות לך",
+      "findSimilar": "מצא התנדבויות דומות",
+      "volunteersCount": "{{current}}/{{needed}} מתנדבים",
+      "join": "הצטרף",
+      "statActiveVolunteers": "מתנדבים פעילים",
+      "statVolunteerHours": "שעות התנדבות",
+      "statActiveOrgs": "ארגונים פעילים",
+      "usefulLinks": "קישורים שימושיים",
+      "joinVolunteerTitle": "הצטרפות להתנדבות",
+      "joinVolunteerConfirm": "האם תרצה להצטרף להתנדבות \"{{title}}\"?",
+      "joinSuccessTitle": "הצלחה!",
+      "joinSuccessBody": "הצטרפת להתנדבות בהצלחה. נציג הארגון יצור איתך קשר בקרוב.",
+      "error": "שגיאה",
+      "cannotOpenLink": "לא ניתן לפתוח את הקישור",
+      "linkError": "שגיאה בפתיחת הקישור",
+      "categories": {
+        "all": "כל הקטגוריות",
+        "elderly": "קשישים",
+        "education": "חינוך",
+        "welfare": "רווחה",
+        "animals": "חיות",
+        "environment": "סביבה",
+        "health": "בריאות"
+      },
+      "filterOptions": {
+        "elderly": "קשישים",
+        "education": "חינוך",
+        "welfare": "רווחה",
+        "animals": "חיות",
+        "environment": "סביבה",
+        "health": "בריאות",
+        "youth": "נוער",
+        "community": "קהילה",
+        "sports": "ספורט",
+        "culture": "תרבות",
+        "food": "מזון",
+        "clothing": "ביגוד"
+      },
+      "sortOptions": {
+        "alphabetical": "אלפביתי",
+        "byLocation": "לפי מיקום",
+        "byField": "לפי תחום",
+        "byDuration": "לפי משך זמן",
+        "byFrequency": "לפי תדירות",
+        "byVolunteersNeeded": "לפי מספר מתנדבים נדרש",
+        "byRelevance": "לפי רלוונטיות"
       }
     }
   },
@@ -1053,6 +1151,27 @@
       "salary": "משכורת",
       "seniority": "ותק",
       "level": "דרגה"
+    },
+    "tables": {
+      "loadError": "לא ניתן לטעון טבלה",
+      "fetchError": "שגיאה בטעינת טבלה",
+      "deleteConfirm": "האם למחוק את הרשומה?",
+      "deleteTitle": "מחיקת רשומה",
+      "deleteFailed": "שגיאה במחיקת רשומה",
+      "deleteSuccess": "רשומה נמחקה בהצלחה",
+      "editRow": "עריכת רשומה",
+      "addRow": "רשומה חדשה",
+      "saveFailed": "שגיאה בשמירת רשומה",
+      "saveSuccess": "רשומה נשמרה בהצלחה",
+      "requiredField": "שדה חובה: {{name}}",
+      "noData": "אין רשומות",
+      "selectDate": "בחר תאריך",
+      "tableNotFound": "טבלה לא נמצאה",
+      "fieldPlaceholder": "הכנס {{name}}",
+      "updateSuccess": "רשומה עודכנה בהצלחה",
+      "createSuccess": "רשומה נוספה בהצלחה",
+      "updateError": "שגיאה בעדכון רשומה",
+      "createError": "שגיאה ביצירת רשומה"
     }
   },
   "bookmarks": {
@@ -1460,7 +1579,15 @@
   },
   "items": {
     "title": "פריט",
-    "forSale": "למכירה"
+    "forSale": "למכירה",
+    "imageTooLarge": "התמונה שבחרת גדולה מאוד. מומלץ להשתמש בתמונה קטנה יותר.",
+    "continueAnyway": "המשך בכל זאת",
+    "convertImageError": "לא הצלחנו להמיר את התמונה",
+    "loadItemsError": "לא הצלחנו לטעון את הפריטים",
+    "saveSuccessTitle": "נשמר בהצלחה!",
+    "saveSuccessBody": "הפריט \"{{title}}\" נשמר במערכת",
+    "saveErrorBody": "לא הצלחנו לשמור את הפריט: {{errorMessage}}",
+    "unknownError": "שגיאה לא ידועה"
   },
   "quickMessage": {
     "title": "שלח הודעה מהירה",
@@ -1642,5 +1769,16 @@
       "saving": "שומר...",
       "goalMinutes": "יעד: {{value}} דקות"
     }
+  },
+  "dropdown": {
+    "search": "חיפוש",
+    "select": "בחר",
+    "noOptions": "אין אפשרויות"
+  },
+  "errorBoundary": {
+    "title": "שגיאה בלתי צפויה",
+    "message": "משהו השתבש באפליקציה. אנחנו מצטערים על התקלה.",
+    "tryAgain": "נסה שוב",
+    "details": "פרטי שגיאה"
   }
 }

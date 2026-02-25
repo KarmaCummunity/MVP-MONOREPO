@@ -30,12 +30,7 @@ interface EditChallengeModalProps {
   onUpdate: () => void;
 }
 
-const CHALLENGE_DIFFICULTY_OPTIONS = [
-  { id: 'easy', label: 'קל', icon: 'happy-outline', color: colors.success },
-  { id: 'medium', label: 'בינוני', icon: 'bulb-outline', color: colors.warning },
-  { id: 'hard', label: 'קשה', icon: 'flame-outline', color: colors.error },
-  { id: 'expert', label: 'מומחה', icon: 'trophy-outline', color: colors.primary },
-];
+
 
 export default function EditChallengeModal({
   visible,
@@ -44,6 +39,13 @@ export default function EditChallengeModal({
   onUpdate,
 }: EditChallengeModalProps) {
   const { t } = useTranslation(['challenges', 'common']);
+
+  const challengeDifficultyOptions = React.useMemo(() => [
+    { id: ChallengeDifficulty.EASY, label: t('difficulty.easy'), icon: 'happy-outline', color: colors.success },
+    { id: ChallengeDifficulty.MEDIUM, label: t('difficulty.medium'), icon: 'bulb-outline', color: colors.warning },
+    { id: ChallengeDifficulty.HARD, label: t('difficulty.hard'), icon: 'flame-outline', color: colors.error },
+    { id: ChallengeDifficulty.EXPERT, label: t('difficulty.expert'), icon: 'trophy-outline', color: colors.primary },
+  ], [t]);
   const { showToast } = useToast();
   const { selectedUser: user } = useUser();
 
@@ -51,7 +53,7 @@ export default function EditChallengeModal({
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState('');
   const [goalValue, setGoalValue] = useState('');
-  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('easy');
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(ChallengeDifficulty.EASY);
   const [category, setCategory] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ export default function EditChallengeModal({
       setDescription(challenge.description || '');
       setImageUri(challenge.image_url || '');
       setGoalValue(challenge.goal_value?.toString() || '');
-      setDifficulty(challenge.difficulty || 'easy');
+      setDifficulty(challenge.difficulty || ChallengeDifficulty.EASY);
       setCategory(challenge.category || '');
       setIsActive(challenge.is_active ?? true);
     }
@@ -171,7 +173,7 @@ export default function EditChallengeModal({
             />
 
             {/* Image */}
-            <Text style={styles.label}>{t('fields.image')} ({t('common:optional', 'אופציונלי')})</Text>
+            <Text style={styles.label}>{t('fields.image')} ({t('common:optional')})</Text>
             <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.challengeImage} resizeMode="cover" />
@@ -186,7 +188,7 @@ export default function EditChallengeModal({
             {/* Difficulty */}
             <Text style={styles.label}>{t('fields.difficulty')}</Text>
             <View style={styles.optionsRow}>
-              {CHALLENGE_DIFFICULTY_OPTIONS.map((option) => (
+              {challengeDifficultyOptions.map((option) => (
                 <TouchableOpacity
                   key={option.id}
                   style={[
@@ -212,7 +214,7 @@ export default function EditChallengeModal({
             {challenge.type !== 'BOOLEAN' && (
               <>
                 <Text style={styles.label}>
-                  {t('fields.goalValue')} ({t('common:optional', 'אופציונלי')})
+                  {t('fields.goalValue')} ({t('common:optional')})
                 </Text>
                 <TextInput
                   style={styles.input}
@@ -230,7 +232,7 @@ export default function EditChallengeModal({
 
             {/* Category */}
             <Text style={styles.label}>
-              {t('fields.category')} ({t('common:optional', 'אופציונלי')})
+              {t('fields.category')} ({t('common:optional')})
             </Text>
             <TextInput
               style={styles.input}

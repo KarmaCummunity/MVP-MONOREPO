@@ -47,16 +47,16 @@ interface CommentsModalProps {
   onCommentsCountChange?: (count: number) => void;
 }
 
-export default function CommentsModal({ 
-  visible, 
-  onClose, 
-  postId, 
-  postTitle, 
+export default function CommentsModal({
+  visible,
+  onClose,
+  postId,
+  postTitle,
   postUser,
-  onCommentsCountChange 
+  onCommentsCountChange
 }: CommentsModalProps) {
   const { selectedUser } = useUser();
-  const { t } = useTranslation(['common','comments']);
+  const { t, i18n } = useTranslation(['common', 'comments']);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -66,9 +66,9 @@ export default function CommentsModal({
     try {
       setIsLoading(true);
       logger.debug('CommentsModal', 'Loading comments', { postId, viewerId: selectedUser?.id });
-      
+
       const response = await postsService.getPostComments(postId, selectedUser?.id);
-      
+
       console.log('🔄 CommentsModal - getPostComments response:', {
         success: response.success,
         hasData: !!response.data,
@@ -76,20 +76,20 @@ export default function CommentsModal({
         total: response.total,
         error: response.error
       });
-      
+
       if (response.success && response.data) {
         const commentsData: Comment[] = response.data.map((apiComment: ApiComment) => ({
           id: apiComment.id,
           text: apiComment.text,
           userId: apiComment.user_id,
-          userName: apiComment.user?.name || 'משתמש',
+          userName: apiComment.user?.name || t('common:unknownUser'),
           userAvatar: apiComment.user?.avatar_url || 'https://picsum.photos/seed/user/100/100',
           timestamp: apiComment.created_at,
           likes: apiComment.likes_count || 0,
           isLiked: apiComment.is_liked || false,
           isOwner: apiComment.user_id === selectedUser?.id,
         }));
-        
+
         console.log('✅ CommentsModal - Setting comments:', commentsData.length);
         setComments(commentsData);
         logger.debug('CommentsModal', 'Comments loaded', { count: commentsData.length });
@@ -118,14 +118,14 @@ export default function CommentsModal({
   const handleSendComment = async () => {
     if (!newComment.trim() || !selectedUser) {
       if (!selectedUser) {
-        toastService.warning('יש להתחבר כדי להגיב');
+        toastService.warning(t('comments:loginRequiredToComment'));
       }
       return;
     }
 
     const commentText = newComment.trim();
     if (commentText.length > 2000) {
-      Alert.alert(t('common:errorTitle'), 'התגובה ארוכה מדי (מקסימום 2000 תווים)');
+      Alert.alert(t('common:errorTitle'), t('comments:commentTooLong'));
       return;
     }
 
@@ -134,38 +134,38 @@ export default function CommentsModal({
 
     try {
       const response = await postsService.addComment(postId, selectedUser.id, commentText);
-      
+
       console.log('🔄 CommentsModal - addComment response:', {
         success: response.success,
         hasData: !!response.data,
         data: response.data,
         error: response.error
       });
-      
+
       if (response.success && response.data) {
         // Add new comment to the list
         const newCommentData: Comment = {
           id: response.data.id,
           text: response.data.text,
           userId: response.data.user_id,
-          userName: response.data.user?.name || selectedUser.name || 'משתמש',
+          userName: response.data.user?.name || selectedUser.name || t('common:unknownUser'),
           userAvatar: response.data.user?.avatar_url || selectedUser.avatar || 'https://picsum.photos/seed/user/100/100',
           timestamp: response.data.created_at,
           likes: response.data.likes_count || 0,
           isLiked: false,
           isOwner: true,
         };
-        
+
         console.log('✅ CommentsModal - Adding comment to list:', newCommentData);
         setComments(prev => [...prev, newCommentData]);
         setNewComment('');
-        
+
         // Notify parent about comment count change
         if (onCommentsCountChange && response.data.comments_count !== undefined) {
           console.log('📊 CommentsModal - Updating comment count:', response.data.comments_count);
           onCommentsCountChange(response.data.comments_count);
         }
-        
+
         logger.debug('CommentsModal', 'Comment added', { commentId: response.data.id });
       } else {
         console.error('❌ CommentsModal - Failed to add comment:', response.error);
@@ -183,51 +183,51 @@ export default function CommentsModal({
 
   const handleLikeComment = async (commentId: string) => {
     if (!selectedUser?.id) {
-      toastService.warning('יש להתחבר כדי לעשות לייק');
+      toastService.warning(t('comments:loginRequiredToLike'));
       return;
     }
 
     // Find comment and save previous state for revert
     const comment = comments.find(c => c.id === commentId);
     if (!comment) return;
-    
+
     const previousIsLiked = comment.isLiked;
     const previousLikes = comment.likes;
 
     // Optimistic UI update
     setComments(prev => prev.map(c =>
-      c.id === commentId 
-        ? { 
-            ...c, 
-            isLiked: !c.isLiked,
-            likes: c.isLiked ? c.likes - 1 : c.likes + 1
-          }
+      c.id === commentId
+        ? {
+          ...c,
+          isLiked: !c.isLiked,
+          likes: c.isLiked ? c.likes - 1 : c.likes + 1
+        }
         : c
     ));
 
     try {
       const response = await postsService.toggleCommentLike(postId, commentId, selectedUser.id);
-      
+
       if (response.success && response.data) {
         // Sync with server
         setComments(prev => prev.map(c =>
-          c.id === commentId 
-            ? { 
-                ...c, 
-                isLiked: response.data!.is_liked,
-                likes: response.data!.likes_count
-              }
+          c.id === commentId
+            ? {
+              ...c,
+              isLiked: response.data!.is_liked,
+              likes: response.data!.likes_count
+            }
             : c
         ));
       } else {
         // Revert on error
         setComments(prev => prev.map(c =>
-          c.id === commentId 
-            ? { 
-                ...c, 
-                isLiked: previousIsLiked,
-                likes: previousLikes
-              }
+          c.id === commentId
+            ? {
+              ...c,
+              isLiked: previousIsLiked,
+              likes: previousLikes
+            }
             : c
         ));
         logger.error('CommentsModal', 'Failed to toggle comment like', { error: response.error });
@@ -235,12 +235,12 @@ export default function CommentsModal({
     } catch (error) {
       // Revert on error
       setComments(prev => prev.map(c =>
-        c.id === commentId 
-          ? { 
-              ...c, 
-              isLiked: previousIsLiked,
-              likes: previousLikes
-            }
+        c.id === commentId
+          ? {
+            ...c,
+            isLiked: previousIsLiked,
+            likes: previousLikes
+          }
           : c
       ));
       logger.error('CommentsModal', 'Error toggling comment like', { error });
@@ -251,34 +251,34 @@ export default function CommentsModal({
     if (!selectedUser?.id) return;
 
     Alert.alert(
-      'מחיקת תגובה',
-      'האם אתה בטוח שברצונך למחוק את התגובה?',
+      t('comments:deleteTitle'),
+      t('comments:deleteConfirm'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: t('common:cancel'), style: 'cancel' },
         {
-          text: 'מחק',
+          text: t('common:delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await postsService.deleteComment(postId, commentId, selectedUser.id);
-              
+
               if (response.success) {
                 setComments(prev => prev.filter(c => c.id !== commentId));
-                
+
                 // Notify parent about comment count change
                 if (onCommentsCountChange && response.data?.comments_count !== undefined) {
                   onCommentsCountChange(response.data.comments_count);
                 }
-                
-                toastService.success('התגובה נמחקה');
+
+                toastService.success(t('comments:deleteSuccess'));
                 logger.debug('CommentsModal', 'Comment deleted', { commentId });
               } else {
                 logger.error('CommentsModal', 'Failed to delete comment', { error: response.error });
-                Alert.alert(t('common:errorTitle'), 'לא הצלחנו למחוק את התגובה');
+                Alert.alert(t('common:errorTitle'), t('comments:deleteError'));
               }
             } catch (error) {
               logger.error('CommentsModal', 'Error deleting comment', { error });
-              Alert.alert(t('common:errorTitle'), 'לא הצלחנו למחוק את התגובה');
+              Alert.alert(t('common:errorTitle'), t('comments:deleteError'));
             }
           }
         }
@@ -290,13 +290,13 @@ export default function CommentsModal({
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) return '';
-      
+
       const now = new Date();
       const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
+
       if (diffInHours < 1) return t('common:time.now');
       if (diffInHours < 24) return t('common:time.hoursAgo', { count: diffInHours });
-      return date.toLocaleDateString('he-IL');
+      return date.toLocaleDateString(i18n.language === 'he' ? 'he-IL' : 'en-US');
     } catch {
       return '';
     }
@@ -310,23 +310,23 @@ export default function CommentsModal({
           <Text style={styles.commentUserName}>{item.userName}</Text>
           <Text style={styles.commentTimestamp}>{formatTimestamp(item.timestamp)}</Text>
         </View>
-        <Text style={styles.commentText}>{item.text}</Text>
+        <Text style={[styles.commentText, { textAlign: i18n.language === 'he' ? 'right' : 'left' }]}>{item.text}</Text>
         <View style={styles.commentActions}>
-          <TouchableOpacity 
-            style={styles.commentAction} 
+          <TouchableOpacity
+            style={styles.commentAction}
             onPress={() => handleLikeComment(item.id)}
           >
-            <Ionicons 
-              name={item.isLiked ? "heart" : "heart-outline"} 
-              size={16} 
-              color={item.isLiked ? colors.error : colors.textSecondary} 
+            <Ionicons
+              name={item.isLiked ? "heart" : "heart-outline"}
+              size={16}
+              color={item.isLiked ? colors.error : colors.textSecondary}
             />
             <Text style={[styles.commentActionText, item.isLiked && styles.likedText]}>
               {item.likes}
             </Text>
           </TouchableOpacity>
           {item.isOwner && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.commentAction}
               onPress={() => handleDeleteComment(item.id)}
             >
@@ -354,7 +354,7 @@ export default function CommentsModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -369,12 +369,12 @@ export default function CommentsModal({
 
         {/* Post Info */}
         <View style={styles.postInfo}>
-          <Image 
-            source={{ uri: postUser?.avatar || 'https://picsum.photos/seed/user/100/100' }} 
-            style={styles.postUserAvatar} 
+          <Image
+            source={{ uri: postUser?.avatar || 'https://picsum.photos/seed/user/100/100' }}
+            style={styles.postUserAvatar}
           />
           <View style={styles.postInfoContent}>
-            <Text style={styles.postUserName}>{postUser?.name || 'משתמש'}</Text>
+            <Text style={styles.postUserName}>{postUser?.name || t('common:unknownUser')}</Text>
             <Text style={styles.postTitle} numberOfLines={1}>{postTitle || ''}</Text>
           </View>
         </View>
@@ -398,7 +398,7 @@ export default function CommentsModal({
         {/* Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign: i18n.language === 'he' ? 'right' : 'left' }]}
             value={newComment}
             onChangeText={setNewComment}
             placeholder={t('comments:placeholder')}
@@ -407,7 +407,7 @@ export default function CommentsModal({
             maxLength={2000}
             editable={!isSending}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.sendButton, (!newComment.trim() || isSending) && styles.sendButtonDisabled]}
             onPress={handleSendComment}
             disabled={!newComment.trim() || isSending}
@@ -415,10 +415,10 @@ export default function CommentsModal({
             {isSending ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Ionicons 
-                name="send" 
-                size={20} 
-                color={newComment.trim() ? colors.primary : colors.textSecondary} 
+              <Ionicons
+                name="send"
+                size={20}
+                color={newComment.trim() ? colors.primary : colors.textSecondary}
               />
             )}
           </TouchableOpacity>

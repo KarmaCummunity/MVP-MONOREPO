@@ -22,6 +22,39 @@ import { logger } from '../../utils/loggerService';
 type ApiResponse<T = any> = BaseApiResponse<T>;
 export type { ApiResponse };
 
+export interface ServerUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  phone?: string | null;
+  avatar_url?: string | null;
+  avatar?: string | null;
+  bio?: string | null;
+  karma_points?: number;
+  karmaPoints?: number;
+  join_date?: string | null;
+  joinDate?: string | null;
+  is_active?: boolean;
+  isActive?: boolean;
+  last_active?: string | null;
+  lastActive?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  city?: string | null;
+  country?: string | null;
+  location?: { city: string; country: string } | null;
+  interests?: string[] | null;
+  roles?: string[] | null;
+  posts_count?: number;
+  postsCount?: number;
+  followers_count?: number;
+  followersCount?: number;
+  following_count?: number;
+  followingCount?: number;
+  settings?: any;
+  email_verified?: boolean;
+}
+
 class ApiService {
   private _baseURL: string | null = null;
 
@@ -244,7 +277,7 @@ class ApiService {
     return null;
   }
 
-  private async request<T>(
+  private async request<T = any>(
     endpoint: string,
     options: RequestInit = {},
     retryOn401: boolean = true

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   TextInput,
@@ -57,41 +57,21 @@ const SearchBar = ({
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   // New state to track if SearchBar has active filters/sorts
-  const [hasActiveConditions, setHasActiveConditions] = useState<boolean>(false);
+  const [_hasActiveConditions, setHasActiveConditions] = useState<boolean>(false);
 
-  // Callback function to be passed to SearchBar
-  const handleHasActiveConditionsChange = (isActive: boolean) => {
+  const handleHasActiveConditionsChange = useCallback((isActive: boolean) => {
     setHasActiveConditions(isActive);
     onHasActiveConditionsChange?.(isActive);
-  };
-
-  // Determine paddingBottom based on hasActiveConditions
-  const getPaddingBottom = () => {
-    if (hasActiveConditions) {
-      // If there are filters/sorts, provide less padding to avoid excessive space
-      return Platform.select({
-        ios: 20,
-        android: 0,
-        web: 0,
-      });
-    } else {
-      // If no filters/sorts, provide more padding for the static buttons row
-      return Platform.select({
-        ios: 80,
-        android: 0,
-        web: 0, // Assuming web might handle spacing differently
-      });
-    }
-  };
+  }, [onHasActiveConditionsChange]);
 
   // Effect to inform parent about active conditions
   useEffect(() => {
     const hasActive = selectedFilters.length > 0 || selectedSorts.length > 0;
     handleHasActiveConditionsChange(hasActive);
-  }, [selectedFilters, selectedSorts]); // Add onHasActiveConditionsChange to dependencies
+  }, [selectedFilters, selectedSorts, handleHasActiveConditionsChange]);
 
   // Function to perform search with given parameters
-  const performSearch = (query: string, filters: string[], sorts: string[]) => {
+  const performSearch = useCallback((query: string, filters: string[], sorts: string[]) => {
     // For backward compatibility, if no searchData is provided, just call onSearch with basic parameters
     if (searchData.length === 0) {
       onSearch?.(query, filters, sorts, []);
@@ -201,7 +181,7 @@ const SearchBar = ({
 
     // Call the parent's search handler with all the parameters
     onSearch?.(query, filters, sorts, results);
-  };
+  }, [searchData, onSearch]);
 
   const handleSearch = () => {
     performSearch(searchText, selectedFilters, selectedSorts);
@@ -237,7 +217,7 @@ const SearchBar = ({
     });
   };
 
-  const removeFilter = (filterToRemove: string) => {
+  const removeFilter = useCallback((filterToRemove: string) => {
     setSelectedFilters((prevFilters) => {
       const newFilters = prevFilters.filter((filter) => filter !== filterToRemove);
 
@@ -249,9 +229,9 @@ const SearchBar = ({
 
       return newFilters;
     });
-  };
+  }, [searchText, selectedSorts, onFiltersChange, performSearch]);
 
-  const removeSort = (sortToRemove: string) => {
+  const removeSort = useCallback((_sortToRemove: string) => {
     setSelectedSorts([]); // Remove all sorts, as typically only one can be active
 
     // Notify parent of sort changes
@@ -259,7 +239,7 @@ const SearchBar = ({
 
     // Perform real-time search with updated sorts
     performSearch(searchText, selectedFilters, []);
-  };
+  }, [searchText, selectedFilters, onSortsChange, performSearch]);
 
   const isFilterSelected = (option: string) => selectedFilters.includes(option);
   const isSortSelected = (option: string) => selectedSorts.includes(option);
@@ -279,7 +259,7 @@ const SearchBar = ({
 
   // Get responsive styles
   const modalStyles = getResponsiveModalStyles();
-  const { isTablet, isDesktop, isLargeDesktop, width } = getScreenInfo();
+  const { isTablet, isDesktop: _isDesktop, isLargeDesktop, width } = getScreenInfo();
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const isMobileWeb = Platform.OS === 'web' && width <= BREAKPOINTS.TABLET;
   // Icon size optimized for mobile web - smaller for better proportions
@@ -291,7 +271,7 @@ const SearchBar = ({
   React.useEffect(() => {
     onRemoveFilterRequested?.(removeFilter);
     onRemoveSortRequested?.(() => removeSort(''));
-  }, [selectedFilters, selectedSorts]);
+  }, [selectedFilters, selectedSorts, onRemoveFilterRequested, onRemoveSortRequested, removeFilter, removeSort]);
 
   return (
     <View style={localStyles.container}>

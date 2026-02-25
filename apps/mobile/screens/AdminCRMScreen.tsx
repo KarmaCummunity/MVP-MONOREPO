@@ -54,7 +54,7 @@ interface ContactFormData {
 
 const LOG_SOURCE = 'AdminCRMScreen';
 
-export default function AdminCRMScreen({ navigation }: AdminCRMScreenProps) {
+export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScreenProps) {
     const route = useRoute();
     const routeParams = (route.params as any) || {};
     const viewOnly = routeParams?.viewOnly === true;
@@ -85,11 +85,7 @@ export default function AdminCRMScreen({ navigation }: AdminCRMScreenProps) {
         ? screenHeight - tabBarHeight - headerHeight - filtersHeight
         : undefined;
 
-    useEffect(() => {
-        loadContacts();
-    }, [statusFilter, searchQuery]);
-
-    const loadContacts = async () => {
+    const loadContacts = React.useCallback(async () => {
         try {
             setIsLoading(true);
             const res = await apiService.crm.getAll({
@@ -102,13 +98,17 @@ export default function AdminCRMScreen({ navigation }: AdminCRMScreenProps) {
             } else {
                 setContacts([]);
             }
-        } catch (error) {
-            logger.error(LOG_SOURCE, 'Error loading contacts', { error });
+        } catch (_error) {
+            logger.error(LOG_SOURCE, 'Error loading contacts', { error: _error });
             Alert.alert('שגיאה', 'לא ניתן לטעון את רשימת הקשרים');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [statusFilter, searchQuery]);
+
+    useEffect(() => {
+        loadContacts();
+    }, [loadContacts]);
 
     const handleAdd = () => {
         setIsEditMode(false);
@@ -155,7 +155,7 @@ export default function AdminCRMScreen({ navigation }: AdminCRMScreenProps) {
                         } else {
                             Alert.alert('שגיאה', 'מחיקה נכשלה');
                         }
-                    } catch (e) {
+                    } catch (_e) {
                         Alert.alert('שגיאה', 'אירעה שגיאה במחיקה');
                     } finally {
                         setIsMutating(false);
@@ -191,7 +191,7 @@ export default function AdminCRMScreen({ navigation }: AdminCRMScreenProps) {
             } else {
                 Alert.alert('שגיאה', res.error || 'שמירה נכשלה');
             }
-        } catch (e) {
+        } catch (_e) {
             Alert.alert('שגיאה', 'אירעה שגיאה בשמירה');
         } finally {
             setIsMutating(false);

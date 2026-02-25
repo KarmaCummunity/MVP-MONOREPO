@@ -47,7 +47,7 @@ interface PostsReelsScreenProps {
 const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   onScroll,
   hideTopBar = false,
-  showTopBar = false
+  showTopBar: _showTopBar = false
 }) => {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
@@ -57,8 +57,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const [feedMode, setFeedMode] = useState<'friends' | 'discovery'>('friends');
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
-  const [numColumns, setNumColumns] = useState(1); // Default to list view
-  const [sliderValue, setSliderValue] = useState(0); // 0 = 1 col, 1 = 2 cols, 2 = 3 cols
+  const [numColumns, setNumColumns] = useState(1);
+  const [_sliderValue, setSliderValue] = useState(0);
 
   // Report State
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -79,8 +79,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     selectedPostForReport,
     setSelectedPostForReport
   } = usePostMenu({
-    onDelete: (postId) => {
-      refresh(); // Refresh feed on success
+    onDelete: (_postId) => {
+      refresh();
     },
     onReport: (item) => {
       setSelectedPostForReport(item);
@@ -96,14 +96,14 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
       try {
         const result = await postsService.hidePost(item.id, selectedUser.id);
         if (result.success) {
-          toastService.showSuccess(t('post.hideSuccess') || 'הפוסט הוסתר בהצלחה');
+          toastService.showSuccess(t('post.hideSuccess'));
           refresh();
         } else {
-          toastService.showError(result.error || t('post.hideError') || 'שגיאה בהסתרת הפוסט');
+          toastService.showError(result.error || t('post.hideError'));
         }
       } catch (error) {
-        console.error('Error hiding post:', error);
-        toastService.showError(t('post.hideError') || 'שגיאה בהסתרת הפוסט');
+        logger.error('PostsReelsScreen', 'Error hiding post', { error });
+        toastService.showError(t('post.hideError'));
       }
     }
   });
@@ -189,7 +189,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
         const res = await apiService.createTask(taskData);
         if (res.success) {
-          Alert.alert(t('common.success') || 'Success', t('common.report_sent') || 'Report sent successfully');
+          Alert.alert(t('success'), t('reportSent'));
           setReportModalVisible(false);
           setSelectedPostForReport(null);
         } else {
@@ -201,19 +201,16 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
     } catch (error) {
       console.error('Report failed:', error);
-      Alert.alert(t('common.error') || 'Error', t('common.report_failed') || 'Failed to send report');
+      Alert.alert(t('errorTitle'), t('reportFailed'));
     } finally {
       setIsSubmittingReport(false);
     }
   };
 
 
-  const handleSliderChange = useCallback((value: number) => {
-    // Round to nearest integer standardizing step behavior
+  const _handleSliderChange = useCallback((value: number) => {
     const step = Math.round(value);
     setSliderValue(step);
-
-    // Map slider value (0-2) to columns (1-3)
     setNumColumns(step + 1);
   }, []);
 
@@ -242,11 +239,11 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     <View style={styles.emptyContainer}>
       {!loading && (
         <>
-          <Text style={styles.emptyText}>{t('feed.empty_title') || 'אין פוסטים עדיין'}</Text>
+          <Text style={styles.emptyText}>{t('feed.empty_title')}</Text>
           <Text style={styles.emptySubtext}>
             {feedMode === 'friends'
-              ? (t('feed.empty_friends') || 'הוסף חברים כדי לראות פוסטים!')
-              : (t('feed.empty_discovery') || 'היה הראשון לפרסם!')
+              ? t('feed.empty_friends')
+              : t('feed.empty_discovery')
             }
           </Text>
         </>
@@ -310,7 +307,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           visible={optionsModalVisible}
           onClose={() => setOptionsModalVisible(false)}
           options={modalOptions}
-          title={t('common.options') || 'Options'}
+          title={t('options')}
           anchorPosition={modalPosition}
         />
         <ReportPostModal
@@ -348,8 +345,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
               avatar: selectedItemForComments.user.avatar || 'https://picsum.photos/seed/user/100/100'
             } : undefined}
             postTitle={selectedItemForComments.title || ''}
-            onCommentsCountChange={(count) => {
-              // Update the comments count in the feed
+            onCommentsCountChange={(_count) => {
               refresh();
             }}
           />

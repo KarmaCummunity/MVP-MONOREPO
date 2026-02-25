@@ -13,14 +13,17 @@ import {
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
+import { createShadowStyle } from '../globals/styles';
 import { useUser } from '../stores/userStore';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
+import { logger } from '../utils/loggerService';
 
-// Mock data for volunteer opportunities
+// Mock data for volunteer opportunities (category keys match donations.timeScreen.categories)
 const volunteerOpportunities = [
   {
     id: '1',
@@ -33,7 +36,7 @@ const volunteerOpportunities = [
     volunteers: 8,
     needed: 12,
     image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400',
-    category: 'קשישים',
+    category: 'elderly',
   },
   {
     id: '2',
@@ -46,7 +49,7 @@ const volunteerOpportunities = [
     volunteers: 15,
     needed: 20,
     image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',
-    category: 'חינוך',
+    category: 'education',
   },
   {
     id: '3',
@@ -59,7 +62,7 @@ const volunteerOpportunities = [
     volunteers: 25,
     needed: 30,
     image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400',
-    category: 'רווחה',
+    category: 'welfare',
   },
   {
     id: '4',
@@ -72,7 +75,7 @@ const volunteerOpportunities = [
     volunteers: 12,
     needed: 18,
     image: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=400',
-    category: 'חיות',
+    category: 'animals',
   },
   {
     id: '5',
@@ -85,7 +88,7 @@ const volunteerOpportunities = [
     volunteers: 40,
     needed: 50,
     image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400',
-    category: 'סביבה',
+    category: 'environment',
   },
   {
     id: '6',
@@ -98,7 +101,7 @@ const volunteerOpportunities = [
     volunteers: 20,
     needed: 25,
     image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400',
-    category: 'בריאות',
+    category: 'health',
   },
 ];
 
@@ -109,8 +112,8 @@ export default function TimeScreen({
 }) {
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
-
-  const { selectedUser, isRealAuth } = useUser();
+  const { t } = useTranslation(['donations', 'common']);
+  const { selectedUser: _selectedUser, isRealAuth } = useUser();
 
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to volunteer), false = seeker (needs volunteers)
@@ -119,13 +122,13 @@ export default function TimeScreen({
   const initialMode = routeParams?.mode === 'offer' ? true : false;
   const [mode, setMode] = useState(initialMode);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('כל הקטגוריות');
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("");
-  const [selectedSort, setSelectedSort] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [_searchQuery, setSearchQuery] = useState("");
+  const [_selectedFilter, setSelectedFilter] = useState("");
+  const [_selectedSort, setSelectedSort] = useState("");
   const [filteredOpportunities, setFilteredOpportunities] = useState(volunteerOpportunities);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_selectedTask, setSelectedTask] = useState<any>(null);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
@@ -135,7 +138,7 @@ export default function TimeScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -158,56 +161,59 @@ export default function TimeScreen({
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('⏰ TimeScreen - Screen focused, refreshing data...');
-      // Reset form when returning to screen
+      logger.debug('TimeScreen', 'Screen focused, refreshing data');
       setSelectedTask(null);
-      // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
     }, [])
   );
 
-  const categories = ['כל הקטגוריות', 'קשישים', 'חינוך', 'רווחה', 'חיות', 'סביבה', 'בריאות'];
+  const categoryKeys = ['all', 'elderly', 'education', 'welfare', 'animals', 'environment', 'health'] as const;
+  const categories = categoryKeys.map(key => ({
+    key,
+    label: key === 'all' ? t('donations:timeScreen.allCategories') : t(`donations:timeScreen.categories.${key}`),
+  }));
 
-  // Filter and sort options for time screen
   const timeFilterOptions = [
-    "קשישים",
-    "חינוך",
-    "רווחה",
-    "חיות",
-    "סביבה",
-    "בריאות",
-    "נוער",
-    "קהילה",
-    "ספורט",
-    "תרבות",
-    "מזון",
-    "ביגוד"
+    t('donations:timeScreen.filterOptions.elderly'),
+    t('donations:timeScreen.filterOptions.education'),
+    t('donations:timeScreen.filterOptions.welfare'),
+    t('donations:timeScreen.filterOptions.animals'),
+    t('donations:timeScreen.filterOptions.environment'),
+    t('donations:timeScreen.filterOptions.health'),
+    t('donations:timeScreen.filterOptions.youth'),
+    t('donations:timeScreen.filterOptions.community'),
+    t('donations:timeScreen.filterOptions.sports'),
+    t('donations:timeScreen.filterOptions.culture'),
+    t('donations:timeScreen.filterOptions.food'),
+    t('donations:timeScreen.filterOptions.clothing'),
   ];
 
   const timeSortOptions = [
-    "אלפביתי",
-    "לפי מיקום",
-    "לפי תחום",
-    "לפי משך זמן",
-    "לפי תדירות",
-    "לפי מספר מתנדבים נדרש",
-    "לפי רלוונטיות",
+    t('donations:timeScreen.sortOptions.alphabetical'),
+    t('donations:timeScreen.sortOptions.byLocation'),
+    t('donations:timeScreen.sortOptions.byField'),
+    t('donations:timeScreen.sortOptions.byDuration'),
+    t('donations:timeScreen.sortOptions.byFrequency'),
+    t('donations:timeScreen.sortOptions.byVolunteersNeeded'),
+    t('donations:timeScreen.sortOptions.byRelevance'),
   ];
 
+  const effectiveCategoryKey = selectedCategory ?? 'all';
+
   const handleVolunteerPress = (opportunity: any) => {
-    console.log('Volunteer opportunity pressed:', opportunity.title);
+    logger.debug('TimeScreen', 'Volunteer opportunity pressed', { title: opportunity.title });
     Alert.alert(
-      'הצטרפות להתנדבות',
-      `האם תרצה להצטרף להתנדבות "${opportunity.title}"?`,
+      t('donations:timeScreen.joinVolunteerTitle'),
+      t('donations:timeScreen.joinVolunteerConfirm', { title: opportunity.title }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: t('common:cancel'), style: 'cancel' },
         {
-          text: 'הצטרף',
+          text: t('donations:timeScreen.join'),
           onPress: () => {
             Alert.alert(
-              'הצלחה!',
-              'הצטרפת להתנדבות בהצלחה. נציג הארגון יצור איתך קשר בקרוב.',
-              [{ text: 'אישור', style: 'default' }]
+              t('donations:timeScreen.joinSuccessTitle'),
+              t('donations:timeScreen.joinSuccessBody'),
+              [{ text: t('common:confirm'), style: 'default' }]
             );
           }
         }
@@ -216,24 +222,24 @@ export default function TimeScreen({
   };
 
   const handleEmergencyLink = async () => {
-    console.log('Emergency volunteer link pressed');
+    logger.debug('TimeScreen', 'Emergency volunteer link pressed');
     const url = 'https://www.volunteer.gov.il';
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
+        Alert.alert(t('donations:timeScreen.error'), t('donations:timeScreen.cannotOpenLink'));
       }
     } catch (error) {
-      console.error('Error opening link:', error);
-      Alert.alert('שגיאה', 'שגיאה בפתיחת הקישור');
+      logger.error('TimeScreen', 'Error opening link', { error });
+      Alert.alert(t('donations:timeScreen.error'), t('donations:timeScreen.linkError'));
     }
   };
 
   // Function to handle search results from HeaderComp
   const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('⏰ TimeScreen - Search received:', {
+    logger.debug('TimeScreen', 'Search received', {
       query,
       filters: filters || [],
       sorts: sorts || [],
@@ -264,8 +270,8 @@ export default function TimeScreen({
       }
 
       // Filter by category
-      if (selectedCategory !== 'כל הקטגוריות') {
-        filtered = filtered.filter(opp => opp.category === selectedCategory);
+      if (effectiveCategoryKey !== 'all') {
+        filtered = filtered.filter(opp => opp.category === effectiveCategoryKey);
       }
 
       setFilteredOpportunities(filtered);
@@ -278,11 +284,11 @@ export default function TimeScreen({
 
       <HeaderComp
         mode={mode}
-        menuOptions={['הגדרות', 'עזרה', 'צור קשר']}
+        menuOptions={[t('donations:timeScreen.menuSettings'), t('donations:timeScreen.menuHelp'), t('donations:timeScreen.menuContact')]}
         onToggleMode={() => setMode(!mode)}
-        onSelectMenuItem={(option: string) => console.log('Menu selected:', option)}
+        onSelectMenuItem={(option: string) => logger.debug('TimeScreen', 'Menu selected', { option })}
         title=""
-        placeholder="חפש הזדמנויות התנדבות..."
+        placeholder={t('donations:timeScreen.placeholder')}
         filterOptions={timeFilterOptions}
         sortOptions={timeSortOptions}
         searchData={isRealAuth ? [] : volunteerOpportunities}
@@ -299,9 +305,9 @@ export default function TimeScreen({
             <View style={styles.emergencyContent}>
               <Ionicons name="flash" size={32} color={colors.accent} />
               <View style={styles.emergencyText}>
-                <Text style={styles.emergencyTitle}>התנדבות דחופה</Text>
+                <Text style={styles.emergencyTitle}>{t('donations:timeScreen.emergencyTitle')}</Text>
                 <Text style={styles.emergencyDescription}>
-                  מצא הזדמנויות התנדבות דחופות באזור שלך
+                  {t('donations:timeScreen.emergencyDescription')}
                 </Text>
               </View>
               <Ionicons name="arrow-forward" size={24} color={colors.accent} />
@@ -311,26 +317,26 @@ export default function TimeScreen({
 
         {/* Categories Filter */}
         <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>קטגוריות</Text>
+          <Text style={styles.sectionTitle}>{t('donations:timeScreen.categoriesTitle')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesScroll}
           >
-            {categories.map((category) => (
+            {categories.map(({ key, label }) => (
               <TouchableOpacity
-                key={category}
+                key={key}
                 style={[
                   styles.categoryButton,
-                  selectedCategory === category && styles.categoryButtonActive
+                  effectiveCategoryKey === key && styles.categoryButtonActive
                 ]}
-                onPress={() => setSelectedCategory(category)}
+                onPress={() => setSelectedCategory(key)}
               >
                 <Text style={[
                   styles.categoryButtonText,
-                  selectedCategory === category && styles.categoryButtonTextActive
+                  effectiveCategoryKey === key && styles.categoryButtonTextActive
                 ]}>
-                  {category}
+                  {label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -339,9 +345,9 @@ export default function TimeScreen({
 
         {/* Volunteer Opportunities */}
         <View style={styles.opportunitiesSection}>
-          <Text style={styles.sectionTitle}>הזדמנויות התנדבות</Text>
+          <Text style={styles.sectionTitle}>{t('donations:timeScreen.opportunitiesTitle')}</Text>
           <Text style={styles.sectionDescription}>
-            מצא הזדמנויות התנדבות מתאימות לך
+            {t('donations:timeScreen.opportunitiesDescription')}
           </Text>
 
           <View style={styles.opportunitiesGrid}>
@@ -356,7 +362,9 @@ export default function TimeScreen({
                   <View style={styles.opportunityHeader}>
                     <Text style={styles.opportunityTitle}>{opportunity.title}</Text>
                     <View style={styles.opportunityCategory}>
-                      <Text style={styles.opportunityCategoryText}>{opportunity.category}</Text>
+                      <Text style={styles.opportunityCategoryText}>
+                        {opportunity.category === 'all' ? t('donations:timeScreen.allCategories') : t(`donations:timeScreen.categories.${opportunity.category}`)}
+                      </Text>
                     </View>
                   </View>
 
@@ -364,9 +372,9 @@ export default function TimeScreen({
                   <Text style={styles.opportunityDescription}>{opportunity.description}</Text>
                   <TouchableOpacity
                     style={styles.visitButton}
-                    onPress={() => Linking.openURL('https://www.ruachtova.org.il/').catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור'))}
+                    onPress={() => Linking.openURL('https://www.ruachtova.org.il/').catch(() => Alert.alert(t('donations:timeScreen.error'), t('donations:timeScreen.cannotOpenLink')))}
                   >
-                    <Text style={styles.visitButtonText}>מצא התנדבויות דומות</Text>
+                    <Text style={styles.visitButtonText}>{t('donations:timeScreen.findSimilar')}</Text>
                   </TouchableOpacity>
 
                   <View style={styles.opportunityDetails}>
@@ -395,11 +403,11 @@ export default function TimeScreen({
                         />
                       </View>
                       <Text style={styles.volunteersText}>
-                        {opportunity.volunteers}/{opportunity.needed} מתנדבים
+                        {t('donations:timeScreen.volunteersCount', { current: opportunity.volunteers, needed: opportunity.needed })}
                       </Text>
                     </View>
                     <TouchableOpacity style={styles.joinButton}>
-                      <Text style={styles.joinButtonText}>הצטרף</Text>
+                      <Text style={styles.joinButtonText}>{t('donations:timeScreen.join')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -412,16 +420,16 @@ export default function TimeScreen({
         <View style={styles.statsSection}>
           <DonationStatsFooter
             stats={[
-              { label: 'מתנדבים פעילים', value: 2847, icon: 'people-outline' },
-              { label: 'שעות התנדבות', value: 15234, icon: 'time-outline' },
-              { label: 'ארגונים פעילים', value: 156, icon: 'heart-outline' },
+              { label: t('donations:timeScreen.statActiveVolunteers'), value: 2847, icon: 'people-outline' },
+              { label: t('donations:timeScreen.statVolunteerHours'), value: 15234, icon: 'time-outline' },
+              { label: t('donations:timeScreen.statActiveOrgs'), value: 156, icon: 'heart-outline' },
             ]}
           />
         </View>
 
         {/* Add Links Section */}
         <View style={(styles as any).section}>
-          <Text style={styles.sectionTitle}>קישורים שימושיים</Text>
+          <Text style={styles.sectionTitle}>{t('donations:timeScreen.usefulLinks')}</Text>
           <AddLinkComponent category="time" />
         </View>
       </ScrollView>
@@ -449,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: (colors as any).pinkDeep,
+    borderColor: colors.pinkDeep,
   },
   emergencyContent: {
     flexDirection: 'row',
@@ -517,7 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 15,
     overflow: 'hidden',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.1, 4),
     elevation: 3,
   },
   opportunityImage: {
@@ -561,7 +569,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   opportunityCategoryText: {
-    color: (colors as any).pinkDeep,
+    color: colors.pinkDeep,
     fontSize: FontSizes.small,
     fontWeight: '600',
   },
@@ -639,7 +647,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    ...createShadowStyle(colors.shadow, { width: 0, height: 2 }, 0.1, 4),
     elevation: 2,
   },
   statNumber: {

@@ -1,4 +1,4 @@
-// Artist Palette & Design System (60-30-10 Rule)
+// Artist Palette & Design System (60-30-10 Rule) - v1.0.1
 // 60% Primary (Neutral/Backgrounds): White, Light Teals/Greys
 // 30% Secondary (Brand/Identity): Teals (#16808C, #0DA6A6)
 // 10% Accent (CTA/Bold): Deep Brown (#591E08)
@@ -187,6 +187,52 @@ const colors = {
   // Custom/Legacy colors for specific panels
   legacyMediumPurple: '#9333ea',
   legacyMediumYellow: '#facc15',
+
+  // --- Missing / Compatibility Keys ---
+  surfaceVariant: palette.greyLight,
+  pinkDeep: palette.tealDark,
+  topNavTitle: palette.brownDeep,
+  surface: palette.white,
+  topNavBackground: palette.white,
+  primaryLight: palette.tealLight,
+  chatTime: palette.greyMedium,
+  legacyDarkGreen: palette.tealDark,
+  legacyDarkBlue: palette.tealDark,
+  danger: palette.errorRed,
+  topNavIcon: palette.brownDeep,
+  dropdownIcon: palette.greyMedium,
+  dropdownSearchIcon: palette.greyMedium,
+  dropdownCloseIcon: palette.greyMedium,
+  dropdownLabel: palette.brownDeep,
+  dropdownModalOverlay: 'rgba(0,0,0,0.5)',
+  /** Modal overlay (lighter than dropdown) for full-screen overlays */
+  modalOverlay: 'rgba(0,0,0,0.4)',
+  /** Soft text primary (e.g. 90% opacity) */
+  textPrimarySoft: 'rgba(44,44,44,0.9)',
+  /** Muted text primary (85% opacity) */
+  textPrimaryMuted: 'rgba(44,44,44,0.85)',
+  /** Soft secondary text (75–70% opacity) */
+  textSecondarySoft: 'rgba(102,102,102,0.75)',
+  textTertiarySoft: 'rgba(102,102,102,0.7)',
+  /** White surface with opacity for overlays */
+  surfaceOverlay: 'rgba(255,255,255,0.85)',
+  /** Disabled button background/border/text */
+  buttonDisabledBg: 'rgba(0,0,0,0.05)',
+  buttonDisabledBorder: 'rgba(0,0,0,0.06)',
+  buttonDisabledText: 'rgba(0,0,0,0.3)',
+  /** Info/accent tint (blue) for badges or highlights */
+  infoTintBackground: 'rgba(33,150,243,0.12)',
+  infoTintBorder: 'rgba(33,150,243,0.35)',
+  infoTintText: 'rgba(33,150,243,0.9)',
+  /** Donate CTA accent (pink) */
+  donateCtaBg: 'rgba(255,107,157,0.2)',
+  donateCtaBorder: 'rgba(255,107,157,0.4)',
+  dropdownModalBackground: palette.white,
+  dropdownSearchBorder: palette.greyMedium,
+  dropdownNoOptionsText: palette.greyMedium,
+  decoCircle1: palette.tealLight,
+  decoCircle2: palette.tealDark,
+  decoCircle3: palette.greenBright,
 };
 
 export default colors;

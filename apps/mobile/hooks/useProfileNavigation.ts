@@ -6,7 +6,7 @@ export const useProfileNavigation = () => {
     const navigation = useNavigation<any>();
     const { selectedUser: currentUser } = useUser();
 
-    const navigateToProfile = (targetUserId: string, targetUserName: string, fromScreen: string = 'Feed') => {
+    const navigateToProfile = (targetUserId: string, targetUserName: string, _fromScreen: string = 'Feed') => {
         logger.debug('useProfileNavigation', 'Navigating to profile', {
             targetUserId,
             targetUserName,
@@ -40,7 +40,7 @@ const _navigateToOwnProfile = (navigation: any, currentUser: any) => {
         try {
             navigation.navigate('ProfileScreen');
             return;
-        } catch (err) {
+        } catch (_err) {
             // Ignore, try next strategy
         }
 
@@ -117,7 +117,7 @@ const _navigateToUserProfile = (navigation: any, userId: string, userName: strin
                     screen: 'UserProfileScreen',
                     params
                 });
-            } catch (e) {
+            } catch (_e) {
                 parentNavigator.navigate('UserProfileScreen', params);
             }
         } else {

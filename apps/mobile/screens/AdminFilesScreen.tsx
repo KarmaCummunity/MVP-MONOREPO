@@ -36,25 +36,21 @@ interface GeneralFile {
     size?: number;
 }
 
-export default function AdminFilesScreen({ navigation }: AdminFilesScreenProps) {
+export default function AdminFilesScreen({ navigation: _navigation }: AdminFilesScreenProps) {
     const route = useRoute();
     const routeParams = (route.params as any) || {};
     const viewOnly = routeParams?.viewOnly === true;
     useAdminProtection(true);
     const { selectedUser } = useUser();
     const [files, setFiles] = useState<GeneralFile[]>([]);
-    const [currentFolder, setCurrentFolder] = useState('/');
+    const [currentFolder, _setCurrentFolder] = useState('/');
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isMutating, setIsMutating] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
 
-    useEffect(() => {
-        loadFiles();
-    }, [currentFolder]);
-
-    const loadFiles = async () => {
+    const loadFiles = React.useCallback(async () => {
         try {
             setIsLoading(true);
             const res = await apiService.adminFiles.getAll({ folder: currentFolder });
@@ -63,12 +59,16 @@ export default function AdminFilesScreen({ navigation }: AdminFilesScreenProps) 
             } else {
                 setFiles([]);
             }
-        } catch (e) {
+        } catch (_e) {
             Alert.alert('שגיאה', 'לא ניתן לטעון קבצים');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [currentFolder]);
+
+    useEffect(() => {
+        loadFiles();
+    }, [loadFiles]);
 
     const handleOpen = (url: string) => {
         Linking.openURL(url).catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור'));

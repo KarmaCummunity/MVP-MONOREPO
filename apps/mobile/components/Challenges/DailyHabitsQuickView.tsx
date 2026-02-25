@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { db } from '../../utils/databaseService';
 import { useUser } from '../../stores/userStore';
 import { EditEntryModal } from './EditEntryModal';
+import colors from '../../globals/colors';
+import { FontSizes } from '../../globals/constants';
 import {
   DailyTrackerData,
   DailyTrackerChallenge,
@@ -171,7 +173,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     }
   };
 
-  const currentEntry = selectedChallenge && selectedDate && data?.entries_by_date[selectedDate]?.[selectedChallenge.id];
+  const currentEntry = (selectedChallenge && selectedDate) ? data?.entries_by_date[selectedDate]?.[selectedChallenge.id] : undefined;
   const modalDate = editingRef.current?.date ?? selectedDate ?? today;
   const modalExistingValue = editingRef.current !== null ? editingRef.current.value : currentEntry?.value;
   const modalExistingNotes = editingRef.current !== null ? editingRef.current.notes : currentEntry?.notes;
@@ -185,7 +187,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color="#2E7D32" />
+          <ActivityIndicator size="small" color={colors.success} />
           <Text style={styles.loadingText}>{t('quickView.loading')}</Text>
         </View>
       </View>
@@ -228,33 +230,33 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
           }
         >
           <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>
-                  {data.stats.total_success_rate != null
-                    ? `${Math.round(data.stats.total_success_rate)}%`
-                    : '—'}
-                </Text>
-                <Text style={styles.statLabel}>{t('stats.successRate')}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>{calculateOverallStreak()}</Text>
-                <Text style={styles.statLabel}>{t('stats.currentStreak')}</Text>
-              </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>
+                {data.stats.total_success_rate != null
+                  ? `${Math.round(data.stats.total_success_rate)}%`
+                  : '—'}
+              </Text>
+              <Text style={styles.statLabel}>{t('stats.successRate')}</Text>
             </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{calculateOverallStreak()}</Text>
+              <Text style={styles.statLabel}>{t('stats.currentStreak')}</Text>
+            </View>
+          </View>
 
-            <ScrollView
-              horizontal={dateRange.length > 4}
-              showsHorizontalScrollIndicator={dateRange.length > 4}
-              style={dateRange.length > 4 ? styles.tableScroll : undefined}
-              contentContainerStyle={Platform.OS === 'web' && dateRange.length > 4 ? { minWidth: '100%' } : undefined}
-            >
-              <View style={[
-                styles.tableWrapper,
-                Platform.OS === 'web' && dateRange.length > 4 && { minWidth: dateRange.length * 60 + 120 }
-              ]}>
-                <View style={styles.tableHeader}>
-                  <View style={styles.tableHeaderLabel} />
-                  {dateRange.map((date) => (
+          <ScrollView
+            horizontal={dateRange.length > 4}
+            showsHorizontalScrollIndicator={dateRange.length > 4}
+            style={dateRange.length > 4 ? styles.tableScroll : undefined}
+            contentContainerStyle={Platform.OS === 'web' && dateRange.length > 4 ? { minWidth: '100%' } : undefined}
+          >
+            <View style={[
+              styles.tableWrapper,
+              Platform.OS === 'web' && dateRange.length > 4 && { minWidth: dateRange.length * 60 + 120 }
+            ]}>
+              <View style={styles.tableHeader}>
+                <View style={styles.tableHeaderLabel} />
+                {dateRange.map((date) => (
                   <View
                     key={date}
                     style={[styles.dateCol, date === today && styles.dateColToday]}
@@ -272,7 +274,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                   {dateRange.map((date) => {
                     const status = getCellStatus(challenge.id, date);
                     const cellValue = getCellValue(challenge.id, date);
-                    
+
                     let displayText = '—';
                     if (cellValue !== undefined) {
                       if (challenge.type === 'BOOLEAN') {
@@ -285,16 +287,16 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                         displayText = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}m`;
                       }
                     }
-                    
+
                     const iconColor =
-                      status === 'success' ? '#4CAF50' : status === 'failed' ? '#F44336' : status === 'neutral' ? '#9E9E9E' : '#E0E0E0';
+                      status === 'success' ? colors.success : status === 'failed' ? colors.error : status === 'neutral' ? colors.textSecondary : colors.border;
 
                     return (
                       <TouchableOpacity
                         key={date}
                         style={[
                           styles.cell,
-                          { backgroundColor: iconColor === '#E0E0E0' ? '#F5F5F5' : `${iconColor}18` },
+                          { backgroundColor: iconColor === colors.border ? colors.backgroundSecondary : `${iconColor}18` },
                           date === today && styles.cellToday,
                         ]}
                         onPress={() => handleCellPress(challenge, date)}
@@ -308,8 +310,8 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                   })}
                 </View>
               ))}
-              </View>
-            </ScrollView>
+            </View>
+          </ScrollView>
         </ScrollView>
       ) : (
         <View style={styles.emptyState}>
@@ -338,12 +340,12 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -352,13 +354,13 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border,
     paddingBottom: 8,
   },
   title: {
-    fontSize: 16,
+    fontSize: FontSizes.medium,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   toggleRow: {
@@ -369,18 +371,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.backgroundSecondary,
   },
   toggleBtnActive: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.success,
   },
   toggleBtnText: {
-    fontSize: 13,
+    fontSize: FontSizes.small,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   toggleBtnTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -390,8 +392,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -402,13 +404,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 20,
+    fontSize: FontSizes.large,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: colors.success,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: FontSizes.caption,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   tableScroll: {
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
   tableWrapper: {
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
     borderRadius: 10,
     overflow: 'hidden',
     minWidth: '100%',
@@ -429,9 +431,9 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.backgroundSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border,
     paddingVertical: 10,
     paddingHorizontal: 8,
   },
@@ -445,31 +447,31 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   dateColToday: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.info + '18',
   },
   dateColText: {
-    fontSize: 13,
+    fontSize: FontSizes.small,
     fontWeight: '700',
-    color: '#333',
+    color: colors.textPrimary,
   },
   dateColSub: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: FontSizes.caption,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.backgroundSecondary,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
   challengeName: {
     width: 100,
     minWidth: 100,
-    fontSize: 13,
-    color: '#333',
+    fontSize: FontSizes.small,
+    color: colors.textPrimary,
     marginEnd: 8,
   },
   cell: {
@@ -480,41 +482,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 2,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
   cellToday: {
-    borderColor: '#2196F3',
+    borderColor: colors.info,
     borderWidth: 1.5,
   },
   cellText: {
-    fontSize: 14,
+    fontSize: FontSizes.small,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   expandButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.backgroundSecondary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   expandButtonText: {
-    fontSize: 14,
+    fontSize: FontSizes.small,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: colors.success,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 16,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: FontSizes.small,
+    color: colors.textTertiary,
     marginBottom: 12,
     textAlign: 'center',
   },

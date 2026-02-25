@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { FontSizes } from '../globals/constants';
-// Empty arrays - replace with real data from API
-const charityNames: string[] = [];
+
 const charities: any[] = [];
 const donations: any[] = [];
 import { charitiesStore } from '../utils/charitiesStore';
@@ -99,10 +98,6 @@ export default function MoneyScreen({
 
   const { isRealAuth } = useUser();
   const { t } = useTranslation(['donations', 'common']);
-  // Debug log for MoneyScreen
-  // console.log('💰 MoneyScreen - Component rendered');
-  // console.log('💰 MoneyScreen - Navigation object:', navigation);
-  // console.log('💰 MoneyScreen - Navigation state:', JSON.stringify(navigation.getState(), null, 2));
   const [selectedRecipient, setSelectedRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('50');
 
@@ -121,7 +116,7 @@ export default function MoneyScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -143,7 +138,7 @@ export default function MoneyScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [selectedSort, setSelectedSort] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Build external charities from donationResources to appear as donation cards
   const externalCharities = React.useMemo(() => {
@@ -204,7 +199,7 @@ export default function MoneyScreen({
     }));
     const dummies = isRealAuth ? [] : dummyCharitiesBase;
     return [...mapFromStore, ...dummies, ...externalCharities];
-  }, [externalCharities]);
+  }, [externalCharities, isRealAuth]);
 
   const [filteredCharities, setFilteredCharities] = useState(combinedCharities); // Search results
 
@@ -220,7 +215,7 @@ export default function MoneyScreen({
   const [charityModalAmount, setCharityModalAmount] = useState<string>('50');
 
   // Quick donate preferred charity (fallback to top rated)
-  const preferredCharity = filteredCharities.length > 0
+  const _preferredCharity = filteredCharities.length > 0
     ? filteredCharities[0]
     : (isRealAuth ? (charitiesStore[0] ? {
       id: `store_${charitiesStore[0].id}`,
@@ -386,7 +381,7 @@ export default function MoneyScreen({
   };
 
   // Function to show charity details in search mode
-  const showCharityDetailsModal = (charity: any) => {
+  const _showCharityDetailsModal = (charity: any) => {
     Alert.alert(
       charity.name,
       `${charity.description}\n\n📞 צור קשר: 03-1234567\n📧 אימייל: info@${charity.name.replace(/\s+/g, '').toLowerCase()}.org.il\n\nהאם תרצה לתרום לעמותה זו?`,
@@ -493,7 +488,7 @@ export default function MoneyScreen({
     }
   };
 
-  const handleDonate = () => {
+  const _handleDonate = () => {
     if (!selectedRecipient || !amount) {
       Alert.alert('שגיאה', 'אנא בחר נמען וסכום לפני התרומה.');
     } else {
@@ -505,7 +500,7 @@ export default function MoneyScreen({
   };
 
   // Open Bit app to donate to a specific phone with optional amount and note
-  const openBitDonation = async (phone: string, amountValue: number, note: string = 'תרומה לקהילה') => {
+  const _openBitDonation = async (phone: string, amountValue: number, note: string = 'תרומה לקהילה') => {
     try {
       // Deep link patterns used by Bit app; try multiple known schemes
       const encodedNote = encodeURIComponent(note);
@@ -531,7 +526,7 @@ export default function MoneyScreen({
         ? 'https://apps.apple.com/il/app/bit/id1148052748'
         : 'https://play.google.com/store/apps/details?id=com.poalim.bit';
       await Linking.openURL(appStoreLink);
-    } catch (e) {
+    } catch (_e) {
       Alert.alert('Bit', 'לא ניתן לפתוח את Bit במכשיר זה כרגע.');
     }
   };
@@ -1302,25 +1297,25 @@ const localStyles = StyleSheet.create({
     padding: 8,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(33, 150, 243, 0.12)',
+    backgroundColor: colors.infoTintBackground,
     borderWidth: 1,
-    borderColor: 'rgba(33, 150, 243, 0.35)',
+    borderColor: colors.infoTintBorder,
     zIndex: 2,
   },
   bitCornerButtonText: {
-    color: 'rgba(33, 150, 243, 0.9)',
+    color: colors.infoTintText,
     fontSize: FontSizes.small,
     fontWeight: '700',
   },
   quickDonateTitle: {
     fontSize: FontSizes.body,
     fontWeight: '700',
-    color: 'rgba(44,44,44,0.85)',
+    color: colors.textPrimaryMuted,
     textAlign: 'center',
   },
   quickDonateSubtitle: {
     fontSize: FontSizes.small,
-    color: 'rgba(102,102,102,0.75)',
+    color: colors.textSecondarySoft,
     textAlign: 'center',
     marginTop: 2,
     marginBottom: 6,
@@ -1360,7 +1355,7 @@ const localStyles = StyleSheet.create({
   sliderTrack: {
     height: "20%",
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: colors.surfaceOverlay,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -1396,7 +1391,7 @@ const localStyles = StyleSheet.create({
   amountDisplayText: {
     fontSize: FontSizes.medium,
     fontWeight: '700',
-    color: 'rgba(44,44,44,0.9)',
+    color: colors.textPrimarySoft,
   },
   amountRangeRow: {
     flexDirection: 'row',
@@ -1405,7 +1400,7 @@ const localStyles = StyleSheet.create({
   },
   amountRangeText: {
     fontSize: FontSizes.caption,
-    color: 'rgba(102,102,102,0.7)',
+    color: colors.textTertiarySoft,
   },
   // Donate CTA styles
   donateMainButton: {
@@ -1417,14 +1412,14 @@ const localStyles = StyleSheet.create({
     minWidth: 88,
   },
   donateMainButtonActive: {
-    backgroundColor: 'rgba(255, 107, 157, 0.2)',
+    backgroundColor: colors.donateCtaBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 157, 0.4)',
+    borderColor: colors.donateCtaBorder,
   },
   donateMainButtonDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: colors.buttonDisabledBg,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: colors.buttonDisabledBorder,
   },
   donateMainButtonText: {
     fontSize: FontSizes.body,
@@ -1432,10 +1427,10 @@ const localStyles = StyleSheet.create({
     textAlign: 'center',
   },
   donateMainButtonTextActive: {
-    color: 'rgba(44,44,44,0.9)',
+    color: colors.textPrimarySoft,
   },
   donateMainButtonTextDisabled: {
-    color: 'rgba(0,0,0,0.3)',
+    color: colors.buttonDisabledText,
   },
   // removed inline bitSmallButton in favor of corner button
   // Search Help Styles
@@ -1510,7 +1505,7 @@ const localStyles = StyleSheet.create({
   // Modal shared styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.modalOverlay,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -1585,7 +1580,7 @@ const localStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   bitButtonText: {
-    color: 'rgba(44,44,44,0.85)',
+    color: colors.textPrimaryMuted,
     fontSize: FontSizes.medium,
     fontWeight: 'bold',
   },

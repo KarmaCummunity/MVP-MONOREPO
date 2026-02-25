@@ -6,6 +6,32 @@ import {
 } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { ImageSourcePropType } from "react-native";
+import {
+  UserPreview,
+  ChallengeType,
+  ChallengeFrequency,
+  ChallengeDifficulty,
+  GoalDirection,
+  CommunityChallenge,
+  ChallengeParticipant,
+  ChallengeEntry,
+  ChallengeStatistics
+} from "@kc/shared-types";
+
+export type {
+  UserPreview,
+  CommunityChallenge,
+  ChallengeParticipant,
+  ChallengeEntry,
+  ChallengeStatistics
+};
+
+export {
+  ChallengeType,
+  ChallengeFrequency,
+  ChallengeDifficulty,
+  GoalDirection
+};
 
 export interface Task {
   id: string;
@@ -305,100 +331,9 @@ export type BottomTabNavigationPropType<
 // import { RouteProp } from '@react-navigation/native';
 // export type PostsReelsScreenRouteProp = RouteProp<RootStackParamList, 'PostsReelsScreen'>;
 
-// --- Shared app user preview type (lightweight, nullable fields allowed) ---
-export interface UserPreview {
-  id: string;
-  name: string;
-  email?: string; // Added for filtering current user by email
-  avatar?: string;
-  bio?: string;
-  karmaPoints?: number;
-  completedTasks?: number;
-  followersCount?: number;
-  roles?: string[];
-  isVerified?: boolean;
-  isActive?: boolean;
-  location?: {
-    city: string;
-    country: string;
-  };
-  joinDate?: string;
-  interests?: string[];
-  parentManagerId?: string | null;
-  hierarchyLevel?: number | null; // דרגה בהיררכיה: 0 = מנהל ראשי, 1 = סופר מנהל, 2+ = מנהלים/מתנדבים, null = משתמש רגיל
-}
+// (Moved to @kc/shared-types)
 
-// --- Community Challenges Types ---
-export type ChallengeType = 'BOOLEAN' | 'NUMERIC' | 'DURATION';
-export type ChallengeFrequency = 'DAILY' | 'WEEKLY' | 'FLEXIBLE';
-export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
-export type GoalDirection = 'maximize' | 'minimize' | null;
-
-export interface CommunityChallenge {
-  id: string;
-  creator_id: string;
-  title: string;
-  description?: string;
-  image_url?: string;
-  type: ChallengeType;
-  frequency: ChallengeFrequency;
-  goal_value?: number;
-  goal_direction?: GoalDirection;
-  deadline?: string;
-  difficulty?: ChallengeDifficulty;
-  category?: string;
-  is_active: boolean;
-  participants_count: number;
-  created_at: string;
-  updated_at: string;
-  // Extended fields from JOIN
-  creator_name?: string;
-  creator_avatar?: string;
-  post_id?: string;
-  participants?: ChallengeParticipant[];
-}
-
-export interface ChallengeParticipant {
-  id: string;
-  challenge_id: string;
-  user_id: string;
-  joined_at: string;
-  current_streak: number;
-  best_streak: number;
-  total_entries: number;
-  last_entry_date?: string;
-  // Extended fields from JOIN
-  user_name?: string;
-  user_avatar?: string;
-}
-
-export interface ChallengeEntry {
-  id: string;
-  challenge_id: string;
-  user_id: string;
-  entry_date: string;
-  value: number;
-  notes?: string;
-  created_at: string;
-}
-
-export interface ChallengeStatistics {
-  overall: {
-    active_challenges: number;
-    total_entries: number;
-    best_streak_overall: number;
-    avg_current_streak: number;
-  };
-  challenges: Array<ChallengeParticipant & {
-    title: string;
-    type: ChallengeType;
-    frequency: ChallengeFrequency;
-    difficulty?: ChallengeDifficulty;
-    category?: string;
-    goal_value?: number;
-    deadline?: string;
-  }>;
-}
+// (Moved to @kc/shared-types)
 
 // New types for Daily Habits Tracker
 export type EntryStatus = 'success' | 'failed' | 'neutral' | 'empty';

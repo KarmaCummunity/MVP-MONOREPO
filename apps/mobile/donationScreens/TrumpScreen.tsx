@@ -47,13 +47,13 @@ export default function TrumpScreen({
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
 
-  // Get initial mode from URL (deep link) or default to search mode (מחפש)
-  // mode: false = Offer Mode (Driver/פרסום), true = Search Mode (Passenger/חיפוש)
+  // Get initial mode from URL (deep link) or default to search mode
+  // mode: false = Offer Mode (Driver), true = Search Mode (Passenger)
   // URL mode: 'offer' = false, 'search' = true
   // Default is search mode (true)
   const initialMode = routeParams?.mode === 'offer' ? false : true;
 
-  const [mode, setMode] = useState(initialMode); // false = Offer Mode (Driver/פרסום), true = Search Mode (Passenger/חיפוש)
+  const [mode, setMode] = useState(initialMode);
   const { t } = useTranslation(['donations', 'common', 'trump', 'search']);
 
   // Post menu hook
@@ -70,7 +70,7 @@ export default function TrumpScreen({
   } = usePostMenu();
 
   // Report submit handler
-  const handleReportSubmit = async (reason: string) => {
+  const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
     // Report functionality can be implemented here if needed
     setReportModalVisible(false);
@@ -85,7 +85,7 @@ export default function TrumpScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function TrumpScreen({
 
   // === Shared State ===
   const { selectedUser } = useUser();
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const _tabBarHeight = useBottomTabBarHeight() || 0;
   const [refreshKey, setRefreshKey] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -116,9 +116,9 @@ export default function TrumpScreen({
   }, []);
 
   // === Data State ===
-  const [allRides, setAllRides] = useState<any[]>([]); // Active rides for search (legacy, for offer mode)
-  const [filteredRides, setFilteredRides] = useState<any[]>([]); // Filtered active rides (legacy, for offer mode)
-  const [recentRides, setRecentRides] = useState<any[]>([]); // User's Published History (legacy)
+  const [allRides, setAllRides] = useState<any[]>([]);
+  const [_filteredRides, setFilteredRides] = useState<any[]>([]);
+  const [_recentRides, setRecentRides] = useState<any[]>([]);
   // Posts state for search mode
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
@@ -244,7 +244,7 @@ export default function TrumpScreen({
   // Other Offer Details
   const [seats, setSeats] = useState(3);
   const [price, setPrice] = useState("0");
-  const [needToPay, setNeedToPay] = useState(false);
+  const [_needToPay, _setNeedToPay] = useState(false);
   const [selectedFormTags, setSelectedFormTags] = useState<string[]>([]);
 
   // Static Options (Now Translated Keys mapped to Labels)
@@ -355,42 +355,32 @@ export default function TrumpScreen({
       console.log('🔄 Loading rides/posts for user:', uid, 'mode:', mode);
 
       if (mode) {
-        // Search mode - load posts
-        console.log('🔍 מצב מחפש - טוען פוסטים של טרמפים');
         try {
           const postsResponse = await postsService.getPosts(100, 0, uid, 'ride');
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             const mappedPosts = postsResponse.data.map(mapPostToFeedItem);
             setAllPosts(mappedPosts);
             setFilteredPosts(mappedPosts);
-            console.log('✅ טעינת פוסטים הצליחה:', mappedPosts.length, 'פוסטים');
           } else {
-            console.warn('⚠️ טעינת פוסטים נכשלה:', postsResponse.error);
             setAllPosts([]);
             setFilteredPosts([]);
           }
-        } catch (error) {
-          console.error('❌ שגיאה בטעינת פוסטים:', error);
+        } catch (_err) {
           setAllPosts([]);
           setFilteredPosts([]);
         }
         return; // Don't load rides in search mode
       }
 
-      // Offer mode - load posts for history
-      console.log('🔵 מצב מציע - טוען פוסטים של המשתמש להיסטוריה:', uid);
       try {
-        // טוען את הפוסטים של המשתמש
         const { apiService } = await import('../utils/apiService');
         const postsResponse = await apiService.getUserPosts(uid, 50, uid);
 
         if (postsResponse.success && Array.isArray(postsResponse.data)) {
-          // מסנן רק פוסטים של טרמפים
           const ridePosts = postsResponse.data.filter((post: any) =>
             post.post_type === 'ride' || post.post_type === 'ride_offered' || post.ride_id
           );
 
-          // ממפה את הפוסטים
           const mappedPosts = ridePosts
             .map(mapPostToFeedItem)
             .filter((post: FeedItem | null): post is FeedItem =>
@@ -398,17 +388,14 @@ export default function TrumpScreen({
             );
 
           setRecentPosts(mappedPosts);
-          console.log('✅ טעינת פוסטים להיסטוריה הצליחה:', mappedPosts.length, 'פוסטים');
         } else {
-          console.warn('⚠️ טעינת פוסטים להיסטוריה נכשלה:', postsResponse.error);
           setRecentPosts([]);
         }
-      } catch (error) {
-        console.error('❌ שגיאה בטעינת פוסטים להיסטוריה:', error);
+      } catch (_err) {
         setRecentPosts([]);
       }
 
-      // עדיין טוען rides לצורך history (legacy support)
+      // Legacy: load rides for history
       const shouldIncludePast = includePastOverride !== undefined
         ? includePastOverride
         : selectedFilters.includes('includePast');
@@ -429,8 +416,7 @@ export default function TrumpScreen({
             if (user && user.name && user.name !== driverId) {
               return { ...ride, driverName: user.name };
             }
-          } catch (e) {
-            // Ignore error
+          } catch (_e) {
           }
         }
         return ride;
@@ -438,19 +424,18 @@ export default function TrumpScreen({
 
       setAllRides(enrichedRides);
 
-      // Map history to UI format (legacy)
       const userRecent = (myHistory || []).map((r: any) => ({
         ...r,
         status: r.status || 'active',
         price: r.price || 0,
       }));
       setRecentRides(userRecent);
-    } catch (e) {
-      console.error("❌ Failed to load rides", e);
+    } catch (_e) {
+      console.error("Failed to load rides", _e);
       setAllRides([]);
       setRecentRides([]);
     }
-  }, [selectedUser?.id, t, selectedFilters]);
+  }, [selectedUser?.id, selectedFilters, mode]);
 
   // Reload rides when includePast filter changes
   useEffect(() => {
@@ -551,9 +536,9 @@ export default function TrumpScreen({
       // Add other sorts as needed
     }
 
-    console.log('✅ Final filtered rides:', filtered.length);
+    console.log('Final filtered rides:', filtered.length);
     return filtered;
-  }, [allRides, searchQuery, selectedFilters, selectedSorts, t]);
+  }, [allRides, allPosts, searchQuery, selectedFilters, selectedSorts, t, mode]);
 
   useEffect(() => {
     if (mode) {
@@ -753,9 +738,9 @@ export default function TrumpScreen({
         setRefreshKey(prev => prev + 1);
       }, 1500);
 
-    } catch (e) {
-      console.error("Failed to create ride", e);
-      const errorMessage = e instanceof Error ? e.message : String(e);
+    } catch (err) {
+      console.error("Failed to create ride", err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       Alert.alert(
         t('common:errorTitle') as string,
         `${t('trump:errors.saveFailed') as string}\n${errorMessage}`
@@ -764,7 +749,7 @@ export default function TrumpScreen({
   };
 
   // --- 4. History Actions ---
-  const handleDeleteRide = async (ride: any) => {
+  const _handleDeleteRide = async (ride: any) => {
     Alert.alert(
       t('trump:alerts.deleteRideTitle') || 'מחיקת טרמפ',
       t('trump:alerts.deleteRideBody') || 'האם למחוק טרמפ זה?',
@@ -788,7 +773,7 @@ export default function TrumpScreen({
     );
   };
 
-  const handleRestoreRide = (ride: any) => {
+  const _handleRestoreRide = (ride: any) => {
     // Populate form with ride data
     setToLocation(ride.to || '');
     setFromLocation(ride.from || '');
@@ -811,7 +796,7 @@ export default function TrumpScreen({
   // --- Render Helpers ---
   const handleToggleMode = () => setMode(!mode);
 
-  const handleSelectRide = (ride: any) => {
+  const _handleSelectRide = (ride: any) => {
     setSelectedRide(ride);
     setShowRideModal(true);
   };
@@ -830,8 +815,7 @@ export default function TrumpScreen({
   const COLUMN_GAP = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
   const cardGap = COLUMN_GAP;
-  // Calculate card width: full width minus padding on both sides, minus gaps between columns
-  const cardWidth = numColumns === 1
+  const _cardWidth = numColumns === 1
     ? width - (screenPadding * 2)
     : (width - (screenPadding * 2) - (cardGap * (numColumns - 1))) / numColumns;
 
@@ -877,7 +861,7 @@ export default function TrumpScreen({
     </View>
   ), [t]);
 
-  const handleSelectRideOld = (ride: any) => {
+  const _handleSelectRideOld = (ride: any) => {
     // In Search Mode: Show join details/contact
     Alert.alert(
       t('trump:rideOf', { name: ride.driverName }) as string,
@@ -898,7 +882,7 @@ export default function TrumpScreen({
       {/* Header handles Search Mode inputs & Mode Toggle */}
       <HeaderComp
         mode={mode}
-        menuOptions={['היסטוריה', 'הגדרות']}
+        menuOptions={[t('trump:menu.history'), t('trump:menu.settings')]}
         onToggleMode={handleToggleMode}
         onSelectMenuItem={() => { }}
         title=""

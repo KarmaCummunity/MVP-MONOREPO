@@ -76,21 +76,21 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       const data = response.data as any;
       if (response.success && data) {
         setItemOwner({
-          name: data.name || 'משתמש',
+          name: data.name || t('common:unknownUser'),
           avatar: data.avatar_url || data.avatar || '',
           id: data.id || ownerId,
         });
       } else {
         setItemOwner({
-          name: 'משתמש',
+          name: t('common:unknownUser'),
           avatar: '',
           id: ownerId,
         });
       }
     } catch (error) {
-      console.error('❌ שגיאה בטעינת פרטי יוזר:', error);
+      console.error('❌ Error loading owner details:', error);
       setItemOwner({
-        name: 'משתמש',
+        name: t('common:unknownUser'),
         avatar: '',
         id: ownerId,
       });
@@ -294,15 +294,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
     setSendingMessage(true);
     try {
-      // Get translation with fallback - ensure we get the actual text, not the key
-      const rideText = t('quickMessage:ride', { defaultValue: 'האם טרמפ זה רלוונטי?' });
-      const itemText = t('quickMessage:item', { defaultValue: 'האם פריט זה רלוונטי?' });
-      let messageText = type === 'ride' ? rideText : itemText;
-
-      // Fallback if translation returns the key itself or empty
-      if (!messageText || messageText === 'quickMessage:ride' || messageText === 'quickMessage:item' || messageText === 'ride' || messageText === 'item') {
-        messageText = type === 'ride' ? 'האם טרמפ זה רלוונטי?' : 'האם פריט זה רלוונטי?';
-      }
+      const rideText = t('quickMessage:ride');
+      const itemText = t('quickMessage:item');
+      const messageText = type === 'ride' ? rideText : itemText;
 
       // 1. Try to find existing conversation
       let conversationId = '';
@@ -334,11 +328,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         status: 'sending'
       });
 
-      toastService.showSuccess(t('quickMessage:success', { defaultValue: 'ההודעה נשלחה בהצלחה' }));
+      toastService.showSuccess(t('quickMessage:success'));
       onClose();
     } catch (error) {
       console.error('❌ Quick message error:', error);
-      toastService.showError(t('quickMessage:error', { defaultValue: 'ההודעה נכשלה' }));
+      toastService.showError(t('quickMessage:error'));
     } finally {
       setSendingMessage(false);
     }
@@ -373,7 +367,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Description */}
           {item.description && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>תיאור:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.description')}</Text>
               <Text style={styles.modalDescription}>{item.description}</Text>
             </View>
           )}
@@ -381,11 +375,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Condition */}
           {item.condition && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>מצב:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.condition')}</Text>
               <Text style={styles.modalText}>
-                {item.condition === 'new' ? '🆕 חדש' :
-                  item.condition === 'like_new' ? '✨ כמו חדש' :
-                    item.condition === 'used' ? '📦 משומש' : '🔧 לחלפים'}
+                {item.condition === 'new' ? t('donations:details.conditions.new') :
+                  item.condition === 'like_new' ? t('donations:details.conditions.like_new') :
+                    item.condition === 'used' ? t('donations:details.conditions.used') : t('donations:details.conditions.parts')}
               </Text>
             </View>
           )}
@@ -393,7 +387,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Quantity */}
           {(item.qty || item.quantity) && (item.qty || item.quantity) > 1 && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>כמות:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.quantity')}</Text>
               <Text style={styles.modalText}>{item.qty || item.quantity}</Text>
             </View>
           )}
@@ -401,7 +395,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Location */}
           {(item.city || item.address) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>מיקום:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.location')}</Text>
               <Text style={styles.modalText}>
                 📍 {item.city || ''}{item.address ? `, ${item.address}` : ''}
               </Text>
@@ -411,12 +405,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Date and Time */}
           {(item.timestamp || item.created_at || item.createdAt) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>תאריך ושעה:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.dateTime')}</Text>
               <Text style={styles.modalText}>
                 📅 {(() => {
                   const dateStr = item.timestamp || item.created_at || item.createdAt;
                   const date = new Date(dateStr);
-                  return date.toLocaleDateString('he-IL') + ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                  return date.toLocaleDateString(t('common:locale') === 'en' ? 'en-US' : 'he-IL') + ' ' + date.toLocaleTimeString(t('common:locale') === 'en' ? 'en-US' : 'he-IL', { hour: '2-digit', minute: '2-digit' });
                 })()}
               </Text>
             </View>
@@ -429,34 +423,34 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         <>
           {/* Ride Route */}
           <View style={styles.modalSection}>
-            <Text style={styles.modalItemTitle}>טרמפ</Text>
+            <Text style={styles.modalItemTitle}>{t('donations:details.ride')}</Text>
             <View style={styles.modalBadge}>
-              <Text style={styles.modalBadgeText}>🚗 נסיעה</Text>
+              <Text style={styles.modalBadgeText}>🚗 {t('donations:details.journey')}</Text>
             </View>
           </View>
 
           {/* Route */}
           <View style={styles.modalSection}>
-            <Text style={styles.modalLabel}>מסלול:</Text>
+            <Text style={styles.modalLabel}>{t('donations:details.route')}</Text>
             <Text style={styles.modalText}>
-              📍 {item.from || item.from_location?.name || 'לא צויין'} ➝ {item.to || item.to_location?.name || 'לא צויין'}
+              📍 {item.from || item.from_location?.name || t('donations:details.notSpecified')} ➝ {item.to || item.to_location?.name || t('donations:details.notSpecified')}
             </Text>
           </View>
 
           {/* Price */}
           <View style={styles.modalSection}>
             <Text style={styles.modalPrice}>
-              {(item.price ?? item.price_per_seat ?? 0) === 0 ? 'בחינם' : `₪${item.price || item.price_per_seat}`}
+              {(item.price ?? item.price_per_seat ?? 0) === 0 ? t('donations:details.free') : `₪${item.price || item.price_per_seat}`}
             </Text>
           </View>
 
           {/* Date and Time */}
           {(item.date || item.departure_time) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>תאריך ושעה:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.dateTime')}</Text>
               <Text style={styles.modalText}>
                 📅 {item.departure_time
-                  ? new Date(item.departure_time).toLocaleDateString('he-IL') + ' ' + new Date(item.departure_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                  ? new Date(item.departure_time).toLocaleDateString(t('common:locale') === 'en' ? 'en-US' : 'he-IL') + ' ' + new Date(item.departure_time).toLocaleTimeString(t('common:locale') === 'en' ? 'en-US' : 'he-IL', { hour: '2-digit', minute: '2-digit' })
                   : item.date + ' ' + (item.time || '')}
               </Text>
             </View>
@@ -465,9 +459,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Seats */}
           {(item.seats || item.available_seats) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>מקומות פנויים:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.availableSeats')}</Text>
               <Text style={styles.modalText}>
-                👥 {item.available_seats || item.seats || 0} מקומות
+                👥 {item.available_seats || item.seats || 0} {t('donations:details.seats')}
               </Text>
             </View>
           )}
@@ -475,7 +469,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Description */}
           {item.description && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>הערות:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.notes')}</Text>
               <Text style={styles.modalDescription}>{item.description}</Text>
             </View>
           )}
@@ -483,7 +477,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Tags */}
           {(item.noSmoking || item.petsAllowed || item.kidsFriendly) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>תגיות:</Text>
+              <Text style={styles.modalLabel}>{t('donations:details.tags')}</Text>
               <View style={styles.tagsContainer}>
                 {item.noSmoking && <View style={styles.tag}><Text style={styles.tagText}>🚫🚭</Text></View>}
                 {item.petsAllowed && <View style={styles.tag}><Text style={styles.tagText}>🐾</Text></View>}
@@ -497,11 +491,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   };
 
   const getModalTitle = () => {
-    return type === 'item' ? 'פרטי הפריט' : 'פרטי הטרמפ';
+    return type === 'item' ? t('donations:details.itemTitle') : t('donations:details.rideTitle');
   };
 
   const getOwnerLabel = () => {
-    return type === 'item' ? 'פורסם על ידי:' : 'נהג:';
+    return type === 'item' ? t('donations:details.publishedBy') : t('donations:details.driver');
   };
 
   return (
@@ -550,8 +544,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                         <Icon name="chatbubble-ellipses-outline" size={18} color={colors.white} />
                         <Text style={styles.quickMessageText}>
                           {(() => {
-                            const rideText = t('quickMessage:ride', { defaultValue: 'האם טרמפ זה רלוונטי?' });
-                            const itemText = t('quickMessage:item', { defaultValue: 'האם פריט זה רלוונטי?' });
+                            const rideText = t('quickMessage:ride');
+                            const itemText = t('quickMessage:item');
                             return type === 'ride' ? rideText : itemText;
                           })()}
                         </Text>
@@ -580,12 +574,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     )}
                     <View style={styles.ownerInfo}>
                       <Text style={styles.ownerName}>{itemOwner.name}</Text>
-                      <Text style={styles.ownerLink}>לחץ לצפייה בפרופיל →</Text>
+                      <Text style={styles.ownerLink}>{t('donations:details.viewProfile')}</Text>
                     </View>
                     <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.modalText}>מידע לא זמין</Text>
+                  <Text style={styles.modalText}>{t('donations:details.noInfo')}</Text>
                 )}
               </View>
             )}
@@ -748,7 +742,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, // Rounded button
     marginBottom: 12, // Space above profile card
     gap: 8,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
