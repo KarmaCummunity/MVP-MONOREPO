@@ -181,27 +181,31 @@ fi
 # =============================================================================
 print_header "6️⃣  Scanning for Sensitive Data"
 
-SENSITIVE_PATTERNS=(
-    "password.*=.*['\"][^'\"]{8,}"
-    "api[_-]?key.*=.*['\"][^'\"]{8,}"
-    "secret.*=.*['\"][^'\"]{8,}"
-    "token.*=.*['\"][^'\"]{20,}"
-    "BEGIN.*PRIVATE.*KEY"
-)
-
-SENSITIVE_FOUND=0
-for pattern in "${SENSITIVE_PATTERNS[@]}"; do
-    if echo "$CHANGED_FILES" | xargs grep -iE "$pattern" 2>/dev/null; then
-        SENSITIVE_FOUND=1
-    fi
-done
-
-if [ $SENSITIVE_FOUND -eq 1 ]; then
-    echo -e "${RED}❌ Potential sensitive data found in changed files${NC}"
-    echo -e "${YELLOW}Please remove hardcoded secrets before committing${NC}"
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+if [ "$CHANGED_FILE_COUNT" -eq 0 ]; then
+    echo -e "${GREEN}✅ Skipping - no files to check${NC}"
 else
-    echo -e "${GREEN}✅ No sensitive data detected${NC}"
+    SENSITIVE_PATTERNS=(
+        "password.*=.*['\"][^'\"]{8,}"
+        "api[_-]?key.*=.*['\"][^'\"]{8,}"
+        "secret.*=.*['\"][^'\"]{8,}"
+        "token.*=.*['\"][^'\"]{20,}"
+        "BEGIN.*PRIVATE.*KEY"
+    )
+
+    SENSITIVE_FOUND=0
+    for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+        if echo "$CHANGED_FILES" | xargs grep -iE "$pattern" 2>/dev/null; then
+            SENSITIVE_FOUND=1
+        fi
+    done
+
+    if [ $SENSITIVE_FOUND -eq 1 ]; then
+        echo -e "${RED}❌ Potential sensitive data found in changed files${NC}"
+        echo -e "${YELLOW}Please remove hardcoded secrets before committing${NC}"
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    else
+        echo -e "${GREEN}✅ No sensitive data detected${NC}"
+    fi
 fi
 
 # =============================================================================
