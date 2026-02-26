@@ -1,0 +1,375 @@
+
+> @kc/api@2.5.3 sonar:local
+> npm run test:ci && npx sonar-scanner
+
+
+> @kc/api@2.5.3 test:ci
+> jest --ci --coverage --maxWorkers=2
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "test-user-id",
+  "email": "test@example.com",
+  "sessionId": "a01991abfe903b2e03365ba978dea3eb6c54c3ced9e6c243d359d6ecaff3ab17",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "test-user-id",
+  "email": "test@example.com",
+  "sessionId": "02d30a76f76ce1483914d68a74353862eb46c4fdd69ff093e869c09ccbf46ada",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "user-uuid-123",
+  "email": "user@karma.com",
+  "sessionId": "30f2f3607f95ac20ffaf3d41b3488f40330359c8340e0fded6691e141c363718",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "user-id",
+  "email": "user@test.com",
+  "sessionId": "cb1a5423a6c6761ec3d72e7b19c7fedc5b5c4ae566b5dde0d036ac5da5c3be19",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "verify-user",
+  "email": "verify@test.com",
+  "sessionId": "77aca7b48ba4ae647a3a4812476613fd76fab843cd1c003ca4c1a65c3fa84cc5",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+{
+  "userId": "user-original",
+  "email": "original@test.com",
+  "sessionId": "d47874824d28f48862e6505616e047ec1877af05e473f349d186f385e06a237a",
+  "accessExpiresIn": 3600,
+  "refreshExpiresIn": 2592000
+}
+
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+{
+  "error": "Invalid token signature",
+  "tokenLength": 352
+}
+
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+{
+  "error": "Invalid token format",
+  "tokenLength": 17
+}
+
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+{
+  "error": "Invalid token format",
+  "tokenLength": 0
+}
+
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+{
+  "error": "Invalid token format",
+  "tokenLength": 3
+}
+
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+{
+  "error": "Token has expired",
+  "tokenLength": 280
+}
+
+-------------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------
+File                                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                         
+-------------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------
+All files                                  |   15.82 |      1.2 |   11.68 |   14.61 |                                                                                           
+ database                                  |   32.46 |       22 |   44.44 |   32.11 |                                                                                           
+  database.init.ts                         |   32.02 |       22 |   44.44 |   31.66 | 25-40,46-50,54-55,74-75,106-108,114,138,182-183,189-197,215,224-280,305,330-350,363-1352  
+  query-builder.ts                         |     100 |      100 |     100 |     100 |                                                                                           
+ modules/admin/controllers                 |   17.72 |        0 |   11.62 |   15.95 |                                                                                           
+  admin-files.controller.ts                |   19.27 |        0 |   14.28 |   17.72 | 39-76,86-123,130-138,148-198,205-220                                                      
+  admin-tables.controller.ts               |    17.7 |        0 |    9.09 |   15.95 | 36-37,43-48,59-79,88-106,116-128,134-140,150-168,178-193,204-225,231-238                  
+  community-members.controller.ts          |   11.34 |        0 |    12.5 |   10.07 | 64-181,191-239,249-287,296-347,356-432,441-465                                            
+  crm.controller.ts                        |   13.63 |        0 |   16.66 |   12.03 | 49-102,111-145,151-181,187-246,252-266                                                    
+  tasks.controller.ts                      |   62.96 |      100 |    9.09 |      60 | 37,51,57,63,69,75,84,90,96,102                                                            
+ modules/admin/services                    |    2.86 |        0 |    3.03 |     2.4 |                                                                                           
+  admin-tables.service.ts                  |    3.72 |        0 |    5.26 |    2.89 | 47-706                                                                                    
+  tasks.service.ts                         |    2.55 |        0 |    2.12 |    2.22 | 32-1875                                                                                   
+ modules/auth                              |   32.79 |    10.79 |   32.07 |   30.59 |                                                                                           
+  firebase-admin.service.ts                |   41.02 |     12.5 |      50 |   37.83 | 21-23,33-43,48-54,65-107                                                                  
+  jwt-auth.guard.ts                        |   22.44 |        0 |   28.57 |   17.58 | 43-230,240-264,279-303                                                                    
+  jwt.service.ts                           |   56.03 |    33.33 |    62.5 |   55.26 | 52-55,122,135-137,159-300,389-395                                                         
+  rate-limit.service.ts                    |    17.3 |        0 |      10 |      14 | 78-253                                                                                    
+  session.service.ts                       |   14.92 |        0 |    7.14 |   13.11 | 39-240                                                                                    
+ modules/auth/controllers                  |   18.15 |     0.42 |   18.18 |   16.66 |                                                                                           
+  auth.controller.ts                       |   14.04 |     0.47 |    8.33 |   13.41 | 72,199-202,210-315,329-367,385-472,491-561,580-955,973-1015                               
+  index.ts                                 |     100 |      100 |     100 |     100 |                                                                                           
+  session.controller.ts                    |   26.66 |        0 |    12.5 |   24.65 | 48-125,138-155,168-178,191-200,213-224,237-245,261-308                                    
+ modules/challenges/controllers            |   11.55 |        0 |     5.4 |   11.49 |                                                                                           
+  challenges.controller.ts                 |   17.92 |        0 |    5.55 |   18.77 | 144-186,192-216,222-247,257-314,323-387,396-458,464-488,494-530,539-568,574-609,618-655   
+  community-group-challenges.controller.ts |    6.68 |        0 |    5.26 |    6.26 | 50-105,114-231,240-274,288-478,487-542,554-631,644-769,783-812,821-873,886-1004,1016-1064 
+ modules/challenges/dto                    |   85.18 |      100 |       0 |     100 |                                                                                           
+  community-challenge.dto.ts               |   85.18 |      100 |       0 |     100 |                                                                                           
+ modules/chat/controllers                  |     7.4 |        0 |       5 |    6.81 |                                                                                           
+  chat.controller.ts                       |     7.4 |        0 |       5 |    6.81 | 61-100,112-242,251-333,348-589,598-728,742-812,822-875                                    
+ modules/donations/controllers             |   14.68 |        0 |    6.66 |   13.47 |                                                                                           
+  donations.controller.ts                  |   14.68 |        0 |    6.66 |   13.47 | 79-121,130-147,156-176,182-270,284-328,337-363,372-411,418-447,452-471,479-558            
+ modules/items                             |   14.04 |        0 |    8.33 |   12.32 |                                                                                           
+  dedicated-items.controller.ts            |   25.45 |        0 |    12.5 |   22.64 | 29-38,52-57,71-86,100-116,130-135,149-154,168-180                                         
+  dedicated-items.service.ts               |    6.92 |        0 |    9.09 |    5.51 | 21-372                                                                                    
+  items.controller.ts                      |      30 |        0 |      10 |   27.08 | 27-28,39-40,48-79,87-88,98-100,109-111,118-133,142-150,159-167                            
+  items.service.ts                         |   10.15 |        0 |    5.26 |    9.09 | 60-356                                                                                    
+ modules/items/controllers                 |   38.46 |        0 |    7.69 |      36 |                                                                                           
+  items-delivery.controller.ts             |   38.46 |        0 |    7.69 |      36 | 34-74,96-114,130-137,155-173,182,190,195,205,213,222,231-235,248-261                      
+ modules/items/dto                         |   80.16 |        0 |       0 |   80.16 |                                                                                           
+  dedicated-item.dto.ts                    |     100 |      100 |     100 |     100 |                                                                                           
+  item.dto.ts                              |     100 |      100 |     100 |     100 |                                                                                           
+  items.dto.ts                             |   69.62 |        0 |       0 |   69.62 | 37-39,52-54,161-173,178-190,211-223,228-240                                               
+ modules/items/services                    |    4.22 |        0 |    4.54 |    3.58 |                                                                                           
+  items-delivery.service.ts                |    4.22 |        0 |    4.54 |    3.58 | 32-712                                                                                    
+ modules/notifications/controllers         |   18.08 |        0 |   11.11 |    16.3 |                                                                                           
+  notifications.controller.ts              |   18.08 |        0 |   11.11 |    16.3 | 37-107,120-175,181-196,206-221,231-246,255-270                                            
+ modules/posts                             |    6.21 |        0 |    6.25 |    5.03 |                                                                                           
+  posts-schema.service.ts                  |    6.21 |        0 |    6.25 |    5.03 | 18-517                                                                                    
+ modules/posts/controllers                 |   43.93 |        0 |    6.25 |   42.18 |                                                                                           
+  posts.controller.ts                      |   43.93 |        0 |    6.25 |   42.18 | 40-43,55,71,77-81,90-92,100,106,116-118,133,143,153,163-167,177-181,191-195,201-205       
+ modules/posts/helpers                     |      12 |        0 |       0 |      12 |                                                                                           
+  posts-query.builder.ts                   |      12 |        0 |       0 |      12 | 19-39,47-86                                                                               
+ modules/posts/services                    |    9.41 |        0 |    8.57 |    8.27 |                                                                                           
+  posts-comments.service.ts                |    8.28 |        0 |    9.09 |    7.27 | 58-548                                                                                    
+  posts-likes.service.ts                   |   18.05 |        0 |   14.28 |   16.17 | 43-242                                                                                    
+  posts.service.ts                         |    7.31 |        0 |    5.88 |    6.43 | 61-613                                                                                    
+ modules/rides/controllers                 |    9.38 |        0 |    8.33 |    8.53 |                                                                                           
+  rides.controller.ts                      |    9.38 |        0 |    8.33 |    8.53 | 49-218,235-326,335-366,374-496,505-570,580-648,653-687,695-730,735-770                    
+ modules/stats/controllers                 |   39.21 |        0 |      10 |   36.73 |                                                                                           
+  stats.controller.ts                      |   39.21 |        0 |      10 |   36.73 | 36,41,49,54,59-77,86-111,118,123,129                                                      
+ modules/stats/services                    |   16.66 |        0 |      10 |   13.72 |                                                                                           
+  computed-stats.service.ts                |   13.75 |        0 |    6.25 |   12.85 | 28-269                                                                                    
+  index.ts                                 |     100 |      100 |      75 |     100 |                                                                                           
+  stats-facade.service.ts                  |    12.8 |        0 |    5.88 |   11.38 | 38-298                                                                                    
+  stats-mapper.service.ts                  |   15.38 |        0 |       0 |    9.09 | 73-280                                                                                    
+  stats-queries.service.ts                 |   18.91 |        0 |    8.33 |   14.28 | 17-230                                                                                    
+ modules/sync/controllers                  |    9.18 |     2.53 |    9.09 |    8.37 |                                                                                           
+  sync.controller.ts                       |    9.18 |     2.53 |    9.09 |    8.37 | 33-36,40-81,99-514,530-613,624-665                                                        
+ modules/users/controllers                 |    72.6 |      100 |      20 |   68.25 |                                                                                           
+  users-auth.controller.ts                 |      75 |      100 |      25 |      70 | 14,19,26                                                                                  
+  users-follow.controller.ts               |   81.81 |      100 |   33.33 |   77.77 | 22,31                                                                                     
+  users-hierarchy.controller.ts            |   65.21 |      100 |   11.11 |    61.9 | 16,30,39,48,57,62,67,72                                                                   
+  users-profile.controller.ts              |   73.33 |      100 |      20 |   69.23 | 22,27,36,47                                                                               
+  users-stats.controller.ts                |      75 |      100 |      25 |      70 | 10,18,23                                                                                  
+ modules/users/services                    |    8.06 |        0 |      10 |    6.89 |                                                                                           
+  user-auth.service.ts                     |     8.1 |        0 |   11.11 |     7.1 | 80-685                                                                                    
+  user-follow.service.ts                   |   25.64 |      100 |   33.33 |   21.62 | 23-134                                                                                    
+  user-hierarchy.service.ts                |    3.32 |        0 |    3.44 |    2.87 | 75-1444                                                                                   
+  user-profile.service.ts                  |    7.48 |        0 |   11.11 |    6.48 | 53-618                                                                                    
+  user-resolution.service.ts               |   17.18 |        0 |   16.66 |   14.51 | 52-215                                                                                    
+  user-stats.service.ts                    |   21.15 |        0 |      25 |      18 | 28-174                                                                                    
+ redis                                     |    5.55 |        0 |    6.25 |    4.25 |                                                                                           
+  redis-cache.service.ts                   |    5.55 |        0 |    6.25 |    4.25 | 17-290                                                                                    
+ shared/controllers                        |   21.86 |        0 |   18.75 |    19.4 |                                                                                           
+  health.controller.ts                     |    64.7 |        0 |      75 |      60 | 35-43                                                                                     
+  places.controller.ts                     |   14.28 |        0 |   14.28 |   11.66 | 15-59,68-85,90-162                                                                        
+  rate-limit.controller.ts                 |   20.28 |        0 |    8.33 |   19.04 | 33-50,72-113,130-144,160-179,192-201,214-222,243-259,275-297                              
+  redis-test.controller.ts                 |   19.69 |        0 |   11.11 |   17.46 | 25-32,46-63,76-87,100-110,123-133,150-161,174-239                                         
+-------------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------
+INFO: Scanner configuration file: /Users/navesarussi/KC/kc-monorepo/node_modules/sonar-scanner/conf/sonar-scanner.properties
+INFO: Project root configuration file: /Users/navesarussi/KC/kc-monorepo/apps/api/sonar-project.properties
+INFO: SonarQube Scanner 3.1.0.1141
+INFO: Java 25.0.2 Homebrew (64-bit)
+INFO: Mac OS X 15.6.1 aarch64
+INFO: User cache: /Users/navesarussi/.sonar/cache
+INFO: SonarQube server 12.19.0.2506
+INFO: Default locale: "en_US", source code encoding: "UTF-8" (analysis is platform dependent)
+INFO: Load global settings
+INFO: Load global settings (done) | time=712ms
+INFO: Server id: 1BD809FA-AWHW8ct9-T_TB3XqouNu
+INFO: Loading required plugins
+INFO: Load plugins index
+INFO: Load plugins index (done) | time=211ms
+INFO: Load/download plugins
+INFO: Load/download plugins (done) | time=45ms
+INFO: Loaded core extensions: sca, a3s, architecture
+INFO: Process project properties
+INFO: Project key: KarmaCummunity_KC-MVP-server
+INFO: Base dir: /Users/navesarussi/KC/kc-monorepo/apps/api
+INFO: Working dir: /Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork
+INFO: Load project branches
+INFO: Load project branches (done) | time=421ms
+INFO: Load project settings for component key: 'KarmaCummunity_KC-MVP-server'
+INFO: Load project settings for component key: 'KarmaCummunity_KC-MVP-server' (done) | time=629ms
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Check ALM binding of project 'KarmaCummunity_KC-MVP-server'
+INFO: Detected project binding: BOUND
+INFO: Check ALM binding of project 'KarmaCummunity_KC-MVP-server' (done) | time=255ms
+INFO: Load project pull requests
+INFO: Load project pull requests (done) | time=315ms
+INFO: Load branch configuration
+INFO: Load branch configuration (done) | time=1ms
+INFO: Load quality profiles
+INFO: Load quality profiles (done) | time=764ms
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Create analysis
+INFO: Create analysis (done) | time=440ms
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Load active rules
+INFO: Load active rules (done) | time=1244ms
+INFO: Organization key: karmacummunity
+INFO: Preprocessing files...
+INFO: 2 languages detected in 109 preprocessed files (done) | time=192ms
+INFO: 142 files ignored because of inclusion/exclusion patterns
+INFO: 1 file ignored because of scm ignore settings
+INFO: Loading plugins for detected languages
+INFO: Load/download plugins
+INFO: Load/download plugins (done) | time=20ms
+INFO: Load project repositories
+INFO: Load project repositories (done) | time=427ms
+INFO: Indexing files...
+INFO: Project configuration:
+INFO:   Excluded sources: src/**/*.spec.ts, src/**/*.test.ts, src/scripts/**, dist/**, node_modules/**, **/build-wrapper-dump.json, src/**/*.spec.ts, src/**/*.test.ts
+INFO:   Included tests: src/**/*.spec.ts, src/**/*.test.ts
+INFO:   Excluded sources for coverage: src/**/*.spec.ts, src/**/*.test.ts, src/scripts/**
+INFO: 108 files indexed (done) | time=9ms
+INFO: Quality profile for plsql: Sonar way
+INFO: Quality profile for ts: Sonar way
+INFO: ------------- Run sensors on module KarmaCummunity_KC-MVP-server
+INFO: Load metrics repository
+INFO: Load metrics repository (done) | time=181ms
+INFO: Sensor cache enabled
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Load sensor cache
+INFO: Load sensor cache (1 MB) | time=2680ms
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
+INFO: Sensor JasminFileCollectorSensor [jasmin]
+INFO: Sensor JasminFileCollectorSensor [jasmin] (done) | time=0ms
+INFO: Sensor IaC hadolint report Sensor [iac]
+INFO: Sensor IaC hadolint report Sensor [iac] (done) | time=0ms
+INFO: Sensor Java Config Sensor [iac]
+INFO: There are no files to be analyzed for the Java language
+INFO: Sensor Java Config Sensor [iac] (done) | time=3ms
+INFO: Sensor IaC Docker Sensor [iac]
+INFO: There are no files to be analyzed for the Docker language
+INFO: Sensor IaC Docker Sensor [iac] (done) | time=1ms
+INFO: Sensor IaC GitHub Actions Sensor [iac]
+INFO: There are no files to be analyzed for the GitHub Actions language
+INFO: Sensor IaC GitHub Actions Sensor [iac] (done) | time=0ms
+INFO: Sensor IaC actionlint report Sensor [iac]
+INFO: Sensor IaC actionlint report Sensor [iac] (done) | time=0ms
+INFO: Sensor IaC Shell Sensor [iac]
+INFO: There are no files to be analyzed for the Shell language
+INFO: Sensor IaC Shell Sensor [iac] (done) | time=0ms
+INFO: Sensor JavaScript/TypeScript analysis [javascript]
+INFO: Detected os: Mac OS X arch: aarch64 alpine: false. Platform: DARWIN_ARM64
+INFO: Deploy location /Users/navesarussi/.sonar/js/node-runtime, tagetRuntime: /Users/navesarussi/.sonar/js/node-runtime/node,  version: /Users/navesarussi/.sonar/js/node-runtime/version.txt
+INFO: Using embedded Node.js runtime.
+INFO: Using Node.js executable: '/Users/navesarussi/.sonar/js/node-runtime/node'.
+INFO: Memory configuration: OS (16384 MB), Node.js (4288 MB).
+INFO: WebSocket client connected on /ws
+INFO: Plugin version: [12.0.0.38664]
+INFO: Resolving provided TSConfig files using '/Users/navesarussi/KC/kc-monorepo/apps/api/tsconfig.json'
+INFO: Found 1 tsconfig.json file(s): [/Users/navesarussi/KC/kc-monorepo/apps/api/tsconfig.json]
+INFO: 89 source files to be analyzed
+INFO: Creating TypeScript(5.9.3) program with configuration file /Users/navesarussi/KC/kc-monorepo/apps/api/tsconfig.json
+INFO: Analyzing 89 file(s) from tsconfig /Users/navesarussi/KC/kc-monorepo/apps/api/tsconfig.json (1485 total files in program)
+INFO: 89/89 source files have been analyzed
+INFO: JasminAstConsumer done
+INFO: Hit the cache for 0 out of 89
+INFO: Miss the cache for 89 out of 89: ANALYSIS_MODE_INELIGIBLE [89/89]
+INFO: Sensor JavaScript/TypeScript analysis [javascript] (done) | time=10208ms
+INFO: Sensor CSS Rules [javascript]
+INFO: No CSS, PHP, HTML or VueJS files are found in the project. CSS analysis is skipped.
+INFO: Sensor CSS Rules [javascript] (done) | time=0ms
+INFO: Sensor JavaScript/TypeScript Coverage [javascript]
+INFO: Analysing [/Users/navesarussi/KC/kc-monorepo/apps/api/coverage/lcov.info]
+INFO: Sensor JavaScript/TypeScript Coverage [javascript] (done) | time=26ms
+INFO: Sensor PL/SQL Sensor [plsql]
+INFO: 19 source files to be analyzed
+INFO: 19/19 source files have been analyzed
+INFO: Sensor PL/SQL Sensor [plsql] (done) | time=554ms
+INFO: Sensor EnterpriseTextAndSecretsSensor [textenterprise]
+INFO: Available processors: 8
+INFO: Using 8 threads for analysis.
+INFO: Start fetching files for the text and secrets analysis
+INFO: Using Git CLI to retrieve dirty files
+INFO: Retrieving language associated files and files included via "sonar.text.inclusions" that are tracked by git
+INFO: Starting the text and secrets analysis
+INFO: 108 source files to be analyzed for the text and secrets analysis
+INFO: 108/108 source files have been analyzed for the text and secrets analysis
+INFO: Start fetching files for the binary file analysis
+INFO: There are no files to be analyzed for the binary file analysis
+INFO: Sensor EnterpriseTextAndSecretsSensor [textenterprise] (done) | time=531ms
+INFO: ------------- Run sensors on project
+INFO: Sensor JsSecuritySensorV2 [jasmin]
+INFO: 86 file(s) will be analysed by SonarJasmin.
+INFO: Analysis progress:   9% (8/86 files)
+INFO: Analysis progress:  18% (16/86 files)
+INFO: Analysis progress:  27% (24/86 files)
+INFO: Analysis progress:  37% (32/86 files)
+INFO: Analysis progress:  46% (40/86 files)
+INFO: Analysis progress:  55% (48/86 files)
+INFO: Analysis progress:  65% (56/86 files)
+INFO: Analysis progress:  74% (64/86 files)
+INFO: Analysis progress:  83% (72/86 files)
+INFO: Analysis progress:  93% (80/86 files)
+INFO: Sensor JsSecuritySensorV2 [jasmin] (done) | time=1826ms
+INFO: Sensor TsArchitectureSensor [architecture]
+INFO: Found 1 potential Udg file location(s) for "ts" in "/Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork"
+INFO: - /Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork/architecture/ts
+INFO: Architecture analysis is enabled with the following features: legacy
+INFO: * Protobuf reading starting | memory total=214 | free=21 | used=192 (MB)
+INFO: * Reading SonarArchitecture UDG data from directory "/Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork/architecture/ts"
+INFO: * Files successfully loaded: "89" out of "89"
+INFO: * Purging externals (components not scanned) from graphs
+INFO: * Purging excluded nodes from graphs
+INFO: * Protobuf reading complete | memory total=214 | free=114 | used=99 (MB)
+INFO: * Build architecture.graph.ts.file_graph.default_perspective hierarchy graph complete (filtered=false) | memory total=214 | free=106 | used=107 (MB)
+INFO: Sensor TsArchitectureSensor [architecture] (done) | time=131ms
+INFO: Sensor Zero Coverage Sensor
+INFO: Sensor Zero Coverage Sensor (done) | time=2ms
+INFO: ------------- Gather SCA dependencies on project
+INFO: Checking if SCA is enabled for organization karmacummunity
+INFO: Dependency analysis skipped
+INFO: CPD Executor 15 files had no CPD blocks
+INFO: CPD Executor Calculating CPD for 90 files
+INFO: CPD Executor CPD calculation finished (done) | time=45ms
+INFO: SCM Publisher SCM provider for this project is: git
+INFO: SCM Publisher 108 source files to be analyzed
+INFO: SCM Publisher 108/108 source files have been analyzed (done) | time=400ms
+INFO: Analysis report generated in 86ms, dir size=2 MB
+INFO: Analysis report compressed in 216ms, zip size=730 KB
+INFO: Analysis report uploaded in 1865ms
+INFO: ------------- Upload SCA dependency files
+INFO: Sensor cache published successfully
+INFO: ------------- Check Quality Gate status
+INFO: Waiting for the analysis report to be processed (max 300s)
+INFO: ------------------------------------------------------------------------
+INFO: EXECUTION FAILURE
+INFO: ------------------------------------------------------------------------
+INFO: Total time: 37.457s
+INFO: Final Memory: 34M/134M
+INFO: ------------------------------------------------------------------------

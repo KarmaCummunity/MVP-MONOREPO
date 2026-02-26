@@ -16,6 +16,7 @@ ignore:
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
   javascript/Sqli:
+    - src/modules/items/items.service.ts:
     - src/items/items.service.ts:
         reason: >
           Table names come from tableFor() which validates against a hard-coded
@@ -30,6 +31,7 @@ ignore:
           used; no string interpolation of user values into SQL.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
+    - src/modules/challenges/controllers/community-group-challenges.controller.ts:
     - src/controllers/community-group-challenges.controller.ts:
         reason: >
           sort_by is validated against an explicit allowlist of column names;
@@ -37,6 +39,7 @@ ignore:
           quoted via pg-format %I before being appended to the query.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
+    - src/modules/admin/controllers/tasks.controller.ts:
     - src/controllers/tasks.controller.ts:
         reason: >
           The WHERE clause is built from fixed column names (status, priority,
@@ -44,6 +47,13 @@ ignore:
           input is used as a column name or identifier.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
+    - src/modules/items/controllers/items-delivery.controller.ts:
+    - src/modules/items/services/items-delivery.service.ts:
+        reason: >
+          All filter values (category, search, etc.) are passed as query params
+          ($1, $2, ...). sort_by/sort_order validated against allowlist.
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-26T00:00:00.000Z
     - src/scripts/run-sql.ts:
         reason: >
           sqlPath is validated: confined to projectRoot, .sql extension
@@ -159,24 +169,33 @@ ignore:
 patch: {}
 exclude:
   code:
+    - src/modules/items/items.service.ts:
     - src/items/items.service.ts:
         reason: >-
           tableFor() validates against hard-coded allowlist; all queries use
           pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:10.616Z
+    - src/modules/challenges/controllers/community-group-challenges.controller.ts:
     - src/controllers/community-group-challenges.controller.ts:
         reason: >-
           sort_by validated against allowlist; sort_order forced ASC/DESC;
           identifier quoted via pg-format %I
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:13.615Z
+    - src/modules/admin/controllers/tasks.controller.ts:
     - src/controllers/tasks.controller.ts:
         reason: >-
           WHERE clause built from fixed column names; all values parameterised
           ($1,$2,...); no user input as identifier
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:16.452Z
+    - src/modules/items/controllers/items-delivery.controller.ts:
+    - src/modules/items/services/items-delivery.service.ts:
+        reason: >-
+          Filter values passed as query params; sort_by/sort_order allowlisted
+        expires: 2027-06-01T00:00:00.000Z
+        created: 2026-02-26T00:00:00.000Z
     - src/scripts/run-sql.ts:
         reason: >-
           sqlPath validated: confined to projectRoot, .sql extension enforced,
@@ -195,6 +214,7 @@ exclude:
           always HTTPS
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:24.754Z
+    - src/modules/items/items.controller.ts:
     - src/items/items.controller.ts:
         reason: >-
           all SQL queries through itemsService which validates collection
