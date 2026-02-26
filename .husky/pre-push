@@ -38,6 +38,19 @@ if [ -n "$API_CHANGED" ]; then
   fi
   
   cd ../.. || exit 1
+
+  # Sonar: run scan locally and block push if BLOCKER/CRITICAL issues found
+  if [ -n "${SONAR_TOKEN:-}" ]; then
+    echo ""
+    echo "🔍 Running pre-push Sonar check (scan + BLOCKER/CRITICAL gate)..."
+    if ! ./scripts/sonar-analysis/pre-push-sonar-check.sh; then
+      echo ""
+      echo "❌ Push blocked by Sonar (BLOCKER/CRITICAL issues). Fix them or use: git push --no-verify"
+      exit 1
+    fi
+  else
+    echo "ℹ️  Set SONAR_TOKEN to run pre-push Sonar check (optional; CI will run Sonar)"
+  fi
 else
   echo "ℹ️  No API changes detected - skipping quality gate"
 fi

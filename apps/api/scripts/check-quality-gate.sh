@@ -84,31 +84,35 @@ else
 fi
 
 # =============================================================================
-# 2. ESLint Check - Only Changed Files
+# 2. ESLint - Full Project
 # =============================================================================
-print_header "2️⃣  Running ESLint on Changed Files"
+print_header "2️⃣  Running ESLint (full project)"
 
-if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
-    echo -e "${GREEN}✅ Skipping - no files to check${NC}"
+if npm run lint 2>&1; then
+    echo -e "${GREEN}✅ ESLint passed${NC}"
 else
-    echo "Running ESLint..."
-    
-    # Convert changed files to space-separated list
-    FILES_TO_LINT=$(echo "$CHANGED_FILES" | tr '\n' ' ')
-    
-    if npm run lint -- $FILES_TO_LINT 2>&1; then
-        echo -e "${GREEN}✅ ESLint passed - no issues in changed files${NC}"
-    else
-        echo -e "${RED}❌ ESLint found issues in changed files${NC}"
-        echo -e "${YELLOW}Run 'npm run lint -- --fix' to auto-fix some issues${NC}"
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
-    fi
+    echo -e "${RED}❌ ESLint found issues${NC}"
+    echo -e "${YELLOW}Run 'npm run lint -- --fix' to auto-fix some issues${NC}"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
 # =============================================================================
-# 3. TypeScript Compilation Check
+# 3. TypeScript Check (noEmit)
 # =============================================================================
-print_header "3️⃣  Checking TypeScript Compilation"
+print_header "3️⃣  TypeScript Check (noEmit)"
+
+if npm run typecheck 2>&1; then
+    echo -e "${GREEN}✅ TypeScript (noEmit) passed${NC}"
+else
+    echo -e "${RED}❌ TypeScript (noEmit) failed${NC}"
+    echo "Run 'npm run typecheck' to see detailed errors"
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+# =============================================================================
+# 4. TypeScript Compilation Check
+# =============================================================================
+print_header "4️⃣  Checking TypeScript Compilation"
 
 if npm run build > /dev/null 2>&1; then
     echo -e "${GREEN}✅ TypeScript compilation successful${NC}"
@@ -119,9 +123,9 @@ else
 fi
 
 # =============================================================================
-# 4. Run Tests
+# 5. Run Tests
 # =============================================================================
-print_header "4️⃣  Running Tests"
+print_header "5️⃣  Running Tests"
 
 export NODE_ENV=test
 export JWT_SECRET="test-jwt-secret-32-chars-minimum!!"
@@ -146,9 +150,9 @@ else
 fi
 
 # =============================================================================
-# 5. Snyk Security Check (if available)
+# 6. Snyk Security Check (if available)
 # =============================================================================
-print_header "5️⃣  Checking for Security Vulnerabilities (Snyk)"
+print_header "6️⃣  Checking for Security Vulnerabilities (Snyk)"
 
 if ! command_exists snyk; then
     echo -e "${YELLOW}⚠️  Snyk CLI not installed - skipping security scan${NC}"
@@ -177,9 +181,9 @@ else
 fi
 
 # =============================================================================
-# 6. Check for Sensitive Data
+# 7. Check for Sensitive Data
 # =============================================================================
-print_header "6️⃣  Scanning for Sensitive Data"
+print_header "7️⃣  Scanning for Sensitive Data"
 
 if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
     echo -e "${GREEN}✅ Skipping - no files to check${NC}"
@@ -209,9 +213,9 @@ else
 fi
 
 # =============================================================================
-# 7. Check TODO Comments in Changed Files
+# 8. Check TODO Comments in Changed Files
 # =============================================================================
-print_header "7️⃣  Checking for TODO Comments"
+print_header "8️⃣  Checking for TODO Comments"
 
 if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
     TODO_COUNT=0
@@ -242,7 +246,8 @@ if [[ $ISSUES_FOUND -eq 0 ]]; then
     echo -e "${GREEN}✅ Quality Gate PASSED${NC}"
     echo ""
     echo -e "${GREEN}All checks passed successfully:${NC}"
-    echo -e "  ✅ No new linting errors"
+    echo -e "  ✅ ESLint (full project)"
+    echo -e "  ✅ TypeScript (noEmit)"
     echo -e "  ✅ No compilation errors"
     echo -e "  ✅ All tests passing"
     echo -e "  ✅ No new security vulnerabilities"

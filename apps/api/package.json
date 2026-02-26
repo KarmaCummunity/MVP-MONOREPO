@@ -16,6 +16,7 @@
     "start:dev": "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=${GOOGLE_CLIENT_ID} DATABASE_URL=${DATABASE_URL} REDIS_URL=${REDIS_URL} NODE_ENV=development nest start --watch",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint ./src --ext .ts",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\"",
     "init:db": "ts-node -r tsconfig-paths/register src/scripts/init-db.ts",
     "add:google-id": "ts-node -r tsconfig-paths/register src/scripts/add-google-id-column.ts",
@@ -39,6 +40,7 @@
     "quality:gate": "./scripts/check-quality-gate.sh",
     "quality:snyk": "./scripts/check-snyk-delta.sh",
     "quality:full": "npm run lint && npm run test:cov && npm run quality:snyk",
+    "sonar:local": "npm run test:ci && npx sonar-scanner",
     "_TODO_ADD_SCRIPTS": "// TODO: Add missing scripts: migration:run, migration:revert, seed, security-audit"
   },
   "dependencies": {
@@ -65,6 +67,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@kc/config-eslint": "1.0.0",
     "@nestjs/cli": "^10.3.2",
     "@nestjs/schematics": "^10.1.1",
     "@nestjs/testing": "^10.3.2",
@@ -74,7 +77,6 @@
     "@types/node": "^20.14.2",
     "@types/pg": "^8.15.5",
     "@types/supertest": "^6.0.3",
-    "@kc/config-eslint": "1.0.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.1",
@@ -85,6 +87,7 @@
     "jest": "^29.7.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.2.5",
+    "sonar-scanner": "^3.1.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
