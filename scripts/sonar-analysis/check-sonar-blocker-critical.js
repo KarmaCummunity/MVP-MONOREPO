@@ -1,6 +1,7 @@
 /**
- * Fetches BLOCKER and CRITICAL issues from SonarCloud API and exits with 1 if any exist.
- * Used after a local Sonar scan to block push when critical/blocker issues are present.
+ * Fetches BLOCKER, CRITICAL and HIGH issues from SonarCloud API and exits with 1 if any exist.
+ * Used after a local Sonar scan to block push when blocker/critical/high issues are present.
+ * Displays the first 20 issues (by severity order: BLOCKER, CRITICAL, HIGH).
  *
  * Usage: SONAR_TOKEN=xxx node scripts/sonar-analysis/check-sonar-blocker-critical.js [projectKey]
  * Default projectKey: KarmaCummunity_KC-MVP-server (API)
@@ -11,14 +12,17 @@ const https = require('https');
 const SONAR_API = 'https://sonarcloud.io/api/issues/search';
 const DEFAULT_PROJECT_KEY = 'KarmaCummunity_KC-MVP-server';
 const PAGE_SIZE = 500;
+const SEVERITIES = 'BLOCKER,CRITICAL,HIGH';
+const SHOW_FIRST_N = 20;
+const SEVERITY_ORDER = { BLOCKER: 0, CRITICAL: 1, HIGH: 2 };
 
-function fetchPage(projectKey, token, page, severities) {
+function fetchPage(projectKey, token, page) {
   return new Promise((resolve, reject) => {
     const params = new URLSearchParams({
       projectKeys: projectKey,
       ps: String(PAGE_SIZE),
       p: String(page),
-      severities: severities || 'BLOCKER,CRITICAL',
+      severities: SEVERITIES,
     });
     const url = `${SONAR_API}?${params.toString()}`;
     https
@@ -37,7 +41,7 @@ function fetchPage(projectKey, token, page, severities) {
   });
 }
 
-async function fetchBlockerCriticalIssues(projectKey, token) {
+async function fetchBlockingIssues(projectKey, token) {
   const allIssues = [];
   let page = 1;
   let total = 0;
@@ -68,31 +72,32 @@ async function main() {
 
   const projectKey = process.argv[2] || DEFAULT_PROJECT_KEY;
 
-  const issues = await fetchBlockerCriticalIssues(projectKey, token);
+  const issues = await fetchBlockingIssues(projectKey, token);
 
   if (issues.length === 0) {
-    console.log('No BLOCKER or CRITICAL issues in SonarCloud for project:', projectKey);
+    console.log('No BLOCKER, CRITICAL or HIGH issues in SonarCloud for project:', projectKey);
     process.exit(0);
   }
 
-  const blocker = issues.filter((i) => i.severity === 'BLOCKER');
-  const critical = issues.filter((i) => i.severity === 'CRITICAL');
+  const bySeverity = {
+    BLOCKER: issues.filter((i) => i.severity === 'BLOCKER'),
+    CRITICAL: issues.filter((i) => i.severity === 'CRITICAL'),
+    HIGH: issues.filter((i) => i.severity === 'HIGH'),
+  };
+  const sorted = [...issues].sort(
+    (a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
+  );
+  const toShow = sorted.slice(0, SHOW_FIRST_N);
 
   console.error('');
-  console.error('SonarCloud reported BLOCKER/CRITICAL issues. Push blocked.');
+  console.error('SonarCloud reported BLOCKER/CRITICAL/HIGH issues. Push blocked.');
   console.error('Project:', projectKey);
-  console.error('BLOCKER:', blocker.length, '| CRITICAL:', critical.length);
+  console.error('BLOCKER:', bySeverity.BLOCKER.length, '| CRITICAL:', bySeverity.CRITICAL.length, '| HIGH:', bySeverity.HIGH.length);
   console.error('');
-  if (blocker.length > 0) {
-    console.error('BLOCKER:');
-    blocker.slice(0, 20).forEach((i) => console.error(formatIssue(i)));
-    if (blocker.length > 20) console.error('  ... and', blocker.length - 20, 'more');
-    console.error('');
-  }
-  if (critical.length > 0) {
-    console.error('CRITICAL:');
-    critical.slice(0, 20).forEach((i) => console.error(formatIssue(i)));
-    if (critical.length > 20) console.error('  ... and', critical.length - 20, 'more');
+  console.error('First', SHOW_FIRST_N, 'issues:');
+  toShow.forEach((i) => console.error(formatIssue(i)));
+  if (issues.length > SHOW_FIRST_N) {
+    console.error('  ... and', issues.length - SHOW_FIRST_N, 'more');
   }
   console.error('');
   console.error('Fix these issues or run: git push --no-verify to skip (not recommended).');

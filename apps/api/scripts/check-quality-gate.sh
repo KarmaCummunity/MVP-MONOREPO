@@ -9,8 +9,6 @@
 # Example: ./scripts/check-quality-gate.sh main
 # =============================================================================
 
-set -e  # Exit on error
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -22,18 +20,51 @@ NC='\033[0m' # No Color
 BASE_BRANCH="${1:-main}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+LOG_LINES_ON_FAIL=40
+TMP_OUTPUT=$(mktemp)
+trap 'rm -f "$TMP_OUTPUT"' EXIT
+
+# Track passed steps (to show on first failure)
+PASSED_STEPS=()
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║           Quality Gate Check - Local Validation               ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Track overall status
-ISSUES_FOUND=0
+# =============================================================================
+# Run a check: on success add to PASSED_STEPS and print one line; on failure
+# print passed checks, then failed check name, then output and exit 1.
+# =============================================================================
+run_check() {
+    local step_name="$1"
+    shift
+    if "$@" > "$TMP_OUTPUT" 2>&1; then
+        PASSED_STEPS+=("$step_name")
+        echo -e "${GREEN}✅ $step_name${NC}"
+        return 0
+    else
+        echo ""
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BLUE}  FAILURE SUMMARY${NC}"
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        if [[ ${#PASSED_STEPS[@]} -gt 0 ]]; then
+            echo -e "${GREEN}Passed (${#PASSED_STEPS[@]}):${NC}"
+            printf '  ✅ %s\n' "${PASSED_STEPS[@]}"
+            echo ""
+        fi
+        echo -e "${RED}Failed: $step_name${NC}"
+        echo ""
+        echo -e "${YELLOW}--- Output (last ${LOG_LINES_ON_FAIL} lines) ---${NC}"
+        tail -n "$LOG_LINES_ON_FAIL" "$TMP_OUTPUT" | sed 's/^/  /'
+        echo -e "${YELLOW}---${NC}"
+        echo ""
+        echo "To fix: run the failing step manually (e.g. npm run lint, npm run typecheck, npm run build, npm test)."
+        echo "To skip this check (not recommended): git push --no-verify"
+        exit 1
+    fi
+}
 
-# =============================================================================
-# Function: Print section header
-# =============================================================================
 print_header() {
     echo ""
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -41,9 +72,6 @@ print_header() {
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# =============================================================================
-# Function: Check if command exists
-# =============================================================================
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -86,98 +114,45 @@ fi
 # =============================================================================
 # 2. ESLint - Full Project
 # =============================================================================
-print_header "2️⃣  Running ESLint (full project)"
-
-if npm run lint 2>&1; then
-    echo -e "${GREEN}✅ ESLint passed${NC}"
-else
-    echo -e "${RED}❌ ESLint found issues${NC}"
-    echo -e "${YELLOW}Run 'npm run lint -- --fix' to auto-fix some issues${NC}"
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
-fi
+print_header "2️⃣  ESLint (full project)"
+run_check "ESLint (full project)" npm run lint
 
 # =============================================================================
 # 3. TypeScript Check (noEmit)
 # =============================================================================
-print_header "3️⃣  TypeScript Check (noEmit)"
-
-if npm run typecheck 2>&1; then
-    echo -e "${GREEN}✅ TypeScript (noEmit) passed${NC}"
-else
-    echo -e "${RED}❌ TypeScript (noEmit) failed${NC}"
-    echo "Run 'npm run typecheck' to see detailed errors"
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
-fi
+print_header "3️⃣  TypeScript (noEmit)"
+run_check "TypeScript (noEmit)" npm run typecheck
 
 # =============================================================================
-# 4. TypeScript Compilation Check
+# 4. TypeScript Compilation
 # =============================================================================
-print_header "4️⃣  Checking TypeScript Compilation"
-
-if npm run build > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ TypeScript compilation successful${NC}"
-else
-    echo -e "${RED}❌ TypeScript compilation failed${NC}"
-    echo "Run 'npm run build' to see detailed errors"
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
-fi
+print_header "4️⃣  TypeScript compilation"
+run_check "TypeScript compilation" npm run build
 
 # =============================================================================
 # 5. Run Tests
 # =============================================================================
-print_header "5️⃣  Running Tests"
-
+print_header "5️⃣  Tests"
 export NODE_ENV=test
 export JWT_SECRET="test-jwt-secret-32-chars-minimum!!"
 export GOOGLE_CLIENT_ID="test-google-client-id"
 export EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID="test-web-client-id"
-
-if npm run test:cov > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ All tests passed${NC}"
-    
-    # Show coverage summary if available
-    if [[ -f "coverage/coverage-summary.json" ]]; then
-        echo ""
-        echo "Coverage Summary:"
-        if command_exists jq; then
-            jq -r '.total | "  Lines: \(.lines.pct)% | Statements: \(.statements.pct)% | Functions: \(.functions.pct)% | Branches: \(.branches.pct)%"' coverage/coverage-summary.json
-        fi
-    fi
-else
-    echo -e "${RED}❌ Tests failed${NC}"
-    echo "Run 'npm test' to see detailed errors"
-    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+run_check "Tests" npm run test:cov
+if [[ -f "coverage/coverage-summary.json" ]] && command_exists jq; then
+    echo "  Coverage: $(jq -r '.total | "Lines \(.lines.pct)% | Branches \(.branches.pct)%"' coverage/coverage-summary.json)"
 fi
 
 # =============================================================================
 # 6. Snyk Security Check (if available)
 # =============================================================================
-print_header "6️⃣  Checking for Security Vulnerabilities (Snyk)"
+print_header "6️⃣  Snyk (security)"
 
 if ! command_exists snyk; then
-    echo -e "${YELLOW}⚠️  Snyk CLI not installed - skipping security scan${NC}"
-    echo "Install with: npm install -g snyk"
+    echo -e "${YELLOW}⏭️  Snyk CLI not installed - skipped${NC}"
 elif [[ -z "$SNYK_TOKEN" ]]; then
-    echo -e "${YELLOW}⚠️  SNYK_TOKEN not set - skipping authenticated scan${NC}"
-    echo "Set SNYK_TOKEN environment variable or run: snyk auth"
+    echo -e "${YELLOW}⏭️  SNYK_TOKEN not set - skipped${NC}"
 else
-    echo "Running Snyk security scan..."
-    
-    # Run Snyk test with high severity threshold
-    if snyk test --severity-threshold=high --fail-on=upgradable 2>&1; then
-        echo -e "${GREEN}✅ No high/critical security vulnerabilities found${NC}"
-    else
-        echo -e "${RED}❌ High/critical security vulnerabilities found${NC}"
-        echo -e "${YELLOW}Run 'snyk test' for detailed report${NC}"
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
-    fi
-    
-    # Run Snyk Code (SAST)
-    if snyk code test --severity-threshold=high 2>&1 | grep -q "✗"; then
-        echo -e "${YELLOW}⚠️  Snyk Code found potential security issues${NC}"
-        echo "Run 'snyk code test' for detailed report"
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
-    fi
+    run_check "Snyk" bash -c "snyk test --severity-threshold=high --fail-on=upgradable && (! snyk code test --severity-threshold=high 2>&1 | grep -q '✗')"
 fi
 
 # =============================================================================
