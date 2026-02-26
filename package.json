@@ -17,7 +17,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "prepare": "husky install",
-    "quality:api": "npm run quality:gate --workspace @kc/api"
+    "quality:api": "npm run quality:gate --workspace @kc/api",
+    "sonar:report": "node scripts/sonar-analysis/sonar-report.js"
   },
   "engines": {
     "node": ">=18.0.0"

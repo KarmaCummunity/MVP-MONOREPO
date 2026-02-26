@@ -1,7 +1,7 @@
 // Community Challenges Screen
 // Main screen for community challenges - similar to ItemsScreen structure
 // Supports two modes: Search (browse challenges) and Offer (create new challenge)
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -73,6 +73,52 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   // Mode: true = מחפש (search), false = מציע (offer/create)
   const [mode, setMode] = useState(initialMode);
 
+  const hasSetInitialModeRef = useRef(false);
+  const navRef = useRef(navigation);
+  navRef.current = navigation;
+
+  // Initial load only: set URL to search when no mode in params; do not reset mode when params briefly missing (avoids loop when toggling to offer)
+  useEffect(() => {
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (!missingOrInvalid) return;
+
+    if (!hasSetInitialModeRef.current) {
+      hasSetInitialModeRef.current = true;
+      (navRef.current as NavigationProp<DonationsStackParamList> & { setParams?: (p: { mode?: string }) => void }).setParams?.({ mode: 'search' });
+      queueMicrotask(() => setMode(true));
+    }
+  }, [routeParams?.mode]);
+
+  // Sync mode from route params (e.g. deep link)
+  useEffect(() => {
+    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
+      const newMode = routeParams.mode === 'search';
+      setMode((prev) => (prev === newMode ? prev : newMode));
+    }
+  }, [routeParams?.mode]);
+
+  // Sync mode to URL when user toggles; re-apply when params briefly missing so URL stays in sync
+  useEffect(() => {
+    const nav = navRef.current as NavigationProp<DonationsStackParamList> & { setParams?: (p: { mode?: string }) => void };
+    const newMode = mode ? 'search' : 'offer';
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (missingOrInvalid) {
+      if (hasSetInitialModeRef.current) {
+        nav.setParams?.({ mode: newMode });
+      }
+      return;
+    }
+    if (newMode !== currentMode) {
+      nav.setParams?.({ mode: newMode });
+    }
+  }, [mode, routeParams?.mode]);
+
   // State for challenges list
   const [allChallenges, setAllChallenges] = useState<CommunityChallenge[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<CommunityChallenge[]>([]);
@@ -95,16 +141,6 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const [goalValue, setGoalValue] = useState('');
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(ChallengeDifficulty.EASY);
   const [category, setCategory] = useState('');
-
-  // Update mode from route params
-  useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'search';
-      if (newMode !== mode) {
-        setMode(newMode);
-      }
-    }
-  }, [routeParams?.mode, mode]);
 
   const loadChallenges = useCallback(async () => {
     try {

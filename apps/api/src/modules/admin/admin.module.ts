@@ -5,6 +5,7 @@ import { CrmController } from "./controllers/crm.controller";
 import { TasksController } from "./controllers/tasks.controller";
 import { CommunityMembersController } from "./controllers/community-members.controller";
 import { AdminTablesService } from "./services/admin-tables.service";
+import { TasksService } from "./services/tasks.service";
 import { DatabaseModule } from "../../database/database.module";
 import { RedisCacheModule } from "../../redis/redis-cache.module";
 import { AuthModule } from "../auth/auth.module";
@@ -26,7 +27,7 @@ import { ItemsModule } from "../items/items.module";
     TasksController,
     CommunityMembersController,
   ],
-  providers: [AdminTablesService],
-  exports: [AdminTablesService],
+  providers: [AdminTablesService, TasksService],
+  exports: [AdminTablesService, TasksService],
 })
 export class AdminModule {}

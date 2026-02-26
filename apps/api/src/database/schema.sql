@@ -46,18 +46,21 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 );
 
 -- Ensure parent_manager_id column exists (for existing tables that might not have it)
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'user_profiles';
+    c_col CONSTANT TEXT := 'parent_manager_id';
+    c_fk CONSTANT TEXT := 'user_profiles_parent_manager_id_fkey';
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'parent_manager_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         ALTER TABLE user_profiles ADD COLUMN parent_manager_id UUID;
-        -- Add foreign key constraint only if user_profiles table exists and constraint doesn't exist
-        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_profiles') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
             IF NOT EXISTS (
-                SELECT 1 FROM information_schema.table_constraints 
-                WHERE constraint_name = 'user_profiles_parent_manager_id_fkey' AND table_name = 'user_profiles'
+                SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_name = c_fk AND table_schema = current_schema() AND table_name = c_tbl
             ) THEN
                 ALTER TABLE user_profiles ADD CONSTRAINT user_profiles_parent_manager_id_fkey FOREIGN KEY (parent_manager_id) REFERENCES user_profiles(id) ON DELETE SET NULL;
             END IF;
@@ -66,22 +69,28 @@ BEGIN
 END $$;
 
 -- Ensure salary column exists (for existing tables that might not have it)
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'user_profiles';
+    c_col CONSTANT TEXT := 'salary';
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'salary'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         ALTER TABLE user_profiles ADD COLUMN salary DECIMAL(10,2) DEFAULT 0;
     END IF;
 END $$;
 
 -- Ensure seniority_start_date column exists (for existing tables that might not have it)
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'user_profiles';
+    c_col CONSTANT TEXT := 'seniority_start_date';
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'seniority_start_date'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         ALTER TABLE user_profiles ADD COLUMN seniority_start_date DATE DEFAULT CURRENT_DATE;
     END IF;
@@ -346,11 +355,14 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_roles ON user_profiles USING GIN (r
 CREATE INDEX IF NOT EXISTS idx_user_profiles_active ON user_profiles (is_active, last_active);
 
 -- Only create parent_manager_id index if the column exists
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'user_profiles';
+    c_col CONSTANT TEXT := 'parent_manager_id';
 BEGIN
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'parent_manager_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         CREATE INDEX IF NOT EXISTS idx_user_profiles_parent_manager_id ON user_profiles (parent_manager_id);
     END IF;
@@ -397,12 +409,12 @@ CREATE INDEX IF NOT EXISTS idx_community_stats_city ON community_stats (city, da
 
 -- Create triggers for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS '
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-' language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
 -- Apply triggers to relevant tables
 DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
@@ -440,18 +452,21 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 -- Ensure parent_task_id column exists (for existing tables that might not have it)
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'tasks';
+    c_col CONSTANT TEXT := 'parent_task_id';
+    c_fk CONSTANT TEXT := 'tasks_parent_task_id_fkey';
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'tasks' AND column_name = 'parent_task_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         ALTER TABLE tasks ADD COLUMN parent_task_id UUID;
-        -- Add foreign key constraint only if tasks table exists and constraint doesn't exist
-        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tasks') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
             IF NOT EXISTS (
-                SELECT 1 FROM information_schema.table_constraints 
-                WHERE constraint_name = 'tasks_parent_task_id_fkey' AND table_name = 'tasks'
+                SELECT 1 FROM information_schema.table_constraints
+                WHERE constraint_name = c_fk AND table_schema = current_schema() AND table_name = c_tbl
             ) THEN
                 ALTER TABLE tasks ADD CONSTRAINT tasks_parent_task_id_fkey FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE;
             END IF;
@@ -468,11 +483,14 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assignees_gin ON tasks USING GIN (assignees
 CREATE INDEX IF NOT EXISTS idx_tasks_tags_gin ON tasks USING GIN (tags);
 
 -- Only create parent_task_id index if the column exists
-DO $$ 
+DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'tasks';
+    c_col CONSTANT TEXT := 'parent_task_id';
 BEGIN
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'tasks' AND column_name = 'parent_task_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col
     ) THEN
         CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks (parent_task_id);
     END IF;
@@ -515,172 +533,154 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 -- Ensure author_id and task_id columns exist and have foreign key constraints
-DO $$ 
+DO $$
+DECLARE
+    c_posts CONSTANT TEXT := 'posts';
+    c_user_profiles CONSTANT TEXT := 'user_profiles';
+    c_tasks CONSTANT TEXT := 'tasks';
+    c_rides CONSTANT TEXT := 'rides';
+    c_items CONSTANT TEXT := 'items';
+    c_author_id CONSTANT TEXT := 'posts_author_id_fkey';
+    c_task_id_fk CONSTANT TEXT := 'posts_task_id_fkey';
+    c_ride_id_fk CONSTANT TEXT := 'posts_ride_id_fkey';
+    c_item_id_fk CONSTANT TEXT := 'posts_item_id_fkey';
+    c_col_author CONSTANT TEXT := 'author_id';
+    c_col_task CONSTANT TEXT := 'task_id';
+    c_col_ride CONSTANT TEXT := 'ride_id';
+    c_col_item CONSTANT TEXT := 'item_id';
+    c_col_post_type CONSTANT TEXT := 'post_type';
+    c_col_created CONSTANT TEXT := 'created_at';
 BEGIN
-    -- Drop existing foreign key constraints if they exist (from old schema)
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'posts_author_id_fkey' AND table_name = 'posts'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_author_id AND table_name = c_posts
     ) THEN
         ALTER TABLE posts DROP CONSTRAINT posts_author_id_fkey;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'posts_task_id_fkey' AND table_name = 'posts'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_task_id_fk AND table_name = c_posts
     ) THEN
         ALTER TABLE posts DROP CONSTRAINT posts_task_id_fkey;
     END IF;
-    
-    -- Add author_id if missing
+
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'author_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_author
     ) THEN
-        -- Add column as nullable first (without constraint to avoid issues)
         ALTER TABLE posts ADD COLUMN author_id UUID;
-        -- Update existing rows to have a default author_id if needed
-        -- Only update if user_profiles has rows
         IF EXISTS (SELECT 1 FROM user_profiles LIMIT 1) THEN
             UPDATE posts SET author_id = (SELECT id FROM user_profiles LIMIT 1) WHERE author_id IS NULL;
         END IF;
     END IF;
-    
-    -- Add foreign key constraint for author_id
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_profiles') THEN
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_user_profiles) THEN
         ALTER TABLE posts ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
     END IF;
-    
-    -- Only set NOT NULL if all rows have author_id
+
     IF NOT EXISTS (SELECT 1 FROM posts WHERE author_id IS NULL) THEN
         ALTER TABLE posts ALTER COLUMN author_id SET NOT NULL;
     END IF;
-    
-    -- Add task_id if missing
+
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'task_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_task
     ) THEN
         ALTER TABLE posts ADD COLUMN task_id UUID;
     END IF;
-    
-    -- Add foreign key constraint for task_id
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tasks') THEN
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tasks) THEN
         ALTER TABLE posts ADD CONSTRAINT posts_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
     END IF;
-    
-    -- Add ride_id if missing
+
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'ride_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_ride
     ) THEN
         ALTER TABLE posts ADD COLUMN ride_id UUID;
     END IF;
-    
-    -- Add foreign key constraint for ride_id
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'rides') THEN
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_rides) THEN
         IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
-            WHERE constraint_name = 'posts_ride_id_fkey' AND table_name = 'posts'
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = current_schema() AND constraint_name = c_ride_id_fk AND table_name = c_posts
         ) THEN
             ALTER TABLE posts ADD CONSTRAINT posts_ride_id_fkey FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE;
         END IF;
     END IF;
-    
-    -- Check if item_id exists and is UUID (fix for previous failed schema update)
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'item_id' AND data_type = 'uuid'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_item AND data_type = 'uuid'
     ) THEN
-        -- Drop foreign key if exists
         IF EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
-            WHERE constraint_name = 'posts_item_id_fkey' AND table_name = 'posts'
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = current_schema() AND constraint_name = c_item_id_fk AND table_name = c_posts
         ) THEN
             ALTER TABLE posts DROP CONSTRAINT posts_item_id_fkey;
         END IF;
-        
-        -- Convert column to TEXT
         ALTER TABLE posts ALTER COLUMN item_id TYPE TEXT;
     END IF;
 
-    -- Add item_id if missing
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'item_id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_item
     ) THEN
         ALTER TABLE posts ADD COLUMN item_id TEXT;
     END IF;
-    
-    -- Add foreign key constraint for item_id
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'items') THEN
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_items) THEN
         IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
-            WHERE constraint_name = 'posts_item_id_fkey' AND table_name = 'posts'
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = current_schema() AND constraint_name = c_item_id_fk AND table_name = c_posts
         ) THEN
             ALTER TABLE posts ADD CONSTRAINT posts_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE;
         END IF;
     END IF;
-    
-    -- Add post_type if missing
+
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'post_type'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_post_type
     ) THEN
         ALTER TABLE posts ADD COLUMN post_type VARCHAR(50) DEFAULT 'task_completion';
     END IF;
-    
-    -- Add created_at if missing (should always exist, but check just in case)
+
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'created_at'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_col_created
     ) THEN
         ALTER TABLE posts ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
     END IF;
 END $$;
 
 -- Only create indexes if the columns exist
-DO $$ 
+DO $$
+DECLARE
+    c_posts CONSTANT TEXT := 'posts';
+    c_author CONSTANT TEXT := 'author_id';
+    c_task CONSTANT TEXT := 'task_id';
+    c_ride CONSTANT TEXT := 'ride_id';
+    c_item CONSTANT TEXT := 'item_id';
+    c_created CONSTANT TEXT := 'created_at';
+    c_post_type CONSTANT TEXT := 'post_type';
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'author_id'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_author) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
     END IF;
-    
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'task_id'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_task) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_task_id ON posts(task_id);
     END IF;
-    
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'ride_id'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_ride) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_ride_id ON posts(ride_id);
     END IF;
-    
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'item_id'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_item) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_item_id ON posts(item_id);
     END IF;
-    
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'created_at'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_created) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
     END IF;
-    
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'post_type'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_post_type) THEN
         CREATE INDEX IF NOT EXISTS idx_posts_post_type ON posts(post_type);
     END IF;
 END $$;
@@ -701,38 +701,42 @@ CREATE TABLE IF NOT EXISTS post_likes (
 );
 
 -- Add foreign key constraints for post_likes
-DO $$ 
+DO $$
+DECLARE
+    c_post_likes CONSTANT TEXT := 'post_likes';
+    c_posts CONSTANT TEXT := 'posts';
+    c_user_profiles CONSTANT TEXT := 'user_profiles';
+    c_id CONSTANT TEXT := 'id';
+    c_post_fk CONSTANT TEXT := 'post_likes_post_id_fkey';
+    c_user_fk CONSTANT TEXT := 'post_likes_user_id_fkey';
 BEGIN
-    -- Drop existing constraints if they exist
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'post_likes_post_id_fkey' AND table_name = 'post_likes'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_post_fk AND table_name = c_post_likes
     ) THEN
         ALTER TABLE post_likes DROP CONSTRAINT post_likes_post_id_fkey;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'post_likes_user_id_fkey' AND table_name = 'post_likes'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_user_fk AND table_name = c_post_likes
     ) THEN
         ALTER TABLE post_likes DROP CONSTRAINT post_likes_user_id_fkey;
     END IF;
-    
-    -- Add constraints only if target tables AND columns exist
-    -- This prevents errors when old tables exist with different structure
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_id
     ) THEN
-        ALTER TABLE post_likes ADD CONSTRAINT post_likes_post_id_fkey 
+        ALTER TABLE post_likes ADD CONSTRAINT post_likes_post_id_fkey
             FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_user_profiles AND column_name = c_id
     ) THEN
-        ALTER TABLE post_likes ADD CONSTRAINT post_likes_user_id_fkey 
+        ALTER TABLE post_likes ADD CONSTRAINT post_likes_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
     END IF;
 END $$;
@@ -754,38 +758,42 @@ CREATE TABLE IF NOT EXISTS post_comments (
 );
 
 -- Add foreign key constraints for post_comments
-DO $$ 
+DO $$
+DECLARE
+    c_post_comments CONSTANT TEXT := 'post_comments';
+    c_posts CONSTANT TEXT := 'posts';
+    c_user_profiles CONSTANT TEXT := 'user_profiles';
+    c_id CONSTANT TEXT := 'id';
+    c_post_fk CONSTANT TEXT := 'post_comments_post_id_fkey';
+    c_user_fk CONSTANT TEXT := 'post_comments_user_id_fkey';
 BEGIN
-    -- Drop existing constraints if they exist
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'post_comments_post_id_fkey' AND table_name = 'post_comments'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_post_fk AND table_name = c_post_comments
     ) THEN
         ALTER TABLE post_comments DROP CONSTRAINT post_comments_post_id_fkey;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'post_comments_user_id_fkey' AND table_name = 'post_comments'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_user_fk AND table_name = c_post_comments
     ) THEN
         ALTER TABLE post_comments DROP CONSTRAINT post_comments_user_id_fkey;
     END IF;
-    
-    -- Add constraints only if target tables AND columns exist
-    -- This prevents errors when old tables exist with different structure
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'posts' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_posts AND column_name = c_id
     ) THEN
-        ALTER TABLE post_comments ADD CONSTRAINT post_comments_post_id_fkey 
+        ALTER TABLE post_comments ADD CONSTRAINT post_comments_post_id_fkey
             FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_user_profiles AND column_name = c_id
     ) THEN
-        ALTER TABLE post_comments ADD CONSTRAINT post_comments_user_id_fkey 
+        ALTER TABLE post_comments ADD CONSTRAINT post_comments_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
     END IF;
 END $$;
@@ -812,38 +820,42 @@ CREATE TABLE IF NOT EXISTS comment_likes (
 );
 
 -- Add foreign key constraints for comment_likes
-DO $$ 
+DO $$
+DECLARE
+    c_comment_likes CONSTANT TEXT := 'comment_likes';
+    c_post_comments CONSTANT TEXT := 'post_comments';
+    c_user_profiles CONSTANT TEXT := 'user_profiles';
+    c_id CONSTANT TEXT := 'id';
+    c_comment_fk CONSTANT TEXT := 'comment_likes_comment_id_fkey';
+    c_user_fk CONSTANT TEXT := 'comment_likes_user_id_fkey';
 BEGIN
-    -- Drop existing constraints if they exist
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'comment_likes_comment_id_fkey' AND table_name = 'comment_likes'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_comment_fk AND table_name = c_comment_likes
     ) THEN
         ALTER TABLE comment_likes DROP CONSTRAINT comment_likes_comment_id_fkey;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'comment_likes_user_id_fkey' AND table_name = 'comment_likes'
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = current_schema() AND constraint_name = c_user_fk AND table_name = c_comment_likes
     ) THEN
         ALTER TABLE comment_likes DROP CONSTRAINT comment_likes_user_id_fkey;
     END IF;
-    
-    -- Add constraints only if target tables AND columns exist
-    -- This prevents errors when old tables exist with different structure
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'post_comments' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_post_comments AND column_name = c_id
     ) THEN
-        ALTER TABLE comment_likes ADD CONSTRAINT comment_likes_comment_id_fkey 
+        ALTER TABLE comment_likes ADD CONSTRAINT comment_likes_comment_id_fkey
             FOREIGN KEY (comment_id) REFERENCES post_comments(id) ON DELETE CASCADE;
     END IF;
-    
+
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_profiles' AND column_name = 'id'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_user_profiles AND column_name = c_id
     ) THEN
-        ALTER TABLE comment_likes ADD CONSTRAINT comment_likes_user_id_fkey 
+        ALTER TABLE comment_likes ADD CONSTRAINT comment_likes_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
     END IF;
 END $$;

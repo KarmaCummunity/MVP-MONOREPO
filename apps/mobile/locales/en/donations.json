@@ -249,6 +249,18 @@
       "description": "Join community challenges, track your progress and achieve goals together with the community"
     }
   },
+  "offerScreen": {
+    "knowledge": {
+      "title": "Want to donate knowledge?",
+      "message": "If you want to share knowledge, teach or mentor — contact us and we'll connect you.",
+      "cta": "Contact us"
+    },
+    "time": {
+      "title": "Want to donate time?",
+      "message": "If you want to volunteer or donate your time — contact us and we'll connect you with opportunities.",
+      "cta": "Contact us"
+    }
+  },
   "timeScreen": {
     "menuSettings": "Settings",
     "menuHelp": "Help",

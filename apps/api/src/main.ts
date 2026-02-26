@@ -15,15 +15,6 @@
 // ✅ Helmet.js security headers (XSS, clickjacking, MITM protection)
 // ✅ Global rate limiting via ThrottlerModule
 
-// MVP: Reduced startup logging (verbose debug banners commented out)
-// console.log('========================================');
-// console.log('🚀 STARTING KC-MVP-SERVER');
-// console.log('📍 Node version:', process.version);
-// console.log('📍 Platform:', process.platform);
-// console.log('📍 CWD:', process.cwd());
-// console.log('========================================');
-// console.log('[DEBUG-H1-H4] Server startup initiated:', JSON.stringify({...}));
-
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
@@ -32,12 +23,6 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import * as dotenv from "dotenv";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
-import "./sanity";
-
-// MVP: Reduced startup logging
-// console.log("🔥🔥🔥 PROCESS STARTING: src/main.ts LOADED 🔥🔥🔥");
-// console.log(`Env PORT: ${process.env.PORT}`);
-// console.log(`Env DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 
 /**
  * Validate required environment variables before server startup
@@ -520,8 +505,22 @@ async function bootstrap(): Promise<void> {
 
 // Start the application
 bootstrap().catch((error) => {
-  console.error("❌ Unhandled bootstrap error:", error);
-  console.error("Stack:", error?.stack);
+  const logger = new Logger("Bootstrap");
+
+  if (error instanceof Error) {
+    logger.error("❌ Unhandled bootstrap error:", error.message);
+
+    const environment =
+      process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
+    const isProduction = environment === "production";
+
+    if (error.stack && !isProduction) {
+      logger.error("Stack trace:", error.stack);
+    }
+  } else {
+    logger.error("❌ Unhandled bootstrap error: Unknown error", error);
+  }
+
   process.exit(1);
 });
 

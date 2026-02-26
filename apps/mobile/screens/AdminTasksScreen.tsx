@@ -37,6 +37,163 @@ import TaskHoursModal from "../components/TaskHoursModal";
 /** Cast shared StyleSheet entry to TextStyle for use on Text/TextInput (RN style types are incompatible in strict mode). */
 const asTextStyle = (s: StyleProp<ViewStyle>): StyleProp<TextStyle> => s as StyleProp<TextStyle>;
 
+const PRIORITY_ORDER: Record<TaskPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const STATUS_RANK: Record<TaskStatus, number> = {
+  open: 0,
+  in_progress: 1,
+  stuck: 1.5,
+  testing: 1.7,
+  done: 2,
+  archived: 3,
+  reports: 4,
+};
+
+function getInitialFormData() {
+  return {
+    title: "",
+    description: "",
+    priority: "medium" as TaskPriority,
+    status: "open" as TaskStatus,
+    category: "development",
+    due_date: "",
+    assignees: [] as User[],
+    tagsText: "" as string,
+    parent_task_id: "" as string,
+    estimated_hours: "" as string,
+  };
+}
+
+function compareTasks(a: AdminTask, b: AdminTask): number {
+  if (a.status === b.status) {
+    return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+  }
+  return (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0);
+}
+
+function isPermissionError(message: string | undefined): boolean {
+  return Boolean(message?.toLowerCase().includes("permission"));
+}
+
+function parseTagsFromText(tagsText: string): string[] {
+  if (!tagsText.trim()) return [];
+  return tagsText
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function formatEstimatedHoursForEdit(value: number | null | undefined): string {
+  if (value == null || value <= 0) return "";
+  return String(value);
+}
+
+type HeaderStyles = {
+  header: ViewStyle;
+  filtersRow: ViewStyle;
+  input: ViewStyle;
+  refreshBtn: ViewStyle;
+  chipsRow: ViewStyle;
+};
+
+function AdminTasksHeader({
+  styles: headerStyles,
+  onLayout,
+  query,
+  setQuery,
+  error,
+  filterAssignee,
+  setFilterAssignee,
+  filterStatus,
+  setFilterStatus,
+  filterPriority,
+  setFilterPriority,
+  fetchTasks,
+  t,
+}: {
+  styles: HeaderStyles;
+  onLayout: (event: { nativeEvent: { layout: { height: number } } }) => void;
+  query: string;
+  setQuery: (q: string) => void;
+  error: string | null;
+  filterAssignee: "all" | "me";
+  setFilterAssignee: (v: "all" | "me") => void;
+  filterStatus: TaskStatus | "";
+  setFilterStatus: (v: "" | TaskStatus) => void;
+  filterPriority: TaskPriority | "";
+  setFilterPriority: (v: "" | TaskPriority) => void;
+  fetchTasks: () => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <View onLayout={onLayout}>
+      <Text style={asTextStyle(headerStyles.header)}>{t("tasks.headerTitle")}</Text>
+      <View style={headerStyles.filtersRow}>
+        <TextInput
+          style={asTextStyle(headerStyles.input)}
+          placeholder={t("tasks.searchPlaceholder")}
+          placeholderTextColor={colors.textSecondary}
+          value={query}
+          onChangeText={setQuery}
+        />
+        <TouchableOpacity style={headerStyles.refreshBtn} onPress={fetchTasks}>
+          <Ionicons name="search-outline" size={IconSizes.xsmall} color={colors.white} />
+        </TouchableOpacity>
+      </View>
+      {error ? (
+        <Text
+          style={{
+            color: colors.error,
+            textAlign: "right",
+            marginBottom: 8,
+            fontWeight: "bold",
+          }}
+        >
+          {error}
+        </Text>
+      ) : null}
+      <View style={headerStyles.chipsRow}>
+        <FilterChip
+          label={t("tasks.assigneeLabel")}
+          value={filterAssignee}
+          setValue={(v) => setFilterAssignee(v as "all" | "me")}
+          options={[
+            { value: "all", label: t("tasks.assigneeAll") },
+            { value: "me", label: t("tasks.assigneeMe") },
+          ]}
+        />
+        <FilterChip
+          label={t("tasks.statusLabel")}
+          value={filterStatus}
+          setValue={(v) => setFilterStatus(v as "" | TaskStatus)}
+          options={[
+            { value: "", label: t("tasks.statusAll") },
+            { value: "open", label: t("tasks.open") },
+            { value: "in_progress", label: t("tasks.in_progress") },
+            { value: "stuck", label: t("tasks.stuck") },
+            { value: "testing", label: t("tasks.testing") },
+            { value: "done", label: t("tasks.done") },
+          ]}
+        />
+        <FilterChip
+          label={t("tasks.priorityLabel")}
+          value={filterPriority}
+          setValue={(v) => setFilterPriority(v as "" | TaskPriority)}
+          options={[
+            { value: "", label: t("tasks.statusAll") },
+            { value: "high", label: t("tasks.high") },
+            { value: "medium", label: t("tasks.medium") },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function AdminTasksScreen() {
   const { t } = useTranslation("admin");
   const route = useRoute();
@@ -65,19 +222,7 @@ export default function AdminTasksScreen() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    priority: "medium" as TaskPriority,
-    status: "open" as TaskStatus,
-    category: "development",
-    due_date: "",
-    assignees: [] as User[],
-    tagsText: "" as string,
-    parent_task_id: "" as string,
-    estimated_hours: "" as string,
-  });
+  const [formData, setFormData] = useState(getInitialFormData);
 
   // Task Hours Modal State
   const [showHoursModal, setShowHoursModal] = useState(false);
@@ -110,29 +255,8 @@ export default function AdminTasksScreen() {
   }, [tasks]);
 
   const sortedTasks = useMemo(() => {
-    const priorityOrder: Record<TaskPriority, number> = {
-      high: 0,
-      medium: 1,
-      low: 2,
-    };
-    // Filter out subtasks - only show root level tasks (those without parent_task_id)
     const rootTasks = tasks.filter((t) => !t.parent_task_id);
-    return [...rootTasks].sort((a, b) => {
-      // First sort by ownership if "My Tasks" is NOT active (to bring mine to top implicitly? No, sticking to date/priority)
-      if (a.status === b.status) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
-      const statusRank: Record<TaskStatus, number> = {
-        open: 0,
-        in_progress: 1,
-        stuck: 1.5,
-        testing: 1.7,
-        done: 2,
-        archived: 3,
-        reports: 4,
-      };
-      return (statusRank[a.status] || 0) - (statusRank[b.status] || 0);
-    });
+    return [...rootTasks].sort(compareTasks);
   }, [tasks]);
 
   const fetchTasks = useCallback(async () => {
@@ -198,23 +322,12 @@ export default function AdminTasksScreen() {
     fetchTasks,
   ]);
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      priority: "medium",
-      status: "open",
-      category: "development",
-      due_date: "",
-      assignees: [],
-      tagsText: "",
-      parent_task_id: "",
-      estimated_hours: "",
-    });
+  const resetForm = useCallback(() => {
+    setFormData(getInitialFormData());
     setEditingId(null);
-  };
+  }, []);
 
-  const checkAndUpdateParentStatus = async (taskId: string) => {
+  const checkAndUpdateParentStatus = useCallback(async (taskId: string) => {
     // Check if task has incomplete subtasks, if so, set to 'stuck'
     try {
       const res = await apiService.getSubtasks(taskId);
@@ -238,9 +351,9 @@ export default function AdminTasksScreen() {
       logger.error("AdminTasksScreen", "Failed to check parent status", { err });
     }
     return false;
-  };
+  }, []);
 
-  const toggleSubtasks = async (taskId: string) => {
+  const toggleSubtasks = useCallback(async (taskId: string) => {
     if (expandedTasks.has(taskId)) {
       // Collapse
       const newExpanded = new Set(expandedTasks);
@@ -270,9 +383,9 @@ export default function AdminTasksScreen() {
         setLoadingSubtasks(null);
       }
     }
-  };
+  }, [expandedTasks, checkAndUpdateParentStatus, fetchTasks]);
 
-  const createSubtask = (parentTask: AdminTask) => {
+  const createSubtask = useCallback((parentTask: AdminTask) => {
     setFormData({
       title: "",
       description: "",
@@ -287,7 +400,7 @@ export default function AdminTasksScreen() {
     });
     setEditingId(null);
     setShowForm(true);
-  };
+  }, []);
 
   const validateCreateTask = (): boolean => {
     if (!formData.title.trim()) return false;
@@ -314,11 +427,8 @@ export default function AdminTasksScreen() {
     return !Number.isNaN(hours) && hours > 0 ? hours : null;
   };
 
-  const buildTaskBody = (
-    parsedDueDate: string | null,
-    parsedEstimatedHours: number | null,
-  ) => {
-    return {
+  const buildTaskBody = useCallback(
+    (parsedDueDate: string | null, parsedEstimatedHours: number | null) => ({
       title: formData.title.trim(),
       description: formData.description.trim() || null,
       priority: formData.priority,
@@ -326,17 +436,13 @@ export default function AdminTasksScreen() {
       category: formData.category || null,
       due_date: parsedDueDate,
       assignees: formData.assignees.map((u) => u.id),
-      tags: formData.tagsText.trim()
-        ? formData.tagsText
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean)
-        : [],
+      tags: parseTagsFromText(formData.tagsText),
       created_by: selectedUser!.id,
       parent_task_id: formData.parent_task_id || null,
       estimated_hours: parsedEstimatedHours,
-    };
-  };
+    }),
+    [formData, selectedUser],
+  );
 
   const createTask = async () => {
     if (!validateCreateTask()) return;
@@ -357,11 +463,11 @@ export default function AdminTasksScreen() {
       const res = (await apiService.createTask(body)) as ApiResponse<AdminTask>;
 
       if (!res.success) {
-        if (res.error?.includes("הרשאה")) {
-          setError(t("tasks.errorPermissionAssign"));
-        } else {
-          setError(res.error || t("tasks.errorCreate"));
-        }
+        setError(
+          isPermissionError(res.error)
+            ? t("tasks.errorPermissionAssign")
+            : (res.error || t("tasks.errorCreate")),
+        );
       } else if (res.data) {
         if (formData.parent_task_id) {
           await checkAndUpdateParentStatus(formData.parent_task_id);
@@ -378,7 +484,7 @@ export default function AdminTasksScreen() {
     }
   };
 
-  const toggleDone = async (task: AdminTask) => {
+  const toggleDone = useCallback(async (task: AdminTask) => {
     // If trying to mark as done, check if hours are logged first
     if (task.status !== "done") {
       // Open hours modal first
@@ -406,7 +512,7 @@ export default function AdminTasksScreen() {
     } finally {
       setUpdating(null);
     }
-  };
+  }, [fetchTasks, t]);
 
   const handleSaveHours = async (hours: number) => {
     if (!pendingTaskId || !selectedUser?.id) {
@@ -440,34 +546,7 @@ export default function AdminTasksScreen() {
     setPendingTask(null);
   };
 
-  const renderItem = ({
-    item,
-    isSubtask = false,
-    level = 0,
-  }: {
-    item: AdminTask;
-    isSubtask?: boolean;
-    level?: number;
-  }) => (
-    <AdminTaskItem
-      item={item}
-      isSubtask={isSubtask}
-      level={level}
-      viewOnly={viewOnly}
-      updating={updating}
-      deleting={deleting}
-      loadingSubtasks={loadingSubtasks}
-      expandedTasks={expandedTasks}
-      subtasks={subtasks}
-      onToggleDone={toggleDone}
-      onToggleSubtasks={toggleSubtasks}
-      onOpenEdit={openEdit}
-      onCreateSubtask={createSubtask}
-      onDeleteTask={deleteTask}
-    />
-  );
-
-  const openEdit = (task: AdminTask) => {
+  const openEdit = useCallback((task: AdminTask) => {
     setFormData({
       title: task.title || "",
       description: task.description || "",
@@ -480,65 +559,32 @@ export default function AdminTasksScreen() {
       assignees: task.assignees_details || [],
       tagsText: (task.tags || []).join(", "),
       parent_task_id: task.parent_task_id || "",
-      estimated_hours:
-        task.estimated_hours !== null &&
-          task.estimated_hours !== undefined &&
-          task.estimated_hours > 0
-          ? String(task.estimated_hours)
-          : "",
+      estimated_hours: formatEstimatedHoursForEdit(task.estimated_hours),
     });
     setEditingId(task.id);
     setShowForm(true);
-  };
+  }, []);
 
   const saveEdit = async () => {
     if (!editingId) return;
     setUpdating(editingId);
     setError(null);
     try {
-      let parsedDueDate = null;
-      if (formData.due_date.trim()) {
-        const date = new Date(formData.due_date);
-        if (isNaN(date.getTime())) {
-          setError(t("tasks.errorInvalidDate"));
-          setUpdating(null);
-          return;
-        }
-        parsedDueDate = date.toISOString();
+      const parsedDueDate = parseDueDate();
+      if (formData.due_date.trim() && !parsedDueDate) {
+        setUpdating(null);
+        return;
       }
 
-      // Parse estimated_hours
-      let parsedEstimatedHours = null;
-      if (formData.estimated_hours && formData.estimated_hours.trim()) {
-        const hours = parseFloat(formData.estimated_hours.trim());
-        if (!isNaN(hours) && hours > 0) {
-          parsedEstimatedHours = hours;
-        }
-      }
-
-      const body: {
-        title: string;
-        description: string | null;
-        priority: TaskPriority;
-        status: TaskStatus;
-        category: string | null;
-        due_date: string | null;
-        tags: string[];
-        assignees: string[];
-        estimated_hours?: number;
-      } = {
+      const parsedEstimatedHours = parseEstimatedHours();
+      const body = {
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         priority: formData.priority,
         status: formData.status,
         category: formData.category || null,
         due_date: parsedDueDate,
-        tags: formData.tagsText
-          ? formData.tagsText
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-          : [],
+        tags: parseTagsFromText(formData.tagsText),
         assignees: formData.assignees.map((u) => u.id),
         estimated_hours: parsedEstimatedHours ?? undefined,
       };
@@ -550,12 +596,11 @@ export default function AdminTasksScreen() {
         resetForm();
         setEditingId(null);
       } else {
-        // Handle specific permission error
-        if (res.error?.includes("הרשאה")) {
-          setError(t("tasks.errorPermissionAssign"));
-        } else {
-          setError(res.error || t("tasks.errorUpdateTask"));
-        }
+        setError(
+          isPermissionError(res.error)
+            ? t("tasks.errorPermissionAssign")
+            : (res.error || t("tasks.errorUpdateTask")),
+        );
       }
     } catch (err) {
       logger.error("AdminTasksScreen", "Error updating task", { err });
@@ -565,7 +610,7 @@ export default function AdminTasksScreen() {
     }
   };
 
-  const deleteTask = async (taskId: string) => {
+  const deleteTask = useCallback(async (taskId: string) => {
     setDeleting(taskId);
     setError(null);
     try {
@@ -581,80 +626,87 @@ export default function AdminTasksScreen() {
     } finally {
       setDeleting(null);
     }
-  };
+  }, [fetchTasks, t]);
 
-  const renderHeader = () => (
-    <View
-      onLayout={(event) => {
-        if (Platform.OS === "web") {
-          const { height } = event.nativeEvent.layout;
-          setHeaderHeight(height);
-        }
-      }}
-    >
-      <Text style={asTextStyle(styles.header)}>{t("tasks.headerTitle")}</Text>
+  const renderItem = useCallback(
+    ({
+      item,
+      isSubtask = false,
+      level = 0,
+    }: {
+      item: AdminTask;
+      isSubtask?: boolean;
+      level?: number;
+    }) => (
+      <AdminTaskItem
+        item={item}
+        isSubtask={isSubtask}
+        level={level}
+        viewOnly={viewOnly}
+        updating={updating}
+        deleting={deleting}
+        loadingSubtasks={loadingSubtasks}
+        expandedTasks={expandedTasks}
+        subtasks={subtasks}
+        onToggleDone={toggleDone}
+        onToggleSubtasks={toggleSubtasks}
+        onOpenEdit={openEdit}
+        onCreateSubtask={createSubtask}
+        onDeleteTask={deleteTask}
+      />
+    ),
+    [
+      viewOnly,
+      updating,
+      deleting,
+      loadingSubtasks,
+      expandedTasks,
+      subtasks,
+      toggleDone,
+      toggleSubtasks,
+      openEdit,
+      createSubtask,
+      deleteTask,
+    ],
+  );
 
-      <View style={styles.filtersRow}>
-        <TextInput
-          style={asTextStyle(styles.input)}
-          placeholder={t("tasks.searchPlaceholder")}
-          placeholderTextColor={colors.textSecondary}
-          value={query}
-          onChangeText={setQuery}
-        />
-        <TouchableOpacity style={styles.refreshBtn} onPress={fetchTasks}>
-          <Ionicons name="search-outline" size={IconSizes.xsmall} color={colors.white} />
-        </TouchableOpacity>
-      </View>
+  const handleHeaderLayout = useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      if (Platform.OS === "web") {
+        setHeaderHeight(event.nativeEvent.layout.height);
+      }
+    },
+    [],
+  );
 
-      {error && (
-        <Text
-          style={{
-            color: colors.error,
-            textAlign: "right",
-            marginBottom: 8,
-            fontWeight: "bold",
-          }}
-        >
-          {error}
-        </Text>
-      )}
-
-      <View style={styles.chipsRow}>
-        <FilterChip
-          label={t("tasks.assigneeLabel")}
-          value={filterAssignee}
-          setValue={(v) => setFilterAssignee(v as "all" | "me")}
-          options={[
-            { value: "all", label: t("tasks.assigneeAll") },
-            { value: "me", label: t("tasks.assigneeMe") },
-          ]}
-        />
-        <FilterChip
-          label={t("tasks.statusLabel")}
-          value={filterStatus}
-          setValue={(v) => setFilterStatus(v as "" | TaskStatus)}
-          options={[
-            { value: "", label: t("tasks.statusAll") },
-            { value: "open", label: t("tasks.open") },
-            { value: "in_progress", label: t("tasks.in_progress") },
-            { value: "stuck", label: t("tasks.stuck") },
-            { value: "testing", label: t("tasks.testing") },
-            { value: "done", label: t("tasks.done") },
-          ]}
-        />
-        <FilterChip
-          label={t("tasks.priorityLabel")}
-          value={filterPriority}
-          setValue={(v) => setFilterPriority(v as "" | TaskPriority)}
-          options={[
-            { value: "", label: t("tasks.statusAll") },
-            { value: "high", label: t("tasks.high") },
-            { value: "medium", label: t("tasks.medium") },
-          ]}
-        />
-      </View>
-    </View>
+  const listHeader = useMemo(
+    () => (
+      <AdminTasksHeader
+        styles={styles as HeaderStyles}
+        onLayout={handleHeaderLayout}
+        query={query}
+        setQuery={setQuery}
+        error={error}
+        filterAssignee={filterAssignee}
+        setFilterAssignee={setFilterAssignee}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        filterPriority={filterPriority}
+        setFilterPriority={setFilterPriority}
+        fetchTasks={fetchTasks}
+        t={t}
+      />
+    ),
+    [
+      handleHeaderLayout,
+      query,
+      error,
+      filterAssignee,
+      filterStatus,
+      filterPriority,
+      fetchTasks,
+      t,
+    ],
   );
 
   return (
@@ -682,12 +734,12 @@ export default function AdminTasksScreen() {
         <FlatList
           data={sortedTasks}
           keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          renderItem={({ item }) => renderItem({ item })}
           contentContainerStyle={[
             stylesWithListContent.listContent,
             Platform.OS === "web" && { paddingBottom: 120 },
           ]}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <Text style={asTextStyle(styles.emptyText)}>{t("tasks.emptyText")}</Text>
           }
@@ -827,7 +879,7 @@ export default function AdminTasksScreen() {
             setShowForm(true);
           }}
         >
-          <Ionicons name="add" size={24} color={colors.white} />
+          <Ionicons name="add" size={IconSizes.small} color={colors.white} />
         </TouchableOpacity>
       )}
     </SafeAreaView>

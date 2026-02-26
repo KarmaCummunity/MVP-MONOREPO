@@ -23,6 +23,7 @@ import { SearchableItem } from '../components/SearchBar';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { logger } from '../utils/loggerService';
+import { WHATSAPP_URL } from '../screens/Landing/constants';
 
 // Mock data for volunteer opportunities (category keys match donations.timeScreen.categories)
 const volunteerOpportunities = [
@@ -116,12 +117,13 @@ export default function TimeScreen({
   const { t } = useTranslation(['donations', 'common']);
   const { selectedUser: _selectedUser, isRealAuth } = useUser();
 
-  // Get initial mode from URL (deep link) or default to search mode (מחפש)
-  // mode: true = offerer (wants to volunteer), false = seeker (needs volunteers)
-  // URL mode: 'offer' = true, 'search' = false
-  // Default is search mode (false)
-  const initialMode = routeParams?.mode === 'offer' ? true : false;
+  // mode: true = offerer (מציע), false = seeker (מחפש). Derive from route when valid to avoid setState in effects.
+  const initialMode = routeParams?.mode === 'offer';
   const [mode, setMode] = useState(initialMode);
+  const effectiveMode =
+    routeParams?.mode === 'offer' ? true
+    : routeParams?.mode === 'search' ? false
+    : mode;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [_searchQuery, setSearchQuery] = useState("");
@@ -132,38 +134,47 @@ export default function TimeScreen({
   const [_selectedTask, setSelectedTask] = useState<VolunteerOpportunity | null>(null);
   const [_refreshKey, setRefreshKey] = useState(0);
 
-  // Update mode when route params change (e.g., from deep link)
-  useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'offer' ? true : false;
-      if (newMode !== mode) {
-        queueMicrotask(() => setMode(newMode));
-      }
-    }
-  }, [routeParams?.mode, mode]);
-
   type TimeScreenParams = { TimeScreen: { mode?: string } };
-  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
   const hasSetInitialModeRef = useRef(false);
+  const navRef = useRef(navigation);
 
-  // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
-    const newMode = mode ? 'offer' : 'search';
-    const currentMode = routeParams?.mode;
-    const nav = navigation as NavigationProp<ParamListBase & TimeScreenParams, 'TimeScreen'>;
-    if (!nav.setParams) return;
+    navRef.current = navigation;
+  }, [navigation]);
 
-    if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      if (!hasSetInitialModeRef.current) {
-        hasSetInitialModeRef.current = true;
-        nav.setParams({ mode: 'search' });
+  // If no mode in URL on first load only: set URL to search. Do NOT set state here (avoids set-state-in-effect).
+  useEffect(() => {
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (!missingOrInvalid) return;
+
+    if (!hasSetInitialModeRef.current) {
+      hasSetInitialModeRef.current = true;
+      (navRef.current as NavigationProp<ParamListBase & TimeScreenParams, 'TimeScreen'>).setParams?.({ mode: 'search' });
+    }
+  }, [routeParams?.mode]);
+
+  // Sync URL when mode changes (toggle). When params are briefly missing after setParams, re-apply once.
+  useEffect(() => {
+    const nav = navRef.current as NavigationProp<ParamListBase & TimeScreenParams, 'TimeScreen'>;
+    if (!nav.setParams) return;
+    const newMode = effectiveMode ? 'offer' : 'search';
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (missingOrInvalid) {
+      if (hasSetInitialModeRef.current) {
+        nav.setParams({ mode: newMode });
       }
       return;
     }
     if (newMode !== currentMode) {
       nav.setParams({ mode: newMode });
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [effectiveMode, routeParams?.mode]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -290,9 +301,13 @@ export default function TimeScreen({
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <HeaderComp
-        mode={mode}
+        mode={effectiveMode}
         menuOptions={[t('donations:timeScreen.menuSettings'), t('donations:timeScreen.menuHelp'), t('donations:timeScreen.menuContact')]}
-        onToggleMode={() => setMode(!mode)}
+        onToggleMode={() => {
+          const next = !effectiveMode;
+          setMode(next);
+          (navRef.current as NavigationProp<ParamListBase & TimeScreenParams, 'TimeScreen'>).setParams?.({ mode: next ? 'offer' : 'search' });
+        }}
         onSelectMenuItem={(option: string) => logger.debug('TimeScreen', 'Menu selected', { option })}
         title=""
         placeholder={t('donations:timeScreen.placeholder')}
@@ -302,6 +317,19 @@ export default function TimeScreen({
         onSearch={handleSearch}
       />
 
+      {!effectiveMode ? (
+        <View style={styles.offerPlaceholder}>
+          <Ionicons name="time-outline" size={48} color={colors.accent} style={styles.offerIcon} />
+          <Text style={styles.offerTitle}>{t('donations:offerScreen.time.title')}</Text>
+          <Text style={styles.offerMessage}>{t('donations:offerScreen.time.message')}</Text>
+          <TouchableOpacity
+            style={styles.offerCta}
+            onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => {})}
+          >
+            <Text style={styles.offerCtaText}>{t('donations:offerScreen.time.cta')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} nestedScrollEnabled>
         {/* Emergency Volunteer Link */}
         <View style={styles.emergencySection}>
@@ -440,6 +468,7 @@ export default function TimeScreen({
           <AddLinkComponent category="time" />
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -671,5 +700,39 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.small,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  offerPlaceholder: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerIcon: {
+    marginBottom: 16,
+  },
+  offerTitle: {
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  offerMessage: {
+    fontSize: FontSizes.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  offerCta: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  offerCtaText: {
+    fontSize: FontSizes.body,
+    fontWeight: '600',
+    color: colors.background,
   },
 }); 

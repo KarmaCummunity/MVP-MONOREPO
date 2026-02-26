@@ -97,7 +97,7 @@ export default function TrumpScreen({
   // mode: false = Offer Mode (Driver), true = Search Mode (Passenger)
   // URL mode: 'offer' = false, 'search' = true
   // Default is search mode (true)
-  const initialMode = routeParams?.mode === 'offer' ? false : true;
+  const initialMode = routeParams?.mode !== 'offer';
 
   const [mode, setMode] = useState(initialMode);
   const { t } = useTranslation(['donations', 'common', 'trump', 'search']);
@@ -123,38 +123,49 @@ export default function TrumpScreen({
     setSelectedPostForReport(null);
   };
 
-  // Update mode when route params change (e.g., from deep link)
-  useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'search';
-      if (newMode !== mode) {
-        setMode(newMode);
-      }
-    }
-  }, [routeParams?.mode, mode]);
-
   // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
   const hasSetInitialModeRef = useRef(false);
   const navigationRef = useRef(navWithParams);
   navigationRef.current = navWithParams;
 
-  // Update URL when mode changes (toggle button pressed) or when screen loads without mode
-  // NOTE: navigation excluded from deps - it can change on every nav state update, causing effect loops
+  // Initial load only: when no mode in URL, set URL to search and do not touch mode again when params are briefly missing (avoids loop when toggling to offer)
+  useEffect(() => {
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (!missingOrInvalid) return;
+
+    if (!hasSetInitialModeRef.current) {
+      hasSetInitialModeRef.current = true;
+      navigationRef.current.setParams?.({ mode: 'search' });
+      queueMicrotask(() => setMode(true));
+    }
+  }, [routeParams?.mode]);
+
+  // Update mode when route params change (e.g., from deep link)
+  useEffect(() => {
+    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
+      const newMode = routeParams.mode === 'search';
+      setMode((prev) => (prev === newMode ? prev : newMode));
+    }
+  }, [routeParams?.mode]);
+
+  // Update URL when mode changes (toggle). When params are briefly missing after setParams, re-apply current mode once (hasSetInitialModeRef already true).
   useEffect(() => {
     const nav = navigationRef.current;
     const newMode = mode ? 'search' : 'offer';
     const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
 
-    // If no mode in URL, set it to search (default) - only once to avoid infinite loop
-    if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      if (!hasSetInitialModeRef.current) {
-        hasSetInitialModeRef.current = true;
-        nav.setParams?.({ mode: 'search' });
+    if (missingOrInvalid) {
+      if (hasSetInitialModeRef.current) {
+        nav.setParams?.({ mode: newMode });
       }
       return;
     }
 
-    // Only update URL if mode actually changed
     if (newMode !== currentMode) {
       nav.setParams?.({ mode: newMode });
     }

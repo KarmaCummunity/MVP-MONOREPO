@@ -3,8 +3,11 @@
 // because TLS is handled externally; production traffic is never sent over this
 // server without TLS at the network edge.
 import * as http from "http";
+import { Logger } from "@nestjs/common";
 
-// Parse and validate port from environment (sanitize user-controlled input before logging)
+const logger = new Logger("MinimalServer");
+
+// Parse and validate port from environment without logging raw input
 const rawPort = process.env.PORT;
 const portNum = rawPort ? parseInt(rawPort, 10) : null;
 const port =
@@ -12,24 +15,19 @@ const port =
     ? portNum
     : 3001;
 
-console.log("==================================================");
-console.log("!!! MINIMAL SERVER STARTING !!!");
-console.log("Current Directory:", process.cwd());
-// Log the sanitized/validated port number only (not raw env string)
-// Using a numeric value ensures no log injection (S5145)
-console.log("Resolved PORT:", Number(port));
-console.log("Node Version:", process.version);
-console.log("==================================================");
+logger.log("==================================================");
+logger.log("Minimal health-check server starting");
+logger.log(`Node version: ${process.version}`);
+logger.log("==================================================");
 
 const server = http.createServer((_req, res) => {
-  console.log("[MINIMAL] Health check request received");
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(
     JSON.stringify({
       status: "ok",
       message: "Minimal Server is UP!",
       env: {
-        port,
+        // Only expose minimal, non-sensitive health information
         db_url_set: !!process.env.DATABASE_URL,
       },
     }),
@@ -37,12 +35,12 @@ const server = http.createServer((_req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`!!! MINIMAL SERVER LISTENING ON PORT ${port} !!!`);
+  logger.log("Minimal health-check server is listening for requests");
 });
 
 // Prevent immediate exit
 process.on("SIGTERM", () => {
-  console.log("SIGTERM received");
+  logger.log("SIGTERM received - shutting down minimal health-check server");
   server.close();
   process.exit(0);
 });

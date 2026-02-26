@@ -13,19 +13,24 @@
  *   DATABASE_URL="<prod-url>" ENVIRONMENT=production ts-node src/scripts/verify-separation.ts
  */
 
+import { Logger } from "@nestjs/common";
 import { Client } from "pg";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
+const logger = new Logger("VerifySeparation");
+
 async function verifySeparation() {
   const environment = process.env.ENVIRONMENT || "unknown";
   const databaseUrl = process.env.DATABASE_URL;
 
-  console.log(`\n🔍 בודק הפרדת סביבות עבור: ${environment.toUpperCase()}\n`);
+  logger.log(
+    `Checking environment separation for: ${environment.toUpperCase()}`,
+  );
 
   if (!databaseUrl) {
-    console.error("❌ DATABASE_URL לא מוגדר!");
+    logger.error("DATABASE_URL is not set");
     process.exit(1);
   }
 
@@ -33,16 +38,13 @@ async function verifySeparation() {
 
   try {
     await client.connect();
-    console.log("✅ התחבר למסד הנתונים\n");
+    logger.log("Connected to database");
 
-    // Get database identifier (from connection string)
     const dbInfo = extractDbInfo(databaseUrl);
-    console.log("📊 מידע על מסד הנתונים:");
-    console.log(`  Host: ${dbInfo.host}`);
-    console.log(`  Database: ${dbInfo.database}\n`);
+    logger.log("Database info:");
+    logger.log(`  Host: ${dbInfo.host}`);
+    logger.log(`  Database: ${dbInfo.database}`);
 
-    // Verify environment separation by checking host patterns
-    // This checks the database host to ensure you're connecting to the right environment
     if (environment === "development") {
       if (
         dbInfo.host.includes("localhost") ||
@@ -51,19 +53,19 @@ async function verifySeparation() {
         dbInfo.database.includes("dev") ||
         dbInfo.database.includes("test")
       ) {
-        console.log("✅ זה נראה כמו מסד נתונים של Development\n");
+        logger.log("This looks like a Development database");
       } else if (
         dbInfo.host.includes("railway.app") ||
         dbInfo.host.includes("production") ||
         (!dbInfo.host.includes("localhost") &&
           !dbInfo.host.includes("127.0.0.1"))
       ) {
-        console.error("🚨 זה נראה כמו מסד נתונים של PRODUCTION!");
-        console.error(
-          "   אתה מנסה לבדוק development אבל מחובר ל-production!\n",
+        logger.error("This looks like a PRODUCTION database!");
+        logger.error(
+          "You are checking development but connected to production!",
         );
-        console.error(`   Host: ${dbInfo.host}`);
-        console.error(`   Database: ${dbInfo.database}\n`);
+        logger.error(`  Host: ${dbInfo.host}`);
+        logger.error(`  Database: ${dbInfo.database}`);
         process.exit(1);
       }
     } else if (environment === "production") {
@@ -74,86 +76,66 @@ async function verifySeparation() {
           !dbInfo.host.includes("127.0.0.1") &&
           !dbInfo.host.includes("dev"))
       ) {
-        console.log("✅ זה נראה כמו מסד נתונים של Production\n");
+        logger.log("This looks like a Production database");
       } else if (
         dbInfo.host.includes("localhost") ||
         dbInfo.host.includes("127.0.0.1") ||
         dbInfo.database.includes("dev") ||
         dbInfo.database.includes("test")
       ) {
-        console.error("🚨 זה נראה כמו מסד נתונים של DEVELOPMENT!");
-        console.error(
-          "   אתה מנסה לבדוק production אבל מחובר ל-development!\n",
+        logger.error("This looks like a DEVELOPMENT database!");
+        logger.error(
+          "You are checking production but connected to development!",
         );
-        console.error(`   Host: ${dbInfo.host}`);
-        console.error(`   Database: ${dbInfo.database}\n`);
+        logger.error(`  Host: ${dbInfo.host}`);
+        logger.error(`  Database: ${dbInfo.database}`);
         process.exit(1);
       }
     }
 
-    // Count tables
     const tablesResult = await client.query(`
       SELECT COUNT(*) as count
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
       AND table_type = 'BASE TABLE'
     `);
-    const tableCount = parseInt(tablesResult.rows[0].count);
-    console.log(`📋 מספר טבלאות: ${tableCount}`);
+    const tableCount = parseInt(tablesResult.rows[0].count, 10);
+    logger.log(`Table count: ${tableCount}`);
 
-    // Count users
     const usersResult = await client
-      .query(
-        `
-      SELECT COUNT(*) as count FROM user_profiles
-    `,
-      )
+      .query("SELECT COUNT(*) as count FROM user_profiles")
       .catch(() => ({ rows: [{ count: 0 }] }));
-    const userCount = parseInt(usersResult.rows[0].count);
-    console.log(`👥 מספר משתמשים: ${userCount}`);
+    const userCount = parseInt(usersResult.rows[0].count, 10);
+    logger.log(`User count: ${userCount}`);
 
-    // Count posts
     const postsResult = await client
-      .query(
-        `
-      SELECT COUNT(*) as count FROM posts
-    `,
-      )
+      .query("SELECT COUNT(*) as count FROM posts")
       .catch(() => ({ rows: [{ count: 0 }] }));
-    const postCount = parseInt(postsResult.rows[0].count);
-    console.log(`📝 מספר פוסטים: ${postCount}`);
+    const postCount = parseInt(postsResult.rows[0].count, 10);
+    logger.log(`Post count: ${postCount}`);
 
-    // Count donations
     const donationsResult = await client
-      .query(
-        `
-      SELECT COUNT(*) as count FROM donations
-    `,
-      )
+      .query("SELECT COUNT(*) as count FROM donations")
       .catch(() => ({ rows: [{ count: 0 }] }));
-    const donationCount = parseInt(donationsResult.rows[0].count);
-    console.log(`💰 מספר תרומות: ${donationCount}`);
+    const donationCount = parseInt(donationsResult.rows[0].count, 10);
+    logger.log(`Donation count: ${donationCount}`);
 
-    console.log("\n" + "=".repeat(60));
-    console.log("סיכום:");
-    console.log("=".repeat(60));
-    console.log(`סביבה: ${environment.toUpperCase()}`);
-    console.log(`טבלאות: ${tableCount}`);
-    console.log(`משתמשים: ${userCount}`);
-    console.log(`פוסטים: ${postCount}`);
-    console.log(`תרומות: ${donationCount}`);
-    console.log("=".repeat(60) + "\n");
+    logger.log("Summary:");
+    logger.log(`  Environment: ${environment.toUpperCase()}`);
+    logger.log(`  Tables: ${tableCount}`);
+    logger.log(`  Users: ${userCount}`);
+    logger.log(`  Posts: ${postCount}`);
+    logger.log(`  Donations: ${donationCount}`);
 
-    // Recommendations
     if (environment === "development" && userCount > 100) {
-      console.log("💡 יש הרבה משתמשים בסביבת dev. שקול לנקות נתונים ישנים.\n");
+      logger.log("Many users in dev environment. Consider cleaning old data.");
     }
 
     if (environment === "production" && userCount === 0) {
-      console.log("⚠️  אין משתמשים בסביבת production! זה תקין?\n");
+      logger.warn("No users in production environment. Is this expected?");
     }
   } catch (error) {
-    console.error("❌ שגיאה:", error);
+    logger.error("Error:", error);
     process.exit(1);
   } finally {
     await client.end();
@@ -165,8 +147,6 @@ function extractDbInfo(url: string): {
   database: string;
 } {
   try {
-    // Format: postgresql://user:password@host:port/database
-    // We extract host and database name, but NOT the password for security
     const match = url.match(
       /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/,
     );

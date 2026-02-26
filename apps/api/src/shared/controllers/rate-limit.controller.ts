@@ -277,7 +277,7 @@ export class RateLimitController {
       const endpointRuleMap: Record<string, string> = {
         login: "login",
         register: "register",
-        "reset-pwd": "pwd" + "_reset",
+        "reset-pwd": "pwd_reset",
         chat: "chat",
         search: "search",
         api: "general",

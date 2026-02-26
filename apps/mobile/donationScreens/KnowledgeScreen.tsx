@@ -22,6 +22,7 @@ import { donationResources } from '../utils/donationResources';
 import AddLinkComponent from '../components/AddLinkComponent';
 import ScrollContainer from '../components/ScrollContainer';
 import { useTranslation } from 'react-i18next';
+import { WHATSAPP_URL } from '../screens/Landing/constants';
 
 // Mock data for educational content
 const educationalLinks = [
@@ -138,12 +139,13 @@ export default function KnowledgeScreen({
   const { t } = useTranslation(['donations', 'common']);
   const { isRealAuth } = useUser();
 
-  // Get initial mode from URL (deep link) or default to search mode (מחפש)
-  // mode: true = offerer (wants to teach/share), false = seeker (needs learning)
-  // URL mode: 'offer' = true, 'search' = false or undefined = search
-  // Default is search mode (false)
-  const initialMode = routeParams?.mode === 'offer' ? true : false;
+  // mode: true = offerer (מציע), false = seeker (מחפש). Derive from route when valid to avoid setState in effects.
+  const initialMode = routeParams?.mode === 'offer';
   const [mode, setMode] = useState(initialMode);
+  const effectiveMode =
+    routeParams?.mode === 'offer' ? true
+    : routeParams?.mode === 'search' ? false
+    : mode;
 
   type CommunityContentItem = (typeof communityContent)[number];
   const [_searchQuery, setSearchQuery] = useState("");
@@ -154,49 +156,47 @@ export default function KnowledgeScreen({
   const [_selectedMentorship, setSelectedMentorship] = useState<CommunityContentItem | null>(null);
   const [_refreshKey, setRefreshKey] = useState(0);
 
-  // Ref to prevent infinite loop: setParams triggers re-render; navigation ref can change before params propagate
   const hasSetInitialModeRef = useRef(false);
+  const navRef = useRef(navigation);
 
-  // If no mode in URL, set it to search (default) and update URL; sync local mode without synchronous setState in effect
   useEffect(() => {
-    if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null' || routeParams.mode === '') {
-      if (!hasSetInitialModeRef.current) {
-        hasSetInitialModeRef.current = true;
-        (navigation as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>).setParams({ mode: 'search' });
-      }
-      queueMicrotask(() => {
-        if (mode !== false) setMode(false);
+    navRef.current = navigation;
+  }, [navigation]);
+
+  // If no mode in URL on first load only: set URL to search. Do NOT set state here (avoids set-state-in-effect).
+  useEffect(() => {
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (!missingOrInvalid) return;
+
+    if (!hasSetInitialModeRef.current) {
+      hasSetInitialModeRef.current = true;
+      (navRef.current as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>).setParams({
+        mode: 'search',
       });
     }
-  }, [routeParams?.mode, mode, navigation]);
+  }, [routeParams?.mode]);
 
-  // Update mode when route params change (e.g., from deep link)
+  // Sync URL when mode changes (toggle). When params are briefly missing after setParams, re-apply once.
   useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'offer' ? true : false;
-      if (newMode !== mode) {
-        queueMicrotask(() => setMode(newMode));
-      }
-    }
-  }, [routeParams?.mode, mode]);
-
-  // Update URL when mode changes (toggle button pressed) or when screen loads without mode
-  useEffect(() => {
-    const newMode = mode ? 'offer' : 'search';
+    const newMode = effectiveMode ? 'offer' : 'search';
     const currentMode = routeParams?.mode;
-    const nav = navigation as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>;
+    const nav = navRef.current as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
 
-    if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      if (!hasSetInitialModeRef.current) {
-        hasSetInitialModeRef.current = true;
-        nav.setParams({ mode: 'search' });
+    if (missingOrInvalid) {
+      if (hasSetInitialModeRef.current) {
+        nav.setParams({ mode: newMode });
       }
       return;
     }
     if (newMode !== currentMode) {
       nav.setParams({ mode: newMode });
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [effectiveMode, routeParams?.mode]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -314,9 +314,15 @@ export default function KnowledgeScreen({
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <HeaderComp
-        mode={mode}
+        mode={effectiveMode}
         menuOptions={[]}
-        onToggleMode={() => setMode(!mode)}
+        onToggleMode={() => {
+          const next = !effectiveMode;
+          setMode(next);
+          (navRef.current as NavigationProp<{ KnowledgeScreen: { mode?: string } }, 'KnowledgeScreen'>).setParams({
+            mode: next ? 'offer' : 'search',
+          });
+        }}
         onSelectMenuItem={() => { }}
         title=""
         placeholder="חפש קורסים ושיעורים..."
@@ -326,6 +332,19 @@ export default function KnowledgeScreen({
         onSearch={handleSearch}
       />
 
+      {!effectiveMode ? (
+        <View style={styles.offerPlaceholder}>
+          <Ionicons name="school-outline" size={48} color={colors.info} style={styles.offerIcon} />
+          <Text style={styles.offerTitle}>{t('donations:offerScreen.knowledge.title')}</Text>
+          <Text style={styles.offerMessage}>{t('donations:offerScreen.knowledge.message')}</Text>
+          <TouchableOpacity
+            style={styles.offerCta}
+            onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => {})}
+          >
+            <Text style={styles.offerCtaText}>{t('donations:offerScreen.knowledge.cta')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollContainer
         style={styles.scrollView}
         contentStyle={styles.content}
@@ -447,6 +466,7 @@ export default function KnowledgeScreen({
           <AddLinkComponent category="knowledge" />
         </View>
       </ScrollContainer>
+      )}
     </SafeAreaView>
   );
 };
@@ -690,5 +710,39 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.small,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  offerPlaceholder: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerIcon: {
+    marginBottom: 16,
+  },
+  offerTitle: {
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  offerMessage: {
+    fontSize: FontSizes.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  offerCta: {
+    backgroundColor: colors.info,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  offerCtaText: {
+    fontSize: FontSizes.body,
+    fontWeight: '600',
+    color: colors.background,
   },
 }); 

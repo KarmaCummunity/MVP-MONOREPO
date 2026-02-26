@@ -4,25 +4,23 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.spec.ts', '**/*.test.ts'],
   moduleNameMapper: {
-    // Support for tsconfig-paths (כבר קיים בפרויקט)
+    // Support for tsconfig-paths
     '^src/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/main.ts',
-    '!src/main-improved.ts',
     '!src/minimal-server.ts',
     '!src/sanity.ts',
     '!src/**/*.module.ts',
     '!src/database/schema.sql',
     '!src/database/**/*.sql',
-    '!src/scripts/**', // Scripts לא נכללים ב-coverage
+    '!src/scripts/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  // חשוב: tsconfig.build.json כבר מוציא את **/*.spec.ts - זה בסדר
-  // הבדיקות לא יכנסו ל-build
+  // Spec files are excluded from build via tsconfig.build.json
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };
 

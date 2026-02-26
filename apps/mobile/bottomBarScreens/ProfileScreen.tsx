@@ -1844,7 +1844,7 @@ export default function ProfileScreen(props: Record<string, unknown>) {
   const propUserId = props?.userId as string | undefined;
   const propUserName = props?.userName as string | undefined;
   const propCharacterData = props?.characterData as CharacterType | undefined;
-  const isExplicitOtherProfile = props?.isExplicitOtherProfile === true;
+  const isExplicitOtherProfile = Boolean(props?.isExplicitOtherProfile);
 
   // Use restored params if props are not provided
   const externalUserId = propUserId ?? routeParams?.userId;

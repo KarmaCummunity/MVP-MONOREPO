@@ -85,6 +85,54 @@ export class ItemsDeliveryService {
     return { whereClauses, params };
   }
 
+  private buildItemUpdateFields(updateItemDto: UpdateItemDto): {
+    updateFields: string[];
+    params: unknown[];
+  } {
+    const updateFields: string[] = [];
+    const params: unknown[] = [];
+    let paramCount = 0;
+
+    const addField = (value: unknown, sql: string) => {
+      paramCount++;
+      updateFields.push(sql.replace("$$", `$${paramCount}`));
+      params.push(value);
+    };
+
+    if (updateItemDto.title !== undefined)
+      addField(updateItemDto.title, "title = $$");
+    if (updateItemDto.description !== undefined)
+      addField(updateItemDto.description, "description = $$");
+    if (updateItemDto.category !== undefined)
+      addField(updateItemDto.category, "category = $$");
+    if (updateItemDto.condition !== undefined)
+      addField(updateItemDto.condition, "condition = $$");
+    if (updateItemDto.location !== undefined)
+      addField(JSON.stringify(updateItemDto.location), "location = $$::jsonb");
+    if (updateItemDto.price !== undefined)
+      addField(updateItemDto.price, "price = $$");
+    if (updateItemDto.images !== undefined)
+      addField(updateItemDto.images, "images = $$");
+    if (updateItemDto.tags !== undefined)
+      addField(updateItemDto.tags, "tags = $$");
+    if (updateItemDto.quantity !== undefined)
+      addField(updateItemDto.quantity, "quantity = $$");
+    if (updateItemDto.status !== undefined)
+      addField(updateItemDto.status, "status = $$");
+    if (updateItemDto.delivery_method !== undefined)
+      addField(updateItemDto.delivery_method, "delivery_method = $$");
+    if (updateItemDto.metadata !== undefined)
+      addField(JSON.stringify(updateItemDto.metadata), "metadata = $$::jsonb");
+    if (updateItemDto.expires_at !== undefined) {
+      addField(
+        updateItemDto.expires_at ? new Date(updateItemDto.expires_at) : null,
+        "expires_at = $$",
+      );
+    }
+
+    return { updateFields, params };
+  }
+
   private getItemSortClause(filters: ItemFiltersDto): string {
     const allowedSortColumns = [
       "created_at",
@@ -282,85 +330,17 @@ export class ItemsDeliveryService {
   async updateItem(id: string, updateItemDto: UpdateItemDto) {
     const client = await this.pool.connect();
     try {
-      const updateFields: string[] = [];
-      const params: unknown[] = [];
-      let paramCount = 0;
-
-      if (updateItemDto.title !== undefined) {
-        paramCount++;
-        updateFields.push(`title = $${paramCount}`);
-        params.push(updateItemDto.title);
-      }
-      if (updateItemDto.description !== undefined) {
-        paramCount++;
-        updateFields.push(`description = $${paramCount}`);
-        params.push(updateItemDto.description);
-      }
-      if (updateItemDto.category !== undefined) {
-        paramCount++;
-        updateFields.push(`category = $${paramCount}`);
-        params.push(updateItemDto.category);
-      }
-      if (updateItemDto.condition !== undefined) {
-        paramCount++;
-        updateFields.push(`condition = $${paramCount}`);
-        params.push(updateItemDto.condition);
-      }
-      if (updateItemDto.location !== undefined) {
-        paramCount++;
-        updateFields.push(`location = $${paramCount}::jsonb`);
-        params.push(JSON.stringify(updateItemDto.location));
-      }
-      if (updateItemDto.price !== undefined) {
-        paramCount++;
-        updateFields.push(`price = $${paramCount}`);
-        params.push(updateItemDto.price);
-      }
-      if (updateItemDto.images !== undefined) {
-        paramCount++;
-        updateFields.push(`images = $${paramCount}`);
-        params.push(updateItemDto.images);
-      }
-      if (updateItemDto.tags !== undefined) {
-        paramCount++;
-        updateFields.push(`tags = $${paramCount}`);
-        params.push(updateItemDto.tags);
-      }
-      if (updateItemDto.quantity !== undefined) {
-        paramCount++;
-        updateFields.push(`quantity = $${paramCount}`);
-        params.push(updateItemDto.quantity);
-      }
-      if (updateItemDto.status !== undefined) {
-        paramCount++;
-        updateFields.push(`status = $${paramCount}`);
-        params.push(updateItemDto.status);
-      }
-      if (updateItemDto.delivery_method !== undefined) {
-        paramCount++;
-        updateFields.push(`delivery_method = $${paramCount}`);
-        params.push(updateItemDto.delivery_method);
-      }
-      if (updateItemDto.metadata !== undefined) {
-        paramCount++;
-        updateFields.push(`metadata = $${paramCount}::jsonb`);
-        params.push(JSON.stringify(updateItemDto.metadata));
-      }
-      if (updateItemDto.expires_at !== undefined) {
-        paramCount++;
-        updateFields.push(`expires_at = $${paramCount}`);
-        params.push(
-          updateItemDto.expires_at ? new Date(updateItemDto.expires_at) : null,
-        );
-      }
+      const { updateFields, params } =
+        this.buildItemUpdateFields(updateItemDto);
 
       if (updateFields.length === 0) {
         return { success: false, error: "No fields to update" };
       }
 
-      paramCount++;
-      updateFields.push(`updated_at = NOW()`);
+      updateFields.push("updated_at = NOW()");
       params.push(id);
+
+      const paramCount = params.length;
 
       const { rows } = await client.query(
         `
@@ -418,44 +398,39 @@ export class ItemsDeliveryService {
 
   // ==================== Item Requests ====================
 
+  private async validateCreateItemRequest(
+    client: import("pg").PoolClient,
+    dto: CreateItemRequestDto,
+  ): Promise<{ error?: string }> {
+    const itemCheck = await client.query(
+      `SELECT id, status, owner_id FROM items WHERE id = $1`,
+      [dto.item_id],
+    );
+    if (itemCheck.rows.length === 0) return { error: "Item not found" };
+    const item = itemCheck.rows[0];
+    if (item.status !== "available") return { error: "Item is not available" };
+    if (item.owner_id === dto.requester_id)
+      return { error: "Cannot request your own item" };
+
+    const existingRequest = await client.query(
+      `SELECT id FROM item_requests WHERE item_id = $1 AND requester_id = $2 AND status = 'pending'`,
+      [dto.item_id, dto.requester_id],
+    );
+    if (existingRequest.rows.length > 0) {
+      return { error: "You already have a pending request for this item" };
+    }
+    return {};
+  }
+
   async createItemRequest(createRequestDto: CreateItemRequestDto) {
     const client = await this.pool.connect();
     try {
-      // Check if item exists and is available
-      const itemCheck = await client.query(
-        `
-        SELECT id, status, owner_id FROM items WHERE id = $1
-      `,
-        [createRequestDto.item_id],
+      const validation = await this.validateCreateItemRequest(
+        client,
+        createRequestDto,
       );
-
-      if (itemCheck.rows.length === 0) {
-        return { success: false, error: "Item not found" };
-      }
-
-      if (itemCheck.rows[0].status !== "available") {
-        return { success: false, error: "Item is not available" };
-      }
-
-      // Check if requester is not the owner
-      if (itemCheck.rows[0].owner_id === createRequestDto.requester_id) {
-        return { success: false, error: "Cannot request your own item" };
-      }
-
-      // Check for existing pending request
-      const existingRequest = await client.query(
-        `
-        SELECT id FROM item_requests
-        WHERE item_id = $1 AND requester_id = $2 AND status = 'pending'
-      `,
-        [createRequestDto.item_id, createRequestDto.requester_id],
-      );
-
-      if (existingRequest.rows.length > 0) {
-        return {
-          success: false,
-          error: "You already have a pending request for this item",
-        };
+      if (validation.error) {
+        return { success: false, error: validation.error };
       }
 
       const { rows } = await client.query(
@@ -536,6 +511,47 @@ export class ItemsDeliveryService {
     return { success: true, data: rows };
   }
 
+  private validateStatusUpdatePermission(
+    newStatus: string,
+    isOwner: boolean,
+    isRequester: boolean,
+  ): { allowed: boolean; error?: string } {
+    const ownerOnly = newStatus === "approved" || newStatus === "rejected";
+    if (ownerOnly && !isOwner) {
+      return {
+        allowed: false,
+        error: "Only owner can approve/reject requests",
+      };
+    }
+    if (newStatus === "cancelled" && !isRequester) {
+      return {
+        allowed: false,
+        error: "Only requester can cancel their request",
+      };
+    }
+    return { allowed: true };
+  }
+
+  private async applyItemStatusFromRequestStatus(
+    client: import("pg").PoolClient,
+    itemId: string,
+    newStatus: string,
+  ): Promise<void> {
+    const statusMap: Record<string, string> = {
+      approved: "reserved",
+      completed: "delivered",
+      rejected: "available",
+      cancelled: "available",
+    };
+    const itemStatus = statusMap[newStatus];
+    if (itemStatus) {
+      await client.query(`UPDATE items SET status = $1 WHERE id = $2`, [
+        itemStatus,
+        itemId,
+      ]);
+    }
+  }
+
   private async handleStatusUpdate(
     client: import("pg").PoolClient,
     request: { item_id: string },
@@ -543,38 +559,18 @@ export class ItemsDeliveryService {
     isOwner: boolean,
     isRequester: boolean,
   ): Promise<{ allowed: boolean; error?: string }> {
-    if (newStatus === "approved" || newStatus === "rejected") {
-      if (!isOwner) {
-        return {
-          allowed: false,
-          error: "Only owner can approve/reject requests",
-        };
-      }
-    } else if (newStatus === "cancelled") {
-      if (!isRequester) {
-        return {
-          allowed: false,
-          error: "Only requester can cancel their request",
-        };
-      }
-    }
+    const permission = this.validateStatusUpdatePermission(
+      newStatus,
+      isOwner,
+      isRequester,
+    );
+    if (!permission.allowed) return permission;
 
-    if (newStatus === "approved") {
-      await client.query(`UPDATE items SET status = 'reserved' WHERE id = $1`, [
-        request.item_id,
-      ]);
-    } else if (newStatus === "completed") {
-      await client.query(
-        `UPDATE items SET status = 'delivered' WHERE id = $1`,
-        [request.item_id],
-      );
-    } else if (newStatus === "rejected" || newStatus === "cancelled") {
-      await client.query(
-        `UPDATE items SET status = 'available' WHERE id = $1`,
-        [request.item_id],
-      );
-    }
-
+    await this.applyItemStatusFromRequestStatus(
+      client,
+      request.item_id,
+      newStatus,
+    );
     return { allowed: true };
   }
 

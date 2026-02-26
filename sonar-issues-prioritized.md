@@ -1,57 +1,16 @@
-# תוכנית תיעדוף פתרון בעיות SonarQube
 
 **תאריך:** 26.2.2026
-**סריקה מ-SonarCloud:** https://sonarcloud.io
-
----
-
-## סיכום מצב
-
-### סטטיסטיקה כללית
-
-- **סה"כ בעיות:** 888
-- **BLOCKER:** 0 ✅
-- **CRITICAL:** 86 ⚠️
-- **MAJOR:** 269
-- **MINOR:** 435
-- **INFO:** 98
-
-### פילוח לפי פרויקט
-
-#### apps/api (Backend)
-- סה"כ: 388 בעיות
-- CRITICAL: 53
-- MAJOR: 57
-- MINOR: 183
-- INFO: 95
-
-#### apps/mobile (React Native)
-- סה"כ: 500 בעיות
-- CRITICAL: 33
-- MAJOR: 212
-- MINOR: 252
-- INFO: 3
-
-### פילוח לפי סוג
-
-- **CODE_SMELL:** 882 (99.3%)
-- **BUG:** 5
-- **VULNERABILITY:** 1 🔴
-- **SECURITY_HOTSPOT:** 0
-
----
 
 ## 📋 עדיפות 1: CRITICAL Issues (86)
 
 ### Top Rules - API
 
 #### typescript:S3776 - Cognitive Complexity - פונקציות מורכבות מדי
-- **כמות:** 32 בעיות
+- **כמות:** 30 בעיות
 - **קבצים מושפעים:**
   - `src/controllers/users.controller.ts` (6)
   - `src/controllers/posts.controller.ts` (6)
   - `src/controllers/tasks.controller.ts` (3)
-  - `src/database/database.init.ts` (2)
   - `src/controllers/items-delivery.service.ts` (2)
 
 #### plsql:S1192 - SQL: String literals duplication
@@ -129,21 +88,7 @@
 
 ---
 
-## 🔒 בעיות אבטחה (VULNERABILITY)
-
-1 vulnerabilities ב-API
-
-- **tssecurity:S5145** בקובץ `src/minimal-server.ts` שורה 15
-  - Message: Change this code to not log user-controlled data.
-
----
-
 ## 📈 אסטרטגיית פתרון מומלצת
-
-### שלב 1: בעיות אבטחה (Vulnerabilities)
-**זמן משוער:** 1-2 שעות
-- [ ] פתרון 1 vulnerability
-- [ ] בדיקת security hotspots
 
 ### שלב 2: CRITICAL Issues - Complexity (S3776)
 **זמן משוער:** 3-5 ימים
@@ -173,36 +118,4 @@
 
 ### שלב 7: אוטומציה
 - [ ] הגדרת ESLint rules להתאמה ל-SonarQube
-- [ ] הוספת pre-commit hooks
 - [ ] CI/CD integration
-
----
-
-## 🎯 יעדים
-
-### טווח קצר (שבוע 1-2)
-- ✅ 0 BLOCKER issues (כבר אין!)
-- 🎯 0 CRITICAL issues
-- 🎯 0 VULNERABILITY issues
-
-### טווח בינוני (שבוע 3-6)
-- 🎯 <50 MAJOR issues (ירידה של 80%)
-- 🎯 <200 MINOR issues (ירידה של 50%)
-
-### טווח ארוך (חודש 2-3)
-- 🎯 Quality Gate: PASSED
-- 🎯 <10 MAJOR issues סה"כ
-- 🎯 Code coverage >70%
-- 🎯 אוטומציה מלאה ב-CI/CD
-
----
-
-## קישורים שימושיים
-
-- [SonarCloud - API Project](https://sonarcloud.io/dashboard?id=KarmaCummunity_KC-MVP-server)
-- [SonarCloud - Mobile Project](https://sonarcloud.io/dashboard?id=KarmaCummunity_MVP)
-- [SonarQube TypeScript Rules](https://rules.sonarsource.com/typescript/)
-
----
-
-**עדכון אחרון:** 2026-02-25T22:41:12.484Z

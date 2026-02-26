@@ -89,7 +89,7 @@ export class JwtAuthGuard implements CanActivate {
 
       this.logger.debug("Token extracted from request", {
         tokenLength: token.length,
-        tokenPrefix: token.substring(0, 20) + "...",
+        tokenPrefix: `${token.substring(0, 20)}...`,
         path: request.path,
       });
 

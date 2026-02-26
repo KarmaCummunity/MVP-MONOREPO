@@ -100,7 +100,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   // Get initial mode from URL (deep link) or default to search mode
   // URL mode: 'offer' = false, 'search' = true
   // Default is search mode (true)
-  const initialMode = routeParams?.mode === 'offer' ? false : true;
+  const initialMode = routeParams?.mode !== 'offer';
   const [mode, setMode] = useState(initialMode);
 
   // Post menu hook
@@ -129,34 +129,44 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const navigationRef = useRef(navigation);
   navigationRef.current = navigation;
 
+  // Initial load only: when no mode in URL, set URL to search; do not reset mode when params are briefly missing (avoids loop when toggling to offer)
+  useEffect(() => {
+    const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
+
+    if (!missingOrInvalid) return;
+
+    if (!hasSetInitialModeRef.current) {
+      hasSetInitialModeRef.current = true;
+      navigationRef.current.setParams?.({ mode: 'search' });
+      queueMicrotask(() => setMode(true));
+    }
+  }, [routeParams?.mode]);
+
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
     if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
       const newMode = routeParams.mode === 'search';
-      if (newMode !== mode) {
-        setMode(newMode);
-      }
+      setMode((prev) => (prev === newMode ? prev : newMode));
     }
-  }, [routeParams?.mode, mode]);
+  }, [routeParams?.mode]);
 
-  // Update URL when mode changes (toggle button pressed) or when screen loads without mode
-  // NOTE: navigation excluded from deps - it can change on every nav state update, causing
-  // effect loops. We use a ref to always have the latest navigation.
+  // Update URL when mode changes (toggle). When params are briefly missing after setParams, re-apply current mode once (hasSetInitialModeRef already true).
   useEffect(() => {
     const nav = navigationRef.current;
     const newMode = mode ? 'search' : 'offer';
     const currentMode = routeParams?.mode;
+    const missingOrInvalid =
+      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
 
-    // If no mode in URL, set it to search (default) - only once to avoid infinite loop
-    if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      if (!hasSetInitialModeRef.current) {
-        hasSetInitialModeRef.current = true;
-        nav.setParams?.({ mode: 'search' });
+    if (missingOrInvalid) {
+      if (hasSetInitialModeRef.current) {
+        nav.setParams?.({ mode: newMode });
       }
       return;
     }
 
-    // Only update URL if mode actually changed
     if (newMode !== currentMode) {
       nav.setParams?.({ mode: newMode });
     }
@@ -446,7 +456,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
             };
           });
 
-        const forType = displayItems.filter(i => itemType === 'general' ? true : i.category === itemType);
+        const forType = displayItems.filter(i => itemType === 'general' || i.category === itemType);
         setAllItems(forType);
       }
 

@@ -1,5 +1,9 @@
 import { Module } from "@nestjs/common";
-import { UsersController } from "./controllers/users.controller";
+import { UsersAuthController } from "./controllers/users-auth.controller";
+import { UsersProfileController } from "./controllers/users-profile.controller";
+import { UsersHierarchyController } from "./controllers/users-hierarchy.controller";
+import { UsersStatsController } from "./controllers/users-stats.controller";
+import { UsersFollowController } from "./controllers/users-follow.controller";
 import { UserResolutionService } from "./services/user-resolution.service";
 import { UserAuthService } from "./services/user-auth.service";
 import { UserProfileService } from "./services/user-profile.service";
@@ -12,7 +16,13 @@ import { AuthModule } from "../auth/auth.module";
 
 @Module({
   imports: [DatabaseModule, RedisCacheModule, AuthModule],
-  controllers: [UsersController],
+  controllers: [
+    UsersAuthController,
+    UsersProfileController,
+    UsersHierarchyController,
+    UsersStatsController,
+    UsersFollowController,
+  ],
   providers: [
     UserResolutionService,
     UserAuthService,

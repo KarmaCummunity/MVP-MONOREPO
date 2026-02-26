@@ -28,4 +28,6 @@ Imports: Organize imports; remove unused ones.
 
 Logging: Use the project logger only. No console.log/warn/error/debug. Use NestJS Logger in API code; in mobile use the shared logger from `utils/loggerService` with structured calls (source/tag, message, optional context). All log text in English.
 
+Before finishing with a file: You must run lint and type-check (no emit) on that file—e.g. `npx eslint <file>` and `npx tsc --noEmit` (or the project’s equivalent in the file’s package). Fix any reported issues before considering the change done.
+
 Action: Fix violations automatically. If the correct shared constant or path is unclear, flag it.

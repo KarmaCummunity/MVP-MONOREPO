@@ -146,7 +146,7 @@ log_success "Docker is available and running"
 if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
   log_warning "Skipping Code Quality & Security Checks as requested (SKIP_CHECKS=1)"
 else
-  log_info "Running Code Quality & Security Checks (Lint, Snyk, Sonar)..."
+  log_info "Running Code Quality & Security Checks (Lint, type-check, Snyk, Sonar)..."
 
   # --- Linting (required, stops on failure) ---
   log_info "Running server linting..."
@@ -155,6 +155,14 @@ else
   log_info "Running client linting..."
   (cd "$CLIENT_DIR" && npm run lint)
   log_success "Lint checks passed."
+
+  # --- Type-check (tsc --noEmit, required, stops on failure) ---
+  log_info "Running server type-check (tsc --noEmit)..."
+  (cd "$SERVER_DIR" && npx tsc -p tsconfig.build.json --noEmit)
+
+  log_info "Running client type-check (tsc --noEmit)..."
+  (cd "$CLIENT_DIR" && npx tsc --noEmit)
+  log_success "Type-check (no emit) passed."
 
   # log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
   # (cd "$CLIENT_DIR" && npm run audit:all)

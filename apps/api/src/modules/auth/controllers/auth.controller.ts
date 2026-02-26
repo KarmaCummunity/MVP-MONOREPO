@@ -334,7 +334,7 @@ export class AuthController {
 
       // SECURITY: Log only partial email (first 3 chars + domain) to prevent email leakage
       const emailParts = normalized.split("@");
-      const safeEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+      const safeEmail = `${emailParts[0].substring(0, 3)}***@${emailParts[1]}`;
       this.logger.log(`Email availability check for: ${safeEmail}`);
 
       const { rows } = await this.pool.query(
@@ -393,7 +393,7 @@ export class AuthController {
 
       // SECURITY: Log only partial email for privacy
       const emailParts = normalized.split("@");
-      const safeEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+      const safeEmail = `${emailParts[0].substring(0, 3)}***@${emailParts[1]}`;
       this.logger.log(`Registration attempt for: ${safeEmail}`);
 
       // Check if exists
@@ -499,7 +499,7 @@ export class AuthController {
 
       // SECURITY: Log only partial email
       const emailParts = normalized.split("@");
-      const safeEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+      const safeEmail = `${emailParts[0].substring(0, 3)}***@${emailParts[1]}`;
       this.logger.log(`Login attempt for user: ${safeEmail}`);
 
       const { rows } = await this.pool.query(
@@ -703,7 +703,7 @@ export class AuthController {
 
       // SECURITY: Log only partial email
       const emailParts = normalizedEmail.split("@");
-      const safeEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+      const safeEmail = `${emailParts[0].substring(0, 3)}***@${emailParts[1]}`;
       this.logger.log(`Processing Google auth for user: ${safeEmail}`);
 
       // Extract Google ID and Firebase UID separately

@@ -28,8 +28,6 @@
     "data:setup-urls": "source ./scripts/setup-db-urls.sh",
     "check:env": "ts-node -r tsconfig-paths/register src/scripts/check-environment.ts",
     "verify:separation": "ts-node -r tsconfig-paths/register src/scripts/verify-separation.ts",
-    "reset:db": "ts-node -r tsconfig-paths/register scripts/reset-db.ts",
-    "reset:db:full": "./scripts/reset-db-full.sh",
     "run:sql": "ts-node -r tsconfig-paths/register src/scripts/run-sql.ts",
     "migrate:items": "npm run run:sql src/database/migration-items-to-posts.sql",
     "docker:up": "docker compose up -d",

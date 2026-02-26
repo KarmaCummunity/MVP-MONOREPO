@@ -74,7 +74,7 @@ else
     CHANGED_FILES=$(git diff --name-only HEAD | grep '\.ts$' | grep -v '\.spec\.ts$' | grep '^src/' || true)
 fi
 
-if [ -z "$CHANGED_FILES" ]; then
+if [[ -z "$CHANGED_FILES" ]]; then
     echo -e "${GREEN}✅ No TypeScript files changed${NC}"
     CHANGED_FILE_COUNT=0
 else
@@ -88,7 +88,7 @@ fi
 # =============================================================================
 print_header "2️⃣  Running ESLint on Changed Files"
 
-if [ "$CHANGED_FILE_COUNT" -eq 0 ]; then
+if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
     echo -e "${GREEN}✅ Skipping - no files to check${NC}"
 else
     echo "Running ESLint..."
@@ -132,7 +132,7 @@ if npm run test:cov > /dev/null 2>&1; then
     echo -e "${GREEN}✅ All tests passed${NC}"
     
     # Show coverage summary if available
-    if [ -f "coverage/coverage-summary.json" ]; then
+    if [[ -f "coverage/coverage-summary.json" ]]; then
         echo ""
         echo "Coverage Summary:"
         if command_exists jq; then
@@ -153,7 +153,7 @@ print_header "5️⃣  Checking for Security Vulnerabilities (Snyk)"
 if ! command_exists snyk; then
     echo -e "${YELLOW}⚠️  Snyk CLI not installed - skipping security scan${NC}"
     echo "Install with: npm install -g snyk"
-elif [ -z "$SNYK_TOKEN" ]; then
+elif [[ -z "$SNYK_TOKEN" ]]; then
     echo -e "${YELLOW}⚠️  SNYK_TOKEN not set - skipping authenticated scan${NC}"
     echo "Set SNYK_TOKEN environment variable or run: snyk auth"
 else
@@ -181,7 +181,7 @@ fi
 # =============================================================================
 print_header "6️⃣  Scanning for Sensitive Data"
 
-if [ "$CHANGED_FILE_COUNT" -eq 0 ]; then
+if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
     echo -e "${GREEN}✅ Skipping - no files to check${NC}"
 else
     SENSITIVE_PATTERNS=(
@@ -199,7 +199,7 @@ else
         fi
     done
 
-    if [ $SENSITIVE_FOUND -eq 1 ]; then
+    if [[ $SENSITIVE_FOUND -eq 1 ]]; then
         echo -e "${RED}❌ Potential sensitive data found in changed files${NC}"
         echo -e "${YELLOW}Please remove hardcoded secrets before committing${NC}"
         ISSUES_FOUND=$((ISSUES_FOUND + 1))
@@ -213,16 +213,16 @@ fi
 # =============================================================================
 print_header "7️⃣  Checking for TODO Comments"
 
-if [ "$CHANGED_FILE_COUNT" -eq 0 ]; then
+if [[ "$CHANGED_FILE_COUNT" -eq 0 ]]; then
     TODO_COUNT=0
 else
     TODO_COUNT=$(echo "$CHANGED_FILES" | xargs grep -n "TODO\|FIXME\|XXX\|HACK" 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-if [ "$TODO_COUNT" -gt 0 ]; then
+if [[ "$TODO_COUNT" -gt 0 ]]; then
     echo -e "${YELLOW}⚠️  Found $TODO_COUNT TODO/FIXME comments in changed files${NC}"
     echo "$CHANGED_FILES" | xargs grep -n "TODO\|FIXME\|XXX\|HACK" 2>/dev/null | head -5
-    if [ "$TODO_COUNT" -gt 5 ]; then
+    if [[ "$TODO_COUNT" -gt 5 ]]; then
         echo "  ... and $((TODO_COUNT - 5)) more"
     fi
 else
@@ -238,7 +238,7 @@ echo -e "${BLUE}║                        FINAL SUMMARY                        
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-if [ $ISSUES_FOUND -eq 0 ]; then
+if [[ $ISSUES_FOUND -eq 0 ]]; then
     echo -e "${GREEN}✅ Quality Gate PASSED${NC}"
     echo ""
     echo -e "${GREEN}All checks passed successfully:${NC}"

@@ -20,9 +20,9 @@ DO $$
 DECLARE
     mapping_record RECORD;
     user_uuid UUID;
+    c_tbl CONSTANT TEXT := 'user_id_mapping';
 BEGIN
-    -- Check if user_id_mapping table exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_id_mapping') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
         -- Migrating data from user_id_mapping to user_profiles
         
         FOR mapping_record IN 
@@ -81,11 +81,12 @@ DECLARE
     user_uuid UUID;
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
+    c_tbl CONSTANT TEXT := 'items';
+    c_col CONSTANT TEXT := 'owner_id';
 BEGIN
-    -- Check if items table exists and owner_id is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'items' AND column_name = 'owner_id' AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
     ) THEN
         -- Converting items.owner_id from TEXT to UUID
         
@@ -174,11 +175,12 @@ DECLARE
     user_uuid UUID;
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
+    c_tbl CONSTANT TEXT := 'tasks';
+    c_col CONSTANT TEXT := 'created_by';
 BEGIN
-    -- Check if tasks table exists and created_by is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'tasks' AND column_name = 'created_by' AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
     ) THEN
         -- Converting tasks.created_by from TEXT to UUID
         
@@ -262,11 +264,12 @@ DECLARE
     user_uuid UUID;
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
+    c_tbl CONSTANT TEXT := 'community_members';
+    c_col CONSTANT TEXT := 'created_by';
 BEGIN
-    -- Check if community_members table exists and created_by is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'community_members' AND column_name = 'created_by' AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
     ) THEN
         -- Converting community_members.created_by from TEXT to UUID
         
@@ -345,8 +348,10 @@ END $$;
 -- STEP 5: Drop links table
 -- ============================================
 DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'links';
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'links') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
         DROP TABLE IF EXISTS links CASCADE;
     ELSE
         -- links table does not exist, skipping
@@ -357,8 +362,10 @@ END $$;
 -- STEP 6: Drop user_id_mapping table
 -- ============================================
 DO $$
+DECLARE
+    c_tbl CONSTANT TEXT := 'user_id_mapping';
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_id_mapping') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
         DROP TABLE IF EXISTS user_id_mapping CASCADE;
     ELSE
         -- user_id_mapping table does not exist, skipping
