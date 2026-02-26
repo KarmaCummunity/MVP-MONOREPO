@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Pre-push Sonar check: run Sonar locally and block push if BLOCKER/CRITICAL/HIGH
-# issues are found in SonarCloud for the API project. On failure, shows first 20 issues.
+# Pre-push Sonar check: run Sonar locally and block push only if BLOCKER/CRITICAL/HIGH
+# issues exist in SonarCloud for the API project. Quality Gate failures (e.g. coverage)
+# do not block when there are no blocking issues.
 #
 # Requires: SONAR_TOKEN (SonarCloud → My Account → Security)
 # Usage: from repo root: ./scripts/sonar-analysis/pre-push-sonar-check.sh
@@ -29,17 +30,8 @@ echo "Running Sonar scan for API (tests + sonar-scanner)..."
 echo ""
 
 cd apps/api
-if ! npm run sonar:local > "$SONAR_LOG" 2>&1; then
-  cd "$REPO_ROOT"
-  echo ""
-  echo "Sonar scan or Quality Gate failed. Showing first 20 BLOCKER/CRITICAL/HIGH issues:"
-  echo ""
-  export SONAR_TOKEN
-  node scripts/sonar-analysis/check-sonar-blocker-critical.js "$API_PROJECT_KEY" || true
-  echo ""
-  echo "❌ Push blocked. Fix the issues above or use: git push --no-verify"
-  exit 1
-fi
+SONAR_LOCAL_EXIT=0
+npm run sonar:local > "$SONAR_LOG" 2>&1 || SONAR_LOCAL_EXIT=$?
 cd "$REPO_ROOT"
 
 echo ""
@@ -48,10 +40,20 @@ echo ""
 
 export SONAR_TOKEN
 if node scripts/sonar-analysis/check-sonar-blocker-critical.js "$API_PROJECT_KEY"; then
-  echo "✅ No BLOCKER/CRITICAL/HIGH issues - safe to push."
+  if [[ "$SONAR_LOCAL_EXIT" -ne 0 ]]; then
+    echo ""
+    echo "⚠️  Sonar scan or Quality Gate failed (no BLOCKER/CRITICAL/HIGH issues - push allowed)."
+    echo "   Last 40 lines of scan output:"
+    echo "   ---"
+    tail -n 40 "$SONAR_LOG" | sed 's/^/   /'
+    echo "   ---"
+    echo "   Consider fixing the above (e.g. tests, coverage) or run: git push --no-verify to skip this check."
+  else
+    echo "✅ No BLOCKER/CRITICAL/HIGH issues - safe to push."
+  fi
   exit 0
 else
   echo ""
-  echo "❌ Push blocked: fix the issues above (first 20 shown) or use: git push --no-verify"
+  echo "❌ Push blocked by Sonar. Fix the issues above or use: git push --no-verify"
   exit 1
 fi

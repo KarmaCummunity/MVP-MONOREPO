@@ -21,11 +21,20 @@ BASE_BRANCH="${1:-main}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOG_LINES_ON_FAIL=40
+
+# Load .env from project dir so SNYK_TOKEN and other vars are available
+if [[ -f "$PROJECT_DIR/.env" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$PROJECT_DIR/.env"
+    set +a
+fi
 TMP_OUTPUT=$(mktemp)
 trap 'rm -f "$TMP_OUTPUT"' EXIT
 
 # Track passed steps (to show on first failure)
 PASSED_STEPS=()
+ISSUES_FOUND=0
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║           Quality Gate Check - Local Validation               ║${NC}"
@@ -144,13 +153,15 @@ fi
 
 # =============================================================================
 # 6. Snyk Security Check (if available)
+# Uses SNYK_TOKEN if set (CI), otherwise Snyk CLI config from `snyk auth` (local).
+# To get a token: https://app.snyk.io/account → Personal access tokens
 # =============================================================================
 print_header "6️⃣  Snyk (security)"
 
 if ! command_exists snyk; then
     echo -e "${YELLOW}⏭️  Snyk CLI not installed - skipped${NC}"
-elif [[ -z "$SNYK_TOKEN" ]]; then
-    echo -e "${YELLOW}⏭️  SNYK_TOKEN not set - skipped${NC}"
+elif [[ -z "$SNYK_TOKEN" ]] && ! snyk whoami &>/dev/null; then
+    echo -e "${YELLOW}⏭️  Snyk not authenticated - run 'snyk auth' or set SNYK_TOKEN (see app.snyk.io/account) - skipped${NC}"
 else
     run_check "Snyk" bash -c "snyk test --severity-threshold=high --fail-on=upgradable && (! snyk code test --severity-threshold=high 2>&1 | grep -q '✗')"
 fi
@@ -228,7 +239,6 @@ if [[ $ISSUES_FOUND -eq 0 ]]; then
     echo -e "  ✅ No new security vulnerabilities"
     echo -e "  ✅ No sensitive data detected"
     echo ""
-    echo -e "${GREEN}Your code is ready to push! 🚀${NC}"
     exit 0
 else
     echo -e "${RED}❌ Quality Gate FAILED${NC}"
@@ -243,4 +253,6 @@ else
     echo "  • Security: snyk test"
     echo ""
     exit 1
+    echo -e "${GREEN}Your code is ready to push! 🚀${NC}"
+
 fi
