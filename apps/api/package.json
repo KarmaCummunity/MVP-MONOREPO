@@ -57,13 +57,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "firebase-admin": "^12.7.0",
-    "google-auth-library": "^10.2.1",
+    "google-auth-library": "^10.6.1",
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
     "reflect-metadata": "^0.1.13",
-    "rimraf": "^5.0.7",
+    "rimraf": "^6.1.1",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
@@ -103,6 +103,7 @@
   "overrides": {
     "qs": "^6.13.1",
     "fast-xml-parser": "^5.3.6",
-    "validator": "^13.15.22"
+    "validator": "^13.15.22",
+    "minimatch": "^10.2.3"
   }
 }
