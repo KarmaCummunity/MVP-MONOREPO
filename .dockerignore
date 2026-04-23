@@ -17,6 +17,11 @@ dist/
 coverage/
 .scannerwork/
 *.tsbuildinfo
-apps/mobile/
+# Exclude heavy/unnecessary directories from mobile (but keep source files)
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/android/
+apps/mobile/ios/
 apps/dev-bot/
 .cursor/
