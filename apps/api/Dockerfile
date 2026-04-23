@@ -35,8 +35,11 @@ COPY apps/api/package*.json ./apps/api/
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy built application from builder
+# Copy built application from builder (includes SQL files via nest-cli.json assets)
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+
+# Copy SQL schema files to src location as fallback (database.init.ts checks both dist and src paths)
+COPY --from=builder /app/apps/api/src/database/*.sql ./apps/api/src/database/
 
 # Expose port
 EXPOSE 3001
