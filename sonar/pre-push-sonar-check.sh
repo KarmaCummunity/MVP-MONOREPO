@@ -5,13 +5,13 @@
 # do not block when there are no blocking issues.
 #
 # Requires: SONAR_TOKEN (SonarCloud → My Account → Security)
-# Usage: from repo root: ./scripts/sonar-analysis/pre-push-sonar-check.sh
+# Usage: from repo root: ./sonar/pre-push-sonar-check.sh
 # =============================================================================
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 API_PROJECT_KEY="KarmaCummunity_KC-MVP-server"
 SONAR_LOG=$(mktemp)
 trap 'rm -f "$SONAR_LOG"' EXIT
@@ -39,7 +39,7 @@ echo "Checking SonarCloud for BLOCKER/CRITICAL/HIGH issues..."
 echo ""
 
 export SONAR_TOKEN
-if node scripts/sonar-analysis/check-sonar-blocker-critical.js "$API_PROJECT_KEY"; then
+if node sonar/check-sonar-blocker-critical.js "$API_PROJECT_KEY"; then
   if [[ "$SONAR_LOCAL_EXIT" -ne 0 ]]; then
     echo ""
     echo "⚠️  Sonar scan or Quality Gate failed (no BLOCKER/CRITICAL/HIGH issues - push allowed)."

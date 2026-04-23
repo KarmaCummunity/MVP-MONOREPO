@@ -43,7 +43,7 @@ if [ -n "$API_CHANGED" ]; then
   if [ -n "${SONAR_TOKEN:-}" ]; then
     echo ""
     echo "🔍 Running pre-push Sonar check (BLOCKER/CRITICAL/HIGH gate)..."
-    if ! ./scripts/sonar-analysis/pre-push-sonar-check.sh; then
+    if ! ./sonar/pre-push-sonar-check.sh; then
       echo ""
       echo "❌ Push blocked by Sonar. Fix the issues above or use: git push --no-verify"
       exit 1

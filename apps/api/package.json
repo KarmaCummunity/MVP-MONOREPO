@@ -40,7 +40,8 @@
     "quality:gate": "./scripts/check-quality-gate.sh",
     "quality:snyk": "./scripts/check-snyk-delta.sh",
     "quality:full": "npm run lint && npm run test:cov && npm run quality:snyk",
-    "sonar:local": "npm run test:ci && npx sonar-scanner",
+    "sonar:local": "npm run test:ci && npx sonar-scanner || (node scripts/print-sonar-gate-details.js; exit 1)",
+    "sonar:gate-details": "node scripts/print-sonar-gate-details.js",
     "_TODO_ADD_SCRIPTS": "// TODO: Add missing scripts: migration:run, migration:revert, seed, security-audit"
   },
   "dependencies": {

@@ -18,8 +18,8 @@
     "test": "npm test --workspaces --if-present",
     "prepare": "husky install",
     "quality:api": "npm run quality:gate --workspace @kc/api",
-    "sonar:report": "node scripts/sonar-analysis/sonar-report.js",
-    "sonar:pre-push": "./scripts/sonar-analysis/pre-push-sonar-check.sh"
+    "sonar:report": "node sonar/sonar-report.js",
+    "sonar:pre-push": "./sonar/pre-push-sonar-check.sh"
   },
   "engines": {
     "node": ">=18.0.0"

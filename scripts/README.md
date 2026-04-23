@@ -4,18 +4,18 @@ This directory contains utility scripts for code analysis, testing, and maintena
 
 ## Directory Structure
 
-### `sonar-analysis/`
-Scripts for analyzing SonarQube scan results:
-- `analyze-sonar-issues.js` - Main analysis of SonarQube issues
-- `analyze-stats-controller.js` - Specific analysis for stats controller
-- `analyze-users-controller.js` - Specific analysis for users controller
-- `compare-results.js` - Compare old vs new scan results
-- `create-priority-doc.js` - Generate prioritized issue documentation
+### Sonar (root `sonar/` folder)
+Scripts and reports for SonarCloud/SonarQube analysis live in **`sonar/`** at repo root:
+- `sonar-report.js` – Fetches issues from SonarCloud API and writes a single report to `sonar/docs/SONAR-ALL-ISSUES.md`
+- `check-sonar-blocker-critical.js` – Exits with code 1 if BLOCKER/CRITICAL/HIGH issues exist (used by pre-push)
+- `pre-push-sonar-check.sh` – Runs Sonar scan for API, then blocks push if BLOCKER/CRITICAL/HIGH exist
 
-**Usage**: Run from monorepo root after SonarQube scan
+**Usage** (from monorepo root):
 ```bash
-node scripts/sonar-analysis/analyze-sonar-issues.js
+SONAR_TOKEN=xxx npm run sonar:report   # Generate sonar/docs/SONAR-ALL-ISSUES.md
+npm run sonar:pre-push                 # Run Sonar + block push on blocking issues
 ```
+See `sonar/README.md` for details.
 
 ### `code-analysis/`
 Scripts for code quality and linting analysis:

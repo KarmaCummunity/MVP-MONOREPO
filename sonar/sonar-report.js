@@ -1,8 +1,9 @@
 /**
- * Fetches current issues from SonarCloud API and writes sonar-all-issues.md.
+ * Fetches current issues from SonarCloud API and writes consolidated reports.
  * Run after Sonar (CI or local); needs SONAR_TOKEN (SonarCloud → My Account → Security).
  *
- * Usage: SONAR_TOKEN=xxx node scripts/sonar-analysis/sonar-report.js
+ * Usage: SONAR_TOKEN=xxx node sonar/sonar-report.js
+ * Output: sonar/docs/SONAR-ALL-ISSUES.md (summary), sonar/docs/SONAR-ISSUES-FULL.md (all issues table)
  */
 
 const fs = require('fs');
@@ -13,7 +14,34 @@ const SONAR_API = 'https://sonarcloud.io/api/issues/search';
 const API_PROJECT = 'KarmaCummunity_KC-MVP-server';
 const MOBILE_PROJECT = 'KarmaCummunity_MVP';
 const PAGE_SIZE = 500;
-const rootDir = path.resolve(__dirname, '../..');
+
+const REPO_ROOT = path.join(__dirname, '..');
+const API_ROOT = path.join(REPO_ROOT, 'apps', 'api');
+const MOBILE_ROOT = path.join(REPO_ROOT, 'apps', 'mobile');
+
+/** Sonar component is "projectKey:path"; path is relative to project root (e.g. apps/api or apps/mobile). */
+function getComponentRelativePath(componentStr) {
+  if (!componentStr || !componentStr.includes(':')) return null;
+  return componentStr.split(':').slice(1).join(':').trim();
+}
+
+function resolveApiFilePath(componentStr) {
+  const rel = getComponentRelativePath(componentStr);
+  return rel ? path.join(API_ROOT, rel) : null;
+}
+
+function resolveMobileFilePath(componentStr) {
+  const rel = getComponentRelativePath(componentStr);
+  return rel ? path.join(MOBILE_ROOT, rel) : null;
+}
+
+/** Keep only issues for files that exist in the repo (removes stale/deleted/moved files). */
+function filterIssuesToExistingFiles(issues, resolvePath) {
+  return issues.filter((i) => {
+    const abs = resolvePath(i.component);
+    return abs && fs.existsSync(abs);
+  });
+}
 
 const RULE_DESC = {
   'typescript:S3776': 'Cognitive Complexity',
@@ -112,11 +140,22 @@ function buildMd(apiIssues, mobileIssues) {
   const minorInfo =
     apiIssues.filter((i) => i.severity === 'MINOR' || i.severity === 'INFO').length +
     mobileIssues.filter((i) => i.severity === 'MINOR' || i.severity === 'INFO').length;
+  const totalIssues = apiIssues.length + mobileIssues.length;
 
   let md = '';
+  md += '# SonarCloud – All Issues (single reference)\n\n';
+  md += `Generated: ${new Date().toISOString()}\n\n`;
+  md += 'Refresh: `SONAR_TOKEN=xxx node sonar/sonar-report.js` from repo root.\n\n';
+  md += '---\n\n## 1. Summary\n\n';
+  md += `| Project | Total | BLOCKER | CRITICAL | MAJOR | MINOR | INFO |\n`;
+  md += `|---------|-------|---------|----------|-------|-------|------|\n`;
+  md += `| **API** | ${apiIssues.length} | ${(apiBlocker.length)} | ${apiCritical.length} | ${apiMajor.length} | ${apiIssues.filter((i) => i.severity === 'MINOR').length} | ${apiIssues.filter((i) => i.severity === 'INFO').length} |\n`;
+  md += `| **Mobile** | ${mobileIssues.length} | ${mobileBlocker.length} | ${mobileCritical.length} | ${mobileMajor.length} | ${mobileIssues.filter((i) => i.severity === 'MINOR').length} | ${mobileIssues.filter((i) => i.severity === 'INFO').length} |\n`;
+  md += `| **Total** | **${totalIssues}** | **${apiBlocker.length + mobileBlocker.length}** | **${apiCritical.length + mobileCritical.length}** | **${majorTotal}** | - | - |\n\n`;
+  md += '---\n\n';
 
   // BLOCKER + CRITICAL
-  md += `## BLOCKER + CRITICAL (${criticalTotal})\n\n`;
+  md += `## 2. BLOCKER + CRITICAL (${criticalTotal})\n\n`;
 
   const apiHigh = [...apiBlocker, ...apiCritical];
   const apiHighByRule = byRule(apiHigh);
@@ -148,7 +187,7 @@ function buildMd(apiIssues, mobileIssues) {
   md += '---\n\n';
 
   // MAJOR
-  md += `## MAJOR (${majorTotal})\n\n`;
+  md += `## 3. MAJOR (${majorTotal})\n\n`;
   const allMajor = [...apiMajor, ...mobileMajor];
   const majorByRule = {};
   allMajor.forEach((i) => {
@@ -164,7 +203,7 @@ function buildMd(apiIssues, mobileIssues) {
   md += '\n---\n\n';
 
   // Top files
-  md += '## Top files by issue count (API)\n\n';
+  md += '## 4. Top files by issue count (API)\n\n';
   Object.entries(apiByFile)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
@@ -173,7 +212,7 @@ function buildMd(apiIssues, mobileIssues) {
     });
   md += '\n---\n\n';
 
-  md += '## Top files by issue count (Mobile)\n\n';
+  md += '## 5. Top files by issue count (Mobile)\n\n';
   Object.entries(mobileByFile)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
@@ -182,12 +221,52 @@ function buildMd(apiIssues, mobileIssues) {
     });
   md += '\n---\n\n';
 
-  md += `## MINOR + INFO (${minorInfo})\n\n`;
+  md += `## 6. MINOR + INFO (${minorInfo})\n\n`;
   md += '- Unused imports, dead stores, TODO/FIXME comments, style issues.\n';
   md += '- Fix incrementally; re-run this script after Sonar for current counts.\n\n';
   md += '---\n\n';
-  md += '*Generated from SonarCloud. Run: `SONAR_TOKEN=xxx node scripts/sonar-analysis/sonar-report.js` (or in CI after SonarCloud Scan).*\n';
+  md += '*Generated from SonarCloud. Run: `SONAR_TOKEN=xxx node sonar/sonar-report.js` from repo root.*\n';
 
+  return md;
+}
+
+const SEVERITY_ORDER = { BLOCKER: 0, CRITICAL: 1, MAJOR: 2, MINOR: 3, INFO: 4 };
+
+function sortIssues(issues) {
+  return [...issues].sort(
+    (a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
+  );
+}
+
+function buildFullIssuesMd(apiIssues, mobileIssues) {
+  let md = '';
+  md += '# SonarCloud – Full issues list\n\n';
+  md += `Generated: ${new Date().toISOString()}\n\n`;
+  md += 'Refresh: `SONAR_TOKEN=xxx node sonar/sonar-report.js` from repo root.\n\n';
+  md += '---\n\n';
+
+  const formatIssueLine = (i) => {
+    const file = i.component ? i.component.split(':').pop() : '?';
+    const line = i.line != null ? i.line : '-';
+    return `| \`${file}\` | ${line} | ${(i.rule || '').replace(/\|/g, '\\|')} | ${(i.severity || '').replace(/\|/g, '\\|')} | ${(i.message || '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} |`;
+  };
+
+  const writeProjectSection = (title, issues) => {
+    if (issues.length === 0) return '';
+    let section = `## ${title} (${issues.length} issues)\n\n`;
+    section += '| File | Line | Rule | Severity | Message |\n';
+    section += '|------|------|------|----------|--------|\n';
+    sortIssues(issues).forEach((i) => {
+      section += formatIssueLine(i) + '\n';
+    });
+    section += '\n';
+    return section;
+  };
+
+  md += writeProjectSection('API – All issues', apiIssues);
+  md += writeProjectSection('Mobile – All issues', mobileIssues);
+  md += '---\n\n';
+  md += '*Generated from SonarCloud. Run: `SONAR_TOKEN=xxx node sonar/sonar-report.js` from repo root.*\n';
   return md;
 }
 
@@ -206,10 +285,20 @@ async function main() {
   const mobileIssues = await fetchAllIssues(MOBILE_PROJECT, token);
   console.log('Mobile issues:', mobileIssues.length);
 
-  const md = buildMd(apiIssues, mobileIssues);
-  const outPath = path.join(rootDir, 'sonar-all-issues.md');
-  fs.writeFileSync(outPath, md);
-  console.log('Written:', outPath);
+  const docsDir = path.join(__dirname, 'docs');
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+  }
+
+  const summaryMd = buildMd(apiIssues, mobileIssues);
+  const summaryPath = path.join(docsDir, 'SONAR-ALL-ISSUES.md');
+  fs.writeFileSync(summaryPath, summaryMd);
+  console.log('Written:', summaryPath);
+
+  const fullMd = buildFullIssuesMd(apiIssues, mobileIssues);
+  const fullPath = path.join(docsDir, 'SONAR-ISSUES-FULL.md');
+  fs.writeFileSync(fullPath, fullMd);
+  console.log('Written:', fullPath);
 }
 
 main().catch((err) => {

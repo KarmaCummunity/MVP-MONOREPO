@@ -3,7 +3,7 @@
  * Used after a local Sonar scan to block push when blocker/critical/high issues are present.
  * Displays the first 20 issues (by severity order: BLOCKER, CRITICAL, HIGH).
  *
- * Usage: SONAR_TOKEN=xxx node scripts/sonar-analysis/check-sonar-blocker-critical.js [projectKey]
+ * Usage: SONAR_TOKEN=xxx node sonar/check-sonar-blocker-critical.js [projectKey]
  * Default projectKey: KarmaCummunity_KC-MVP-server (API)
  */
 

@@ -1,101 +1,101 @@
 
 > @kc/api@2.5.3 sonar:local
-> npm run test:ci && npx sonar-scanner
+> npm run test:ci && npx sonar-scanner || (node scripts/print-sonar-gate-details.js; exit 1)
 
 
 > @kc/api@2.5.3 test:ci
 > jest --ci --coverage --maxWorkers=2
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "test-user-id",
   "email": "test@example.com",
-  "sessionId": "a01991abfe903b2e03365ba978dea3eb6c54c3ced9e6c243d359d6ecaff3ab17",
+  "sessionId": "63068063217d50970f8c954b0e986839dfb2ce82a5e0ca351c589779df17cda4",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "test-user-id",
   "email": "test@example.com",
-  "sessionId": "02d30a76f76ce1483914d68a74353862eb46c4fdd69ff093e869c09ccbf46ada",
+  "sessionId": "635c3852b55e3f6006550eb11a9cf94b109ef964351ddd9cd634bed502c7f282",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "user-uuid-123",
   "email": "user@karma.com",
-  "sessionId": "30f2f3607f95ac20ffaf3d41b3488f40330359c8340e0fded6691e141c363718",
+  "sessionId": "bf3812f514599156dd2bd27ebe34e2b3c9718e7c7c0a113f7031d71972d22515",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "user-id",
   "email": "user@test.com",
-  "sessionId": "cb1a5423a6c6761ec3d72e7b19c7fedc5b5c4ae566b5dde0d036ac5da5c3be19",
+  "sessionId": "be574ecd4fa83fb86829935ef3f9dde0700eb1b7fff5b42de05eb315a7fd602c",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "verify-user",
   "email": "verify@test.com",
-  "sessionId": "77aca7b48ba4ae647a3a4812476613fd76fab843cd1c003ca4c1a65c3fa84cc5",
+  "sessionId": "0108a482f4b886aa2e8339d0fc17c59831b97fd7297469ffeb09f6aff20cb01f",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
-[32m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mCreated token pair for user[39m
+[32m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [32m    LOG[39m [38;5;3m[JwtService] [39m[32mObject:[39m
 {
   "userId": "user-original",
   "email": "original@test.com",
-  "sessionId": "d47874824d28f48862e6505616e047ec1877af05e473f349d186f385e06a237a",
+  "sessionId": "1eba93c5acf844176b4b2bb0c956cd80234f5058dfd1095fe581b16ab3a29d03",
   "accessExpiresIn": 3600,
   "refreshExpiresIn": 2592000
 }
 
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
 {
   "error": "Invalid token signature",
   "tokenLength": 352
 }
 
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
 {
   "error": "Invalid token format",
   "tokenLength": 17
 }
 
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
 {
   "error": "Invalid token format",
   "tokenLength": 0
 }
 
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
 {
   "error": "Invalid token format",
   "tokenLength": 3
 }
 
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
-[33m[Nest] 29448  - [39m02/26/2026, 2:34:52 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mToken verification failed[39m
+[33m[Nest] 54870  - [39m02/26/2026, 3:12:33 PM [33m   WARN[39m [38;5;3m[JwtService] [39m[33mObject:[39m
 {
   "error": "Token has expired",
   "tokenLength": 280
@@ -203,66 +203,66 @@ INFO: User cache: /Users/navesarussi/.sonar/cache
 INFO: SonarQube server 12.19.0.2506
 INFO: Default locale: "en_US", source code encoding: "UTF-8" (analysis is platform dependent)
 INFO: Load global settings
-INFO: Load global settings (done) | time=712ms
+INFO: Load global settings (done) | time=742ms
 INFO: Server id: 1BD809FA-AWHW8ct9-T_TB3XqouNu
 INFO: Loading required plugins
 INFO: Load plugins index
-INFO: Load plugins index (done) | time=211ms
+INFO: Load plugins index (done) | time=220ms
 INFO: Load/download plugins
 INFO: Load/download plugins (done) | time=45ms
-INFO: Loaded core extensions: sca, a3s, architecture
+INFO: Loaded core extensions: a3s, architecture, sca
 INFO: Process project properties
 INFO: Project key: KarmaCummunity_KC-MVP-server
 INFO: Base dir: /Users/navesarussi/KC/kc-monorepo/apps/api
 INFO: Working dir: /Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork
 INFO: Load project branches
-INFO: Load project branches (done) | time=421ms
+INFO: Load project branches (done) | time=476ms
 INFO: Load project settings for component key: 'KarmaCummunity_KC-MVP-server'
-INFO: Load project settings for component key: 'KarmaCummunity_KC-MVP-server' (done) | time=629ms
+INFO: Load project settings for component key: 'KarmaCummunity_KC-MVP-server' (done) | time=596ms
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Check ALM binding of project 'KarmaCummunity_KC-MVP-server'
 INFO: Detected project binding: BOUND
-INFO: Check ALM binding of project 'KarmaCummunity_KC-MVP-server' (done) | time=255ms
+INFO: Check ALM binding of project 'KarmaCummunity_KC-MVP-server' (done) | time=297ms
 INFO: Load project pull requests
-INFO: Load project pull requests (done) | time=315ms
+INFO: Load project pull requests (done) | time=299ms
 INFO: Load branch configuration
 INFO: Load branch configuration (done) | time=1ms
 INFO: Load quality profiles
-INFO: Load quality profiles (done) | time=764ms
+INFO: Load quality profiles (done) | time=772ms
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Create analysis
-INFO: Create analysis (done) | time=440ms
+INFO: Create analysis (done) | time=405ms
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Load active rules
-INFO: Load active rules (done) | time=1244ms
+INFO: Load active rules (done) | time=1428ms
 INFO: Organization key: karmacummunity
 INFO: Preprocessing files...
-INFO: 2 languages detected in 109 preprocessed files (done) | time=192ms
+INFO: 2 languages detected in 109 preprocessed files (done) | time=206ms
 INFO: 142 files ignored because of inclusion/exclusion patterns
 INFO: 1 file ignored because of scm ignore settings
 INFO: Loading plugins for detected languages
 INFO: Load/download plugins
 INFO: Load/download plugins (done) | time=20ms
 INFO: Load project repositories
-INFO: Load project repositories (done) | time=427ms
+INFO: Load project repositories (done) | time=285ms
 INFO: Indexing files...
 INFO: Project configuration:
 INFO:   Excluded sources: src/**/*.spec.ts, src/**/*.test.ts, src/scripts/**, dist/**, node_modules/**, **/build-wrapper-dump.json, src/**/*.spec.ts, src/**/*.test.ts
 INFO:   Included tests: src/**/*.spec.ts, src/**/*.test.ts
 INFO:   Excluded sources for coverage: src/**/*.spec.ts, src/**/*.test.ts, src/scripts/**
-INFO: 108 files indexed (done) | time=9ms
+INFO: 108 files indexed (done) | time=10ms
 INFO: Quality profile for plsql: Sonar way
 INFO: Quality profile for ts: Sonar way
 INFO: ------------- Run sensors on module KarmaCummunity_KC-MVP-server
 INFO: Load metrics repository
-INFO: Load metrics repository (done) | time=181ms
+INFO: Load metrics repository (done) | time=131ms
 INFO: Sensor cache enabled
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Load sensor cache
-INFO: Load sensor cache (1 MB) | time=2680ms
+INFO: Load sensor cache (1 MB) | time=3843ms
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Inferred api base url 'https://api.sonarcloud.io' from host url 'https://sonarcloud.io'.
 INFO: Sensor JasminFileCollectorSensor [jasmin]
@@ -271,7 +271,7 @@ INFO: Sensor IaC hadolint report Sensor [iac]
 INFO: Sensor IaC hadolint report Sensor [iac] (done) | time=0ms
 INFO: Sensor Java Config Sensor [iac]
 INFO: There are no files to be analyzed for the Java language
-INFO: Sensor Java Config Sensor [iac] (done) | time=3ms
+INFO: Sensor Java Config Sensor [iac] (done) | time=4ms
 INFO: Sensor IaC Docker Sensor [iac]
 INFO: There are no files to be analyzed for the Docker language
 INFO: Sensor IaC Docker Sensor [iac] (done) | time=1ms
@@ -300,17 +300,17 @@ INFO: 89/89 source files have been analyzed
 INFO: JasminAstConsumer done
 INFO: Hit the cache for 0 out of 89
 INFO: Miss the cache for 89 out of 89: ANALYSIS_MODE_INELIGIBLE [89/89]
-INFO: Sensor JavaScript/TypeScript analysis [javascript] (done) | time=10208ms
+INFO: Sensor JavaScript/TypeScript analysis [javascript] (done) | time=10813ms
 INFO: Sensor CSS Rules [javascript]
 INFO: No CSS, PHP, HTML or VueJS files are found in the project. CSS analysis is skipped.
 INFO: Sensor CSS Rules [javascript] (done) | time=0ms
 INFO: Sensor JavaScript/TypeScript Coverage [javascript]
 INFO: Analysing [/Users/navesarussi/KC/kc-monorepo/apps/api/coverage/lcov.info]
-INFO: Sensor JavaScript/TypeScript Coverage [javascript] (done) | time=26ms
+INFO: Sensor JavaScript/TypeScript Coverage [javascript] (done) | time=27ms
 INFO: Sensor PL/SQL Sensor [plsql]
 INFO: 19 source files to be analyzed
 INFO: 19/19 source files have been analyzed
-INFO: Sensor PL/SQL Sensor [plsql] (done) | time=554ms
+INFO: Sensor PL/SQL Sensor [plsql] (done) | time=576ms
 INFO: Sensor EnterpriseTextAndSecretsSensor [textenterprise]
 INFO: Available processors: 8
 INFO: Using 8 threads for analysis.
@@ -322,7 +322,7 @@ INFO: 108 source files to be analyzed for the text and secrets analysis
 INFO: 108/108 source files have been analyzed for the text and secrets analysis
 INFO: Start fetching files for the binary file analysis
 INFO: There are no files to be analyzed for the binary file analysis
-INFO: Sensor EnterpriseTextAndSecretsSensor [textenterprise] (done) | time=531ms
+INFO: Sensor EnterpriseTextAndSecretsSensor [textenterprise] (done) | time=519ms
 INFO: ------------- Run sensors on project
 INFO: Sensor JsSecuritySensorV2 [jasmin]
 INFO: 86 file(s) will be analysed by SonarJasmin.
@@ -336,33 +336,33 @@ INFO: Analysis progress:  65% (56/86 files)
 INFO: Analysis progress:  74% (64/86 files)
 INFO: Analysis progress:  83% (72/86 files)
 INFO: Analysis progress:  93% (80/86 files)
-INFO: Sensor JsSecuritySensorV2 [jasmin] (done) | time=1826ms
+INFO: Sensor JsSecuritySensorV2 [jasmin] (done) | time=1988ms
 INFO: Sensor TsArchitectureSensor [architecture]
 INFO: Found 1 potential Udg file location(s) for "ts" in "/Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork"
 INFO: - /Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork/architecture/ts
 INFO: Architecture analysis is enabled with the following features: legacy
-INFO: * Protobuf reading starting | memory total=214 | free=21 | used=192 (MB)
+INFO: * Protobuf reading starting | memory total=186 | free=47 | used=138 (MB)
 INFO: * Reading SonarArchitecture UDG data from directory "/Users/navesarussi/KC/kc-monorepo/apps/api/.scannerwork/architecture/ts"
 INFO: * Files successfully loaded: "89" out of "89"
 INFO: * Purging externals (components not scanned) from graphs
 INFO: * Purging excluded nodes from graphs
-INFO: * Protobuf reading complete | memory total=214 | free=114 | used=99 (MB)
-INFO: * Build architecture.graph.ts.file_graph.default_perspective hierarchy graph complete (filtered=false) | memory total=214 | free=106 | used=107 (MB)
-INFO: Sensor TsArchitectureSensor [architecture] (done) | time=131ms
+INFO: * Protobuf reading complete | memory total=186 | free=33 | used=152 (MB)
+INFO: * Build architecture.graph.ts.file_graph.default_perspective hierarchy graph complete (filtered=false) | memory total=186 | free=26 | used=159 (MB)
+INFO: Sensor TsArchitectureSensor [architecture] (done) | time=142ms
 INFO: Sensor Zero Coverage Sensor
-INFO: Sensor Zero Coverage Sensor (done) | time=2ms
+INFO: Sensor Zero Coverage Sensor (done) | time=4ms
 INFO: ------------- Gather SCA dependencies on project
 INFO: Checking if SCA is enabled for organization karmacummunity
 INFO: Dependency analysis skipped
 INFO: CPD Executor 15 files had no CPD blocks
 INFO: CPD Executor Calculating CPD for 90 files
-INFO: CPD Executor CPD calculation finished (done) | time=45ms
+INFO: CPD Executor CPD calculation finished (done) | time=42ms
 INFO: SCM Publisher SCM provider for this project is: git
 INFO: SCM Publisher 108 source files to be analyzed
-INFO: SCM Publisher 108/108 source files have been analyzed (done) | time=400ms
-INFO: Analysis report generated in 86ms, dir size=2 MB
-INFO: Analysis report compressed in 216ms, zip size=730 KB
-INFO: Analysis report uploaded in 1865ms
+INFO: SCM Publisher 108/108 source files have been analyzed (done) | time=409ms
+INFO: Analysis report generated in 87ms, dir size=2 MB
+INFO: Analysis report compressed in 219ms, zip size=730 KB
+INFO: Analysis report uploaded in 1744ms
 INFO: ------------- Upload SCA dependency files
 INFO: Sensor cache published successfully
 INFO: ------------- Check Quality Gate status
@@ -370,6 +370,6 @@ INFO: Waiting for the analysis report to be processed (max 300s)
 INFO: ------------------------------------------------------------------------
 INFO: EXECUTION FAILURE
 INFO: ------------------------------------------------------------------------
-INFO: Total time: 37.457s
-INFO: Final Memory: 34M/134M
+INFO: Total time: 38.983s
+INFO: Final Memory: 34M/128M
 INFO: ------------------------------------------------------------------------
