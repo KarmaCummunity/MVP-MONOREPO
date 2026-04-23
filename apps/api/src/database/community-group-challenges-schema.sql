@@ -128,10 +128,10 @@ CREATE INDEX IF NOT EXISTS idx_challenge_entries_challenge_user ON community_cha
 CREATE INDEX IF NOT EXISTS idx_challenge_entries_tracker 
 ON community_challenge_entries(user_id, challenge_id, entry_date DESC);
 
--- Index for date range queries
+-- Index for date range queries (removed WHERE clause with CURRENT_DATE - it's not immutable)
+-- Queries can still use this index efficiently for date ranges
 CREATE INDEX IF NOT EXISTS idx_challenge_entries_date_range 
-ON community_challenge_entries(user_id, entry_date DESC) 
-WHERE entry_date >= CURRENT_DATE - INTERVAL '90 days';
+ON community_challenge_entries(user_id, entry_date DESC);
 
 CREATE INDEX IF NOT EXISTS idx_posts_community_challenge ON posts(community_challenge_id) WHERE community_challenge_id IS NOT NULL;
 
