@@ -6,34 +6,33 @@
 FROM node:20
 WORKDIR /app
 
-LABEL Name="kc-mvp-server" Version="1.2.0"
+LABEL Name="kc-mvp-server" Version="1.3.0"
 
-# Copy root package.json and workspace package files
+# Copy all package.json files for monorepo workspaces
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 
-# Install all dependencies (including dev deps for build)
+# Install all dependencies from root (monorepo approach)
 RUN npm ci --include=dev && npm cache clean --force
 
-# Copy entire monorepo
+# Copy entire monorepo source
 COPY . .
 
-# Build the API workspace
-WORKDIR /app/apps/api
-RUN rm -f *.tsbuildinfo && npm run build
+# Build the API workspace from root using workspace command
+RUN npm run build --workspace @kc/api
 
 # Verify build succeeded
-RUN test -f ./dist/main.js || (echo "ERROR: dist/main.js missing after build" && exit 1)
-
-# Copy schema files to dist
-RUN npm run copy:schema || (mkdir -p dist/database && cp -f src/database/*.sql dist/database/ 2>/dev/null || true)
+RUN test -f ./apps/api/dist/main.js || (echo "ERROR: apps/api/dist/main.js missing after build" && ls -la apps/api/ && exit 1)
 
 # Clean dev dependencies after build to reduce image size
-RUN cd /app && npm prune --production
+RUN npm prune --production
+
+# Set working directory to api app for runtime
+WORKDIR /app/apps/api
 
 # Expose port
 EXPOSE 3001
 
-# Start command
+# Start command (runs from /app/apps/api so dist/main.js is correct path)
 CMD ["node", "dist/main.js"]
 
