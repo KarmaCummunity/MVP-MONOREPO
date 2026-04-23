@@ -38,8 +38,12 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy built application from builder (includes SQL files via nest-cli.json assets)
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Copy SQL schema files to src location as fallback (database.init.ts checks both dist and src paths)
+# Ensure database directory exists and copy SQL schema files
+RUN mkdir -p ./apps/api/src/database
 COPY --from=builder /app/apps/api/src/database/*.sql ./apps/api/src/database/
+
+# Verify SQL files were copied
+RUN ls -la ./apps/api/dist/database/ && ls -la ./apps/api/src/database/ || echo "⚠️ SQL files location check"
 
 # Expose port
 EXPOSE 3001

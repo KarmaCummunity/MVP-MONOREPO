@@ -203,8 +203,11 @@ export class DatabaseInit implements OnModuleInit {
         path.resolve(__dirname, "../../src/database/schema.sql"),
       ];
 
+      console.log("🔍 Searching for schema.sql in:", candidates);
+
       let schemaPath = "";
       for (const p of candidates) {
+        console.log(`  Checking: ${p} - exists: ${fs.existsSync(p)}`);
         if (fs.existsSync(p)) {
           schemaPath = p;
           break;
@@ -212,9 +215,13 @@ export class DatabaseInit implements OnModuleInit {
       }
 
       if (!schemaPath) {
+        console.error("❌ schema.sql not found in any expected location");
+        console.error("Current directory:", process.cwd());
+        console.error("__dirname:", __dirname);
         throw new Error("schema.sql not found in expected locations");
       }
 
+      console.log(`✅ Found schema.sql at: ${schemaPath}`);
       const schemaSql = fs.readFileSync(schemaPath, "utf8");
 
       // Split SQL statements intelligently, handling DO $$ blocks
@@ -1259,8 +1266,14 @@ export class DatabaseInit implements OnModuleInit {
         ),
       ];
 
+      console.log(
+        "🔍 Searching for community-group-challenges-schema.sql in:",
+        candidates,
+      );
+
       let schemaPath = "";
       for (const p of candidates) {
+        console.log(`  Checking: ${p} - exists: ${fs.existsSync(p)}`);
         if (fs.existsSync(p)) {
           schemaPath = p;
           break;
@@ -1271,9 +1284,14 @@ export class DatabaseInit implements OnModuleInit {
         console.warn(
           "⚠️ community-group-challenges-schema.sql not found, skipping community challenges tables",
         );
+        console.error("Current directory:", process.cwd());
+        console.error("__dirname:", __dirname);
         return;
       }
 
+      console.log(
+        `✅ Found community-group-challenges-schema.sql at: ${schemaPath}`,
+      );
       const schemaSql = fs.readFileSync(schemaPath, "utf8");
 
       // Split SQL statements intelligently, handling DO $$ blocks
