@@ -227,7 +227,10 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     }
   };
 
-  const currentEntry = selectedChallenge && selectedDate && data?.entries_by_date[selectedDate]?.[selectedChallenge.id];
+  const currentEntry =
+    selectedChallenge && selectedDate
+      ? data?.entries_by_date[selectedDate]?.[selectedChallenge.id]
+      : undefined;
   const modalDate = editingRef.current?.date ?? selectedDate ?? todayStr;
   const modalExistingValue = editingRef.current !== null ? editingRef.current.value : currentEntry?.value;
   const modalExistingNotes = editingRef.current !== null ? editingRef.current.notes : currentEntry?.notes;
