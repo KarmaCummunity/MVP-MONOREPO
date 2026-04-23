@@ -13,6 +13,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
@@ -50,12 +51,14 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
-  
+  const insets = useSafeAreaInsets();
+
   const [challenges, setChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [habitsReloadTick, setHabitsReloadTick] = useState(0);
 
   // Load challenges when screen focuses
   useFocusEffect(
@@ -139,6 +142,7 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setHabitsReloadTick((n) => n + 1);
     await loadChallenges();
     setRefreshing(false);
   };
@@ -225,6 +229,18 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
     );
   };
 
+  const listHeader = (
+    <>
+      <DailyHabitsQuickView
+        reloadToken={habitsReloadTick}
+        onBrowseChallenges={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
+      />
+      <View style={styles.titleContainer}>
+        <Text style={styles.screenTitle}>{t('challenges:myChallenges', 'האתגרים שלי')}</Text>
+      </View>
+    </>
+  );
+
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="trophy-outline" size={64} color={colors.textSecondary} />
@@ -268,23 +284,21 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
         hideSortButton={true}
       />
 
-      <DailyHabitsQuickView
-        onBrowseChallenges={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
-      />
-
-      {/* Screen Title */}
-      <View style={styles.titleContainer}>
-        <Text style={styles.screenTitle}>{t('challenges:myChallenges', 'האתגרים שלי')}</Text>
+      <View style={styles.listOuter}>
+        <FlatList
+          style={styles.flatList}
+          data={filteredChallenges}
+          renderItem={renderChallengeCard}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(insets.bottom, 12) + 24 },
+          ]}
+          ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} /> : renderEmptyState()}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
       </View>
-
-      <FlatList
-        data={filteredChallenges}
-        renderItem={renderChallengeCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} /> : renderEmptyState()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
     </SafeAreaView>
   );
 }
@@ -293,6 +307,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  listOuter: {
+    flex: 1,
+    minHeight: 0,
+  },
+  flatList: {
+    flex: 1,
   },
   titleContainer: {
     paddingHorizontal: 16,

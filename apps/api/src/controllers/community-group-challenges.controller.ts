@@ -51,7 +51,8 @@ export class CommunityGroupChallengesController {
     try {
       await client.query("BEGIN");
 
-      // 1. Create the challenge - simple approach without image_url column
+      const isPublic = dto.is_public !== false;
+
       this.logger.log(`🔍 Creating challenge: ${dto.title}`);
       this.logger.log(
         `📊 Challenge data: ${JSON.stringify({
@@ -60,6 +61,7 @@ export class CommunityGroupChallengesController {
           type: dto.type,
           frequency: dto.frequency,
           difficulty: dto.difficulty,
+          is_public: isPublic,
         })}`,
       );
 
@@ -68,8 +70,8 @@ export class CommunityGroupChallengesController {
       } = await client.query(
         `
         INSERT INTO community_group_challenges 
-        (creator_id, title, description, type, frequency, goal_value, deadline, difficulty, category)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (creator_id, title, description, type, frequency, goal_value, goal_direction, deadline, difficulty, category, image_url, is_public)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `,
         [
@@ -78,52 +80,62 @@ export class CommunityGroupChallengesController {
           dto.description || null,
           dto.type,
           dto.frequency,
-          dto.goal_value || null,
+          dto.goal_value ?? null,
+          dto.goal_direction ?? null,
           dto.deadline || null,
           dto.difficulty || null,
           dto.category || null,
+          dto.image_url || null,
+          isPublic,
         ],
       );
 
       this.logger.log(`✅ Challenge created with ID: ${challenge.id}`);
 
-      // 2. Auto-create a corresponding post
-      try {
-        const postTitle = challenge.title;
-        const postDescription =
-          challenge.description || `אתגר קהילתי חדש: ${challenge.title}`;
+      // 2. Auto-create a feed post only for public (community) challenges
+      if (isPublic) {
+        try {
+          const postTitle = challenge.title;
+          const postDescription =
+            challenge.description || `אתגר קהילתי חדש: ${challenge.title}`;
 
-        await client.query(
-          `
+          await client.query(
+            `
           INSERT INTO posts 
           (author_id, community_challenge_id, title, description, post_type, metadata)
           VALUES ($1, $2, $3, $4, $5, $6)
         `,
-          [
-            dto.creator_id,
-            challenge.id,
-            postTitle,
-            postDescription,
-            "community_challenge",
-            JSON.stringify({
-              challenge_id: challenge.id,
-              type: challenge.type,
-              frequency: challenge.frequency,
-              difficulty: challenge.difficulty,
-              category: challenge.category,
-              goal_value: challenge.goal_value,
-              deadline: challenge.deadline,
-            }),
-          ],
-        );
+            [
+              dto.creator_id,
+              challenge.id,
+              postTitle,
+              postDescription,
+              "community_challenge",
+              JSON.stringify({
+                challenge_id: challenge.id,
+                type: challenge.type,
+                frequency: challenge.frequency,
+                difficulty: challenge.difficulty,
+                category: challenge.category,
+                goal_value: challenge.goal_value,
+                deadline: challenge.deadline,
+              }),
+            ],
+          );
 
-        this.logger.log(`✅ Auto-created post for challenge: ${challenge.id}`);
-      } catch (postError) {
-        this.logger.error(
-          "⚠️ Failed to auto-create post (continuing anyway)",
-          postError,
+          this.logger.log(
+            `✅ Auto-created post for challenge: ${challenge.id}`,
+          );
+        } catch (postError) {
+          this.logger.error(
+            "⚠️ Failed to auto-create post (continuing anyway)",
+            postError,
+          );
+        }
+      } else {
+        this.logger.log(
+          `Skipping feed post for private challenge: ${challenge.id}`,
         );
-        // Don't fail challenge creation if post creation fails
       }
 
       // 3. Auto-join the creator to their own challenge
@@ -218,6 +230,8 @@ export class CommunityGroupChallengesController {
         query += ` AND c.creator_id = $${paramCount}`;
         params.push(filters.creator_id);
         paramCount++;
+      } else {
+        query += ` AND COALESCE(c.is_public, true) = true`;
       }
 
       if (filters.search) {
@@ -285,12 +299,21 @@ export class CommunityGroupChallengesController {
     const client = await this.pool.connect();
     try {
       // Default to current week if not specified
-      const today = new Date().toISOString().split("T")[0];
+      // IMPORTANT: Use local server date, not UTC date
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const today = `${year}-${month}-${day}`;
       const start =
         startDate ||
-        new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
+        (() => {
+          const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+          const y = weekAgo.getFullYear();
+          const m = String(weekAgo.getMonth() + 1).padStart(2, "0");
+          const d = String(weekAgo.getDate()).padStart(2, "0");
+          return `${y}-${m}-${d}`;
+        })();
       const end = endDate || today;
 
       // Get all DAILY challenges the user participates in
@@ -392,7 +415,7 @@ export class CommunityGroupChallengesController {
           dateKey = raw.split("T")[0];
         } else if (raw instanceof Date) {
           const d = raw;
-          dateKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+          dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           this.logger.log(
             `Date conversion: raw=${raw.toISOString()}, dateKey=${dateKey}`,
           );
@@ -657,8 +680,22 @@ export class CommunityGroupChallengesController {
       }
 
       // Determine entry date (today if not specified)
-      const entryDate =
-        dto.entry_date || new Date().toISOString().split("T")[0];
+      // IMPORTANT: Use local server date, not UTC date
+      let entryDate: string;
+      if (dto.entry_date) {
+        entryDate = dto.entry_date;
+        this.logger.log(`📅 Using provided entry_date: ${entryDate}`);
+      } else {
+        // Get current date in local timezone (not UTC)
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        entryDate = `${year}-${month}-${day}`;
+        this.logger.log(
+          `📅 Generated local entry_date: ${entryDate} (no date provided)`,
+        );
+      }
       this.logger.log(
         `Entry date resolved to: ${entryDate} (received: ${dto.entry_date}, value: ${dto.value}, type: ${typeof dto.value})`,
       );
@@ -954,6 +991,12 @@ export class CommunityGroupChallengesController {
       if (dto.goal_direction !== undefined) {
         updates.push(`goal_direction = $${paramCount}`);
         values.push(dto.goal_direction);
+        paramCount++;
+      }
+
+      if (dto.is_public !== undefined) {
+        updates.push(`is_public = $${paramCount}`);
+        values.push(dto.is_public);
         paramCount++;
       }
 

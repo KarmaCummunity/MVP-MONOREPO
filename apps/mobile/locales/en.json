@@ -1441,6 +1441,12 @@
     "viewStatistics": "View Statistics",
     "searchChallenges": "Search Challenges",
     "createNewChallenge": "Create a New Community Challenge",
+    "visibility": {
+      "label": "Who can see this challenge?",
+      "community": "Community (public)",
+      "private": "Private",
+      "hint": "Community challenges appear in the list and can get a feed post. Private challenges are only visible when you filter by your own creations."
+    },
     "challengeCreated": "Challenge created successfully! 🎉",
     "challengeJoined": "Joined challenge successfully! 💪",
     "entryAdded": "Entry added successfully! 🎯",

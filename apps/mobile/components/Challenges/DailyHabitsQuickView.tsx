@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
   ScrollView,
   Platform,
 } from 'react-native';
@@ -24,23 +23,36 @@ type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 interface DailyHabitsQuickViewProps {
   onBrowseChallenges: () => void;
+  /** Increment from parent (e.g. pull-to-refresh) to reload tracker data without remounting. */
+  reloadToken?: number;
+}
+
+/** Calendar YYYY-MM-DD in the device local timezone (avoids UTC day shift from toISOString). */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getDateRange(mode: ViewMode): string[] {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
   const dates: string[] = [];
   if (mode === 'daily') {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    dates.push(yesterday, today);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    dates.push(toLocalDateString(yesterday), toLocalDateString(now));
   } else if (mode === 'weekly') {
     for (let i = 7; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      dates.push(d.toISOString().split('T')[0]);
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dates.push(toLocalDateString(d));
     }
   } else {
     for (let i = 30; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      dates.push(d.toISOString().split('T')[0]);
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dates.push(toLocalDateString(d));
     }
   }
   return dates;
@@ -48,22 +60,31 @@ function getDateRange(mode: ViewMode): string[] {
 
 export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   onBrowseChallenges,
+  reloadToken,
 }) => {
   const { t } = useTranslation('challenges');
   const { selectedUser: user } = useUser();
   const [data, setData] = useState<DailyTrackerData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<DailyTrackerChallenge | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const editingRef = useRef<{ date: string; value?: number; notes?: string } | null>(null);
-  const today = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateString(new Date());
   const dateRange = getDateRange(viewMode);
   const startDate = dateRange[0];
   const endDate = dateRange[dateRange.length - 1];
+
+  if (__DEV__) {
+    console.log('[DailyHabitsQuickView] Component initialized:');
+    console.log('  todayStr:', todayStr);
+    console.log('  viewMode:', viewMode);
+    console.log('  dateRange:', dateRange);
+    console.log('  startDate:', startDate);
+    console.log('  endDate:', endDate);
+  }
 
   const loadTodayData = useCallback(async () => {
     if (!user?.id) {
@@ -98,7 +119,6 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       setData(null);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [user?.id, startDate, endDate]);
 
@@ -108,6 +128,18 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     }, [loadTodayData])
   );
 
+  const prevReloadToken = useRef<number | null>(null);
+  useEffect(() => {
+    if (reloadToken === undefined) return;
+    if (prevReloadToken.current === null) {
+      prevReloadToken.current = reloadToken;
+      return;
+    }
+    if (prevReloadToken.current === reloadToken) return;
+    prevReloadToken.current = reloadToken;
+    if (user?.id) loadTodayData();
+  }, [reloadToken, user?.id, loadTodayData]);
+
   const viewModeRef = useRef(viewMode);
   useEffect(() => {
     if (viewModeRef.current !== viewMode) {
@@ -115,11 +147,6 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       if (user?.id) loadTodayData();
     }
   }, [viewMode, user?.id, loadTodayData]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadTodayData();
-  };
 
   const getCellStatus = (challengeId: string, date: string): EntryStatus => {
     if (!data?.entries_by_date[date]) return 'empty';
@@ -132,33 +159,62 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   };
 
   const handleCellPress = (challenge: DailyTrackerChallenge, date: string) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:158',message:'handleCellPress called',data:{clickedDate:date,todayStr,dateRange,challengeId:challenge.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const value = getCellValue(challenge.id, date);
     const notes = data?.entries_by_date[date]?.[challenge.id]?.notes;
     const currentStatus = getCellStatus(challenge.id, date);
     editingRef.current = { date, value, notes };
+    // #region agent log
+    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:163',message:'editingRef.current set',data:{editingRefDate:editingRef.current.date,editingRefValue:editingRef.current.value,editingRefNotes:editingRef.current.notes},timestamp:Date.now(),hypothesisId:'A,B'})}).catch(()=>{});
+    // #endregion
     setSelectedChallenge(challenge);
     setSelectedDate(date);
+    // #region agent log
+    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:166',message:'selectedDate state set',data:{selectedDateArg:date},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     setModalVisible(true);
     if (__DEV__) {
+      console.log('[DailyHabitsQuickView] ===== CELL PRESSED =====');
+      console.log('[DailyHabitsQuickView] Clicked date:', date);
+      console.log('[DailyHabitsQuickView] Today is:', todayStr);
+      console.log('[DailyHabitsQuickView] Date range:', dateRange);
       console.log('[DailyHabitsQuickView] Opening edit:', { challengeId: challenge.id, title: challenge.title, type: challenge.type, goal_value: challenge.goal_value, goal_direction: challenge.goal_direction, date, value, notes, currentStatus });
+      console.log('[DailyHabitsQuickView] editingRef.current set to:', editingRef.current);
     }
   };
 
   const handleSaveEntry = async (value: number, notes: string) => {
     const challengeId = selectedChallenge?.id;
-    const dateToSave = selectedDate || editingRef.current?.date;
+    const dateToSave = editingRef.current?.date || selectedDate;
+    // #region agent log
+    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:179',message:'handleSaveEntry called',data:{challengeId,dateToSave,editingRefDate:editingRef.current?.date,selectedDate,value,notes,todayStr},timestamp:Date.now(),hypothesisId:'B,E'})}).catch(()=>{});
+    // #endregion
     if (!challengeId || !user?.id || !dateToSave) {
       if (__DEV__) console.warn('[DailyHabitsQuickView] Save cancelled: missing challenge/user/date', { challengeId, userId: user?.id, dateToSave });
       return;
     }
-    if (__DEV__) console.log('[DailyHabitsQuickView] Saving entry:', { challengeId, date: dateToSave, value, notes });
+    if (__DEV__) {
+      console.log('[DailyHabitsQuickView] ===== SAVING ENTRY =====');
+      console.log('[DailyHabitsQuickView] editingRef.current:', editingRef.current);
+      console.log('[DailyHabitsQuickView] selectedDate:', selectedDate);
+      console.log('[DailyHabitsQuickView] dateToSave:', dateToSave);
+      console.log('[DailyHabitsQuickView] Saving entry:', { challengeId, date: dateToSave, value, notes });
+    }
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:191',message:'Before addChallengeEntry API call',data:{challengeId,entry_date:dateToSave,value,notes,user_id:user.id},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
+      // #endregion
       await db.addChallengeEntry(challengeId, {
         user_id: user.id,
         value,
         notes,
         entry_date: dateToSave,
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:197',message:'After addChallengeEntry API call success',data:{},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
+      // #endregion
       if (__DEV__) console.log('[DailyHabitsQuickView] Save succeeded');
       editingRef.current = null;
       setModalVisible(false);
@@ -172,7 +228,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   };
 
   const currentEntry = selectedChallenge && selectedDate && data?.entries_by_date[selectedDate]?.[selectedChallenge.id];
-  const modalDate = editingRef.current?.date ?? selectedDate ?? today;
+  const modalDate = editingRef.current?.date ?? selectedDate ?? todayStr;
   const modalExistingValue = editingRef.current !== null ? editingRef.current.value : currentEntry?.value;
   const modalExistingNotes = editingRef.current !== null ? editingRef.current.notes : currentEntry?.notes;
 
@@ -195,8 +251,8 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   const hasDailyChallenges = data && data.challenges.length > 0;
 
   const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    if (viewMode === 'daily') return dateStr === today ? t('details.today') : t('details.yesterday');
+    const d = new Date(dateStr + 'T12:00:00');
+    if (viewMode === 'daily') return dateStr === todayStr ? t('details.today') : t('details.yesterday');
     if (viewMode === 'weekly') return d.getDate().toString();
     return d.getDate().toString();
   };
@@ -221,12 +277,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       </View>
 
       {hasDailyChallenges ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
+        <View>
           <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>
@@ -257,7 +308,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                   {dateRange.map((date) => (
                   <View
                     key={date}
-                    style={[styles.dateCol, date === today && styles.dateColToday]}
+                    style={[styles.dateCol, date === todayStr && styles.dateColToday]}
                   >
                     <Text style={styles.dateColText}>{formatDateLabel(date)}</Text>
                     <Text style={styles.dateColSub}>{date}</Text>
@@ -295,9 +346,14 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                         style={[
                           styles.cell,
                           { backgroundColor: iconColor === '#E0E0E0' ? '#F5F5F5' : `${iconColor}18` },
-                          date === today && styles.cellToday,
+                          date === todayStr && styles.cellToday,
                         ]}
-                        onPress={() => handleCellPress(challenge, date)}
+                        onPress={() => {
+                          // #region agent log
+                          fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:330',message:'Cell TouchableOpacity onPress',data:{dateFromMap:date,challengeId:challenge.id,todayStr,dateRange},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+                          // #endregion
+                          handleCellPress(challenge, date);
+                        }}
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.cellText, { color: iconColor }]} numberOfLines={1}>
@@ -310,7 +366,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
               ))}
               </View>
             </ScrollView>
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>{t('quickView.noChallenges')}</Text>

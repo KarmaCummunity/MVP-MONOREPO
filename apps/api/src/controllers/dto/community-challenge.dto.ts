@@ -12,7 +12,9 @@ import {
   MinLength,
   MaxLength,
   IsBoolean,
+  IsIn,
 } from "class-validator";
+import { Transform, Type } from "class-transformer";
 
 // Challenge types
 export enum ChallengeType {
@@ -93,6 +95,15 @@ export class CreateCommunityGroupChallengeDto {
     message: "כיוון היעד חייב להיות maximize או minimize",
   })
   goal_direction?: GoalDirection;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === "true" || value === "1") return true;
+    if (value === false || value === "false" || value === "0") return false;
+    return value;
+  })
+  @IsBoolean()
+  is_public?: boolean;
 }
 
 // DTO for updating a community challenge
@@ -139,12 +150,26 @@ export class UpdateCommunityGroupChallengeDto {
   category?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === "true" || value === "1") return true;
+    if (value === false || value === "false" || value === "0") return false;
+    return value;
+  })
   @IsBoolean()
   is_active?: boolean;
 
   @IsOptional()
   @IsEnum(GoalDirection)
   goal_direction?: GoalDirection;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === "true" || value === "1") return true;
+    if (value === false || value === "false" || value === "0") return false;
+    return value;
+  })
+  @IsBoolean()
+  is_public?: boolean;
 }
 
 // DTO for joining a challenge
@@ -194,6 +219,11 @@ export class GetChallengesFilterDto {
   category?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === "true" || value === "1") return true;
+    if (value === false || value === "false" || value === "0") return false;
+    return value;
+  })
   @IsBoolean()
   is_active?: boolean;
 
@@ -202,12 +232,14 @@ export class GetChallengesFilterDto {
   creator_id?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(100)
   limit?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   offset?: number;
@@ -217,15 +249,29 @@ export class GetChallengesFilterDto {
   search?: string; // Search in title and description
 
   @IsOptional()
-  @IsEnum(["created_at", "participants_count", "title", "deadline"], {
-    message:
-      "סדר המיון חייב להיות created_at, participants_count, title או deadline",
-  })
+  @IsIn(
+    [
+      "created_at",
+      "updated_at",
+      "title",
+      "type",
+      "frequency",
+      "difficulty",
+      "category",
+      "is_active",
+      "participants_count",
+      "deadline",
+    ],
+    {
+      message:
+        "sort_by must be one of: created_at, updated_at, title, type, frequency, difficulty, category, is_active, participants_count, deadline",
+    },
+  )
   sort_by?: string;
 
   @IsOptional()
-  @IsEnum(["ASC", "DESC"], {
-    message: "כיוון המיון חייב להיות ASC או DESC",
+  @IsIn(["ASC", "DESC"], {
+    message: "sort_order must be ASC or DESC",
   })
   sort_order?: "ASC" | "DESC";
 }

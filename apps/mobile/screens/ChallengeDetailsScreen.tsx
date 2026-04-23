@@ -12,6 +12,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Switch,
 } from 'react-native';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +52,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
   // Entry form state
   const [entryValue, setEntryValue] = useState('');
+  const [entryBooleanValue, setEntryBooleanValue] = useState(true); // For BOOLEAN type
   const [entryNotes, setEntryNotes] = useState('');
   const [submittingEntry, setSubmittingEntry] = useState(false);
   const [showEntryModal, setShowEntryModal] = useState(false);
@@ -156,7 +158,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
     // Validate entry value
     let value = 0;
     if (challenge?.type === 'BOOLEAN') {
-      value = 1; // Always 1 for boolean (completed)
+      value = entryBooleanValue ? 1 : 0; // Use the switch value
     } else {
       const parsedValue = parseFloat(entryValue);
       if (isNaN(parsedValue) || parsedValue < 0) {
@@ -168,10 +170,19 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
     try {
       setSubmittingEntry(true);
+      
+      // Get today's date in local timezone (YYYY-MM-DD format)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayDate = `${year}-${month}-${day}`;
+      
       const response = await db.addChallengeEntry(challengeId, {
         user_id: user.id,
         value,
         notes: entryNotes.trim() || undefined,
+        entry_date: todayDate,
       });
 
       if (response.success) {
@@ -180,6 +191,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
         // Reset form
         setEntryValue('');
+        setEntryBooleanValue(true); // Reset to true (success)
         setEntryNotes('');
         setShowEntryModal(false);
 
@@ -368,7 +380,22 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
                 </TouchableOpacity>
               </View>
 
-              {challenge.type !== 'BOOLEAN' && (
+              {challenge.type === 'BOOLEAN' ? (
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>{t('challenges:fields.value')} *</Text>
+                  <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>
+                      {entryBooleanValue ? '✓ הצלחתי' : '✗ לא הצלחתי'}
+                    </Text>
+                    <Switch
+                      value={entryBooleanValue}
+                      onValueChange={setEntryBooleanValue}
+                      trackColor={{ false: '#F44336', true: '#4CAF50' }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                </View>
+              ) : (
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>{t('challenges:fields.value')} *</Text>
                   <TextInput
@@ -685,6 +712,21 @@ const styles = StyleSheet.create({
   textArea: {
     height: 80,
     textAlignVertical: 'top' as const,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+  },
+  switchLabel: {
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   addEntryButton: {
     flexDirection: 'row',

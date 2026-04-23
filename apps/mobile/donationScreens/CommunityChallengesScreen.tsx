@@ -14,6 +14,7 @@ import {
   RefreshControl,
   TextInput,
   Image,
+  Platform,
 } from 'react-native';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -68,8 +69,8 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   
   const routeParams = route?.params as { mode?: string } | undefined;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
-  
-  // Mode: true = מחפש (search), false = מציע (offer/create)
+
+  // true = seeker/search (browse), false = offerer/create form
   const [mode, setMode] = useState(initialMode);
   
   // State for challenges list
@@ -94,16 +95,30 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const [goalValue, setGoalValue] = useState('');
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('easy');
   const [category, setCategory] = useState('');
+  const [isCommunityPublic, setIsCommunityPublic] = useState(true);
 
-  // Update mode from route params
   useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'search';
-      if (newMode !== mode) {
-        setMode(newMode);
-      }
+    const m = routeParams?.mode;
+    if (m === 'offer' || m === 'search') {
+      const nextSearchMode = m === 'search';
+      setMode((prev) => (prev !== nextSearchMode ? nextSearchMode : prev));
     }
   }, [routeParams?.mode]);
+
+  const syncModeToUrl = useCallback(
+    (nextSearchMode: boolean) => {
+      navigation.setParams({ mode: nextSearchMode ? 'search' : 'offer' });
+    },
+    [navigation],
+  );
+
+  const handleToggleHeaderMode = useCallback(() => {
+    const nextSearchMode = !mode;
+    setMode(nextSearchMode);
+    if (Platform.OS === 'web') {
+      syncModeToUrl(nextSearchMode);
+    }
+  }, [mode, navigation, syncModeToUrl]);
 
   // Load challenges when screen focuses
   useFocusEffect(
@@ -237,8 +252,13 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         type: challengeType,
         frequency,
         goal_value: goalValue ? parseFloat(goalValue) : undefined,
+        goal_direction:
+          challengeType !== 'BOOLEAN' && goalValue
+            ? ('maximize' as const)
+            : undefined,
         difficulty,
         category: category.trim() || undefined,
+        is_public: isCommunityPublic,
       };
 
       const response = await db.createCommunityChallenge(challengeData);
@@ -255,9 +275,12 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         setGoalValue('');
         setDifficulty('easy');
         setCategory('');
+        setIsCommunityPublic(true);
 
-        // Switch to search mode and reload
         setMode(true);
+        if (Platform.OS === 'web') {
+          syncModeToUrl(true);
+        }
         await loadChallenges();
       } else {
         showToast(t('challenges:messages.errorCreating'), 'error');
@@ -422,6 +445,37 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
     <ScrollContainer style={styles.formContainer}>
       <Text style={styles.formTitle}>{t('challenges:createNewChallenge')}</Text>
 
+      <Text style={styles.label}>{t('challenges:visibility.label')}</Text>
+      <View style={styles.optionsRow}>
+        <TouchableOpacity
+          style={[styles.optionButton, isCommunityPublic && styles.optionButtonActive]}
+          onPress={() => setIsCommunityPublic(true)}
+        >
+          <Ionicons
+            name="earth-outline"
+            size={20}
+            color={isCommunityPublic ? colors.white : colors.textSecondary}
+          />
+          <Text style={[styles.optionText, isCommunityPublic && styles.optionTextActive]}>
+            {t('challenges:visibility.community')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.optionButton, !isCommunityPublic && styles.optionButtonActive]}
+          onPress={() => setIsCommunityPublic(false)}
+        >
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color={!isCommunityPublic ? colors.white : colors.textSecondary}
+          />
+          <Text style={[styles.optionText, !isCommunityPublic && styles.optionTextActive]}>
+            {t('challenges:visibility.private')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.visibilityHint}>{t('challenges:visibility.hint')}</Text>
+
       {/* Title */}
       <Text style={styles.label}>{t('challenges:fields.title')} *</Text>
       <TextInput
@@ -578,7 +632,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
           t('challenges:myChallenges', 'האתגרים שלי'),
           t('challenges:myCreatedChallenges', 'האתגרים שיצרתי'),
         ]}
-        onToggleMode={() => setMode(!mode)}
+        onToggleMode={handleToggleHeaderMode}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
             (navigation as any).navigate('ChallengeStatisticsScreen');
@@ -851,5 +905,11 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  visibilityHint: {
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
+    marginTop: 8,
+    lineHeight: 20,
   },
 });

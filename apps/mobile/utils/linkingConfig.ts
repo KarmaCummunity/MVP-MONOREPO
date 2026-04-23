@@ -18,6 +18,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
     'karma-community://',
     'https://karma-community-kc.com',
     'https://www.karma-community-kc.com',
+    'https://dev.karma-community-kc.com',
+    'http://dev.karma-community-kc.com',
     'http://karma-community-kc.com',
     'http://www.karma-community-kc.com',
     'http://localhost:8081',
@@ -29,19 +31,30 @@ export const linking: LinkingOptions<RootStackParamList> = {
   // Custom function to handle paths that don't match exactly
   // Redirects paths without mode to include /search
   getStateFromPath: (path: string, options?: any) => {
-    // Remove query string and hash for matching
-    const cleanPath = path.split('?')[0].split('#')[0];
-    
+    const [pathnamePart, queryPartRaw = ''] = path.split('?');
+    const queryPart = queryPartRaw.split('#')[0];
+    const cleanPath = pathnamePart.split('#')[0];
+    const normalized = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+
+    // Legacy web URLs: /CommunityChallengesScreen?mode=search|offer
+    if (/^\/CommunityChallengesScreen\/?$/i.test(normalized)) {
+      const params = new URLSearchParams(queryPart);
+      const mode = params.get('mode') === 'offer' ? 'offer' : 'search';
+      return defaultGetStateFromPath(
+        `/donations/community-challenges/${mode}`,
+        options,
+      );
+    }
+
     // Handle paths without mode - redirect to /search
-    const categoryMatch = cleanPath.match(/^\/donations\/(money|time|knowledge|rides|items)$/);
+    const categoryMatch = normalized.match(
+      /^\/donations\/(money|time|knowledge|rides|items)$/,
+    );
     if (categoryMatch) {
       const category = categoryMatch[1];
       const pathWithMode = `/donations/${category}/search`;
-      // Use default getStateFromPath with the modified path
-      // Don't pass config in options - it's already in linking.config
       return defaultGetStateFromPath(pathWithMode, options);
     }
-    // Use default behavior for other paths
     return defaultGetStateFromPath(path, options);
   },
   
@@ -88,7 +101,18 @@ export const linking: LinkingOptions<RootStackParamList> = {
             screens: {
               DonationsScreen: 'donations',
               MyChallengesScreen: 'donations/challenges',
-              
+              CommunityChallengesScreen: {
+                path: 'donations/community-challenges/:mode?',
+                parse: {
+                  mode: (mode: string | undefined) => {
+                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') {
+                      return 'search';
+                    }
+                    return mode === 'offer' ? 'offer' : 'search';
+                  },
+                },
+              },
+
               // Main donation categories with mode support (offer/search)
               // 4 main categories: money, time, knowledge, rides (trump), items
               // Default mode is 'search' (מחפש)

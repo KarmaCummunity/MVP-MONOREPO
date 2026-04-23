@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS community_group_challenges (
   category VARCHAR(50), -- Challenge category
   is_active BOOLEAN DEFAULT true,
   participants_count INTEGER DEFAULT 0,
+  is_public BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -53,6 +54,18 @@ BEGIN
         WHERE type IN ('NUMERIC', 'DURATION') 
           AND goal_value IS NOT NULL
           AND goal_direction IS NULL;
+    END IF;
+END $$;
+
+-- Add is_public (community vs private) for existing databases
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'community_group_challenges' AND column_name = 'is_public'
+    ) THEN
+        ALTER TABLE community_group_challenges ADD COLUMN is_public BOOLEAN DEFAULT true;
+        UPDATE community_group_challenges SET is_public = true WHERE is_public IS NULL;
     END IF;
 END $$;
 

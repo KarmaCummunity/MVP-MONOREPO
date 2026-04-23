@@ -348,6 +348,7 @@ export interface CommunityChallenge {
   difficulty?: ChallengeDifficulty;
   category?: string;
   is_active: boolean;
+  is_public?: boolean;
   participants_count: number;
   created_at: string;
   updated_at: string;

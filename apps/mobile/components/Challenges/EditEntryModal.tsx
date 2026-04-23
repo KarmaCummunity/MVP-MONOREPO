@@ -95,7 +95,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   };
 
   const formatDate = (dateString: string): string => {
-    const d = new Date(dateString + 'T00:00:00');
+    const d = new Date(dateString + 'T12:00:00');
     return d.toLocaleDateString('he-IL', {
       weekday: 'long',
       year: 'numeric',

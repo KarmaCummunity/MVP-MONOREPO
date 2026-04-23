@@ -1318,6 +1318,27 @@ export class DatabaseInit implements OnModuleInit {
         console.error("⚠️ Could not verify image_url column:", err);
       }
 
+      try {
+        await client.query(`
+          DO $$
+          BEGIN
+              IF NOT EXISTS (
+                  SELECT 1 FROM information_schema.columns
+                  WHERE table_name = 'community_group_challenges' AND column_name = 'is_public'
+              ) THEN
+                  ALTER TABLE community_group_challenges ADD COLUMN is_public BOOLEAN DEFAULT true;
+                  UPDATE community_group_challenges SET is_public = true WHERE is_public IS NULL;
+                  RAISE NOTICE 'Column is_public added to community_group_challenges';
+              END IF;
+          END $$;
+        `);
+        console.log(
+          "✅ Verified is_public column exists in community_group_challenges",
+        );
+      } catch (err) {
+        console.error("⚠️ Could not verify is_public column:", err);
+      }
+
       console.log(
         `✅ Community Group Challenges schema tables created successfully from: ${schemaPath}`,
       );
