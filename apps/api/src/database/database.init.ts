@@ -54,6 +54,9 @@ export class DatabaseInit implements OnModuleInit {
             "⏭️  Skipping full schema initialization (SKIP_FULL_SCHEMA=1)",
           );
           await this.ensureBackwardCompatibility(client);
+          // Full schema.sql is skipped, but challenge tables are required by the API.
+          await this.runChallengesSchema(client);
+          await this.runCommunityGroupChallengesSchema(client);
           await this.initializeDefaultData(client);
         } else {
           try {
