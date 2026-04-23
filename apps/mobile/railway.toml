@@ -4,7 +4,6 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
-watchPatterns = ["apps/mobile/**"]
 
 [deploy]
 startCommand = ""
