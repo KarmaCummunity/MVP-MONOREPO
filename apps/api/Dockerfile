@@ -9,7 +9,6 @@ WORKDIR /app
 # Copy all package.json files for monorepo workspaces
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
-COPY packages/*/package*.json ./packages/
 
 # Install all dependencies (including dev deps for build)
 RUN npm ci --include=dev
@@ -27,26 +26,21 @@ RUN test -f ./apps/api/dist/main.js || (echo "ERROR: apps/api/dist/main.js missi
 FROM node:20
 WORKDIR /app
 
-LABEL Name="kc-mvp-server" Version="1.4.0"
+LABEL Name="kc-mvp-server" Version="1.5.0"
 
 # Copy package files for production install
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
-COPY packages/*/package*.json ./packages/
 
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy built application from builder
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/src/database/*.sql ./apps/api/dist/database/
-
-# Set working directory to api app for runtime
-WORKDIR /app/apps/api
 
 # Expose port
 EXPOSE 3001
 
-# Start command
-CMD ["node", "dist/main.js"]
+# Start command from root (so node_modules are accessible)
+CMD ["node", "apps/api/dist/main.js"]
 
