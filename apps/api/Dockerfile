@@ -1,34 +1,39 @@
 # File overview:
 # - Purpose: Multi-stage Dockerfile to build and run the NestJS server on Railway/containers.
-# - Stages: builder (tsc), deps (prod node_modules), runner (start dist).
-# - Notes: Copies `schema.sql` into dist for runtime schema bootstrap.
+# - Context: Designed for monorepo - Railway builds from root, this file is in apps/api
+# - Notes: Copies monorepo structure, installs deps, builds api workspace, runs from dist
 
-# Simple single-stage Dockerfile (lint-friendly)
 FROM node:20
 WORKDIR /app
 
-# NODE_ENV will be set by Railway environment variables
-# Don't hardcode it here to allow dev/prod separation
-LABEL Name="kc-mvp-server" Version="1.1.0"
+LABEL Name="kc-mvp-server" Version="1.2.0"
 
+# Copy root package.json and workspace package files
 COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+
+# Install all dependencies (including dev deps for build)
 RUN npm ci --include=dev && npm cache clean --force
 
+# Copy entire monorepo
 COPY . .
 
-# Build: prefer nest build via npm script; fallback to tsc
-RUN rm -f *.tsbuildinfo && (npm run build || npx tsc -p tsconfig.build.json)
+# Build the API workspace
+WORKDIR /app/apps/api
+RUN rm -f *.tsbuildinfo && npm run build
+
+# Verify build succeeded
+RUN test -f ./dist/main.js || (echo "ERROR: dist/main.js missing after build" && exit 1)
+
+# Copy schema files to dist
+RUN npm run copy:schema || (mkdir -p dist/database && cp -f src/database/*.sql dist/database/ 2>/dev/null || true)
 
 # Clean dev dependencies after build to reduce image size
-RUN npm prune --production
+RUN cd /app && npm prune --production
 
-# Ensure dist exists and include SQL schema into dist
-RUN test -f ./dist/main.js || (echo "dist/main.js missing" && exit 1)
-RUN mkdir -p dist/database && cp -f src/database/schema.sql dist/database/ || true
-
-# Expose is optional for Railway, but helps locally
+# Expose port
 EXPOSE 3001
 
-# Standard start command
+# Start command
 CMD ["node", "dist/main.js"]
 
