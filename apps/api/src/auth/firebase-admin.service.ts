@@ -9,7 +9,9 @@
 // send a Firebase ID token (common on mobile web when the session JWT is absent).
 //
 // When no service account is configured, `verifyIdToken` still works by
-// validating tokens against Google's public JWKS (needs FIREBASE_PROJECT_ID).
+// validating tokens against Google's public JWKS. Project id is taken from the
+// token `aud` claim (and `iss`) so no FIREBASE_PROJECT_ID env is required unless
+// you want to restrict acceptance to that project only.
 
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import * as admin from "firebase-admin";
@@ -140,18 +142,55 @@ export class FirebaseAdminService implements OnModuleInit {
   }
 
   /**
+   * Read Firebase project id from the token before cryptographic verify.
+   * `iss` must match Google securetoken format so `aud` is not attacker-controlled
+   * without an invalid signature at verify time.
+   */
+  private resolveFirebaseProjectIdForJwks(token: string): string {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("Invalid Firebase ID token format");
+    }
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(
+        Buffer.from(parts[1], "base64url").toString("utf8"),
+      ) as Record<string, unknown>;
+    } catch {
+      throw new Error("Invalid Firebase ID token payload");
+    }
+
+    const audRaw = payload.aud;
+    const iss = payload.iss;
+    const projectIdFromToken =
+      typeof audRaw === "string"
+        ? audRaw
+        : Array.isArray(audRaw) && typeof audRaw[0] === "string"
+          ? audRaw[0]
+          : "";
+    const expectedIss = `https://securetoken.google.com/${projectIdFromToken}`;
+    if (!projectIdFromToken || iss !== expectedIss) {
+      throw new Error("Invalid Firebase ID token: issuer/audience mismatch");
+    }
+
+    const envProjectId = this.resolveProjectId();
+    if (envProjectId && envProjectId !== projectIdFromToken) {
+      throw new Error(
+        "Firebase ID token is for a different project than this server",
+      );
+    }
+
+    return projectIdFromToken;
+  }
+
+  /**
    * Verify Firebase ID token using Google's public keys (no service account).
-   * Same crypto trust as client-side Firebase; requires project id in env.
+   * Cryptographic verification via JWKS; project id from token `aud` / `iss`.
    */
   private async verifyIdTokenWithPublicJwks(
     token: string,
   ): Promise<admin.auth.DecodedIdToken> {
-    const projectId = this.resolveProjectId();
-    if (!projectId) {
-      throw new Error(
-        "Set FIREBASE_PROJECT_ID or GOOGLE_CLOUD_PROJECT to verify Firebase ID tokens without Admin SDK credentials",
-      );
-    }
+    const projectId = this.resolveFirebaseProjectIdForJwks(token);
 
     const JWKS = createRemoteJWKSet(new URL(FIREBASE_SECURE_TOKEN_JWKS));
     const { payload } = await jwtVerify(token, JWKS, {
