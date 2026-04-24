@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../globals/colors';
 import { IS_WEB, IS_MOBILE_WEB, IS_TABLET, SCREEN_WIDTH } from '../constants';
 
-const styles = StyleSheet.create({
+const landingSharedStyleSheet = {
   // Section
   section: {
     paddingHorizontal: IS_MOBILE_WEB ? 16 : (IS_WEB ? (IS_TABLET ? 40 : 24) : 40),
@@ -386,6 +386,8 @@ const styles = StyleSheet.create({
     fontSize: IS_MOBILE_WEB ? 16 : 20,
     letterSpacing: 0.3,
   },
-});
+};
 
-export { styles };
+const styles = StyleSheet.create(landingSharedStyleSheet);
+
+export { styles, landingSharedStyleSheet };

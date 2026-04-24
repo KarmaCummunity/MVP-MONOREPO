@@ -18,6 +18,7 @@ import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
 import { HeroSection } from './Landing/components/HeroSection';
+import { landingSharedStyleSheet } from './Landing/styles';
 
 interface LandingStats {
   siteVisits: number;
@@ -1794,6 +1795,7 @@ const LandingSiteScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  ...landingSharedStyleSheet,
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1832,14 +1834,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     flex: 1,
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    gap: isMobileWeb ? 10 : 16,
-    marginTop: isMobileWeb ? 24 : 40,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    alignItems: 'center',
   },
   ctaIcon: {
     marginRight: isMobileWeb ? 6 : 8,
@@ -1889,29 +1883,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  section: {
-    paddingHorizontal: isMobileWeb ? 16 : (isWeb ? (isTablet ? 40 : 24) : 40),
-    paddingVertical: isMobileWeb ? 24 : (isWeb ? (isTablet ? 60 : 40) : 50),
-    width: '100%',
-    alignSelf: 'center',
-    maxWidth: isTablet ? 1200 : '100%',
-  },
-  sectionTitle: {
-    fontSize: isMobileWeb ? 20 : (isWeb ? (isTablet ? 36 : 28) : 42),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 6 : 8,
-    letterSpacing: -0.5,
-  },
-  sectionSubtitle: {
-    fontSize: isMobileWeb ? 13 : (isWeb ? (isTablet ? 18 : 16) : 22),
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 20 : 24),
-    lineHeight: isMobileWeb ? 18 : (isWeb ? 26 : 30),
-    fontWeight: '500',
-  },
   sectionSubTitle: {
     fontSize: isMobileWeb ? 14 : (isWeb ? 18 : 24),
     fontWeight: '700',
@@ -1927,42 +1898,6 @@ const styles = StyleSheet.create({
     gap: isMobileWeb ? 12 : 24,
     width: '100%',
     marginTop: isMobileWeb ? 12 : 20,
-  },
-  feature: {
-    flex: 1,
-    minWidth: isMobileWeb ? 140 : 280,
-    maxWidth: isMobileWeb ? '100%' : 350,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    borderRadius: isMobileWeb ? 12 : 20,
-    padding: isMobileWeb ? 16 : 28,
-    alignItems: 'center',
-    margin: isMobileWeb ? 4 : 8,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  featureEmoji: {
-    fontSize: isMobileWeb ? 32 : 48,
-    marginBottom: isMobileWeb ? 10 : 16,
-  },
-  featureTitle: {
-    fontSize: isMobileWeb ? 16 : 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 8 : 12,
-    letterSpacing: -0.3,
-  },
-  featureText: {
-    fontSize: isMobileWeb ? 13 : 18,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: isMobileWeb ? 18 : 28,
-    fontWeight: '400',
   },
   paragraph: {
     fontSize: isMobileWeb ? 14 : (isWeb ? 18 : 20),
@@ -2217,27 +2152,6 @@ const styles = StyleSheet.create({
   brandStrip: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: isMobileWeb ? 8 : 10, paddingVertical: isMobileWeb ? 12 : 16 },
   brandIcon: { width: isMobileWeb ? 30 : 40, height: isMobileWeb ? 30 : 40, opacity: 0.9 },
   contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobileWeb ? 10 : 20, justifyContent: 'center', marginTop: isMobileWeb ? 16 : 24, width: '100%' },
-  contactButton: {
-    flexDirection: 'row',
-    gap: isMobileWeb ? 8 : 12,
-    alignItems: 'center',
-    paddingHorizontal: isMobileWeb ? 16 : 28,
-    paddingVertical: isMobileWeb ? 12 : 18,
-    borderRadius: isMobileWeb ? 12 : 16,
-    minWidth: isMobileWeb ? 140 : 200,
-    justifyContent: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  contactButtonText: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: isMobileWeb ? 13 : 18,
-    letterSpacing: 0.3,
-  },
   footer: {
     paddingHorizontal: isMobileWeb ? 16 : 20,
     paddingVertical: isMobileWeb ? 20 : 32,
@@ -2490,113 +2404,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: isMobileWeb ? 12 : 16,
   },
-  // Floating Menu Styles
-  menuOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 999, // מתחת לתפריט אבל מעל התוכן
-  },
-  floatingMenu: {
-    position: 'absolute',
-    right: isMobileWeb ? 8 : 20,
-    top: isMobileWeb ? 60 : 100,
-    minWidth: 150,
-    width: isMobileWeb ? '14%' : '10%',
-    maxHeight: isMobileWeb ? '70vh' as any : (isWeb ? '80vh' as any : 600),
-    backgroundColor: colors.white,
-    borderRadius: isMobileWeb ? 12 : 20,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-    zIndex: 1000,
-    overflow: 'hidden',
-  },
-  floatingMenuMinimized: {
-    position: 'absolute',
-    right: isMobileWeb ? 8 : 20,
-    top: isMobileWeb ? 60 : 100,
-    width: isMobileWeb ? SCREEN_WIDTH * 0.05 : SCREEN_WIDTH * 0.03, // 5% for mobile, 3% for desktop
-    height: isMobileWeb ? SCREEN_WIDTH * 0.05 : SCREEN_WIDTH * 0.03,
-    // backgroundColor: colors.white,
-    borderRadius: isMobileWeb ? SCREEN_WIDTH * 0.025 : SCREEN_WIDTH * 0.015,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 1000,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuToggleButton: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SCREEN_WIDTH * 0.01, // 1% of screen width
-    paddingVertical: SCREEN_WIDTH * 0.008, // 0.8% of screen width
-    borderBottomWidth: 1,
-    borderBottomColor: colors.backgroundSecondary,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  menuTitle: {
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
   menuMinimizeButton: {
     padding: SCREEN_WIDTH * 0.002, // 0.2% of screen width
-  },
-  menuItems: {
-    flex: 1,
-    paddingVertical: SCREEN_WIDTH * 0.006, // 0.6% of screen width
-  },
-  menuItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: SCREEN_WIDTH * 0.006, // 0.6% of screen width
-    borderRightWidth: 3,
-    borderRightColor: 'transparent',
-  },
-  menuItemActive: {
-    backgroundColor: colors.backgroundTertiary,
-    borderRightColor: colors.info,
-  },
-  menuItemIcon: {
-    marginLeft: SCREEN_WIDTH * 0.002, // 0.2% of screen width
-  },
-  menuItemText: {
-    fontWeight: '600',
-    color: colors.textSecondary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  menuItemTextActive: {
-    color: colors.info,
-    fontWeight: '700',
-  },
-  titleDecorator: {
-    width: isMobileWeb ? 40 : 60,
-    height: isMobileWeb ? 3 : 4,
-    backgroundColor: colors.info,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: isMobileWeb ? 16 : 24,
   },
   sectionAltBackground: {
     backgroundColor: colors.backgroundSecondary,
@@ -3109,28 +2918,6 @@ const styles = StyleSheet.create({
     lineHeight: isMobileWeb ? 18 : 24,
     fontWeight: '400',
     fontStyle: 'italic',
-  },
-  donationCtaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: isMobileWeb ? 8 : 12,
-    backgroundColor: colors.secondary,
-    paddingVertical: isMobileWeb ? 14 : 18,
-    paddingHorizontal: isMobileWeb ? 24 : 32,
-    borderRadius: isMobileWeb ? 12 : 16,
-    marginTop: isMobileWeb ? 20 : 28,
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  donationCtaButtonText: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: isMobileWeb ? 16 : 20,
-    letterSpacing: 0.3,
   },
   donationCtaButtonTop: {
     flexDirection: 'row',
