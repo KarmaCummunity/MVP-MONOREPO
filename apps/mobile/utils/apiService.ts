@@ -18,6 +18,9 @@
 import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
 
+/** Admin tasks endpoints can run heavier SQL; allow longer than default fetch abort */
+const TASKS_HTTP_TIMEOUT_MS = 90_000;
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -87,46 +90,86 @@ class ApiService {
       }
     });
     const qs = params.toString();
-    return this.request(`/api/tasks${qs ? `?${qs}` : ''}`);
+    return this.request(
+      `/api/tasks${qs ? `?${qs}` : ''}`,
+      {},
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async createTask(taskData: any): Promise<ApiResponse> {
-    return this.request('/api/tasks', {
-      method: 'POST',
-      body: JSON.stringify(taskData),
-    });
+    return this.request(
+      '/api/tasks',
+      {
+        method: 'POST',
+        body: JSON.stringify(taskData),
+      },
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async updateTask(taskId: string, updateData: any): Promise<ApiResponse> {
-    return this.request(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updateData),
-    });
+    return this.request(
+      `/api/tasks/${taskId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(updateData),
+      },
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async deleteTask(taskId: string): Promise<ApiResponse> {
-    return this.request(`/api/tasks/${taskId}`, {
-      method: 'DELETE',
-    });
+    return this.request(
+      `/api/tasks/${taskId}`,
+      {
+        method: 'DELETE',
+      },
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async getSubtasks(taskId: string): Promise<ApiResponse> {
-    return this.request(`/api/tasks/${taskId}/subtasks`);
+    return this.request(
+      `/api/tasks/${taskId}/subtasks`,
+      {},
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async getTaskTree(taskId: string): Promise<ApiResponse> {
-    return this.request(`/api/tasks/${taskId}/tree`);
+    return this.request(
+      `/api/tasks/${taskId}/tree`,
+      {},
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async logTaskHours(taskId: string, hours: number, userId: string): Promise<ApiResponse> {
-    return this.request(`/api/tasks/${taskId}/log-hours`, {
-      method: 'POST',
-      body: JSON.stringify({ hours, user_id: userId }),
-    });
+    return this.request(
+      `/api/tasks/${taskId}/log-hours`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ hours, user_id: userId }),
+      },
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   async getHoursReport(managerId: string): Promise<ApiResponse> {
-    return this.request(`/api/tasks/hours-report/${managerId}`);
+    return this.request(
+      `/api/tasks/hours-report/${managerId}`,
+      {},
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
   }
 
   private normalizeEndpoint(endpoint: string): string {
@@ -257,7 +300,8 @@ class ApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    retryOn401: boolean = true
+    retryOn401: boolean = true,
+    timeoutMs: number = 30_000,
   ): Promise<ApiResponse<T>> {
     // TODO: Add request ID for tracing and debugging
     try {
@@ -280,7 +324,7 @@ class ApiService {
 
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for slower servers
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
         const response = await fetch(url, {

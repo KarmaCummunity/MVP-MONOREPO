@@ -225,6 +225,26 @@ export class TasksController {
         this.logger.warn("⚠️ Could not ensure estimated_hours column:", e);
       }
 
+      // 2b. Ensure parent_task_id exists (list/create SQL references it; legacy DBs may lack it)
+      try {
+        await this.pool.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'parent_task_id'
+            ) THEN
+              ALTER TABLE tasks ADD COLUMN parent_task_id UUID;
+            END IF;
+          END $$;
+        `);
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks (parent_task_id)`,
+        );
+      } catch (e) {
+        this.logger.warn("⚠️ Could not ensure parent_task_id column:", e);
+      }
+
       // 3. Ensure INDEXES (Idempotent)
       // SEC-002.4: Create indexes individually — no string interpolation in SQL
       const indexQueries = [
@@ -485,27 +505,46 @@ export class TasksController {
         ? `COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours`
         : `0::NUMERIC as actual_hours`;
 
+      // LATERAL joins: one indexed lookup per task row instead of four correlated subqueries per row
       const sql = `
-        SELECT 
+        SELECT
             t.id, t.title, t.description, t.status, t.priority, t.category, t.due_date, t.assignees, t.tags, t.checklist, t.parent_task_id, t.estimated_hours, t.created_at, t.updated_at,
-            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
-             FROM user_profiles u 
-             WHERE u.id::text = t.created_by::text 
-                OR u.firebase_uid = t.created_by::text
-                OR u.google_id = t.created_by::text
-             LIMIT 1) as creator_details,
-            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
-             FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
-            (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtask_count,
-            (SELECT json_build_object('id', pt.id, 'title', pt.title) 
-             FROM tasks pt WHERE pt.id = t.parent_task_id) as parent_task_details,
+            cd.creator_details,
+            ad.assignees_details,
+            sc.subtask_count,
+            pt.parent_task_details,
             ${actualHoursSubquery}
         FROM tasks t
+        LEFT JOIN LATERAL (
+          SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) AS creator_details
+          FROM user_profiles u
+          WHERE u.id::text = t.created_by::text
+             OR u.firebase_uid = t.created_by::text
+             OR u.google_id = t.created_by::text
+          LIMIT 1
+        ) cd ON true
+        LEFT JOIN LATERAL (
+          SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) AS assignees_details
+          FROM user_profiles u
+          WHERE t.assignees IS NOT NULL
+            AND cardinality(t.assignees) > 0
+            AND u.id = ANY(t.assignees::UUID[])
+        ) ad ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS subtask_count
+          FROM tasks st
+          WHERE st.parent_task_id = t.id
+        ) sc ON true
+        LEFT JOIN LATERAL (
+          SELECT json_build_object('id', p.id, 'title', p.title) AS parent_task_details
+          FROM tasks p
+          WHERE p.id = t.parent_task_id
+        ) pt ON true
         ${where}
-        ORDER BY 
-          CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
-          status ASC,
-          created_at DESC
+        ORDER BY
+          CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
+          t.status ASC,
+          t.created_at DESC
         LIMIT $${params.length + 1}
         OFFSET $${params.length + 2}
       `;
