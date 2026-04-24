@@ -268,6 +268,38 @@ class ApiService {
     }
   }
 
+  /**
+   * Firebase ID token for the signed-in user (Google, etc.).
+   * @param forceRefresh - pass true after 401 so the server gets a fresh token
+   */
+  private async getFirebaseIdToken(forceRefresh = false): Promise<string | null> {
+    try {
+      const { getFirebase } = await import('./firebaseClient');
+      const { getAuth } = await import('firebase/auth');
+      const { app } = getFirebase();
+      const auth = getAuth(app);
+      const user = auth.currentUser;
+      if (!user) return null;
+      return await user.getIdToken(forceRefresh);
+    } catch (error) {
+      console.warn('Failed to get Firebase ID token:', error);
+      return null;
+    }
+  }
+
+  private async clearStoredJwt(): Promise<void> {
+    try {
+      const AsyncStorage = await import('@react-native-async-storage/async-storage');
+      await AsyncStorage.default.multiRemove([
+        'jwt_access_token',
+        'jwt_token_expires_at',
+        'jwt_refresh_token',
+      ]);
+    } catch (e) {
+      console.warn('Failed to clear JWT from storage:', e);
+    }
+  }
+
   async getAuthToken(): Promise<string | null> {
     try {
       // Try to validate and refresh JWT token if needed
@@ -276,20 +308,7 @@ class ApiService {
         return jwtToken;
       }
 
-      // Fallback: Try to get Firebase ID token
-      // This is robust because it automatically refreshes if needed
-      const { getFirebase } = await import('./firebaseClient');
-      const { getAuth } = await import('firebase/auth');
-      const { app } = getFirebase();
-      const auth = getAuth(app);
-      const user = auth.currentUser;
-
-      if (user) {
-        // forceRefresh=false by default, but if we suspect issues we could try true
-        // However, standard getIdToken() handles refresh automatically.
-        const token = await user.getIdToken();
-        return token;
-      }
+      return await this.getFirebaseIdToken(false);
     } catch (error) {
       console.warn('Failed to get auth token:', error);
     }
@@ -335,32 +354,40 @@ class ApiService {
 
         const data = await response.json();
 
-        // Handle 401 Unauthorized - try to refresh token and retry
+        // Handle 401 Unauthorized - try JWT refresh, then Firebase (Google) token
         if (response.status === 401 && retryOn401 && authToken) {
           logger.warn('API', 'Received 401, attempting token refresh and retry', { endpoint });
 
-          // Try to refresh token
-          const refreshedToken = await this.validateAndRefreshToken();
+          let tokenToRetry: string | null = await this.validateAndRefreshToken();
 
-          if (refreshedToken) {
-            // Retry request with new token (only once to prevent infinite loops)
-            logger.info('API', 'Retrying request with refreshed token', { endpoint });
-            return this.request<T>(endpoint, options, false);
-          } else {
-            // Refresh failed, clear session
-            logger.error('API', 'Token refresh failed, clearing session', { endpoint });
-            const AsyncStorage = await import('@react-native-async-storage/async-storage');
-            await AsyncStorage.default.multiRemove([
-              'jwt_access_token',
-              'jwt_token_expires_at',
-              'jwt_refresh_token',
-            ]);
-
-            return {
-              success: false,
-              error: 'Session expired. Please log in again.',
-            };
+          // JWT refresh may return the same token the server already rejected — try Firebase
+          if (!tokenToRetry || tokenToRetry === authToken) {
+            await this.clearStoredJwt();
+            tokenToRetry = await this.getFirebaseIdToken(true);
           }
+
+          if (tokenToRetry) {
+            logger.info('API', 'Retrying request with refreshed token', { endpoint });
+            return this.request<T>(endpoint, options, false, timeoutMs);
+          }
+
+          logger.error('API', '401: no valid token after refresh attempts', { endpoint });
+          const serverMsg =
+            typeof data?.message === 'string'
+              ? data.message
+              : typeof data?.error === 'string'
+                ? data.error
+                : '';
+          const isAuthLike =
+            /session|expired|unauthor|invalid token|authentication|log in/i.test(serverMsg);
+
+          return {
+            success: false,
+            error:
+              serverMsg && !isAuthLike
+                ? serverMsg
+                : 'Session expired. Please log in again.',
+          };
         }
 
         if (!response.ok) {
