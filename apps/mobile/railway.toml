@@ -1,9 +1,13 @@
-# Railway Configuration
-# Forces rebuild on every push to main branch
+# Railway Configuration — deploy only when web app or install manifests change.
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
+watchPatterns = [
+  "apps/mobile/**",
+  "package.json",
+  "package-lock.json",
+]
 
 [deploy]
 startCommand = ""
