@@ -8,12 +8,6 @@
   "edit": "Edit",
   "delete": "Delete",
   "loading": "Loading...",
-  "webSingletonStandby": {
-    "title": "App is open in another tab",
-    "body": "KarmaCommunity can only run in one active tab for this browser. Switch to the tab that already has the app, or open it again here.",
-    "focusButton": "Bring tab to front",
-    "openAgain": "Open app in one tab"
-  },
   "notFound": {
     "title": "Oops! Not found",
     "header": "Page not found",

@@ -93,7 +93,7 @@ SplashScreen.preventAutoHideAsync();
 // No need for early initialization - it reads from localStorage on creation
 
 function AppContent() {
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['common', 'webOverlay']);
   const { selectedUser } = useUser();
   /** Web only: at most one tab runs the full app; others show a standby screen. */
   const [webSingletonLeader, setWebSingletonLeader] = useState(true);
@@ -387,8 +387,8 @@ function AppContent() {
   if (Platform.OS === 'web' && !webSingletonLeader) {
     return (
       <View style={singletonStandbyStyles.container}>
-        <Text style={singletonStandbyStyles.title}>{t('common:webSingletonStandby.title')}</Text>
-        <Text style={singletonStandbyStyles.body}>{t('common:webSingletonStandby.body')}</Text>
+        <Text style={singletonStandbyStyles.title}>{t('webOverlay:singletonStandby.title')}</Text>
+        <Text style={singletonStandbyStyles.body}>{t('webOverlay:singletonStandby.body')}</Text>
         <TouchableOpacity
           style={singletonStandbyStyles.button}
           onPress={() => {
@@ -401,9 +401,9 @@ function AppContent() {
             }
           }}
           accessibilityRole="button"
-          accessibilityLabel={t('common:webSingletonStandby.focusButton')}
+          accessibilityLabel={t('webOverlay:singletonStandby.focusButton')}
         >
-          <Text style={singletonStandbyStyles.buttonText}>{t('common:webSingletonStandby.focusButton')}</Text>
+          <Text style={singletonStandbyStyles.buttonText}>{t('webOverlay:singletonStandby.focusButton')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[singletonStandbyStyles.button, singletonStandbyStyles.secondaryButton]}
@@ -417,9 +417,9 @@ function AppContent() {
             }
           }}
           accessibilityRole="button"
-          accessibilityLabel={t('common:webSingletonStandby.openAgain')}
+          accessibilityLabel={t('webOverlay:singletonStandby.openAgain')}
         >
-          <Text style={singletonStandbyStyles.buttonText}>{t('common:webSingletonStandby.openAgain')}</Text>
+          <Text style={singletonStandbyStyles.buttonText}>{t('webOverlay:singletonStandby.openAgain')}</Text>
         </TouchableOpacity>
       </View>
     );
