@@ -14,9 +14,10 @@ import { USE_BACKEND } from '../utils/dbConfig';
 import { useWebMode } from '../stores/webModeStore';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import { navigationQueue } from '../utils/navigationQueue';
-import { checkNavigationGuards } from '../utils/navigationGuards';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
+import { HeroSection } from './Landing/components/HeroSection';
+import { landingSharedStyleSheet } from './Landing/styles';
+import { navigateToAppModeFromLanding } from './Landing/navigateToAppModeFromLanding';
 
 interface LandingStats {
   siteVisits: number;
@@ -229,85 +230,6 @@ const LazySection: React.FC<LazySectionProps> = ({ section: SectionComponent, ..
   );
 };
 
-
-const HeroSection: React.FC<{ onDonate: () => void }> = ({ onDonate }) => {
-  const heroAnimation = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(heroAnimation, {
-      toValue: 1,
-      duration: 800,
-      delay: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [heroAnimation]);
-
-  return (
-    <View style={styles.hero}>
-      <View style={styles.heroGradient}>
-        <View style={styles.decoCircle1} />
-        <View style={styles.decoCircle2} />
-        <View style={styles.decoCircle3} />
-        <Animated.View style={[
-          styles.heroContent,
-          {
-            opacity: heroAnimation,
-            transform: [{
-              translateY: heroAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [20, 0]
-              })
-            }]
-          }
-        ]}>
-
-          <Text style={styles.welcomeTitle}>
-            <Text style={styles.welcomeTitleLarge}>המקום </Text>
-            <Text style={styles.welcomeTitleSmall}> בו  </Text>
-            <Text style={styles.welcomeTitleLarge}>הטוב </Text>
-            <Text style={styles.welcomeTitleSmall}> קורה </Text>
-          </Text>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBackground}>
-              <Image source={require('../assets/images/new_logo_black.png')} style={styles.logo} resizeMode="contain" />
-            </View>
-          </View>
-          <Text style={styles.title}>Karma Community</Text>
-          <View style={styles.subtitlesRow}>
-            <View style={styles.subtitleItem}>
-              <Ionicons name="people-circle-outline" size={isMobileWeb ? 18 : 24} color={colors.info} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>אחדות</Text>
-            </View>
-            <View style={[styles.subtitleItem, styles.subtitleItemGreen]}>
-              <Ionicons name="eye-outline" size={isMobileWeb ? 18 : 24} color={colors.greenBright} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>שקיפות</Text>
-            </View>
-            <View style={styles.subtitleItem}>
-              <Ionicons name="checkmark-circle-outline" size={isMobileWeb ? 18 : 24} color={colors.info} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>סדר</Text>
-            </View>
-          </View>
-          <Text style={styles.subtitle}>רשת חברתית שמחברת בין אנשים שצריכים עזרה, לאנשים שרוצים לעזור. פשוט, שקוף ומהלב.</Text>
-
-
-          <View style={styles.ctaRow}>
-            <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.success }]} onPress={() => { logger.info('LandingSite', 'Click - whatsapp direct'); Linking.openURL('https://wa.me/972528616878'); }}>
-              <Ionicons name="logo-whatsapp" color={colors.white} size={isMobileWeb ? 14 : 18} /><Text style={styles.contactButtonText}>שלחו לי ווטסאפ </Text>
-            </TouchableOpacity>
-          </View>
-          {/* Donation Button */}
-          <TouchableOpacity
-            style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}
-            onPress={onDonate}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="heart" size={isMobileWeb ? 18 : 24} color={colors.white} />
-            <Text style={styles.donationCtaButtonText}>תרמו לנו</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </View>
-  );
-}
 
 const VisionSection: React.FC<{ onGoToApp: () => void }> = ({ onGoToApp }) => (
   <Section id="section-vision" title="החזון שלנו" subtitle="הקיבוץ הקפיטליסטי" style={styles.sectionAltBackground}>
@@ -1436,41 +1358,12 @@ const LandingSiteScreen: React.FC = () => {
     }, [navigation])
   );
 
-  // Handle navigation to app mode
   const handleGoToApp = async () => {
-    logger.info('LandingSiteScreen', 'Navigate to app mode', { isAuthenticated, isGuestMode });
-    setMode('app');
-
-    // Determine target route based on authentication status
-    const targetRoute = (isAuthenticated || isGuestMode) ? 'HomeStack' : 'LoginScreen';
-
-    // Check guards before navigation
-    const guardContext = {
-      isAuthenticated,
-      isGuestMode,
-      isAdmin,
-      mode: 'app' as const,
-    };
-
-    const guardResult = await checkNavigationGuards(
-      {
-        type: 'reset',
-        index: 0,
-        routes: [{ name: targetRoute }],
-      },
-      guardContext
+    await navigateToAppModeFromLanding(
+      setMode,
+      { isAuthenticated, isGuestMode, isAdmin },
+      'LandingSiteScreen'
     );
-
-    if (!guardResult.allowed) {
-      // If guard blocks, try redirect if provided
-      if (guardResult.redirectTo) {
-        await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-      }
-      return;
-    }
-
-    // Use navigation queue with high priority (2) for mode changes
-    await navigationQueue.reset(0, [{ name: targetRoute }], 2);
   };
 
   // Handle navigation from floating menu
@@ -1843,7 +1736,10 @@ const LandingSiteScreen: React.FC = () => {
         contentStyle={styles.content}
         onContentSizeChange={(w, h) => logger.info('LandingSite', 'Content size changed', { width: w, height: h })}
       >
-        <HeroSection onDonate={() => setShowDonationModal(true)} />
+        <HeroSection
+          onDonate={() => setShowDonationModal(true)}
+          onJoinLogin={handleGoToApp}
+        />
         <StatsSection stats={stats} isLoadingStats={isLoadingStats} onGoToApp={handleGoToApp} />
         <LazySection section={VisionSection} onGoToApp={handleGoToApp} />
         <LazySection section={ProblemsSection} />
@@ -1869,6 +1765,7 @@ const LandingSiteScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  ...landingSharedStyleSheet,
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1879,111 +1776,6 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: isMobileWeb ? 80 : 120,
     backgroundColor: colors.white,
-  },
-  hero: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  heroGradient: {
-    backgroundColor: colors.backgroundTertiary,
-    paddingTop: isMobileWeb ? 40 : (isWeb ? 60 : 80),
-    paddingBottom: isMobileWeb ? 30 : (isWeb ? 50 : 70),
-    paddingHorizontal: isMobileWeb ? 16 : (isWeb ? 20 : 40),
-    position: 'relative',
-  },
-  heroContent: {
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  welcomeTitle: {
-    fontSize: isMobileWeb ? 28 : (isWeb ? (isTablet ? 56 : 42) : 64),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 16 : (isWeb ? 24 : 32),
-    letterSpacing: -1,
-    lineHeight: isMobileWeb ? 34 : (isWeb ? (isTablet ? 64 : 50) : 72),
-  },
-  welcomeTitleLarge: {
-    fontSize: isMobileWeb ? 32 : (isWeb ? (isTablet ? 64 : 48) : 72),
-    fontWeight: '900',
-    color: colors.textPrimary,
-  },
-  welcomeTitleSmall: {
-    fontSize: isMobileWeb ? 24 : (isWeb ? (isTablet ? 48 : 36) : 56),
-    fontWeight: '900',
-    color: colors.textPrimary,
-  },
-  logoContainer: {
-    position: 'relative',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 20 : 28),
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: isMobileWeb ? 140 : (isWeb ? (isTablet ? 240 : 220) : 260),
-    overflow: 'hidden',
-  },
-  logoBackground: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: isMobileWeb ? 180 : (isWeb ? (isTablet ? 320 : 280) : 360),
-    height: isMobileWeb ? 180 : (isWeb ? (isTablet ? 320 : 280) : 360),
-    opacity: 0.35,
-  },
-  title: {
-    fontSize: isMobileWeb ? 24 : (isWeb ? (isTablet ? 48 : 36) : 56),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 16 : 20),
-    letterSpacing: -0.5,
-  },
-  subtitlesRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: isMobileWeb ? 12 : (isWeb ? (isTablet ? 28 : 20) : 32),
-    marginBottom: isMobileWeb ? 8 : (isWeb ? 12 : 16),
-    flexWrap: 'wrap',
-  },
-  subtitleItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: isMobileWeb ? 6 : (isWeb ? (isTablet ? 12 : 10) : 14),
-    paddingHorizontal: isMobileWeb ? 8 : (isWeb ? (isTablet ? 16 : 12) : 20),
-    paddingVertical: isMobileWeb ? 6 : (isWeb ? (isTablet ? 10 : 8) : 12),
-    borderRadius: isMobileWeb ? 12 : (isWeb ? (isTablet ? 20 : 16) : 24),
-    backgroundColor: colors.backgroundTertiary,
-    borderWidth: 1,
-    borderColor: colors.info + '30',
-  },
-  subtitleItemGreen: {
-    backgroundColor: colors.greenBright + '18',
-    borderColor: colors.greenBright + '50',
-  },
-  subtitleIcon: {
-    marginTop: isMobileWeb ? 1 : 2,
-  },
-  subtitleText: {
-    fontSize: isMobileWeb ? 12 : (isWeb ? (isTablet ? 24 : 18) : 28),
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: isMobileWeb ? 14 : (isWeb ? (isTablet ? 20 : 18) : 24),
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: isMobileWeb ? 6 : (isWeb ? 8 : 12),
-    maxWidth: isMobileWeb ? '95%' : (isTablet ? '70%' : '90%'),
-    lineHeight: isMobileWeb ? 20 : (isWeb ? 28 : 32),
-    fontWeight: '500',
   },
   heroMottosContainer: {
     marginTop: isMobileWeb ? 16 : 24,
@@ -2012,14 +1804,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     flex: 1,
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    gap: isMobileWeb ? 10 : 16,
-    marginTop: isMobileWeb ? 24 : 40,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    alignItems: 'center',
   },
   ctaIcon: {
     marginRight: isMobileWeb ? 6 : 8,
@@ -2069,29 +1853,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-  section: {
-    paddingHorizontal: isMobileWeb ? 16 : (isWeb ? (isTablet ? 40 : 24) : 40),
-    paddingVertical: isMobileWeb ? 24 : (isWeb ? (isTablet ? 60 : 40) : 50),
-    width: '100%',
-    alignSelf: 'center',
-    maxWidth: isTablet ? 1200 : '100%',
-  },
-  sectionTitle: {
-    fontSize: isMobileWeb ? 20 : (isWeb ? (isTablet ? 36 : 28) : 42),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 6 : 8,
-    letterSpacing: -0.5,
-  },
-  sectionSubtitle: {
-    fontSize: isMobileWeb ? 13 : (isWeb ? (isTablet ? 18 : 16) : 22),
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 20 : 24),
-    lineHeight: isMobileWeb ? 18 : (isWeb ? 26 : 30),
-    fontWeight: '500',
-  },
   sectionSubTitle: {
     fontSize: isMobileWeb ? 14 : (isWeb ? 18 : 24),
     fontWeight: '700',
@@ -2107,42 +1868,6 @@ const styles = StyleSheet.create({
     gap: isMobileWeb ? 12 : 24,
     width: '100%',
     marginTop: isMobileWeb ? 12 : 20,
-  },
-  feature: {
-    flex: 1,
-    minWidth: isMobileWeb ? 140 : 280,
-    maxWidth: isMobileWeb ? '100%' : 350,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    borderRadius: isMobileWeb ? 12 : 20,
-    padding: isMobileWeb ? 16 : 28,
-    alignItems: 'center',
-    margin: isMobileWeb ? 4 : 8,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  featureEmoji: {
-    fontSize: isMobileWeb ? 32 : 48,
-    marginBottom: isMobileWeb ? 10 : 16,
-  },
-  featureTitle: {
-    fontSize: isMobileWeb ? 16 : 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 8 : 12,
-    letterSpacing: -0.3,
-  },
-  featureText: {
-    fontSize: isMobileWeb ? 13 : 18,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: isMobileWeb ? 18 : 28,
-    fontWeight: '400',
   },
   paragraph: {
     fontSize: isMobileWeb ? 14 : (isWeb ? 18 : 20),
@@ -2397,27 +2122,6 @@ const styles = StyleSheet.create({
   brandStrip: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: isMobileWeb ? 8 : 10, paddingVertical: isMobileWeb ? 12 : 16 },
   brandIcon: { width: isMobileWeb ? 30 : 40, height: isMobileWeb ? 30 : 40, opacity: 0.9 },
   contactRow: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobileWeb ? 10 : 20, justifyContent: 'center', marginTop: isMobileWeb ? 16 : 24, width: '100%' },
-  contactButton: {
-    flexDirection: 'row',
-    gap: isMobileWeb ? 8 : 12,
-    alignItems: 'center',
-    paddingHorizontal: isMobileWeb ? 16 : 28,
-    paddingVertical: isMobileWeb ? 12 : 18,
-    borderRadius: isMobileWeb ? 12 : 16,
-    minWidth: isMobileWeb ? 140 : 200,
-    justifyContent: 'center',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  contactButtonText: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: isMobileWeb ? 13 : 18,
-    letterSpacing: 0.3,
-  },
   footer: {
     paddingHorizontal: isMobileWeb ? 16 : 20,
     paddingVertical: isMobileWeb ? 20 : 32,
@@ -2670,141 +2374,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: isMobileWeb ? 12 : 16,
   },
-  // Floating Menu Styles
-  menuOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 999, // מתחת לתפריט אבל מעל התוכן
-  },
-  floatingMenu: {
-    position: 'absolute',
-    right: isMobileWeb ? 8 : 20,
-    top: isMobileWeb ? 60 : 100,
-    minWidth: 150,
-    width: isMobileWeb ? '14%' : '10%',
-    maxHeight: isMobileWeb ? '70vh' as any : (isWeb ? '80vh' as any : 600),
-    backgroundColor: colors.white,
-    borderRadius: isMobileWeb ? 12 : 20,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-    zIndex: 1000,
-    overflow: 'hidden',
-  },
-  floatingMenuMinimized: {
-    position: 'absolute',
-    right: isMobileWeb ? 8 : 20,
-    top: isMobileWeb ? 60 : 100,
-    width: isMobileWeb ? SCREEN_WIDTH * 0.05 : SCREEN_WIDTH * 0.03, // 5% for mobile, 3% for desktop
-    height: isMobileWeb ? SCREEN_WIDTH * 0.05 : SCREEN_WIDTH * 0.03,
-    // backgroundColor: colors.white,
-    borderRadius: isMobileWeb ? SCREEN_WIDTH * 0.025 : SCREEN_WIDTH * 0.015,
-    borderWidth: 1,
-    borderColor: colors.backgroundTertiary,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 1000,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuToggleButton: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SCREEN_WIDTH * 0.01, // 1% of screen width
-    paddingVertical: SCREEN_WIDTH * 0.008, // 0.8% of screen width
-    borderBottomWidth: 1,
-    borderBottomColor: colors.backgroundSecondary,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  menuTitle: {
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
   menuMinimizeButton: {
     padding: SCREEN_WIDTH * 0.002, // 0.2% of screen width
-  },
-  menuItems: {
-    flex: 1,
-    paddingVertical: SCREEN_WIDTH * 0.006, // 0.6% of screen width
-  },
-  menuItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: SCREEN_WIDTH * 0.006, // 0.6% of screen width
-    borderRightWidth: 3,
-    borderRightColor: 'transparent',
-  },
-  menuItemActive: {
-    backgroundColor: colors.backgroundTertiary,
-    borderRightColor: colors.info,
-  },
-  menuItemIcon: {
-    marginLeft: SCREEN_WIDTH * 0.002, // 0.2% of screen width
-  },
-  menuItemText: {
-    fontWeight: '600',
-    color: colors.textSecondary,
-    flex: 1,
-    textAlign: 'right',
-  },
-  menuItemTextActive: {
-    color: colors.info,
-    fontWeight: '700',
-  },
-  // New Styles
-  decoCircle1: {
-    position: 'absolute',
-    width: isMobileWeb ? 200 : 400,
-    height: isMobileWeb ? 200 : 400,
-    borderRadius: isMobileWeb ? 100 : 200,
-    backgroundColor: 'rgba(65, 105, 225, 0.05)',
-    top: isMobileWeb ? -50 : -100,
-    left: isMobileWeb ? -75 : -150,
-  },
-  decoCircle2: {
-    position: 'absolute',
-    width: isMobileWeb ? 150 : 300,
-    height: isMobileWeb ? 150 : 300,
-    borderRadius: isMobileWeb ? 75 : 150,
-    backgroundColor: 'rgba(255, 192, 203, 0.08)',
-    bottom: isMobileWeb ? -25 : -50,
-    right: isMobileWeb ? -50 : -100,
-  },
-  decoCircle3: {
-    position: 'absolute',
-    width: isMobileWeb ? 120 : 240,
-    height: isMobileWeb ? 120 : 240,
-    borderRadius: isMobileWeb ? 60 : 120,
-    backgroundColor: colors.greenBright + '20',
-    top: isMobileWeb ? 40 : 80,
-    right: isMobileWeb ? -30 : -60,
-  },
-  titleDecorator: {
-    width: isMobileWeb ? 40 : 60,
-    height: isMobileWeb ? 3 : 4,
-    backgroundColor: colors.info,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: isMobileWeb ? 16 : 24,
   },
   sectionAltBackground: {
     backgroundColor: colors.backgroundSecondary,
@@ -3317,28 +2888,6 @@ const styles = StyleSheet.create({
     lineHeight: isMobileWeb ? 18 : 24,
     fontWeight: '400',
     fontStyle: 'italic',
-  },
-  donationCtaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: isMobileWeb ? 8 : 12,
-    backgroundColor: colors.secondary,
-    paddingVertical: isMobileWeb ? 14 : 18,
-    paddingHorizontal: isMobileWeb ? 24 : 32,
-    borderRadius: isMobileWeb ? 12 : 16,
-    marginTop: isMobileWeb ? 20 : 28,
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  donationCtaButtonText: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: isMobileWeb ? 16 : 20,
-    letterSpacing: 0.3,
   },
   donationCtaButtonTop: {
     flexDirection: 'row',

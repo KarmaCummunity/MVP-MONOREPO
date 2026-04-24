@@ -1114,9 +1114,11 @@
       },
       "subtitle": "A social network connecting people who need help with people who want to help. Simple, transparent and from the heart.",
       "whatsappButton": "Send me WhatsApp",
+      "joinLoginButton": "Join us",
       "donateButton": "Donate to us",
       "accessibility": {
         "whatsapp": "Send WhatsApp message",
+        "joinLogin": "Go to sign in",
         "donate": "Donate to organization"
       }
     },

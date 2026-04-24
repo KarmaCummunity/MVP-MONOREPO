@@ -116,6 +116,9 @@ export interface LazySectionProps {
 export interface HeroSectionProps {
   /** Callback when donate button is clicked */
   onDonate: () => void;
+
+  /** Navigate to app mode / login (or home when already signed in). Required to keep one navigation implementation. */
+  onJoinLogin: () => void | Promise<void>;
 }
 
 /**

@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native';
 import colors from '../../../globals/colors';
 import { IS_WEB, IS_MOBILE_WEB, IS_TABLET, SCREEN_WIDTH } from '../constants';
 
-const styles = StyleSheet.create({
+const landingSharedStyleSheet = {
   // Section
   section: {
     paddingHorizontal: IS_MOBILE_WEB ? 16 : (IS_WEB ? (IS_TABLET ? 40 : 24) : 40),
@@ -182,6 +182,33 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
   },
+  decoCircle1: {
+    position: 'absolute',
+    width: IS_MOBILE_WEB ? 200 : 400,
+    height: IS_MOBILE_WEB ? 200 : 400,
+    borderRadius: IS_MOBILE_WEB ? 100 : 200,
+    backgroundColor: 'rgba(65, 105, 225, 0.05)',
+    top: IS_MOBILE_WEB ? -50 : -100,
+    left: IS_MOBILE_WEB ? -75 : -150,
+  },
+  decoCircle2: {
+    position: 'absolute',
+    width: IS_MOBILE_WEB ? 150 : 300,
+    height: IS_MOBILE_WEB ? 150 : 300,
+    borderRadius: IS_MOBILE_WEB ? 75 : 150,
+    backgroundColor: 'rgba(255, 192, 203, 0.08)',
+    bottom: IS_MOBILE_WEB ? -25 : -50,
+    right: IS_MOBILE_WEB ? -50 : -100,
+  },
+  decoCircle3: {
+    position: 'absolute',
+    width: IS_MOBILE_WEB ? 120 : 240,
+    height: IS_MOBILE_WEB ? 120 : 240,
+    borderRadius: IS_MOBILE_WEB ? 60 : 120,
+    backgroundColor: colors.greenBright + '20',
+    top: IS_MOBILE_WEB ? 40 : 80,
+    right: IS_MOBILE_WEB ? -30 : -60,
+  },
   heroGradient: {
     backgroundColor: colors.backgroundTertiary,
     paddingTop: IS_MOBILE_WEB ? 40 : (IS_WEB ? 60 : 80),
@@ -291,6 +318,31 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
   },
+  joinLoginButton: {
+    flexDirection: 'row',
+    gap: IS_MOBILE_WEB ? 8 : 12,
+    alignItems: 'center',
+    paddingHorizontal: IS_MOBILE_WEB ? 16 : 28,
+    paddingVertical: IS_MOBILE_WEB ? 12 : 18,
+    borderRadius: IS_MOBILE_WEB ? 12 : 16,
+    minWidth: IS_MOBILE_WEB ? 140 : 200,
+    justifyContent: 'center',
+    marginTop: IS_MOBILE_WEB ? 12 : 16,
+    alignSelf: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  joinLoginButtonText: {
+    color: colors.info,
+    fontWeight: '800',
+    fontSize: IS_MOBILE_WEB ? 13 : 18,
+    letterSpacing: 0.3,
+  },
   contactButton: {
     flexDirection: 'row',
     gap: IS_MOBILE_WEB ? 8 : 12,
@@ -334,6 +386,8 @@ const styles = StyleSheet.create({
     fontSize: IS_MOBILE_WEB ? 16 : 20,
     letterSpacing: 0.3,
   },
-});
+};
 
-export { styles };
+const styles = StyleSheet.create(landingSharedStyleSheet);
+
+export { styles, landingSharedStyleSheet };

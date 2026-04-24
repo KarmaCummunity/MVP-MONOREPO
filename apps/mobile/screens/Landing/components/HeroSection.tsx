@@ -13,6 +13,7 @@ import { logger } from '../../../utils/loggerService';
 import type { HeroSectionProps } from '../types';
 import { IS_MOBILE_WEB, ANIMATION_DURATION, WHATSAPP_URL } from '../constants';
 import { styles } from '../styles';
+import { JoinLoginHeroButton } from './JoinLoginHeroButton';
 
 /**
  * HeroSection Component
@@ -22,10 +23,10 @@ import { styles } from '../styles';
  * @component
  * @example
  * ```tsx
- * <HeroSection onDonate={() => setDonationModalVisible(true)} />
+ * <HeroSection onDonate={...} onJoinLogin={handleGoToApp} />
  * ```
  */
-export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate, onJoinLogin }) => {
   const { t } = useTranslation('landing');
   // Animation setup for fade-in and slide-up effect
   const heroAnimation = useRef(new Animated.Value(0)).current;
@@ -148,7 +149,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
               <Text style={styles.contactButtonText}>{t('hero.whatsappButton')} </Text>
             </TouchableOpacity>
           </View>
-          
+
+          <JoinLoginHeroButton
+            onPress={() => {
+              void onJoinLogin();
+            }}
+            isMobileWeb={IS_MOBILE_WEB}
+            label={t('hero.joinLoginButton')}
+            accessibilityLabel={t('hero.accessibility.joinLogin')}
+          />
+
           {/* Donation CTA button */}
           <TouchableOpacity
             style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}

@@ -1147,9 +1147,11 @@
       },
       "subtitle": "רשת חברתית שמחברת בין אנשים שצריכים עזרה, לאנשים שרוצים לעזור. פשוט, שקוף ומהלב.",
       "whatsappButton": "שלחו לי ווטסאפ",
+      "joinLoginButton": "הצטרפו אלינו",
       "donateButton": "תרמו לנו",
       "accessibility": {
         "whatsapp": "שלח הודעת WhatsApp",
+        "joinLogin": "מעבר למסך התחברות",
         "donate": "תרום לארגון"
       }
     },
