@@ -9,3 +9,4 @@ export { Feature } from './Feature';
 export { FloatingMenu } from './FloatingMenu';
 export { LazySection } from './LazySection';
 export { HeroSection } from './HeroSection';
+export { JoinLoginHeroButton } from './JoinLoginHeroButton';

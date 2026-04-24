@@ -13,6 +13,7 @@ import { logger } from '../../../utils/loggerService';
 import type { HeroSectionProps } from '../types';
 import { IS_MOBILE_WEB, ANIMATION_DURATION, WHATSAPP_URL } from '../constants';
 import { styles } from '../styles';
+import { JoinLoginHeroButton } from './JoinLoginHeroButton';
 import { useWebMode } from '../../../stores/webModeStore';
 import { useUser } from '../../../stores/userStore';
 import { navigationQueue } from '../../../utils/navigationQueue';
@@ -186,19 +187,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate, onJoinLogin:
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.joinLoginButton, { borderColor: colors.info }]}
+          <JoinLoginHeroButton
             onPress={() => {
-              logger.info('LandingSite', 'Click - join us login');
               void handleJoinLogin();
             }}
-            activeOpacity={0.8}
+            isMobileWeb={IS_MOBILE_WEB}
+            label={t('hero.joinLoginButton')}
             accessibilityLabel={t('hero.accessibility.joinLogin')}
-            accessibilityRole="button"
-          >
-            <Ionicons name="person-add-outline" color={colors.info} size={IS_MOBILE_WEB ? 14 : 18} />
-            <Text style={styles.joinLoginButtonText}>{t('hero.joinLoginButton')}</Text>
-          </TouchableOpacity>
+          />
 
           {/* Donation CTA button */}
           <TouchableOpacity

@@ -17,6 +17,7 @@ import { useUser } from '../stores/userStore';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
+import { LegacyHeroSection } from './Landing/components/LegacyHeroSection';
 
 interface LandingStats {
   siteVisits: number;
@@ -229,98 +230,6 @@ const LazySection: React.FC<LazySectionProps> = ({ section: SectionComponent, ..
   );
 };
 
-
-const HeroSection: React.FC<{ onDonate: () => void; onJoinLogin: () => void }> = ({ onDonate, onJoinLogin }) => {
-  const heroAnimation = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(heroAnimation, {
-      toValue: 1,
-      duration: 800,
-      delay: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [heroAnimation]);
-
-  return (
-    <View style={styles.hero}>
-      <View style={styles.heroGradient}>
-        <View style={styles.decoCircle1} />
-        <View style={styles.decoCircle2} />
-        <View style={styles.decoCircle3} />
-        <Animated.View style={[
-          styles.heroContent,
-          {
-            opacity: heroAnimation,
-            transform: [{
-              translateY: heroAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [20, 0]
-              })
-            }]
-          }
-        ]}>
-
-          <Text style={styles.welcomeTitle}>
-            <Text style={styles.welcomeTitleLarge}>המקום </Text>
-            <Text style={styles.welcomeTitleSmall}> בו  </Text>
-            <Text style={styles.welcomeTitleLarge}>הטוב </Text>
-            <Text style={styles.welcomeTitleSmall}> קורה </Text>
-          </Text>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBackground}>
-              <Image source={require('../assets/images/new_logo_black.png')} style={styles.logo} resizeMode="contain" />
-            </View>
-          </View>
-          <Text style={styles.title}>Karma Community</Text>
-          <View style={styles.subtitlesRow}>
-            <View style={styles.subtitleItem}>
-              <Ionicons name="people-circle-outline" size={isMobileWeb ? 18 : 24} color={colors.info} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>אחדות</Text>
-            </View>
-            <View style={[styles.subtitleItem, styles.subtitleItemGreen]}>
-              <Ionicons name="eye-outline" size={isMobileWeb ? 18 : 24} color={colors.greenBright} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>שקיפות</Text>
-            </View>
-            <View style={styles.subtitleItem}>
-              <Ionicons name="checkmark-circle-outline" size={isMobileWeb ? 18 : 24} color={colors.info} style={styles.subtitleIcon} />
-              <Text style={styles.subtitleText}>סדר</Text>
-            </View>
-          </View>
-          <Text style={styles.subtitle}>רשת חברתית שמחברת בין אנשים שצריכים עזרה, לאנשים שרוצים לעזור. פשוט, שקוף ומהלב.</Text>
-
-
-          <View style={styles.ctaRow}>
-            <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.success }]} onPress={() => { logger.info('LandingSite', 'Click - whatsapp direct'); Linking.openURL('https://wa.me/972528616878'); }}>
-              <Ionicons name="logo-whatsapp" color={colors.white} size={isMobileWeb ? 14 : 18} /><Text style={styles.contactButtonText}>שלחו לי ווטסאפ </Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={[styles.joinLoginButton, { borderColor: colors.info }]}
-            onPress={() => {
-              logger.info('LandingSite', 'Click - join us login');
-              onJoinLogin();
-            }}
-            activeOpacity={0.8}
-            accessibilityLabel="Navigate to sign in"
-            accessibilityRole="button"
-          >
-            <Ionicons name="person-add-outline" color={colors.info} size={isMobileWeb ? 14 : 18} />
-            <Text style={styles.joinLoginButtonText}>הצטרפו אלינו</Text>
-          </TouchableOpacity>
-          {/* Donation Button */}
-          <TouchableOpacity
-            style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}
-            onPress={onDonate}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="heart" size={isMobileWeb ? 18 : 24} color={colors.white} />
-            <Text style={styles.donationCtaButtonText}>תרמו לנו</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </View>
-  );
-}
 
 const VisionSection: React.FC<{ onGoToApp: () => void }> = ({ onGoToApp }) => (
   <Section id="section-vision" title="החזון שלנו" subtitle="הקיבוץ הקפיטליסטי" style={styles.sectionAltBackground}>
@@ -1856,7 +1765,12 @@ const LandingSiteScreen: React.FC = () => {
         contentStyle={styles.content}
         onContentSizeChange={(w, h) => logger.info('LandingSite', 'Content size changed', { width: w, height: h })}
       >
-        <HeroSection onDonate={() => setShowDonationModal(true)} onJoinLogin={handleGoToApp} />
+        <LegacyHeroSection
+          onDonate={() => setShowDonationModal(true)}
+          onJoinLogin={handleGoToApp}
+          isMobileWeb={isMobileWeb}
+          styles={styles}
+        />
         <StatsSection stats={stats} isLoadingStats={isLoadingStats} onGoToApp={handleGoToApp} />
         <LazySection section={VisionSection} onGoToApp={handleGoToApp} />
         <LazySection section={ProblemsSection} />
@@ -2033,31 +1947,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexWrap: 'wrap',
     alignItems: 'center',
-  },
-  joinLoginButton: {
-    flexDirection: 'row',
-    gap: isMobileWeb ? 8 : 12,
-    alignItems: 'center',
-    paddingHorizontal: isMobileWeb ? 16 : 28,
-    paddingVertical: isMobileWeb ? 12 : 18,
-    borderRadius: isMobileWeb ? 12 : 16,
-    minWidth: isMobileWeb ? 140 : 200,
-    justifyContent: 'center',
-    marginTop: isMobileWeb ? 12 : 16,
-    alignSelf: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  joinLoginButtonText: {
-    color: colors.info,
-    fontWeight: '800',
-    fontSize: isMobileWeb ? 13 : 18,
-    letterSpacing: 0.3,
   },
   ctaIcon: {
     marginRight: isMobileWeb ? 6 : 8,
