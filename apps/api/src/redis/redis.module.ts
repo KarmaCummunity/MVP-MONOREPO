@@ -60,6 +60,8 @@ export const REDIS = "REDIS";
             process.env.UPSTASH_REDIS_PASSWORD ||
             undefined,
           connectTimeout: 15000,
+          // Prevent a single slow command from blocking the event loop indefinitely
+          commandTimeout: 5000,
           maxRetriesPerRequest: 3,
           enableReadyCheck: true,
           retryStrategy: (times: number) => Math.min(times * 200, 2000),

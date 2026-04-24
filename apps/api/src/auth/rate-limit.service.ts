@@ -81,7 +81,12 @@ export class RateLimitService {
 
     // Check if currently blocked
     const blockKey = `${this.BLOCKED_PREFIX}${ruleType}:${identifier}`;
-    const blockExpiry = await this.redisCache.get<number>(blockKey);
+    let blockExpiry: number | null = null;
+    try {
+      blockExpiry = await this.redisCache.get<number>(blockKey);
+    } catch {
+      // Redis unavailable or slow — allow request (fail open)
+    }
 
     if (blockExpiry && blockExpiry > now) {
       return {
@@ -95,7 +100,16 @@ export class RateLimitService {
 
     // Get current request count in window
     const key = `${this.RATE_LIMIT_PREFIX}${ruleType}:${identifier}`;
-    const requests = (await this.redisCache.get<number[]>(key)) || [];
+    let requests: number[] = [];
+    try {
+      requests = (await this.redisCache.get<number[]>(key)) || [];
+    } catch {
+      return {
+        allowed: true,
+        remaining: rule.requests,
+        resetTime: new Date(now + rule.windowMs),
+      };
+    }
 
     // Filter requests within current window
     const validRequests = requests.filter(
@@ -107,11 +121,15 @@ export class RateLimitService {
       // Block user if rule has blocking configured
       if (rule.blockDurationMs) {
         const blockUntil = now + rule.blockDurationMs;
-        await this.redisCache.setWithExpiry(
-          blockKey,
-          blockUntil,
-          Math.ceil(rule.blockDurationMs / 1000),
-        );
+        try {
+          await this.redisCache.setWithExpiry(
+            blockKey,
+            blockUntil,
+            Math.ceil(rule.blockDurationMs / 1000),
+          );
+        } catch {
+          /* ignore Redis errors */
+        }
 
         return {
           allowed: false,
@@ -133,11 +151,15 @@ export class RateLimitService {
     validRequests.push(now);
 
     // Store updated requests with TTL
-    await this.redisCache.setWithExpiry(
-      key,
-      validRequests,
-      Math.ceil(rule.windowMs / 1000),
-    );
+    try {
+      await this.redisCache.setWithExpiry(
+        key,
+        validRequests,
+        Math.ceil(rule.windowMs / 1000),
+      );
+    } catch {
+      /* ignore Redis errors — request still allowed */
+    }
 
     return {
       allowed: true,
