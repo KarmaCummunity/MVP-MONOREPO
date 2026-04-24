@@ -1,7 +1,9 @@
+# Railway's builder skips this file (only repo-root config paths apply). Use /railway.api.toml
+# in Dashboard → Service → Settings → Config as Code. Keep this file in sync with that file.
+
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/api/Dockerfile"
-# Only trigger this service when API or root install manifests change (monorepo).
 watchPatterns = [
   "apps/api/**",
   "package.json",

@@ -1,0 +1,17 @@
+# API service — must be selected in Railway: Service → Settings → Config as Code → /railway.api.toml
+# (Nested apps/api/railway.toml is skipped by Railway: "not rooted at a valid path".)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/api/Dockerfile"
+watchPatterns = [
+  "apps/api/**",
+  "package.json",
+  "package-lock.json",
+]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

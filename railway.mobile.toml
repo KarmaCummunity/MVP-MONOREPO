@@ -1,5 +1,5 @@
-# Railway skips nested railway.toml. Set Config as Code to /railway.mobile.toml (repo root).
-# Keep this file in sync with /railway.mobile.toml.
+# Web (Expo) service — set in Railway: Service → Settings → Config as Code → /railway.mobile.toml
+# (Nested apps/mobile/railway.toml is skipped by Railway.)
 
 [build]
 builder = "DOCKERFILE"
@@ -14,4 +14,3 @@ watchPatterns = [
 startCommand = ""
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-
