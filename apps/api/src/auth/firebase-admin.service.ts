@@ -4,7 +4,12 @@
 // - Security: Initializes Firebase Admin SDK once with service account
 
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { existsSync, readFileSync } from "fs";
 import * as admin from "firebase-admin";
+
+/** Shown when verifyIdToken is called but Admin was never configured with a service account */
+export const FIREBASE_ADMIN_CONFIG_ERROR =
+  "Firebase Admin is not configured on this server. Set FIREBASE_SERVICE_ACCOUNT (base64 JSON), FIREBASE_SERVICE_ACCOUNT_KEY (JSON string), or GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON). Google / Firebase ID tokens cannot be verified until one of these is set.";
 
 @Injectable()
 export class FirebaseAdminService implements OnModuleInit {
@@ -24,12 +29,11 @@ export class FirebaseAdminService implements OnModuleInit {
     }
 
     try {
-      // Try to initialize with service account from environment variable
       const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
       const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      const gacPath = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
 
       if (serviceAccountBase64) {
-        // Option 1: Base64 encoded service account (for Railway/production)
         const serviceAccountJson = Buffer.from(
           serviceAccountBase64,
           "base64",
@@ -44,7 +48,6 @@ export class FirebaseAdminService implements OnModuleInit {
           "Firebase Admin SDK initialized with service account (base64)",
         );
       } else if (serviceAccountKey) {
-        // Option 2: JSON string service account (for local development)
         const serviceAccount = JSON.parse(serviceAccountKey);
 
         this.firebaseApp = admin.initializeApp({
@@ -54,22 +57,34 @@ export class FirebaseAdminService implements OnModuleInit {
         this.logger.log(
           "Firebase Admin SDK initialized with service account (JSON)",
         );
+      } else if (gacPath) {
+        if (!existsSync(gacPath)) {
+          this.logger.error(
+            `GOOGLE_APPLICATION_CREDENTIALS file not found: ${gacPath}`,
+          );
+        } else {
+          const fileJson = readFileSync(gacPath, "utf-8");
+          const serviceAccount = JSON.parse(fileJson);
+          this.firebaseApp = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+          });
+          this.logger.log(
+            "Firebase Admin SDK initialized from GOOGLE_APPLICATION_CREDENTIALS file",
+          );
+        }
       } else {
-        // Fallback: Try to use default credentials (for local development)
-        this.firebaseApp = admin.initializeApp();
-        this.logger.warn(
-          "Firebase Admin SDK initialized with default credentials",
+        // Do NOT call admin.initializeApp() without credentials: on Railway/Docker
+        // that uses Application Default Credentials and tries metadata.google.internal (ENOTFOUND).
+        this.logger.error(
+          "Firebase Admin SDK not initialized: no FIREBASE_SERVICE_ACCOUNT, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS. Google sign-in token verification will fail.",
         );
+        this.firebaseApp = null;
       }
     } catch (error) {
       this.logger.error("Failed to initialize Firebase Admin SDK", {
         error: error instanceof Error ? error.message : String(error),
       });
-
-      // Initialize without credentials as fallback (will fail on actual use but won't crash)
-      if (!this.firebaseApp) {
-        this.firebaseApp = admin.initializeApp();
-      }
+      this.firebaseApp = null;
     }
   }
 
@@ -81,7 +96,7 @@ export class FirebaseAdminService implements OnModuleInit {
       this.initializeFirebase();
     }
     if (!this.firebaseApp) {
-      throw new Error("Firebase Admin SDK not initialized");
+      throw new Error(FIREBASE_ADMIN_CONFIG_ERROR);
     }
     return this.firebaseApp;
   }
@@ -100,8 +115,9 @@ export class FirebaseAdminService implements OnModuleInit {
     try {
       return await this.getAuth().verifyIdToken(token);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.warn("Firebase token verification failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error: msg,
         tokenLength: token?.length,
       });
       throw error;
