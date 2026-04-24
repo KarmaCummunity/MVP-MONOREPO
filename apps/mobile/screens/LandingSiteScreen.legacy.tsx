@@ -17,7 +17,7 @@ import { useUser } from '../stores/userStore';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
-import { LegacyHeroSection } from './Landing/components/LegacyHeroSection';
+import { HeroSection } from './Landing/components/HeroSection';
 
 interface LandingStats {
   siteVisits: number;
@@ -1765,11 +1765,9 @@ const LandingSiteScreen: React.FC = () => {
         contentStyle={styles.content}
         onContentSizeChange={(w, h) => logger.info('LandingSite', 'Content size changed', { width: w, height: h })}
       >
-        <LegacyHeroSection
+        <HeroSection
           onDonate={() => setShowDonationModal(true)}
           onJoinLogin={handleGoToApp}
-          isMobileWeb={isMobileWeb}
-          styles={styles}
         />
         <StatsSection stats={stats} isLoadingStats={isLoadingStats} onGoToApp={handleGoToApp} />
         <LazySection section={VisionSection} onGoToApp={handleGoToApp} />
@@ -1806,111 +1804,6 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: isMobileWeb ? 80 : 120,
     backgroundColor: colors.white,
-  },
-  hero: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  heroGradient: {
-    backgroundColor: colors.backgroundTertiary,
-    paddingTop: isMobileWeb ? 40 : (isWeb ? 60 : 80),
-    paddingBottom: isMobileWeb ? 30 : (isWeb ? 50 : 70),
-    paddingHorizontal: isMobileWeb ? 16 : (isWeb ? 20 : 40),
-    position: 'relative',
-  },
-  heroContent: {
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  welcomeTitle: {
-    fontSize: isMobileWeb ? 28 : (isWeb ? (isTablet ? 56 : 42) : 64),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 16 : (isWeb ? 24 : 32),
-    letterSpacing: -1,
-    lineHeight: isMobileWeb ? 34 : (isWeb ? (isTablet ? 64 : 50) : 72),
-  },
-  welcomeTitleLarge: {
-    fontSize: isMobileWeb ? 32 : (isWeb ? (isTablet ? 64 : 48) : 72),
-    fontWeight: '900',
-    color: colors.textPrimary,
-  },
-  welcomeTitleSmall: {
-    fontSize: isMobileWeb ? 24 : (isWeb ? (isTablet ? 48 : 36) : 56),
-    fontWeight: '900',
-    color: colors.textPrimary,
-  },
-  logoContainer: {
-    position: 'relative',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 20 : 28),
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: isMobileWeb ? 140 : (isWeb ? (isTablet ? 240 : 220) : 260),
-    overflow: 'hidden',
-  },
-  logoBackground: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: isMobileWeb ? 180 : (isWeb ? (isTablet ? 320 : 280) : 360),
-    height: isMobileWeb ? 180 : (isWeb ? (isTablet ? 320 : 280) : 360),
-    opacity: 0.35,
-  },
-  title: {
-    fontSize: isMobileWeb ? 24 : (isWeb ? (isTablet ? 48 : 36) : 56),
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: isMobileWeb ? 12 : (isWeb ? 16 : 20),
-    letterSpacing: -0.5,
-  },
-  subtitlesRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: isMobileWeb ? 12 : (isWeb ? (isTablet ? 28 : 20) : 32),
-    marginBottom: isMobileWeb ? 8 : (isWeb ? 12 : 16),
-    flexWrap: 'wrap',
-  },
-  subtitleItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: isMobileWeb ? 6 : (isWeb ? (isTablet ? 12 : 10) : 14),
-    paddingHorizontal: isMobileWeb ? 8 : (isWeb ? (isTablet ? 16 : 12) : 20),
-    paddingVertical: isMobileWeb ? 6 : (isWeb ? (isTablet ? 10 : 8) : 12),
-    borderRadius: isMobileWeb ? 12 : (isWeb ? (isTablet ? 20 : 16) : 24),
-    backgroundColor: colors.backgroundTertiary,
-    borderWidth: 1,
-    borderColor: colors.info + '30',
-  },
-  subtitleItemGreen: {
-    backgroundColor: colors.greenBright + '18',
-    borderColor: colors.greenBright + '50',
-  },
-  subtitleIcon: {
-    marginTop: isMobileWeb ? 1 : 2,
-  },
-  subtitleText: {
-    fontSize: isMobileWeb ? 12 : (isWeb ? (isTablet ? 24 : 18) : 28),
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: isMobileWeb ? 14 : (isWeb ? (isTablet ? 20 : 18) : 24),
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: isMobileWeb ? 6 : (isWeb ? 8 : 12),
-    maxWidth: isMobileWeb ? '95%' : (isTablet ? '70%' : '90%'),
-    lineHeight: isMobileWeb ? 20 : (isWeb ? 28 : 32),
-    fontWeight: '500',
   },
   heroMottosContainer: {
     marginTop: isMobileWeb ? 16 : 24,
@@ -2696,34 +2589,6 @@ const styles = StyleSheet.create({
   menuItemTextActive: {
     color: colors.info,
     fontWeight: '700',
-  },
-  // New Styles
-  decoCircle1: {
-    position: 'absolute',
-    width: isMobileWeb ? 200 : 400,
-    height: isMobileWeb ? 200 : 400,
-    borderRadius: isMobileWeb ? 100 : 200,
-    backgroundColor: 'rgba(65, 105, 225, 0.05)',
-    top: isMobileWeb ? -50 : -100,
-    left: isMobileWeb ? -75 : -150,
-  },
-  decoCircle2: {
-    position: 'absolute',
-    width: isMobileWeb ? 150 : 300,
-    height: isMobileWeb ? 150 : 300,
-    borderRadius: isMobileWeb ? 75 : 150,
-    backgroundColor: 'rgba(255, 192, 203, 0.08)',
-    bottom: isMobileWeb ? -25 : -50,
-    right: isMobileWeb ? -50 : -100,
-  },
-  decoCircle3: {
-    position: 'absolute',
-    width: isMobileWeb ? 120 : 240,
-    height: isMobileWeb ? 120 : 240,
-    borderRadius: isMobileWeb ? 60 : 120,
-    backgroundColor: colors.greenBright + '20',
-    top: isMobileWeb ? 40 : 80,
-    right: isMobileWeb ? -30 : -60,
   },
   titleDecorator: {
     width: isMobileWeb ? 40 : 60,
