@@ -117,11 +117,8 @@ export interface HeroSectionProps {
   /** Callback when donate button is clicked */
   onDonate: () => void;
 
-  /**
-   * Optional: navigate to login from the hero "join us" CTA.
-   * When omitted, the modular HeroSection uses built-in app-mode + login navigation.
-   */
-  onJoinLogin?: () => void;
+  /** Navigate to app mode / login (or home when already signed in). Required to keep one navigation implementation. */
+  onJoinLogin: () => void | Promise<void>;
 }
 
 /**

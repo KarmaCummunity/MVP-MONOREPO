@@ -14,11 +14,10 @@ import { USE_BACKEND } from '../utils/dbConfig';
 import { useWebMode } from '../stores/webModeStore';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import { navigationQueue } from '../utils/navigationQueue';
-import { checkNavigationGuards } from '../utils/navigationGuards';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
 import { HeroSection } from './Landing/components/HeroSection';
 import { landingSharedStyleSheet } from './Landing/styles';
+import { navigateToAppModeFromLanding } from './Landing/navigateToAppModeFromLanding';
 
 interface LandingStats {
   siteVisits: number;
@@ -1359,41 +1358,12 @@ const LandingSiteScreen: React.FC = () => {
     }, [navigation])
   );
 
-  // Handle navigation to app mode
   const handleGoToApp = async () => {
-    logger.info('LandingSiteScreen', 'Navigate to app mode', { isAuthenticated, isGuestMode });
-    setMode('app');
-
-    // Determine target route based on authentication status
-    const targetRoute = (isAuthenticated || isGuestMode) ? 'HomeStack' : 'LoginScreen';
-
-    // Check guards before navigation
-    const guardContext = {
-      isAuthenticated,
-      isGuestMode,
-      isAdmin,
-      mode: 'app' as const,
-    };
-
-    const guardResult = await checkNavigationGuards(
-      {
-        type: 'reset',
-        index: 0,
-        routes: [{ name: targetRoute }],
-      },
-      guardContext
+    await navigateToAppModeFromLanding(
+      setMode,
+      { isAuthenticated, isGuestMode, isAdmin },
+      'LandingSiteScreen'
     );
-
-    if (!guardResult.allowed) {
-      // If guard blocks, try redirect if provided
-      if (guardResult.redirectTo) {
-        await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-      }
-      return;
-    }
-
-    // Use navigation queue with high priority (2) for mode changes
-    await navigationQueue.reset(0, [{ name: targetRoute }], 2);
   };
 
   // Handle navigation from floating menu
