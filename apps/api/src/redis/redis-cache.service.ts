@@ -240,28 +240,55 @@ export class RedisCacheService {
   }
 
   /**
-   * Invalidate all keys matching a pattern efficiently using Redis pipeline
-   * This is more efficient than manually getting keys and deleting them one by one
+   * Delete keys in chunks using pipelined DEL (avoids huge single commands).
+   */
+  private async deleteKeysBatched(keys: string[]): Promise<number> {
+    const redis = this.redis;
+    if (!redis || redis.status !== "ready" || keys.length === 0) return 0;
+
+    const chunkSize = 500;
+    let deleted = 0;
+    for (let i = 0; i < keys.length; i += chunkSize) {
+      const chunk = keys.slice(i, i + chunkSize);
+      const pipeline = redis.pipeline();
+      chunk.forEach((key) => pipeline.del(key));
+      await pipeline.exec();
+      deleted += chunk.length;
+    }
+    return deleted;
+  }
+
+  /**
+   * Invalidate all keys matching a pattern using SCAN (non-blocking).
+   * Replaces KEYS + pipeline which blocked Redis on large datasets and caused
+   * API timeouts (e.g. admin tasks list/create waiting on clearTaskCaches).
    *
    * @param pattern Redis key pattern (supports wildcards like 'user:*', 'stats_*')
-   * @returns Number of keys deleted
-   * @example
-   * const deletedCount = await redisCache.invalidatePattern('user_stats_*');
+   * @returns Approximate number of keys passed to DEL (same as prior behavior)
    */
   async invalidatePattern(pattern: string): Promise<number> {
     const redis = this.redis;
     if (!redis || redis.status !== "ready") return 0;
 
     try {
-      const keys = await this.getKeys(pattern);
-      if (keys.length === 0) return 0;
+      let cursor = "0";
+      let totalDeleted = 0;
 
-      // Use pipeline for better performance
-      const pipeline = redis.pipeline();
-      keys.forEach((key) => pipeline.del(key));
-      await pipeline.exec();
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          "MATCH",
+          pattern,
+          "COUNT",
+          200,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          totalDeleted += await this.deleteKeysBatched(keys);
+        }
+      } while (cursor !== "0");
 
-      return keys.length;
+      return totalDeleted;
     } catch (error) {
       // Log error but don't throw - cache clearing should not fail the operation
       console.warn(`Failed to invalidate cache pattern ${pattern}:`, error);
