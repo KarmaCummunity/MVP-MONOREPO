@@ -116,6 +116,12 @@ export interface LazySectionProps {
 export interface HeroSectionProps {
   /** Callback when donate button is clicked */
   onDonate: () => void;
+
+  /**
+   * Optional: navigate to login from the hero "join us" CTA.
+   * When omitted, the modular HeroSection uses built-in app-mode + login navigation.
+   */
+  onJoinLogin?: () => void;
 }
 
 /**

@@ -230,7 +230,7 @@ const LazySection: React.FC<LazySectionProps> = ({ section: SectionComponent, ..
 };
 
 
-const HeroSection: React.FC<{ onDonate: () => void }> = ({ onDonate }) => {
+const HeroSection: React.FC<{ onDonate: () => void; onJoinLogin: () => void }> = ({ onDonate, onJoinLogin }) => {
   const heroAnimation = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(heroAnimation, {
@@ -294,6 +294,19 @@ const HeroSection: React.FC<{ onDonate: () => void }> = ({ onDonate }) => {
               <Ionicons name="logo-whatsapp" color={colors.white} size={isMobileWeb ? 14 : 18} /><Text style={styles.contactButtonText}>שלחו לי ווטסאפ </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={[styles.joinLoginButton, { borderColor: colors.info }]}
+            onPress={() => {
+              logger.info('LandingSite', 'Click - join us login');
+              onJoinLogin();
+            }}
+            activeOpacity={0.8}
+            accessibilityLabel="Navigate to sign in"
+            accessibilityRole="button"
+          >
+            <Ionicons name="person-add-outline" color={colors.info} size={isMobileWeb ? 14 : 18} />
+            <Text style={styles.joinLoginButtonText}>הצטרפו אלינו</Text>
+          </TouchableOpacity>
           {/* Donation Button */}
           <TouchableOpacity
             style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}
@@ -1843,7 +1856,7 @@ const LandingSiteScreen: React.FC = () => {
         contentStyle={styles.content}
         onContentSizeChange={(w, h) => logger.info('LandingSite', 'Content size changed', { width: w, height: h })}
       >
-        <HeroSection onDonate={() => setShowDonationModal(true)} />
+        <HeroSection onDonate={() => setShowDonationModal(true)} onJoinLogin={handleGoToApp} />
         <StatsSection stats={stats} isLoadingStats={isLoadingStats} onGoToApp={handleGoToApp} />
         <LazySection section={VisionSection} onGoToApp={handleGoToApp} />
         <LazySection section={ProblemsSection} />
@@ -2020,6 +2033,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  joinLoginButton: {
+    flexDirection: 'row',
+    gap: isMobileWeb ? 8 : 12,
+    alignItems: 'center',
+    paddingHorizontal: isMobileWeb ? 16 : 28,
+    paddingVertical: isMobileWeb ? 12 : 18,
+    borderRadius: isMobileWeb ? 12 : 16,
+    minWidth: isMobileWeb ? 140 : 200,
+    justifyContent: 'center',
+    marginTop: isMobileWeb ? 12 : 16,
+    alignSelf: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  joinLoginButtonText: {
+    color: colors.info,
+    fontWeight: '800',
+    fontSize: isMobileWeb ? 13 : 18,
+    letterSpacing: 0.3,
   },
   ctaIcon: {
     marginRight: isMobileWeb ? 6 : 8,

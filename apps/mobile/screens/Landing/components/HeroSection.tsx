@@ -4,7 +4,7 @@
  * @module Landing/Components
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,10 @@ import { logger } from '../../../utils/loggerService';
 import type { HeroSectionProps } from '../types';
 import { IS_MOBILE_WEB, ANIMATION_DURATION, WHATSAPP_URL } from '../constants';
 import { styles } from '../styles';
+import { useWebMode } from '../../../stores/webModeStore';
+import { useUser } from '../../../stores/userStore';
+import { navigationQueue } from '../../../utils/navigationQueue';
+import { checkNavigationGuards } from '../../../utils/navigationGuards';
 
 /**
  * HeroSection Component
@@ -25,8 +29,10 @@ import { styles } from '../styles';
  * <HeroSection onDonate={() => setDonationModalVisible(true)} />
  * ```
  */
-export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate, onJoinLogin: onJoinLoginProp }) => {
   const { t } = useTranslation('landing');
+  const { setMode } = useWebMode();
+  const { isAuthenticated, isGuestMode, isAdmin } = useUser();
   // Animation setup for fade-in and slide-up effect
   const heroAnimation = useRef(new Animated.Value(0)).current;
   
@@ -47,6 +53,37 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
     logger.info('LandingSite', 'Click - whatsapp direct');
     Linking.openURL(WHATSAPP_URL);
   };
+
+  const handleJoinLogin = useCallback(async () => {
+    if (onJoinLoginProp) {
+      onJoinLoginProp();
+      return;
+    }
+    logger.info('LandingSiteScreen', 'Navigate to app mode from hero join CTA', { isAuthenticated, isGuestMode });
+    setMode('app');
+    const targetRoute = (isAuthenticated || isGuestMode) ? 'HomeStack' : 'LoginScreen';
+    const guardContext = {
+      isAuthenticated,
+      isGuestMode,
+      isAdmin,
+      mode: 'app' as const,
+    };
+    const guardResult = await checkNavigationGuards(
+      {
+        type: 'reset',
+        index: 0,
+        routes: [{ name: targetRoute }],
+      },
+      guardContext
+    );
+    if (!guardResult.allowed) {
+      if (guardResult.redirectTo) {
+        await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
+      }
+      return;
+    }
+    await navigationQueue.reset(0, [{ name: targetRoute }], 2);
+  }, [onJoinLoginProp, setMode, isAuthenticated, isGuestMode, isAdmin]);
 
   return (
     <View style={styles.hero}>
@@ -148,7 +185,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
               <Text style={styles.contactButtonText}>{t('hero.whatsappButton')} </Text>
             </TouchableOpacity>
           </View>
-          
+
+          <TouchableOpacity
+            style={[styles.joinLoginButton, { borderColor: colors.info }]}
+            onPress={() => {
+              logger.info('LandingSite', 'Click - join us login');
+              void handleJoinLogin();
+            }}
+            activeOpacity={0.8}
+            accessibilityLabel={t('hero.accessibility.joinLogin')}
+            accessibilityRole="button"
+          >
+            <Ionicons name="person-add-outline" color={colors.info} size={IS_MOBILE_WEB ? 14 : 18} />
+            <Text style={styles.joinLoginButtonText}>{t('hero.joinLoginButton')}</Text>
+          </TouchableOpacity>
+
           {/* Donation CTA button */}
           <TouchableOpacity
             style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}
