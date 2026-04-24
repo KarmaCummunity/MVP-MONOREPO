@@ -7,9 +7,16 @@
 // credentials on non-GCP hosts (e.g. Railway) can try metadata.google.internal
 // and fail with ENOTFOUND, breaking ID token verification for clients that
 // send a Firebase ID token (common on mobile web when the session JWT is absent).
+//
+// When no service account is configured, `verifyIdToken` still works by
+// validating tokens against Google's public JWKS (needs FIREBASE_PROJECT_ID).
 
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import * as admin from "firebase-admin";
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
+const FIREBASE_SECURE_TOKEN_JWKS =
+  "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 
 @Injectable()
 export class FirebaseAdminService implements OnModuleInit {
@@ -133,13 +140,87 @@ export class FirebaseAdminService implements OnModuleInit {
   }
 
   /**
-   * Verify Firebase ID token
+   * Verify Firebase ID token using Google's public keys (no service account).
+   * Same crypto trust as client-side Firebase; requires project id in env.
+   */
+  private async verifyIdTokenWithPublicJwks(
+    token: string,
+  ): Promise<admin.auth.DecodedIdToken> {
+    const projectId = this.resolveProjectId();
+    if (!projectId) {
+      throw new Error(
+        "Set FIREBASE_PROJECT_ID or GOOGLE_CLOUD_PROJECT to verify Firebase ID tokens without Admin SDK credentials",
+      );
+    }
+
+    const JWKS = createRemoteJWKSet(new URL(FIREBASE_SECURE_TOKEN_JWKS));
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `https://securetoken.google.com/${projectId}`,
+      audience: projectId,
+    });
+
+    const uid =
+      typeof payload.sub === "string"
+        ? payload.sub
+        : typeof (payload as { user_id?: unknown }).user_id === "string"
+          ? String((payload as { user_id: string }).user_id)
+          : "";
+    if (!uid) {
+      throw new Error("Invalid Firebase ID token: missing subject");
+    }
+
+    const email = typeof payload.email === "string" ? payload.email : undefined;
+    const exp =
+      typeof payload.exp === "number"
+        ? payload.exp
+        : Math.floor(Date.now() / 1000) + 3600;
+
+    return {
+      uid,
+      email,
+      email_verified: payload.email_verified === true,
+      auth_time:
+        typeof payload.auth_time === "number" ? payload.auth_time : undefined,
+      exp,
+      firebase: payload.firebase as admin.auth.DecodedIdToken["firebase"],
+      aud: projectId,
+      iss: `https://securetoken.google.com/${projectId}`,
+      sub: uid,
+      iat:
+        typeof payload.iat === "number"
+          ? payload.iat
+          : Math.floor(Date.now() / 1000),
+    } as admin.auth.DecodedIdToken;
+  }
+
+  /**
+   * Verify Firebase ID token (Admin SDK when configured, else public JWKS).
    */
   async verifyIdToken(token: string): Promise<admin.auth.DecodedIdToken> {
+    const adminReady =
+      this.firebaseApp !== null ||
+      (typeof admin.apps !== "undefined" && admin.apps.length > 0);
+
+    if (adminReady) {
+      try {
+        const app = this.firebaseApp ?? admin.app();
+        return await app.auth().verifyIdToken(token);
+      } catch (error) {
+        this.logger.warn("Firebase token verification failed", {
+          error: error instanceof Error ? error.message : String(error),
+          tokenLength: token?.length,
+        });
+        throw error;
+      }
+    }
+
+    this.logger.warn(
+      "Firebase Admin SDK not initialized; verifying ID token via public JWKS",
+    );
     try {
-      return await this.getAuth().verifyIdToken(token);
+      return await this.verifyIdTokenWithPublicJwks(token);
     } catch (error) {
-      this.logger.warn("Firebase token verification failed", {
+      this.logger.warn("Firebase JWKS token verification failed", {
         error: error instanceof Error ? error.message : String(error),
         tokenLength: token?.length,
       });
