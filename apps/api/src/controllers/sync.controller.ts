@@ -17,7 +17,8 @@ import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { AdminAuthGuard } from "../auth/jwt-auth.guard";
-import * as admin from "firebase-admin";
+import { FirebaseAdminService } from "../auth/firebase-admin.service";
+import type { UserRecord } from "firebase-admin/auth";
 
 @Controller("api/sync")
 export class SyncController {
@@ -25,29 +26,10 @@ export class SyncController {
   // Simple API key check - in production, use proper authentication
   private readonly SYNC_API_KEY =
     process.env.SYNC_API_KEY || "change-me-in-production";
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {
-    // Initialize Firebase Admin SDK if not already initialized
-    if (!admin.apps.length) {
-      try {
-        if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-          const serviceAccount = JSON.parse(
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-          );
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-          });
-        } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-          admin.initializeApp({
-            credential: admin.credential.applicationDefault(),
-          });
-        }
-      } catch {
-        this.logger.warn(
-          "⚠️ Firebase Admin SDK not initialized - sync endpoint will not work",
-        );
-      }
-    }
-  }
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly firebaseAdmin: FirebaseAdminService,
+  ) {}
 
   /**
    * Check API key for sync endpoints
@@ -62,15 +44,16 @@ export class SyncController {
     firebase_uid?: string,
     email?: string,
   ): Promise<
-    { ok: true; user: admin.auth.UserRecord } | { ok: false; error: string }
+    { ok: true; user: UserRecord } | { ok: false; error: string }
   > {
     if (!firebase_uid && !email) {
       return { ok: false, error: "Must provide firebase_uid or email" };
     }
     try {
+      const auth = this.firebaseAdmin.getAuth();
       const user = firebase_uid
-        ? await admin.auth().getUser(firebase_uid)
-        : await admin.auth().getUserByEmail(email ?? "");
+        ? await auth.getUser(firebase_uid)
+        : await auth.getUserByEmail(email ?? "");
       if (!user.email) {
         return { ok: false, error: "User has no email" };
       }
@@ -328,12 +311,12 @@ export class SyncController {
       this.logger.log("🔄 Starting full Firebase users sync...");
 
       // Get all users from Firebase Authentication
-      let allUsers: admin.auth.UserRecord[] = [];
+      let allUsers: UserRecord[] = [];
       let nextPageToken: string | undefined;
 
       do {
-        const listUsersResult = await admin
-          .auth()
+        const listUsersResult = await this.firebaseAdmin
+          .getAuth()
           .listUsers(1000, nextPageToken);
         allUsers = allUsers.concat(listUsersResult.users);
         nextPageToken = listUsersResult.pageToken;
@@ -598,8 +581,8 @@ export class SyncController {
       try {
         let nextPageToken: string | undefined;
         do {
-          const listUsersResult = await admin
-            .auth()
+          const listUsersResult = await this.firebaseAdmin
+            .getAuth()
             .listUsers(1000, nextPageToken);
           firebaseCount += listUsersResult.users.length;
           nextPageToken = listUsersResult.pageToken;

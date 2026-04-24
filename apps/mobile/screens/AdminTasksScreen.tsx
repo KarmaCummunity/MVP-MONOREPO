@@ -1,18 +1,85 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Modal, Image, SafeAreaView, Platform, StatusBar, Dimensions } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
+import { rowDirection } from '../globals/responsive';
 import { Ionicons } from '@expo/vector-icons';
 import apiService, { ApiResponse } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { useAdminProtection } from '../hooks/useAdminProtection';
 import UserSelector from '../components/UserSelector';
 import TaskHoursModal from '../components/TaskHoursModal';
+import HeaderComp from '../components/HeaderComp';
 
 type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
 type TaskPriority = 'low' | 'medium' | 'high';
+
+type TasksListSort =
+  | 'created_desc'
+  | 'created_asc'
+  | 'priority_status'
+  | 'due_asc'
+  | 'due_desc'
+  | 'updated_desc';
+
+const TASK_LIST_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'open', label: 'פתוחה' },
+  { value: 'in_progress', label: 'בתהליך' },
+  { value: 'stuck', label: 'תקוע' },
+  { value: 'testing', label: 'בבדיקה' },
+  { value: 'done', label: 'בוצעה' },
+  { value: 'archived', label: 'בארכיון' },
+];
+
+const TASK_LIST_SORT_OPTIONS: { value: TasksListSort; label: string }[] = [
+  { value: 'created_desc', label: 'נוסף לאחרונה' },
+  { value: 'created_asc', label: 'נוסף ראשון' },
+  { value: 'priority_status', label: 'עדיפות וסטטוס' },
+  { value: 'due_asc', label: 'תאריך יעד (מהקרוב)' },
+  { value: 'due_desc', label: 'תאריך יעד (מהרחוק)' },
+  { value: 'updated_desc', label: 'עודכן לאחרונה' },
+];
+
+const ADMIN_TASKS_FILTER_OPTIONS: string[] = [
+  'task_assign_me',
+  ...TASK_LIST_STATUS_OPTIONS.map((o) => `task_status_${o.value}`),
+  'task_priority_high',
+  'task_priority_medium',
+  'task_priority_low',
+];
+
+const ADMIN_TASKS_SORT_OPTIONS: string[] = TASK_LIST_SORT_OPTIONS.map((o) => o.value);
+
+function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
+  assignee: 'all' | 'me';
+  statuses: TaskStatus[];
+  priorities: TaskPriority[];
+} {
+  const statuses: TaskStatus[] = [];
+  const priorities: TaskPriority[] = [];
+  let assignee: 'all' | 'me' = 'all';
+  for (const key of filterKeys ?? []) {
+    if (key === 'task_assign_me') {
+      assignee = 'me';
+    }
+    if (key.startsWith('task_status_')) {
+      const raw = key.slice('task_status_'.length) as TaskStatus;
+      if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === raw)) {
+        statuses.push(raw);
+      }
+    }
+    if (key.startsWith('task_priority_')) {
+      const raw = key.slice('task_priority_'.length) as TaskPriority;
+      if (raw === 'high' || raw === 'medium' || raw === 'low') {
+        priorities.push(raw);
+      }
+    }
+  }
+  return { assignee, statuses, priorities };
+}
 
 interface User {
   id: string;
@@ -48,6 +115,7 @@ type AdminTask = {
 export default function AdminTasksScreen() {
   const route = useRoute();
   const navigation = useNavigation<any>();
+  const { t } = useTranslation(['common', 'search']);
   const routeParams = (route.params as any) || {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
@@ -92,9 +160,9 @@ export default function AdminTasksScreen() {
   const [pendingTask, setPendingTask] = useState<AdminTask | null>(null);
 
   const [query, setQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('');
-  const [filterPriority, setFilterPriority] = useState<TaskPriority | ''>('');
-  const [filterCategory, setFilterCategory] = useState<string | ''>('');
+  const [filterStatuses, setFilterStatuses] = useState<TaskStatus[]>([]);
+  const [listSort, setListSort] = useState<TasksListSort>('created_desc');
+  const [filterPriorities, setFilterPriorities] = useState<TaskPriority[]>([]);
   const [filterAssignee, setFilterAssignee] = useState<'all' | 'me'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -106,37 +174,51 @@ export default function AdminTasksScreen() {
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
   const [loadingSubtasks, setLoadingSubtasks] = useState<string | null>(null);
+  const fetchTasksSeqRef = useRef(0);
 
   useEffect(() => {
     console.log('📋 Tasks List Updated in Component:', tasks.map(t => `${t.id.substring(0, 8)}:${t.title}`).join(', '));
   }, [tasks]);
 
-  const sortedTasks = useMemo(() => {
-    const priorityOrder: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
-    // Filter out subtasks - only show root level tasks (those without parent_task_id)
-    const rootTasks = tasks.filter(t => !t.parent_task_id);
-    return [...rootTasks].sort((a, b) => {
-      // First sort by ownership if "My Tasks" is NOT active (to bring mine to top implicitly? No, sticking to date/priority)
-      if (a.status === b.status) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
+  // Root tasks only; order matches API (driven by listSort)
+  const rootTasksForList = useMemo(
+    () => tasks.filter((t) => !t.parent_task_id),
+    [tasks],
+  );
+
+  const handleHeaderSearch = useCallback(
+    (searchQuery: string, filterKeys?: string[], sortKeys?: string[]) => {
+      setQuery(searchQuery);
+      const parsed = parseAdminTaskHeaderFilters(filterKeys);
+      setFilterAssignee(parsed.assignee);
+      setFilterStatuses([...new Set(parsed.statuses)]);
+      setFilterPriorities([...new Set(parsed.priorities)]);
+      const nextSort = sortKeys?.[0];
+      if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
+        setListSort(nextSort as TasksListSort);
+      } else if (sortKeys && sortKeys.length === 0) {
+        setListSort('created_desc');
       }
-      const statusRank: Record<TaskStatus, number> = { open: 0, in_progress: 1, stuck: 1.5, testing: 1.7, done: 2, archived: 3 };
-      return statusRank[a.status] - statusRank[b.status];
-    });
-  }, [tasks]);
+    },
+    [],
+  );
 
   const fetchTasks = useCallback(async () => {
+    const seq = ++fetchTasksSeqRef.current;
     setLoading(true);
     setError(null);
-    console.log('🔄 Fetching tasks...', { query, filterStatus, filterPriority, filterCategory, filterAssignee, selectedUserId: selectedUser?.id });
+    console.log('🔄 Fetching tasks...', { query, filterStatuses, listSort, filterPriorities, filterAssignee, selectedUserId: selectedUser?.id });
     try {
       const res: ApiResponse<AdminTask[]> = await apiService.getTasks({
         q: query || undefined,
-        status: filterStatus || undefined,
-        priority: filterPriority || undefined,
-        category: filterCategory || undefined,
+        status: filterStatuses.length > 0 ? filterStatuses : undefined,
+        sort: listSort,
+        priority: filterPriorities.length > 0 ? filterPriorities : undefined,
         assignee: filterAssignee === 'me' ? selectedUser?.id : undefined,
       });
+      if (seq !== fetchTasksSeqRef.current) {
+        return;
+      }
       console.log('✅ Fetch tasks response:', res.success, res.data?.length);
       if (!res.success) {
         setError(res.error || 'שגיאה בטעינת משימות');
@@ -145,11 +227,15 @@ export default function AdminTasksScreen() {
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);
-      setError('שגיאה בטעינת משימות - נסה שוב');
+      if (seq === fetchTasksSeqRef.current) {
+        setError('שגיאה בטעינת משימות - נסה שוב');
+      }
     } finally {
-      setLoading(false);
+      if (seq === fetchTasksSeqRef.current) {
+        setLoading(false);
+      }
     }
-  }, [query, filterStatus, filterPriority, filterCategory, filterAssignee, selectedUser]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, selectedUser]);
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -159,7 +245,7 @@ export default function AdminTasksScreen() {
       fetchTasks();
     }
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [query, filterStatus, filterPriority, filterCategory, filterAssignee, fetchTasks]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, fetchTasks]);
 
   const resetForm = () => {
     setFormData({
@@ -385,9 +471,10 @@ export default function AdminTasksScreen() {
       <View>
         <View style={[
           styles.taskItem,
+          { flexDirection: rowDirection('row-reverse') },
           isDone && styles.taskItemDone,
           isSubtask && styles.subtaskItem,
-          isSubtask && { marginRight: taskLevel * 16 }
+          isSubtask && { marginStart: taskLevel * 16 },
         ]}>
           {/* Subtask Indicator */}
           {isSubtask && (
@@ -424,7 +511,7 @@ export default function AdminTasksScreen() {
               <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
             ) : null}
 
-            <View style={styles.metaRow}>
+            <View style={[styles.metaRow, { flexDirection: rowDirection('row-reverse') }]}>
               {/* Priority Badge */}
               <View style={[styles.badge, styles[`priority_${item.priority}` as const]]}>
                 <Text style={styles.badgeText}>
@@ -476,7 +563,7 @@ export default function AdminTasksScreen() {
                         <Image
                           key={u.id}
                           source={{ uri: u.avatar_url || `https://ui-avatars.com/api/?name=${u.name}` }}
-                          style={[styles.avatarSmall, { marginRight: i > 0 ? -10 : 0, zIndex: 3 - i }]}
+                          style={[styles.avatarSmall, { marginStart: i > 0 ? -10 : 0, zIndex: 3 - i }]}
                         />
                       ))}
                       {item.assignees_details.length > 3 && (
@@ -495,7 +582,7 @@ export default function AdminTasksScreen() {
             {/* Hours Display */}
             {((item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0) ||
               (item.actual_hours && parseFloat(String(item.actual_hours)) > 0)) && (
-                <View style={styles.hoursRow}>
+                <View style={[styles.hoursRow, { flexDirection: rowDirection('row-reverse') }]}>
                   {item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0 && (
                     <View style={[styles.badge, styles.hoursBadge]}>
                       <Ionicons name="time-outline" size={12} color={colors.info} />
@@ -652,60 +739,49 @@ export default function AdminTasksScreen() {
     }
   };
 
-  const renderHeader = () => (
-    <View
-      onLayout={(event) => {
-        if (Platform.OS === 'web') {
-          const { height } = event.nativeEvent.layout;
-          setHeaderHeight(height);
-        }
-      }}
-    >
+  const listHeaderBelowSearch = () => (
+    <View>
       <Text style={styles.header}>ניהול משימות וצוות</Text>
-
-      <View style={styles.filtersRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="חיפוש משימות..."
-          placeholderTextColor={colors.textSecondary}
-          value={query}
-          onChangeText={setQuery}
-        />
-        <TouchableOpacity style={styles.refreshBtn} onPress={fetchTasks}>
-          <Ionicons name="search-outline" size={22} color={colors.white} />
-        </TouchableOpacity>
-      </View>
-
-      {error && (
-        <Text style={{ color: colors.error, textAlign: 'right', marginBottom: 8, fontWeight: 'bold' }}>{error}</Text>
-      )}
-
-
-      <View style={styles.chipsRow}>
-        <FilterChip label="למי מוקצה" value={filterAssignee} setValue={setFilterAssignee} options={[
-          { value: 'all', label: 'כולם' },
-          { value: 'me', label: 'רק שלי' },
-        ]} />
-        <FilterChip label="סטטוס" value={filterStatus} setValue={setFilterStatus} options={[
-          { value: '', label: 'הכל' },
-          { value: 'open', label: 'פתוחה' },
-          { value: 'in_progress', label: 'בתהליך' },
-          { value: 'stuck', label: 'תקוע' },
-          { value: 'testing', label: 'בבדיקה' },
-          { value: 'done', label: 'בוצעה' },
-        ]} />
-        <FilterChip label="עדיפות" value={filterPriority} setValue={setFilterPriority} options={[
-          { value: '', label: 'הכל' },
-          { value: 'high', label: 'גבוהה' },
-          { value: 'medium', label: 'בינונית' },
-        ]} />
-      </View>
+      {loading ? (
+        <View style={[styles.loadingBanner, { flexDirection: rowDirection('row') }]}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.loadingBannerText}>טוען משימות…</Text>
+        </View>
+      ) : null}
+      {error ? (
+        <Text style={styles.errorBanner}>{error}</Text>
+      ) : null}
     </View>
   );
 
   return (
     <SafeAreaView style={[styles.container, Platform.OS === 'web' && { position: 'relative' }]}>
       <StatusBar backgroundColor={colors.backgroundSecondary} barStyle="dark-content" />
+      <View
+        onLayout={(event) => {
+          if (Platform.OS === 'web') {
+            const { height } = event.nativeEvent.layout;
+            setHeaderHeight(height);
+          }
+        }}
+      >
+        <HeaderComp
+          mode={false}
+          menuOptions={[t('common:back')]}
+          onToggleMode={() => {}}
+          onSelectMenuItem={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}
+          placeholder={t('search:adminTasksSearchPlaceholder')}
+          filterOptions={ADMIN_TASKS_FILTER_OPTIONS}
+          sortOptions={ADMIN_TASKS_SORT_OPTIONS}
+          searchData={[]}
+          onSearch={handleHeaderSearch}
+          hideModeToggle
+        />
+      </View>
       {/* List container - limited height on web to ensure scrolling works */}
       <View style={[
         styles.listWrapper,
@@ -714,15 +790,17 @@ export default function AdminTasksScreen() {
         } : undefined
       ]}>
         <FlatList
-          data={sortedTasks}
+          data={rootTasksForList}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={[
             stylesWithListContent.listContent,
             Platform.OS === 'web' && { paddingBottom: 120 }
           ]}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={<Text style={styles.emptyText}>אין משימות כרגע</Text>}
+          ListHeaderComponent={listHeaderBelowSearch}
+          ListEmptyComponent={
+            loading ? null : <Text style={styles.emptyText}>אין משימות כרגע</Text>
+          }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
           scrollEventThrottle={16}
@@ -831,21 +909,6 @@ function PickerField({ label, value, onChange, options }: any) {
   );
 }
 
-function FilterChip({ label, value, setValue, options }: any) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Text style={{ color: colors.textSecondary }}>{label}:</Text>
-      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-        {options.map((opt: any) => (
-          <TouchableOpacity key={`${label}-${opt.value}`} onPress={() => setValue(opt.value)} style={[styles.chip, value === opt.value && styles.chipActive]}>
-            <Text style={[styles.chipText, value === opt.value && styles.chipTextActive]}>{opt.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -867,22 +930,37 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: LAYOUT_CONSTANTS.SPACING.MD,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
-  filtersRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  input: { flex: 1, height: 44, backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, textAlign: 'right', color: colors.textPrimary },
-  refreshBtn: { width: 44, height: 44, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
-  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 40 },
+  loadingBanner: {
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  loadingBannerText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  errorBanner: {
+    color: colors.error,
+    textAlign: 'right',
+    marginBottom: 8,
+    fontWeight: 'bold',
+    writingDirection: 'rtl',
+  },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, marginTop: 40, writingDirection: 'rtl' },
 
-  taskItem: { flexDirection: 'row', padding: 12, backgroundColor: colors.background, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  taskItem: { padding: 12, backgroundColor: colors.background, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
   taskItemDone: { opacity: 0.6 },
-  checkbox: { marginRight: 12, paddingTop: 4 },
+  checkbox: { marginEnd: 12, paddingTop: 4 },
   taskContent: { flex: 1 },
   taskTitle: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, textAlign: 'right' },
   taskTitleDone: { textDecorationLine: 'line-through', color: colors.textSecondary },
   description: { fontSize: 14, color: colors.textSecondary, textAlign: 'right', marginBottom: 6 },
 
-  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
+  metaRow: { alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border },
   badgeText: { fontSize: 12, color: colors.textSecondary },
   priority_high: { backgroundColor: colors.pinkLight, borderColor: colors.pinkLight },
@@ -903,7 +981,7 @@ const styles = StyleSheet.create({
 
   creatorText: { fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
 
-  hoursRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
+  hoursRow: { alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
   hoursBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -932,9 +1010,9 @@ const styles = StyleSheet.create({
 
   // Subtask styles
   subtaskItem: {
-    marginLeft: 24,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.info,
+    marginEnd: 24,
+    borderStartWidth: 3,
+    borderStartColor: colors.info,
     backgroundColor: '#F0F8FF',
   },
   subtaskIndicator: {
@@ -990,7 +1068,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     ...(Platform.OS === 'web' ? { position: 'fixed' as any } : { position: 'absolute' }),
-    left: 20,
+    end: 20,
     bottom: 20,
     width: 56,
     height: 56,

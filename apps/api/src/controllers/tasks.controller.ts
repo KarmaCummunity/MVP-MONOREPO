@@ -1,7 +1,7 @@
 // File overview:
-// - Purpose: CRUD עבור משימות קבוצתיות למנהל האפליקציה
+// - Purpose: CRUD for group tasks (admin app)
 // - Routes: /api/tasks (GET, POST), /api/tasks/:id (GET, PATCH, DELETE)
-// - Storage: PostgreSQL טבלת tasks (schema.sql)
+// - Storage: PostgreSQL tasks table (schema.sql)
 import {
   Body,
   Controller,
@@ -66,6 +66,66 @@ interface UpdateTaskDto {
 interface LogTaskHoursDto {
   hours: number;
   user_id: string;
+}
+
+const TASK_STATUS_VALUES: TaskStatus[] = [
+  "open",
+  "in_progress",
+  "done",
+  "archived",
+  "stuck",
+  "testing",
+  "reports",
+];
+
+type TasksListSort =
+  | "created_desc"
+  | "created_asc"
+  | "priority_status"
+  | "due_asc"
+  | "due_desc"
+  | "updated_desc";
+
+function parseStatusQueryParam(
+  raw: string | string[] | undefined,
+): TaskStatus[] | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const parts = (
+    Array.isArray(raw)
+      ? raw.flatMap((s) => String(s).split(","))
+      : String(raw).split(",")
+  )
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return undefined;
+  }
+  const allowed = new Set<string>(TASK_STATUS_VALUES);
+  const parsed = parts.filter((p) => allowed.has(p)) as TaskStatus[];
+  return parsed.length ? parsed : undefined;
+}
+
+function orderByClause(sort: TasksListSort | undefined): string {
+  switch (sort) {
+    case "created_asc":
+      return "ORDER BY t.created_at ASC NULLS LAST, t.id ASC";
+    case "priority_status":
+      return `ORDER BY 
+          CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
+          t.status ASC,
+          t.created_at DESC`;
+    case "due_asc":
+      return "ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC, t.id ASC";
+    case "due_desc":
+      return "ORDER BY t.due_date DESC NULLS LAST, t.created_at DESC, t.id DESC";
+    case "updated_desc":
+      return "ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC, t.id DESC";
+    case "created_desc":
+    default:
+      return "ORDER BY t.created_at DESC NULLS LAST, t.id DESC";
+  }
 }
 
 @Controller("/api/tasks")
@@ -225,26 +285,6 @@ export class TasksController {
         this.logger.warn("⚠️ Could not ensure estimated_hours column:", e);
       }
 
-      // 2b. Ensure parent_task_id exists (list/create SQL references it; legacy DBs may lack it)
-      try {
-        await this.pool.query(`
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'parent_task_id'
-            ) THEN
-              ALTER TABLE tasks ADD COLUMN parent_task_id UUID;
-            END IF;
-          END $$;
-        `);
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks (parent_task_id)`,
-        );
-      } catch (e) {
-        this.logger.warn("⚠️ Could not ensure parent_task_id column:", e);
-      }
-
       // 3. Ensure INDEXES (Idempotent)
       // SEC-002.4: Create indexes individually — no string interpolation in SQL
       const indexQueries = [
@@ -394,11 +434,12 @@ export class TasksController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async listTasks(
-    @Query("status") status?: TaskStatus,
+    @Query("status") status?: string | string[],
     @Query("priority") priority?: TaskPriority,
     @Query("category") category?: string,
     @Query("assignee") assignee?: string,
     @Query("q") searchQuery?: string,
+    @Query("sort") sortParam?: string,
     @Query("limit") limitParam?: string,
     @Query("offset") offsetParam?: string,
   ) {
@@ -415,8 +456,26 @@ export class TasksController {
       );
       const offset = Math.max(isNaN(offsetNum) ? 0 : offsetNum, 0);
 
+      const statusList = parseStatusQueryParam(status);
+      const sortValues: TasksListSort[] = [
+        "created_desc",
+        "created_asc",
+        "priority_status",
+        "due_asc",
+        "due_desc",
+        "updated_desc",
+      ];
+      const sort: TasksListSort = sortValues.includes(
+        sortParam as TasksListSort,
+      )
+        ? (sortParam as TasksListSort)
+        : "priority_status";
+
+      const statusCachePart =
+        statusList && statusList.length > 0 ? statusList.join(",") : "all";
+
       // Build cache key from query parameters (include search query if present)
-      const cacheKey = `tasks_list_${status || "all"}_${priority || "all"}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${limit}_${offset}`;
+      const cacheKey = `tasks_list_${statusCachePart}_${priority || "all"}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${sort}_${limit}_${offset}`;
 
       // Cache restored - race condition was fixed by awaiting cache clearing in create/update/delete
       // Try to get from cache (but don't fail if Redis is unavailable)
@@ -435,9 +494,14 @@ export class TasksController {
       const filters: string[] = [];
       const params: unknown[] = [];
 
-      if (status) {
-        params.push(status);
-        filters.push(`status = $${params.length}`);
+      if (statusList && statusList.length > 0) {
+        if (statusList.length === 1) {
+          params.push(statusList[0]);
+          filters.push(`status = $${params.length}`);
+        } else {
+          params.push(statusList);
+          filters.push(`status = ANY($${params.length}::text[])`);
+        }
       }
 
       if (priority) {
@@ -505,46 +569,24 @@ export class TasksController {
         ? `COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours`
         : `0::NUMERIC as actual_hours`;
 
-      // LATERAL joins: one indexed lookup per task row instead of four correlated subqueries per row
       const sql = `
-        SELECT
+        SELECT 
             t.id, t.title, t.description, t.status, t.priority, t.category, t.due_date, t.assignees, t.tags, t.checklist, t.parent_task_id, t.estimated_hours, t.created_at, t.updated_at,
-            cd.creator_details,
-            ad.assignees_details,
-            sc.subtask_count,
-            pt.parent_task_details,
+            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
+             FROM user_profiles u 
+             WHERE u.id::text = t.created_by::text 
+                OR u.firebase_uid = t.created_by::text
+                OR u.google_id = t.created_by::text
+             LIMIT 1) as creator_details,
+            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
+             FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
+            (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtask_count,
+            (SELECT json_build_object('id', pt.id, 'title', pt.title) 
+             FROM tasks pt WHERE pt.id = t.parent_task_id) as parent_task_details,
             ${actualHoursSubquery}
         FROM tasks t
-        LEFT JOIN LATERAL (
-          SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) AS creator_details
-          FROM user_profiles u
-          WHERE u.id::text = t.created_by::text
-             OR u.firebase_uid = t.created_by::text
-             OR u.google_id = t.created_by::text
-          LIMIT 1
-        ) cd ON true
-        LEFT JOIN LATERAL (
-          SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) AS assignees_details
-          FROM user_profiles u
-          WHERE t.assignees IS NOT NULL
-            AND cardinality(t.assignees) > 0
-            AND u.id = ANY(t.assignees::UUID[])
-        ) ad ON true
-        LEFT JOIN LATERAL (
-          SELECT COUNT(*)::int AS subtask_count
-          FROM tasks st
-          WHERE st.parent_task_id = t.id
-        ) sc ON true
-        LEFT JOIN LATERAL (
-          SELECT json_build_object('id', p.id, 'title', p.title) AS parent_task_details
-          FROM tasks p
-          WHERE p.id = t.parent_task_id
-        ) pt ON true
         ${where}
-        ORDER BY
-          CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
-          t.status ASC,
-          t.created_at DESC
+        ${orderByClause(sort)}
         LIMIT $${params.length + 1}
         OFFSET $${params.length + 2}
       `;

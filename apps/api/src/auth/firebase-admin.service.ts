@@ -2,6 +2,11 @@
 // - Purpose: Firebase Admin SDK service for centralized Firebase authentication
 // - Provides: Firebase app instance, token verification
 // - Security: Initializes Firebase Admin SDK once with service account
+//
+// Always pass an explicit `projectId` when initializing. Without it, default
+// credentials on non-GCP hosts (e.g. Railway) can try metadata.google.internal
+// and fail with ENOTFOUND, breaking ID token verification for clients that
+// send a Firebase ID token (common on mobile web when the session JWT is absent).
 
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import * as admin from "firebase-admin";
@@ -15,8 +20,18 @@ export class FirebaseAdminService implements OnModuleInit {
     this.initializeFirebase();
   }
 
+  private resolveProjectId(serviceAccount?: {
+    project_id?: string;
+  }): string | undefined {
+    return (
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCLOUD_PROJECT ||
+      serviceAccount?.project_id
+    );
+  }
+
   private initializeFirebase(): void {
-    // Check if Firebase is already initialized
     if (admin.apps.length > 0) {
       this.firebaseApp = admin.app();
       this.logger.log("Firebase Admin SDK already initialized");
@@ -24,52 +39,73 @@ export class FirebaseAdminService implements OnModuleInit {
     }
 
     try {
-      // Try to initialize with service account from environment variable
       const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
       const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
       if (serviceAccountBase64) {
-        // Option 1: Base64 encoded service account (for Railway/production)
         const serviceAccountJson = Buffer.from(
           serviceAccountBase64,
           "base64",
         ).toString("utf-8");
-        const serviceAccount = JSON.parse(serviceAccountJson);
-
+        const serviceAccount = JSON.parse(serviceAccountJson) as {
+          project_id?: string;
+        };
+        const projectId = this.resolveProjectId(serviceAccount);
+        if (!projectId) {
+          this.logger.error(
+            "FIREBASE_SERVICE_ACCOUNT JSON must include project_id, or set FIREBASE_PROJECT_ID",
+          );
+          return;
+        }
         this.firebaseApp = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
+          credential: admin.credential.cert(
+            serviceAccount as admin.ServiceAccount,
+          ),
+          projectId,
         });
-
         this.logger.log(
           "Firebase Admin SDK initialized with service account (base64)",
         );
       } else if (serviceAccountKey) {
-        // Option 2: JSON string service account (for local development)
-        const serviceAccount = JSON.parse(serviceAccountKey);
-
+        const serviceAccount = JSON.parse(serviceAccountKey) as {
+          project_id?: string;
+        };
+        const projectId = this.resolveProjectId(serviceAccount);
+        if (!projectId) {
+          this.logger.error(
+            "FIREBASE_SERVICE_ACCOUNT_KEY JSON must include project_id, or set FIREBASE_PROJECT_ID",
+          );
+          return;
+        }
         this.firebaseApp = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
+          credential: admin.credential.cert(
+            serviceAccount as admin.ServiceAccount,
+          ),
+          projectId,
         });
-
         this.logger.log(
           "Firebase Admin SDK initialized with service account (JSON)",
         );
       } else {
-        // Fallback: Try to use default credentials (for local development)
-        this.firebaseApp = admin.initializeApp();
-        this.logger.warn(
-          "Firebase Admin SDK initialized with default credentials",
-        );
+        const projectId = this.resolveProjectId();
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS && projectId) {
+          this.firebaseApp = admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
+            projectId,
+          });
+          this.logger.log(
+            "Firebase Admin SDK initialized with application default credentials",
+          );
+        } else {
+          this.logger.error(
+            "Firebase Admin: configure FIREBASE_SERVICE_ACCOUNT, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS with FIREBASE_PROJECT_ID (or GOOGLE_CLOUD_PROJECT).",
+          );
+        }
       }
     } catch (error) {
       this.logger.error("Failed to initialize Firebase Admin SDK", {
         error: error instanceof Error ? error.message : String(error),
       });
-
-      // Initialize without credentials as fallback (will fail on actual use but won't crash)
-      if (!this.firebaseApp) {
-        this.firebaseApp = admin.initializeApp();
-      }
     }
   }
 
@@ -77,6 +113,9 @@ export class FirebaseAdminService implements OnModuleInit {
    * Get Firebase Admin app instance
    */
   getApp(): admin.app.App {
+    if (admin.apps.length > 0 && !this.firebaseApp) {
+      this.firebaseApp = admin.app();
+    }
     if (!this.firebaseApp) {
       this.initializeFirebase();
     }

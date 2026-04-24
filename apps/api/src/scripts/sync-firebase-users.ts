@@ -19,14 +19,39 @@ if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       const serviceAccount = JSON.parse(
         process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-      );
+      ) as Record<string, unknown>;
+      const fromJson = serviceAccount["project_id"] as string | undefined;
+      const projectId =
+        process.env.FIREBASE_PROJECT_ID ||
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        process.env.GCLOUD_PROJECT ||
+        fromJson;
+      if (!projectId) {
+        console.error(
+          "❌ Set FIREBASE_PROJECT_ID or use a service account JSON with project_id",
+        );
+        process.exit(1);
+      }
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(
+          serviceAccount as admin.ServiceAccount,
+        ),
+        projectId,
       });
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      // Use service account file path
+      const projectId =
+        process.env.FIREBASE_PROJECT_ID ||
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        process.env.GCLOUD_PROJECT;
+      if (!projectId) {
+        console.error(
+          "❌ With GOOGLE_APPLICATION_CREDENTIALS, set FIREBASE_PROJECT_ID (or GOOGLE_CLOUD_PROJECT) so the SDK does not use metadata.google.internal on non-GCP hosts",
+        );
+        process.exit(1);
+      }
       admin.initializeApp({
         credential: admin.credential.applicationDefault(),
+        projectId,
       });
     } else {
       console.error(

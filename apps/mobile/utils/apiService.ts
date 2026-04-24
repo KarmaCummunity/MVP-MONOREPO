@@ -75,17 +75,38 @@ class ApiService {
   }
 
   async getTasks(filters: {
-    status?: 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
-    priority?: 'low' | 'medium' | 'high';
+    status?:
+      | 'open'
+      | 'in_progress'
+      | 'done'
+      | 'archived'
+      | 'stuck'
+      | 'testing'
+      | Array<'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing'>;
+    priority?: 'low' | 'medium' | 'high' | Array<'low' | 'medium' | 'high'>;
     category?: string;
     assignee?: string;
     q?: string;
+    sort?: string;
     limit?: number;
     offset?: number;
   } = {}): Promise<ApiResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && String(value).length > 0) {
+      if (value === undefined || value === null) {
+        return;
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return;
+        }
+        // Repeat keys so Nest/Express parses `status` as string[] (OR semantics on the server).
+        value.forEach((v) => {
+          params.append(key, String(v));
+        });
+        return;
+      }
+      if (String(value).length > 0) {
         params.append(key, String(value));
       }
     });

@@ -128,6 +128,7 @@
     }
   },
   "search": {
+    "adminTasksSearchPlaceholder": "חיפוש משימות…",
     "sortTitle": "מיון",
     "filterTitle": "סינון",
     "chooseFiltersTitle": "בחר אפשרויות סינון",
@@ -160,9 +161,25 @@
       "ילדים": "ילדים",
       "מטבח": "מטבח",
       "חשמל": "חשמל",
-      "צעצועים": "צעצועים"
+      "צעצועים": "צעצועים",
+      "task_assign_me": "רק המשימות שלי",
+      "task_status_open": "סטטוס: פתוחה",
+      "task_status_in_progress": "סטטוס: בתהליך",
+      "task_status_stuck": "סטטוס: תקוע",
+      "task_status_testing": "סטטוס: בבדיקה",
+      "task_status_done": "סטטוס: בוצעה",
+      "task_status_archived": "סטטוס: בארכיון",
+      "task_priority_high": "עדיפות: גבוהה",
+      "task_priority_medium": "עדיפות: בינונית",
+      "task_priority_low": "עדיפות: נמוכה"
     },
     "sort": {
+      "created_desc": "נוסף לאחרונה",
+      "created_asc": "נוסף ראשון",
+      "priority_status": "עדיפות וסטטוס",
+      "due_asc": "תאריך יעד (מהקרוב)",
+      "due_desc": "תאריך יעד (מהרחוק)",
+      "updated_desc": "עודכן לאחרונה",
       "alphabetical": "אלפביתי",
       "byLocation": "לפי מיקום",
       "byCategory": "לפי תחום",

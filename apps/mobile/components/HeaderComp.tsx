@@ -40,6 +40,8 @@ interface HeaderSectionProps {
   searchData: any[]; // Data array to search through (charities, rides, etc.) - TODO: Replace any[] with proper types
   onSearch: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void; // Search handler function - TODO: Improve typing
   hideSortButton?: boolean;
+  /** When true, the offer/search mode toggle is not shown (e.g. admin-only screens). */
+  hideModeToggle?: boolean;
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -53,6 +55,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   searchData,
   onSearch,
   hideSortButton = false,
+  hideModeToggle = false,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -96,7 +99,6 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
         marginHorizontal: marginHorizontal / 2,
       }
     ]}>
-      {/* מציג את הבאנר במצב אורח אם המשתמש במצב אורח */}
       {isGuestMode && (
         <GuestModeNotice variant="compact" showLoginButton={true} />
       )}
@@ -120,9 +122,11 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
             hideSortButton={hideSortButton}
           />
         </View>
-        <View style={headerStyles.toggleWrapper}>
-          <ModeToggleButton mode={mode} onToggle={onToggleMode} />
-        </View>
+        {!hideModeToggle && (
+          <View style={headerStyles.toggleWrapper}>
+            <ModeToggleButton mode={mode} onToggle={onToggleMode} />
+          </View>
+        )}
       </View>
 
       {/* Selected Filters & Sorts Row - Full width scrollable */}
