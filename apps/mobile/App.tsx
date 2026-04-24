@@ -21,8 +21,8 @@
 // TODO: Add crash reporting integration (Sentry, Bugsnag)
 // TODO: Remove magic numbers for padding (48px) - use constants file
 // TODO: Add proper accessibility support throughout the app
-import React, { useCallback, useEffect, useRef, useMemo, memo } from 'react';
-import { View, Text, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useMemo, memo, useState } from 'react';
+import { View, Text, ActivityIndicator, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import * as Font from 'expo-font';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -53,6 +53,7 @@ import { NavigationState } from '@react-navigation/native';
 import { navigationQueue } from './utils/navigationQueue';
 import { RootStackParamList } from './globals/types';
 import { linking } from './utils/linkingConfig';
+import { createSingletonTabController } from './utils/webAppSingletonTab';
 // RTL is controlled via selected language in i18n and Settings
 
 // Initialize notifications only on supported platforms
@@ -94,6 +95,8 @@ SplashScreen.preventAutoHideAsync();
 function AppContent() {
   const { t } = useTranslation(['common']);
   const { selectedUser } = useUser();
+  /** Web only: at most one tab runs the full app; others show a standby screen. */
+  const [webSingletonLeader, setWebSingletonLeader] = useState(true);
 
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   // Initialize with null - will be loaded before NavigationContainer renders
@@ -108,6 +111,22 @@ function AppContent() {
     markAppReady,
     getCriticalError
   } = useAppLoading();
+
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return undefined;
+    const controller = createSingletonTabController();
+    return controller.start(setWebSingletonLeader);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && webSingletonLeader && typeof window !== 'undefined') {
+      try {
+        window.focus();
+      } catch {
+        /* ignored */
+      }
+    }
+  }, [webSingletonLeader]);
 
   // Initialize stores and load navigation state on mount
   // This must happen before NavigationContainer is rendered
@@ -365,6 +384,47 @@ function AppContent() {
 
 
 
+  if (Platform.OS === 'web' && !webSingletonLeader) {
+    return (
+      <View style={singletonStandbyStyles.container}>
+        <Text style={singletonStandbyStyles.title}>{t('common:webSingletonStandby.title')}</Text>
+        <Text style={singletonStandbyStyles.body}>{t('common:webSingletonStandby.body')}</Text>
+        <TouchableOpacity
+          style={singletonStandbyStyles.button}
+          onPress={() => {
+            try {
+              if (typeof window !== 'undefined') {
+                window.focus();
+              }
+            } catch {
+              /* ignored */
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:webSingletonStandby.focusButton')}
+        >
+          <Text style={singletonStandbyStyles.buttonText}>{t('common:webSingletonStandby.focusButton')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[singletonStandbyStyles.button, singletonStandbyStyles.secondaryButton]}
+          onPress={() => {
+            if (typeof window !== 'undefined' && window.location?.href) {
+              try {
+                window.open(window.location.href, 'kc_web_app');
+              } catch {
+                /* ignored */
+              }
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('common:webSingletonStandby.openAgain')}
+        >
+          <Text style={singletonStandbyStyles.buttonText}>{t('common:webSingletonStandby.openAgain')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   // Check for critical errors
   const criticalError = getCriticalError();
   if (criticalError) {
@@ -564,6 +624,47 @@ const loadingStyles = StyleSheet.create({
     marginTop: 10,
     fontSize: FontSizes.medium,
     color: colors.textPrimary,
+  },
+});
+
+const singletonStandbyStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    padding: 24,
+  },
+  title: {
+    fontSize: FontSizes.large,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  body: {
+    fontSize: FontSizes.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    maxWidth: 420,
+  },
+  button: {
+    backgroundColor: colors.info,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 12,
+    minWidth: 220,
+    alignItems: 'center',
+  },
+  secondaryButton: {
+    backgroundColor: colors.secondary,
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
   },
 });
 
