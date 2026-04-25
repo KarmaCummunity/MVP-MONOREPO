@@ -120,8 +120,9 @@ export default function FirebaseGoogleButton() {
 
       // Single SSoT pipeline: tokens + canonical UUID + persistence are handled by AuthSessionService.
       await establishSessionFromGoogleResponse(serverResponse, { firebaseUid: user.uid });
-      // Sync the Zustand projection.
-      await useUserStore.getState().checkAuthStatus();
+      // Mirror the live session into the Zustand projection synchronously (no isLoading toggle,
+      // no AsyncStorage round-trip), so the auth-gated stack mounts before the navigation reset.
+      useUserStore.getState().syncFromSession();
       logger.debug('FirebaseGoogleButton', 'Session established via AuthSessionService');
 
       // Give React time to update state and re-render before navigation
