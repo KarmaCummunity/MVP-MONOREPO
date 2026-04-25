@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Modal, Image, SafeAreaView, Platform, StatusBar, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -44,8 +45,12 @@ const TASK_LIST_SORT_OPTIONS: { value: TasksListSort; label: string }[] = [
   { value: 'updated_desc', label: 'עודכן לאחרונה' },
 ];
 
+/** When no explicit status chips are selected, completed tasks are hidden unless this key is on. */
+const FILTER_KEY_SHOW_COMPLETED = 'task_show_completed';
+
 const ADMIN_TASKS_FILTER_OPTIONS: string[] = [
   'task_assign_me',
+  FILTER_KEY_SHOW_COMPLETED,
   ...TASK_LIST_STATUS_OPTIONS.map((o) => `task_status_${o.value}`),
   'task_priority_high',
   'task_priority_medium',
@@ -54,17 +59,28 @@ const ADMIN_TASKS_FILTER_OPTIONS: string[] = [
 
 const ADMIN_TASKS_SORT_OPTIONS: string[] = TASK_LIST_SORT_OPTIONS.map((o) => o.value);
 
+const ADMIN_TASKS_FILTER_STORAGE_KEY = '@admin_tasks_filters_v1';
+
+const TASK_STATUSES_EXCLUDING_DONE: TaskStatus[] = TASK_LIST_STATUS_OPTIONS
+  .map((o) => o.value)
+  .filter((s) => s !== 'done');
+
 function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
   statuses: TaskStatus[];
   priorities: TaskPriority[];
+  includeDoneWhenNoStatusFilter: boolean;
 } {
   const statuses: TaskStatus[] = [];
   const priorities: TaskPriority[] = [];
   let assignee: 'all' | 'me' = 'all';
+  let includeDoneWhenNoStatusFilter = false;
   for (const key of filterKeys ?? []) {
     if (key === 'task_assign_me') {
       assignee = 'me';
+    }
+    if (key === FILTER_KEY_SHOW_COMPLETED) {
+      includeDoneWhenNoStatusFilter = true;
     }
     if (key.startsWith('task_status_')) {
       const raw = key.slice('task_status_'.length) as TaskStatus;
@@ -79,8 +95,38 @@ function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
       }
     }
   }
-  return { assignee, statuses, priorities };
+  return { assignee, statuses, priorities, includeDoneWhenNoStatusFilter };
 }
+
+function buildPersistedAdminTaskFilterKeys(
+  assignee: 'all' | 'me',
+  statuses: TaskStatus[],
+  priorities: TaskPriority[],
+  includeDoneWhenNoStatusFilter: boolean,
+): string[] {
+  const keys: string[] = [];
+  if (assignee === 'me') {
+    keys.push('task_assign_me');
+  }
+  if (includeDoneWhenNoStatusFilter) {
+    keys.push(FILTER_KEY_SHOW_COMPLETED);
+  }
+  const dedupStatuses = [...new Set(statuses)];
+  for (const s of dedupStatuses) {
+    keys.push(`task_status_${s}`);
+  }
+  const dedupPri = [...new Set(priorities)];
+  for (const p of dedupPri) {
+    keys.push(`task_priority_${p}`);
+  }
+  return keys;
+}
+
+type PersistedAdminTasksHeader = Readonly<{
+  query: string;
+  filterKeys: string[];
+  sortKey: TasksListSort;
+}>;
 
 interface User {
   id: string;
@@ -165,6 +211,10 @@ export default function AdminTasksScreen() {
   const [listSort, setListSort] = useState<TasksListSort>('created_desc');
   const [filterPriorities, setFilterPriorities] = useState<TaskPriority[]>([]);
   const [filterAssignee, setFilterAssignee] = useState<'all' | 'me'>('all');
+  const [includeDoneWhenNoStatusFilter, setIncludeDoneWhenNoStatusFilter] = useState(false);
+  const [persistedHydrated, setPersistedHydrated] = useState(false);
+  const [hasPersistedSnapshot, setHasPersistedSnapshot] = useState(false);
+  const [searchBarRemountKey, setSearchBarRemountKey] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [subtasks, setSubtasks] = useState<Record<string, AdminTask[]>>({});
@@ -194,6 +244,7 @@ export default function AdminTasksScreen() {
       setFilterAssignee(parsed.assignee);
       setFilterStatuses([...new Set(parsed.statuses)]);
       setFilterPriorities([...new Set(parsed.priorities)]);
+      setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
       const nextSort = sortKeys?.[0];
       if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
         setListSort(nextSort as TasksListSort);
@@ -204,13 +255,91 @@ export default function AdminTasksScreen() {
     [],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let hadSnapshot = false;
+      try {
+        const raw = await AsyncStorage.getItem(ADMIN_TASKS_FILTER_STORAGE_KEY);
+        if (cancelled) {
+          return;
+        }
+        if (!raw?.trim()) {
+          setPersistedHydrated(true);
+          return;
+        }
+        hadSnapshot = true;
+        const data = JSON.parse(raw) as Partial<PersistedAdminTasksHeader>;
+        if (typeof data.query === 'string') {
+          setQuery(data.query);
+        }
+        const parsed = parseAdminTaskHeaderFilters(
+          Array.isArray(data.filterKeys) ? data.filterKeys : undefined,
+        );
+        setFilterAssignee(parsed.assignee);
+        setFilterStatuses([...new Set(parsed.statuses)]);
+        setFilterPriorities([...new Set(parsed.priorities)]);
+        setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
+        if (data.sortKey && TASK_LIST_SORT_OPTIONS.some((o) => o.value === data.sortKey)) {
+          setListSort(data.sortKey as TasksListSort);
+        }
+      } catch {
+        // ignore corrupt storage
+      } finally {
+        if (!cancelled) {
+          if (hadSnapshot) {
+            setHasPersistedSnapshot(true);
+            setSearchBarRemountKey((k) => k + 1);
+          }
+          setPersistedHydrated(true);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!persistedHydrated) {
+      return;
+    }
+    const payload: PersistedAdminTasksHeader = {
+      query,
+      filterKeys: buildPersistedAdminTaskFilterKeys(
+        filterAssignee,
+        filterStatuses,
+        filterPriorities,
+        includeDoneWhenNoStatusFilter,
+      ),
+      sortKey: listSort,
+    };
+    const t = setTimeout(() => {
+      AsyncStorage.setItem(ADMIN_TASKS_FILTER_STORAGE_KEY, JSON.stringify(payload)).catch(() => {});
+    }, 200);
+    return () => clearTimeout(t);
+  }, [
+    persistedHydrated,
+    query,
+    filterAssignee,
+    filterStatuses,
+    filterPriorities,
+    includeDoneWhenNoStatusFilter,
+    listSort,
+  ]);
+
   const fetchTasks = useCallback(async () => {
     const seq = ++fetchTasksSeqRef.current;
     setLoading(true);
     setError(null);
+    const explicitStatusSelected = filterStatuses.length > 0;
+    const effectiveStatuses: TaskStatus[] | undefined = explicitStatusSelected
+      ? [...new Set(filterStatuses)]
+      : (includeDoneWhenNoStatusFilter ? undefined : TASK_STATUSES_EXCLUDING_DONE);
+
     const filterState: TaskFilterState = {
       ...(query.trim() ? { textSearch: { text: query } } : {}),
-      ...(filterStatuses.length > 0 ? { status: filterStatuses } : {}),
+      ...(effectiveStatuses !== undefined && effectiveStatuses.length > 0
+        ? { status: effectiveStatuses }
+        : {}),
       ...(filterPriorities.length > 0 ? { priority: filterPriorities } : {}),
       ownership: filterAssignee === 'me' ? ['mine'] : ['all'],
     };
@@ -240,9 +369,12 @@ export default function AdminTasksScreen() {
         setLoading(false);
       }
     }
-  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, selectedUser]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, includeDoneWhenNoStatusFilter, selectedUser]);
 
   useEffect(() => {
+    if (!persistedHydrated) {
+      return;
+    }
     let timeout: ReturnType<typeof setTimeout> | undefined;
     if (query) {
       timeout = setTimeout(() => fetchTasks(), 500);
@@ -250,7 +382,7 @@ export default function AdminTasksScreen() {
       fetchTasks();
     }
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, fetchTasks]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, includeDoneWhenNoStatusFilter, persistedHydrated, fetchTasks]);
 
   const resetForm = () => {
     setFormData({
@@ -785,6 +917,19 @@ export default function AdminTasksScreen() {
           searchData={[]}
           onSearch={handleHeaderSearch}
           hideModeToggle
+          searchBarRemountKey={searchBarRemountKey}
+          initialSearchText={hasPersistedSnapshot ? query : undefined}
+          initialSelectedFilters={
+            hasPersistedSnapshot
+              ? buildPersistedAdminTaskFilterKeys(
+                filterAssignee,
+                filterStatuses,
+                filterPriorities,
+                includeDoneWhenNoStatusFilter,
+              )
+              : undefined
+          }
+          initialSelectedSorts={hasPersistedSnapshot ? [listSort] : undefined}
         />
       </View>
       {/* List container - limited height on web to ensure scrolling works */}
