@@ -248,7 +248,16 @@ export const useUserStore = create<UserState>((set, get) => ({
   setCurrentPrincipal: async (principal: { user: User | null; role: Role }) => {
     try {
       console.log('🔐 userStore - setCurrentPrincipal:', { user: principal.user?.name || 'null', role: principal.role });
-      if (principal.role === 'guest' || !principal.user) {
+      if (principal.role === 'guest') {
+        set({
+          selectedUser: principal.user ?? null,
+          isAuthenticated: true,
+          isGuestMode: true,
+          authMode: 'guest',
+        });
+        return;
+      }
+      if (!principal.user) {
         set({
           selectedUser: null,
           isAuthenticated: true,
@@ -284,7 +293,14 @@ export const useUserStore = create<UserState>((set, get) => ({
     } catch (error) {
       console.error('Error in setCurrentPrincipal:', error);
       // Fallbacks
-      if (principal.role === 'guest' || !principal.user) {
+      if (principal.role === 'guest') {
+        set({
+          selectedUser: principal.user ?? null,
+          isAuthenticated: true,
+          isGuestMode: true,
+          authMode: 'guest',
+        });
+      } else if (!principal.user) {
         set({
           selectedUser: null,
           isAuthenticated: true,
