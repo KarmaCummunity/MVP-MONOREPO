@@ -1,5 +1,6 @@
 // Purpose: Bottom sheet (80% height) for feed sort/filter options on the home posts screen.
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -32,6 +33,7 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
   value,
   onChange,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const screenH = Dimensions.get('window').height;
   const sheetMaxH = screenH * SHEET_HEIGHT_RATIO;
@@ -107,9 +109,9 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
         >
           <View style={styles.handleBar} />
           <View style={styles.headerRow}>
-            <Text style={styles.title}>סינון ומיון</Text>
+            <Text style={styles.title}>{t('feed.filterSheet.title')}</Text>
             <TouchableOpacity onPress={reset} hitSlop={12}>
-              <Text style={styles.resetText}>איפוס</Text>
+              <Text style={styles.resetText}>{t('feed.filterSheet.reset')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -119,23 +121,23 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionTitle}>מיון</Text>
-            {sortRow('date', 'לפי תאריך', 'החדשים ביותר למעלה')}
-            {sortRow('engagement', 'לפי מעורבות', 'לייקים והערות')}
-            {sortRow('relevance', 'לפי התאמה', 'שילוב מעורבות ועדכניות')}
+            <Text style={styles.sectionTitle}>{t('feed.filterSheet.sortSection')}</Text>
+            {sortRow('date', t('feed.filterSheet.sortDate'), t('feed.filterSheet.sortDateHint'))}
+            {sortRow('engagement', t('feed.filterSheet.sortEngagement'), t('feed.filterSheet.sortEngagementHint'))}
+            {sortRow('relevance', t('feed.filterSheet.sortRelevance'), t('feed.filterSheet.sortRelevanceHint'))}
 
-            <Text style={[styles.sectionTitle, styles.sectionSpaced]}>סינון</Text>
-            {toggleRow('onlyOpenPosts', 'רק פוסטים פתוחים', 'משימות, נסיעות ופריטים שעדיין זמינים')}
-            {toggleRow('verifiedAuthorsOnly', 'רק מיוצרים מאומתים', 'משתמשים עם אימות אימייל')}
+            <Text style={[styles.sectionTitle, styles.sectionSpaced]}>{t('feed.filterSheet.filterSection')}</Text>
+            {toggleRow('onlyOpenPosts', t('feed.filterSheet.onlyOpen'), t('feed.filterSheet.onlyOpenHint'))}
+            {toggleRow('verifiedAuthorsOnly', t('feed.filterSheet.verifiedOnly'), t('feed.filterSheet.verifiedOnlyHint'))}
 
-            <Text style={[styles.sectionTitle, styles.sectionSpaced]}>סוג תוכן</Text>
-            {toggleRow('includeTasks', 'הצג משימות')}
-            {toggleRow('includeRides', 'הצג נסיעות')}
-            {toggleRow('includeItemsAndDonations', 'הצג פריטים ותרומות')}
+            <Text style={[styles.sectionTitle, styles.sectionSpaced]}>{t('feed.filterSheet.contentSection')}</Text>
+            {toggleRow('includeTasks', t('feed.filterSheet.includeTasks'))}
+            {toggleRow('includeRides', t('feed.filterSheet.includeRides'))}
+            {toggleRow('includeItemsAndDonations', t('feed.filterSheet.includeItems'))}
           </ScrollView>
 
           <TouchableOpacity style={styles.doneButton} onPress={onClose} activeOpacity={0.85}>
-            <Text style={styles.doneButtonText}>סיום</Text>
+            <Text style={styles.doneButtonText}>{t('feed.filterSheet.done')}</Text>
           </TouchableOpacity>
         </View>
       </View>
