@@ -17,6 +17,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "prepare": "husky install",
+    "postinstall": "npm run build --workspace=@kc/shared-types",
     "quality:api": "npm run quality:gate --workspace @kc/api",
     "sonar:report": "node sonar/sonar-report.js",
     "sonar:pre-push": "./sonar/pre-push-sonar-check.sh"

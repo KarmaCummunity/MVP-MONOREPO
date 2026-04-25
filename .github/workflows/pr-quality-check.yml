@@ -51,6 +51,9 @@ jobs:
             FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
             echo "no_files=false" >> $GITHUB_OUTPUT
             echo "count=$FILE_COUNT" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
             
             echo "### 📝 Changed Files ($FILE_COUNT)" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
