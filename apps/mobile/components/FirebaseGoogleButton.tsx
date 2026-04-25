@@ -6,23 +6,20 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
-import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../utils/config.constants';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 import { logger } from '../utils/loggerService';
+import { establishSessionFromGoogleResponse } from '../session/loginFlows';
+import { useUserStore } from '../stores/userStore';
 
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
-  const { setSelectedUserWithMode, isAuthenticated, isGuestMode } = useUser();
-  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -121,59 +118,11 @@ export default function FirebaseGoogleButton() {
         hasTokens: !!serverResponse.tokens,
       });
 
-      // Save JWT tokens if provided
-      if (serverResponse.tokens) {
-        const AsyncStorage = await import('@react-native-async-storage/async-storage');
-        await AsyncStorage.default.setItem('jwt_access_token', serverResponse.tokens.accessToken);
-        await AsyncStorage.default.setItem('jwt_refresh_token', serverResponse.tokens.refreshToken);
-        await AsyncStorage.default.setItem('jwt_token_expires_at', 
-          String(Date.now() + (serverResponse.tokens.expiresIn * 1000))
-        );
-        logger.debug('FirebaseGoogleButton', 'JWT tokens saved to storage');
-      }
-
-      // Use server-verified user data
-      const serverUser = serverResponse.user;
-      
-      
-      const userData = {
-        id: serverUser.id,
-        name: serverUser.name || user.displayName || user.email?.split('@')[0] || 'User',
-        email: serverUser.email || user.email || '',
-        avatar: serverUser.avatar || serverUser.avatar_url || user.photoURL || 'https://i.pravatar.cc/150?img=1',
-        phone: user.phoneNumber || '+972500000000',
-        bio: serverUser.bio || '',
-        karmaPoints: serverUser.karmaPoints || 0,
-        joinDate: serverUser.joinDate || new Date().toISOString(),
-        isActive: serverUser.isActive !== false,
-        lastActive: serverUser.lastActive || new Date().toISOString(),
-        location: serverUser.location || { city: 'ישראל', country: 'IL' },
-        interests: serverUser.interests || [],
-        roles: serverUser.roles || ['user'],
-        postsCount: serverUser.postsCount || 0,
-        followersCount: serverUser.followersCount || 0,
-        followingCount: serverUser.followingCount || 0,
-        notifications: serverUser.notifications || [
-          { type: 'system', text: 'ברוך הבא לקרמה קומיוניטי!', date: new Date().toISOString() }
-        ],
-        settings: serverUser.settings || {
-          language: 'he',
-          darkMode: false,
-          notificationsEnabled: true
-        }
-      };
-      logger.debug('FirebaseGoogleButton', 'User data prepared from server', {
-        email: userData.email,
-      });
-
-      logger.debug('FirebaseGoogleButton', 'Saving to UserStore');
-      await setSelectedUserWithMode(userData, 'real');
-      logger.debug('FirebaseGoogleButton', 'UserStore updated');
-
-      logger.debug('FirebaseGoogleButton', 'Saving to AsyncStorage');
-      await AsyncStorage.setItem('current_user', JSON.stringify(userData));
-      await AsyncStorage.setItem('auth_mode', 'real');
-      logger.debug('FirebaseGoogleButton', 'AsyncStorage updated');
+      // Single SSoT pipeline: tokens + canonical UUID + persistence are handled by AuthSessionService.
+      await establishSessionFromGoogleResponse(serverResponse, { firebaseUid: user.uid });
+      // Sync the Zustand projection.
+      await useUserStore.getState().checkAuthStatus();
+      logger.debug('FirebaseGoogleButton', 'Session established via AuthSessionService');
 
       // Give React time to update state and re-render before navigation
       // Use longer timeout for iOS/mobile web to ensure state is fully updated

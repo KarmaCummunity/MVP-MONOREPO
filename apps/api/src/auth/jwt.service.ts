@@ -2,10 +2,24 @@
 // - Purpose: JWT service for secure session token creation, validation, and refresh token management
 // - Provides: Session token creation, validation, refresh tokens, secure signing
 // - Security: Uses HMAC-SHA256 signing (SEC-001.1), proper expiration, blacklist support
+// - SSoT contract: `userId` (the JWT actor / "sub" equivalent) is ALWAYS the canonical
+//   `user_profiles.id` UUID. Firebase UID and Google `sub` are mapping inputs only and MUST
+//   NOT be issued as tokens. Enforced in `createTokenPair`.
 
 import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { randomBytes, createHash, createHmac } from "crypto";
+
+const USER_PROFILE_UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Canonical user-profile UUID guard.
+ * Used inside `JwtService.createTokenPair` to refuse minting tokens with non-UUID actor ids.
+ */
+export function isCanonicalUserProfileUuid(value: unknown): value is string {
+  return typeof value === "string" && USER_PROFILE_UUID_REGEX.test(value);
+}
 
 export interface SessionTokenPayload {
   userId: string;
@@ -54,6 +68,22 @@ export class JwtService {
     email: string;
     roles?: string[];
   }): Promise<TokenPair> {
+    // SSoT enforcement: refuse to mint tokens whose actor id is not a canonical
+    // `user_profiles.id` UUID. Firebase UIDs / Google `sub` values must be resolved first.
+    if (!isCanonicalUserProfileUuid(user.id)) {
+      const id: unknown = user.id;
+      this.logger.error(
+        "Refusing to issue JWT with non-UUID user id (SSoT violation)",
+        {
+          idShape: typeof id,
+          length: typeof id === "string" ? id.length : 0,
+        },
+      );
+      throw new Error(
+        "JWT subject must be a canonical user_profiles.id UUID",
+      );
+    }
+
     const sessionId = this.generateSessionId();
     const now = Math.floor(Date.now() / 1000);
 

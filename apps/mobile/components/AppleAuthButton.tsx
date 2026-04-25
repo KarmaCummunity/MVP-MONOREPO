@@ -5,31 +5,20 @@ import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { API_BASE_URL } from '../utils/config.constants';
 import { logger } from '../utils/loggerService';
-import { persistApiJwtTokens } from '../utils/persistApiJwtTokens';
-
-export type AppleAuthSuccessPayload = {
-  user: {
-    id: string;
-    email: string;
-    name?: string;
-    avatar?: string;
-    roles?: string[];
-    settings?: {
-      language?: string;
-      darkMode?: boolean;
-      notificationsEnabled?: boolean;
-    };
-  };
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-    refreshExpiresIn?: number;
-  };
-};
 
 type Props = {
-  onSuccess: (payload: AppleAuthSuccessPayload) => void;
+  onSuccess: (serverResponse: {
+    success?: boolean;
+    user?: {
+      id: string;
+      email?: string;
+      name?: string;
+      avatar?: string;
+      avatar_url?: string;
+      roles?: string[];
+    };
+    tokens?: { accessToken: string; refreshToken: string; expiresIn: number };
+  }) => void;
   onError?: (message: string) => void;
 };
 
@@ -92,12 +81,6 @@ export default function AppleAuthButton({ onSuccess, onError }: Props) {
         throw new Error(msg);
       }
 
-      await persistApiJwtTokens({
-        accessToken: data.tokens.accessToken,
-        refreshToken: data.tokens.refreshToken,
-        expiresIn: data.tokens.expiresIn,
-      });
-
       let displayName = data.user.name as string | undefined;
       if (
         credential.fullName &&
@@ -111,6 +94,7 @@ export default function AppleAuthButton({ onSuccess, onError }: Props) {
       }
 
       onSuccess({
+        success: data.success,
         user: {
           ...data.user,
           name: displayName || data.user.name,

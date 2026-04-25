@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import GoogleAuthService from './GoogleAuthService';
+import type { AuthTokens, SecureAuthUser } from './GoogleAuthService';
 import { createOAuthConfig } from './AuthConfiguration';
 import colors from '../globals/colors';
 import { logger } from '../utils/loggerService';
@@ -37,8 +38,8 @@ if (Platform.OS === 'web') {
 }
 
 export interface SecureGoogleAuthButtonProps {
-    /** Callback fired on successful authentication */
-    onSuccess?: (user: any) => void;
+    /** Callback fired on successful authentication (server tokens + user) */
+    onSuccess?: (data: { user: SecureAuthUser; tokens: AuthTokens }) => void;
     /** Callback fired on authentication error */
     onError?: (error: any) => void;
     /** Whether to show a small security indicator icon */
@@ -85,14 +86,25 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
                         response.params.id_token
                     );
 
-                    if (authResult.success) {
+                    if (authResult.success && authResult.data?.user && authResult.data?.tokens) {
                         logger.info('SecureGoogleAuthButton', 'Authentication completed successfully');
-                        if (onSuccess) onSuccess(authResult.data?.user);
+                        if (onSuccess) {
+                            onSuccess({
+                                user: authResult.data.user,
+                                tokens: authResult.data.tokens,
+                            });
+                        }
                     } else {
                         logger.error('SecureGoogleAuthButton', 'Server verification failed', {
-                            error: authResult.error
+                            error: authResult.error,
                         });
-                        if (onError) onError(new Error(authResult.error));
+                        if (onError) {
+                            onError(
+                                new Error(
+                                    authResult.error || 'Missing user or tokens in auth response',
+                                ),
+                            );
+                        }
                     }
                 } catch (error) {
                     logger.error('SecureGoogleAuthButton', 'Unexpected authentication error', { error });
@@ -109,6 +121,8 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
         };
 
         handleResponse();
+        // OAuth `response` is one-shot; parent handlers are optional and may be inline.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid re-firing on callback identity
     }, [response]);
 
     const handlePress = async () => {
