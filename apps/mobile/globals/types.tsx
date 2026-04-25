@@ -49,7 +49,7 @@ export type DonationsStackParamList = {
   CommunityChallengesScreen: { mode?: 'search' | 'offer' } | undefined;
   ChallengeDetailsScreen: { challengeId: string; openEntryForm?: boolean } | undefined;
   ChallengeStatisticsScreen: undefined;
-  MyChallengesScreen: undefined;
+  MyChallengesScreen: { scrollToDailyTracker?: boolean } | undefined;
   MyCreatedChallengesScreen: undefined;
   // Top bar accessible screens that are also used inside the Donations stack
   ChatListScreen: undefined;

@@ -1,7 +1,7 @@
 // My Challenges Screen
 // Shows all challenges the user has joined/participating in
 // Allows adding entries for each challenge
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
@@ -47,11 +47,14 @@ type ChallengeWithParticipation = CommunityChallenge & {
   participation?: ChallengeParticipant;
 };
 
-export default function MyChallengesScreen({ navigation, route }: MyChallengesScreenProps) {
+export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
+  const navigation = useNavigation<NavigationProp<DonationsStackParamList>>() as NavigationProp<DonationsStackParamList>;
+  const route = useRoute<RouteProp<DonationsStackParamList, 'MyChallengesScreen'>>();
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
   const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList>(null);
 
   const [challenges, setChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<ChallengeWithParticipation[]>([]);
@@ -66,6 +69,15 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
       loadChallenges();
     }, [])
   );
+
+  useEffect(() => {
+    if (route.params?.scrollToDailyTracker !== true) return;
+    const id = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      navigation.setParams({ scrollToDailyTracker: undefined });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [route.params?.scrollToDailyTracker, navigation]);
 
   // Apply search filter
   React.useEffect(() => {
@@ -286,6 +298,7 @@ export default function MyChallengesScreen({ navigation, route }: MyChallengesSc
 
       <View style={styles.listOuter}>
         <FlatList
+          ref={listRef}
           style={styles.flatList}
           data={filteredChallenges}
           renderItem={renderChallengeCard}

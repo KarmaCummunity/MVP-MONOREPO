@@ -42,6 +42,16 @@ export const getDBKey = (collection: string, userId: string, itemId?: string) =>
   return `${collection}_${userId}`;
 };
 
+const DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX = 'daily_challenge_reminder_last_emitted_date_';
+
+export async function getDailyChallengeReminderLastEmittedDate(userId: string): Promise<string | null> {
+  return AsyncStorage.getItem(`${DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX}${userId}`);
+}
+
+export async function setDailyChallengeReminderLastEmittedDate(userId: string, date: string): Promise<void> {
+  await AsyncStorage.setItem(`${DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX}${userId}`, date);
+}
+
 // Generic Database Service
 // TODO: Convert to proper class instance instead of static methods
 // TODO: Add proper dependency injection for different adapters
