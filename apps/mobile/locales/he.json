@@ -87,6 +87,7 @@
         "verifiedOnly": "רק מיוצרים מאומתים",
         "verifiedOnlyHint": "משתמשים עם אימות אימייל",
         "contentSection": "סוג תוכן",
+        "contentSectionHint": "כשמשביתים קטגוריה, פוסטים רגילים (טקסט/תמונה) יוסתרו גם כן",
         "includeTasks": "הצג משימות",
         "includeRides": "הצג נסיעות",
         "includeItems": "הצג פריטים ותרומות"

@@ -131,6 +131,7 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
             {toggleRow('verifiedAuthorsOnly', t('feed.filterSheet.verifiedOnly'), t('feed.filterSheet.verifiedOnlyHint'))}
 
             <Text style={[styles.sectionTitle, styles.sectionSpaced]}>{t('feed.filterSheet.contentSection')}</Text>
+            <Text style={styles.sectionHint}>{t('feed.filterSheet.contentSectionHint')}</Text>
             {toggleRow('includeTasks', t('feed.filterSheet.includeTasks'))}
             {toggleRow('includeRides', t('feed.filterSheet.includeRides'))}
             {toggleRow('includeItemsAndDonations', t('feed.filterSheet.includeItems'))}
@@ -207,6 +208,13 @@ const styles = StyleSheet.create({
   },
   sectionSpaced: {
     marginTop: 20,
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'right',
+    marginBottom: 10,
+    lineHeight: 17,
   },
   sortRow: {
     flexDirection: 'row-reverse',
