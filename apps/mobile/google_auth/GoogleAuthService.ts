@@ -30,6 +30,7 @@ import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL as GLOBAL_API_BASE_URL } from '../utils/dbConfig';
+import { persistApiJwtTokens } from '../utils/persistApiJwtTokens';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -844,6 +845,14 @@ class GoogleAuthService {
         this.storeSecurely(STORAGE_KEYS.LAST_AUTH_CHECK, Date.now().toString()),
       ]);
 
+      if (Platform.OS !== 'web') {
+        await persistApiJwtTokens({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: tokens.expiresIn,
+        });
+      }
+
       logger.debug('GoogleAuthService', 'Authentication data stored securely');
 
     } catch (error) {
@@ -876,6 +885,14 @@ class GoogleAuthService {
         this.removeFromSecureStorage(STORAGE_KEYS.SESSION_ID),
         this.removeFromSecureStorage(STORAGE_KEYS.LAST_AUTH_CHECK),
       ]);
+
+      if (Platform.OS !== 'web') {
+        await AsyncStorage.multiRemove([
+          'jwt_access_token',
+          'jwt_refresh_token',
+          'jwt_token_expires_at',
+        ]);
+      }
 
       // Update authentication state
       this.setAuthState('unauthenticated');

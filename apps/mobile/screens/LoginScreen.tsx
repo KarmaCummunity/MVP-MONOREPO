@@ -30,6 +30,8 @@ import {
     sendVerification
 } from '../utils/authService';
 import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
+import SecureGoogleAuthButton from '../google_auth/SecureGoogleAuthButton';
+import AppleAuthButton from '../components/AppleAuthButton';
 import i18n from '../app/i18n';
 
 const { height } = Dimensions.get('window');
@@ -306,9 +308,121 @@ export default function LoginScreen() {
                     {/* Form Card */}
                     <View style={styles.card}>
 
-                        {/* Google Login */}
+                        {/* Social login: web uses Firebase popup; iOS/Android use native Google + Apple */}
                         <View style={styles.googleContainer}>
-                            <FirebaseGoogleButton />
+                            {Platform.OS === 'web' ? (
+                                <FirebaseGoogleButton />
+                            ) : (
+                                <>
+                                    <SecureGoogleAuthButton
+                                        label={t('auth:googleCta')}
+                                        onSuccess={async () => {
+                                            const GoogleAuthService = (
+                                                await import('../google_auth/GoogleAuthService')
+                                            ).default;
+                                            const svc = GoogleAuthService.getInstance();
+                                            const u = svc.getCurrentUser();
+                                            if (!u) return;
+                                            const nowIso = new Date().toISOString();
+                                            const userData = {
+                                                id: u.id,
+                                                name: u.name || u.email.split('@')[0],
+                                                email: u.email,
+                                                phone: '',
+                                                avatar: u.avatar || 'https://i.pravatar.cc/150?img=1',
+                                                bio: '',
+                                                karmaPoints: 0,
+                                                joinDate: u.metadata?.accountCreatedAt || nowIso,
+                                                isActive: true,
+                                                lastActive: u.metadata?.lastLoginAt || nowIso,
+                                                location: { city: 'ישראל', country: 'IL' },
+                                                interests: [] as string[],
+                                                roles: u.roles || ['user'],
+                                                postsCount: 0,
+                                                followersCount: 0,
+                                                followingCount: 0,
+                                                notifications: [] as Array<{ type: string; text: string; date: string }>,
+                                                settings: {
+                                                    language: u.settings?.language || 'he',
+                                                    darkMode: u.settings?.darkMode ?? false,
+                                                    notificationsEnabled: u.settings?.notificationsEnabled ?? true,
+                                                },
+                                            };
+                                            await setCurrentPrincipal({ user: userData, role: 'user' });
+                                            await AsyncStorage.setItem('current_user', JSON.stringify(userData));
+                                            await AsyncStorage.setItem('auth_mode', 'real');
+                                            const guardContext = {
+                                                isAuthenticated: true,
+                                                isGuestMode: false,
+                                                isAdmin: false,
+                                            };
+                                            const guardResult = await checkNavigationGuards(
+                                                { type: 'reset', index: 0, routes: [{ name: 'HomeStack' }] },
+                                                guardContext,
+                                            );
+                                            if (!guardResult.allowed && guardResult.redirectTo) {
+                                                await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
+                                            } else {
+                                                await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+                                            }
+                                        }}
+                                        onError={() => {
+                                            Alert.alert(t('common:error'), t('common:genericTryAgain'));
+                                        }}
+                                    />
+                                    <View style={{ height: 12 }} />
+                                    <AppleAuthButton
+                                        onSuccess={async (payload) => {
+                                            const nowIso = new Date().toISOString();
+                                            const u = payload.user;
+                                            const userData = {
+                                                id: u.id,
+                                                name: u.name || u.email.split('@')[0],
+                                                email: u.email,
+                                                phone: '',
+                                                avatar: u.avatar || 'https://i.pravatar.cc/150?img=1',
+                                                bio: '',
+                                                karmaPoints: 0,
+                                                joinDate: nowIso,
+                                                isActive: true,
+                                                lastActive: nowIso,
+                                                location: { city: 'ישראל', country: 'IL' },
+                                                interests: [] as string[],
+                                                roles: u.roles || ['user'],
+                                                postsCount: 0,
+                                                followersCount: 0,
+                                                followingCount: 0,
+                                                notifications: [] as Array<{ type: string; text: string; date: string }>,
+                                                settings: {
+                                                    language: u.settings?.language || 'he',
+                                                    darkMode: u.settings?.darkMode ?? false,
+                                                    notificationsEnabled: u.settings?.notificationsEnabled ?? true,
+                                                },
+                                            };
+                                            await setCurrentPrincipal({ user: userData, role: 'user' });
+                                            await AsyncStorage.setItem('current_user', JSON.stringify(userData));
+                                            await AsyncStorage.setItem('auth_mode', 'real');
+                                            const guardContext = {
+                                                isAuthenticated: true,
+                                                isGuestMode: false,
+                                                isAdmin: false,
+                                            };
+                                            const guardResult = await checkNavigationGuards(
+                                                { type: 'reset', index: 0, routes: [{ name: 'HomeStack' }] },
+                                                guardContext,
+                                            );
+                                            if (!guardResult.allowed && guardResult.redirectTo) {
+                                                await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
+                                            } else {
+                                                await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+                                            }
+                                        }}
+                                        onError={(msg) => {
+                                            Alert.alert(t('common:error'), msg);
+                                        }}
+                                    />
+                                </>
+                            )}
                         </View>
 
                         <View style={styles.divider}>

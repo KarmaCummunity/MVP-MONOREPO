@@ -436,7 +436,10 @@ export const useUserStore = create<UserState>((set, get) => ({
         'oauth_in_progress',
         'oauth_success_flag',
         'google_auth_user',
-        'google_auth_token'
+        'google_auth_token',
+        'jwt_access_token',
+        'jwt_refresh_token',
+        'jwt_token_expires_at',
       ]);
 
       console.log('🔐 userStore - signOut - Setting user state to null');

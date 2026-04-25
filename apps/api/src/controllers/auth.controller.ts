@@ -37,6 +37,7 @@ import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import * as argon2 from "argon2";
 import { OAuth2Client } from "google-auth-library";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { PG_POOL } from "../database/database.module";
 import {
   IsString,
@@ -49,6 +50,10 @@ import { Transform } from "class-transformer";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { JwtService } from "../auth/jwt.service";
 import { RedisCacheService } from "../redis/redis-cache.service";
+
+const APPLE_JWKS = createRemoteJWKSet(
+  new URL("https://appleid.apple.com/auth/keys"),
+);
 
 // DTO for Google Auth with proper validation
 // Ensures tokens are within expected length ranges to prevent malformed data
@@ -67,6 +72,13 @@ class GoogleAuthDto {
   @IsOptional()
   @Length(1, 200, { message: "Firebase UID length is invalid" })
   firebaseUid?: string; // Firebase UID from Firebase Auth (different from Google ID)
+}
+
+/** Sign in with Apple: identity token from Apple (JWT) */
+class AppleAuthDto {
+  @IsString()
+  @Length(50, 8000, { message: "Apple identity token length is invalid" })
+  identityToken!: string;
 }
 
 // DTO for token refresh
@@ -965,6 +977,257 @@ export class AuthController {
 
       throw new InternalServerErrorException("Google authentication failed");
     }
+  }
+
+  /**
+   * Sign in with Apple: verify identity token JWT from Apple, upsert user, return JWT pair.
+   */
+  @Post("apple")
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async appleAuth(@Body() body: AppleAuthDto) {
+    const errors = await validate(body);
+    if (errors.length > 0) {
+      throw new BadRequestException("Invalid token format");
+    }
+
+    const bundleId =
+      process.env.APPLE_BUNDLE_ID ||
+      process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
+      "com.navesarussi1.KarmaCommunity";
+
+    let sub: string;
+    let email: string | undefined;
+    let emailVerified = false;
+
+    try {
+      const { payload } = await jwtVerify(body.identityToken, APPLE_JWKS, {
+        issuer: "https://appleid.apple.com",
+        audience: bundleId,
+      });
+      sub = String(payload.sub || "");
+      if (!sub) {
+        throw new BadRequestException("Invalid Apple token");
+      }
+      if (typeof payload.email === "string" && payload.email) {
+        email = this.normalizeEmail(payload.email);
+      }
+      emailVerified = payload.email_verified === true || payload.email_verified === "true";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Apple identity token verification failed: ${msg}`);
+      throw new BadRequestException("Invalid Apple identity token");
+    }
+
+    if (!email) {
+      throw new BadRequestException(
+        "Apple did not provide an email. Sign in again with name/email shared, or link Apple in Apple ID settings.",
+      );
+    }
+
+    if (!emailVerified) {
+      throw new BadRequestException("Apple email must be verified");
+    }
+
+    if (!this.isValidEmail(email)) {
+      throw new BadRequestException("Invalid email from Apple");
+    }
+
+    const nowIso = new Date().toISOString();
+    const emailParts = email.split("@");
+    const safeEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+    this.logger.log(`Processing Apple auth for user: ${safeEmail}`);
+
+    type UserProfileRow = {
+      id: string;
+      email: string;
+      name: string | null;
+      avatar_url: string | null;
+      apple_id?: string | null;
+      roles?: string[] | null;
+      settings?: UserSettings | null;
+      created_at?: string | Date;
+      last_active?: string | Date;
+    };
+
+    let rows: UserProfileRow[];
+    try {
+      const result = await this.pool.query(
+        `SELECT id, email, name, avatar_url, apple_id, roles, settings, created_at, last_active
+         FROM user_profiles
+         WHERE LOWER(email) = $1 OR apple_id = $2
+         LIMIT 1`,
+        [email, sub],
+      );
+      rows = result.rows as UserProfileRow[];
+    } catch (error_: unknown) {
+      const error = error_ as Error;
+      if (error.message?.includes("apple_id")) {
+        const result = await this.pool.query(
+          `SELECT id, email, name, avatar_url, roles, settings, created_at, last_active
+           FROM user_profiles
+           WHERE LOWER(email) = $1
+           LIMIT 1`,
+          [email],
+        );
+        rows = result.rows as UserProfileRow[];
+      } else {
+        throw error;
+      }
+    }
+
+    let userData: PublicUser;
+    let userId: string;
+
+    if (rows.length > 0) {
+      userId = rows[0].id;
+      try {
+        await this.pool.query(
+          `UPDATE user_profiles
+           SET name = COALESCE(name, $1), apple_id = $2, last_active = $3, updated_at = NOW()
+           WHERE id = $4`,
+          [email.split("@")[0] || "Apple User", sub, nowIso, userId],
+        );
+      } catch (error_: unknown) {
+        const error = error_ as Error;
+        if (error.message?.includes("apple_id")) {
+          await this.pool.query(
+            `UPDATE user_profiles SET last_active = $1, updated_at = NOW() WHERE id = $2`,
+            [nowIso, userId],
+          );
+        } else {
+          throw error;
+        }
+      }
+
+      const { rows: updatedRows } = await this.pool.query(
+        `SELECT id, email, name, avatar_url, roles, settings, created_at, last_active
+         FROM user_profiles WHERE id = $1`,
+        [userId],
+      );
+
+      userData = {
+        id: updatedRows[0].id,
+        email: updatedRows[0].email,
+        name: updatedRows[0].name ?? undefined,
+        avatar: updatedRows[0].avatar_url ?? undefined,
+        roles: updatedRows[0].roles || ["user"],
+        settings: updatedRows[0].settings || {},
+        createdAt: updatedRows[0].created_at
+          ? new Date(updatedRows[0].created_at).toISOString()
+          : undefined,
+        lastActive: updatedRows[0].last_active
+          ? new Date(updatedRows[0].last_active).toISOString()
+          : undefined,
+      };
+      await this.redisCache.clearStatsCaches();
+    } else {
+      let newUser: { rows: UserProfileRow[] };
+      const displayName = email.split("@")[0] || "Apple User";
+      try {
+        const result = await this.pool.query(
+          `INSERT INTO user_profiles (
+            apple_id, email, name, avatar_url, bio,
+            karma_points, join_date, is_active, last_active,
+            city, country, interests, roles, email_verified, settings
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::text[], $13::text[], $14, $15::jsonb)
+          RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
+          [
+            sub,
+            email,
+            displayName,
+            "https://i.pravatar.cc/150?img=1",
+            "משתמש חדש בקארמה קומיוניטי",
+            0,
+            nowIso,
+            true,
+            nowIso,
+            "ישראל",
+            "Israel",
+            [],
+            ["user"],
+            emailVerified,
+            JSON.stringify({
+              language: "he",
+              darkMode: false,
+              notificationsEnabled: true,
+            }),
+          ],
+        );
+        newUser = result as { rows: UserProfileRow[] };
+      } catch (error_: unknown) {
+        const error = error_ as Error;
+        if (error.message?.includes("apple_id")) {
+          const result = await this.pool.query(
+            `INSERT INTO user_profiles (
+              email, name, avatar_url, bio,
+              karma_points, join_date, is_active, last_active,
+              city, country, interests, roles, email_verified, settings
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12::text[], $13, $14::jsonb)
+            RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
+            [
+              email,
+              displayName,
+              "https://i.pravatar.cc/150?img=1",
+              "משתמש חדש בקארמה קומיוניטי",
+              0,
+              nowIso,
+              true,
+              nowIso,
+              "ישראל",
+              "Israel",
+              [],
+              ["user"],
+              emailVerified,
+              JSON.stringify({
+                language: "he",
+                darkMode: false,
+                notificationsEnabled: true,
+              }),
+            ],
+          );
+          newUser = result as { rows: UserProfileRow[] };
+        } else {
+          throw error;
+        }
+      }
+
+      const { rows: newUserRows } = newUser;
+      userId = newUserRows[0].id;
+      userData = {
+        id: newUserRows[0].id,
+        email: newUserRows[0].email,
+        name: newUserRows[0].name ?? undefined,
+        avatar: newUserRows[0].avatar_url ?? undefined,
+        roles: newUserRows[0].roles || ["user"],
+        settings: newUserRows[0].settings || {},
+        createdAt: newUserRows[0].created_at
+          ? new Date(newUserRows[0].created_at).toISOString()
+          : undefined,
+        lastActive: newUserRows[0].last_active
+          ? new Date(newUserRows[0].last_active).toISOString()
+          : undefined,
+      };
+      await this.redisCache.clearStatsCaches();
+    }
+
+    this.logger.log(`✅ Apple authentication successful (user ID: ${userId})`);
+    const publicUser = this.toPublicUser(userData);
+    const tokenPair = await this.jwtService.createTokenPair({
+      id: publicUser.id,
+      email: publicUser.email,
+      roles: publicUser.roles || ["user"],
+    });
+
+    return {
+      success: true,
+      tokens: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        expiresIn: tokenPair.expiresIn,
+        refreshExpiresIn: tokenPair.refreshExpiresIn,
+      },
+      user: publicUser,
+    };
   }
 
   /**

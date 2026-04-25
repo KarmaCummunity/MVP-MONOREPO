@@ -55,6 +55,9 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.navesarussi1.KarmaCommunity",
+      entitlements: {
+        "com.apple.developer.applesignin": ["Default"],
+      },
       // Associated domains for Universal Links
       associatedDomains: [
         "applinks:karma-community-kc.com",
@@ -125,6 +128,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {
