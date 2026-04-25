@@ -26,12 +26,33 @@ import {
   CreateChallengeEntryDto,
   GetChallengesFilterDto,
 } from "./dto/community-challenge.dto";
+import { UserResolutionService } from "../services/user-resolution.service";
 
 @Controller("api/community-challenges")
 export class CommunityGroupChallengesController {
   private readonly logger = new Logger(CommunityGroupChallengesController.name);
 
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly userResolutionService: UserResolutionService,
+  ) {}
+
+  /**
+   * Resolve a non-UUID user identifier (email/firebase_uid) to a canonical
+   * `user_profiles.id` UUID before using it in DB queries.
+   * Throws BadRequestException if the identifier cannot be resolved.
+   */
+  private async resolveUserIdOrThrow(rawId: string): Promise<string> {
+    const resolved = await this.userResolutionService.resolveUserId(rawId, {
+      throwOnNotFound: false,
+    });
+    if (!resolved) {
+      throw new BadRequestException(
+        `Could not resolve user_id to a canonical user_profiles.id`,
+      );
+    }
+    return resolved;
+  }
 
   /**
    * Create a new community challenge
@@ -284,13 +305,14 @@ export class CommunityGroupChallengesController {
    */
   @Get("daily-tracker")
   async getDailyTrackerData(
-    @Query("user_id") userId: string,
+    @Query("user_id") userIdRaw: string,
     @Query("start_date") startDate?: string,
     @Query("end_date") endDate?: string,
   ) {
-    if (!userId) {
+    if (!userIdRaw) {
       throw new BadRequestException("user_id is required");
     }
+    const userId = await this.resolveUserIdOrThrow(userIdRaw);
 
     this.logger.log(
       `Fetching daily tracker for user ${userId}, range: ${startDate} - ${endDate}`,
@@ -800,13 +822,14 @@ export class CommunityGroupChallengesController {
   @Get(":id/entries")
   async getChallengeEntries(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @Query("user_id") userIdRaw: string,
     @Query("limit") limit?: number,
     @Query("offset") offset?: number,
   ) {
-    if (!userId) {
+    if (!userIdRaw) {
       throw new BadRequestException("user_id is required");
     }
+    const userId = await this.resolveUserIdOrThrow(userIdRaw);
 
     this.logger.log(
       `Fetching entries for challenge ${challengeId}, user ${userId}`,
@@ -905,11 +928,12 @@ export class CommunityGroupChallengesController {
   async updateChallenge(
     @Param("id") challengeId: string,
     @Body() dto: UpdateCommunityGroupChallengeDto,
-    @Query("user_id") userId: string,
+    @Query("user_id") userIdRaw: string,
   ) {
-    if (!userId) {
+    if (!userIdRaw) {
       throw new BadRequestException("user_id is required");
     }
+    const userId = await this.resolveUserIdOrThrow(userIdRaw);
 
     this.logger.log(`Updating challenge ${challengeId}`);
 
@@ -1041,11 +1065,12 @@ export class CommunityGroupChallengesController {
   @Delete(":id")
   async deleteChallenge(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @Query("user_id") userIdRaw: string,
   ) {
-    if (!userId) {
+    if (!userIdRaw) {
       throw new BadRequestException("user_id is required");
     }
+    const userId = await this.resolveUserIdOrThrow(userIdRaw);
 
     this.logger.log(`Deleting challenge ${challengeId}`);
 

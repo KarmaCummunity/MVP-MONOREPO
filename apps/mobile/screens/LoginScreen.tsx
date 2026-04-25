@@ -24,13 +24,10 @@ import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
-import {
-    signInWithEmail,
-    signUpWithEmail,
-    sendVerification
-} from '../utils/authService';
+import { loginWithEmailAndEstablishSession } from '../session/loginFlows';
 import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
 import i18n from '../app/i18n';
+import { useUserStore } from '../stores/userStore';
 
 const { height } = Dimensions.get('window');
 
@@ -114,143 +111,23 @@ export default function LoginScreen() {
 
         setIsLoading(true);
         try {
-            const nowIso = new Date().toISOString();
+            // Single SSoT pipeline: Firebase sign-in + server resolve + session establish.
+            const result = await loginWithEmailAndEstablishSession(email, password);
 
-            // Try to sign in first (unified flow)
-            try {
-                const fbUser = await signInWithEmail(email, password);
-
-                // Get UUID from server using firebase_uid
-                try {
-                    const { apiService } = await import('../utils/apiService');
-                    const resolveResponse = await apiService.resolveUserId({
-                        firebase_uid: fbUser.uid,
-                        email: email
-                    });
-
-                    if (!resolveResponse.success || !resolveResponse.user) {
-                        // Fallback: try to get user by email
-                        const userResponse = await apiService.getUserById(fbUser.email || email);
-                        if (userResponse.success && userResponse.data) {
-                            const serverUser = userResponse.data;
-                            const userData = {
-                                id: serverUser.id, // UUID from database
-                                name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                                email: serverUser.email || email,
-                                isActive: serverUser.is_active !== false,
-                                lastActive: serverUser.last_active || nowIso,
-                                roles: serverUser.roles || ['user'],
-                                settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                                phone: serverUser.phone || fbUser.phoneNumber || '',
-                                avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                                bio: serverUser.bio || '',
-                                karmaPoints: serverUser.karma_points || 0,
-                                joinDate: serverUser.join_date || serverUser.created_at || nowIso,
-                                location: { city: serverUser.city || 'תל אביב', country: serverUser.country || 'Israel' },
-                                interests: serverUser.interests || [],
-                                postsCount: serverUser.posts_count || 0,
-                                followersCount: serverUser.followers_count || 0,
-                                followingCount: serverUser.following_count || 0,
-                                notifications: [],
-                            };
-                            await setCurrentPrincipal({ user: userData, role: 'user' });
-                            await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-                            return;
-                        }
-                        throw new Error('Failed to get user from server');
-                    }
-
-                    // Use UUID from server
-                    const serverUser = resolveResponse.user;
-                    const userData = {
-                        id: serverUser.id, // UUID from database - this is the primary identifier
-                        name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                        email: serverUser.email || email,
-                        isActive: serverUser.isActive !== false,
-                        lastActive: serverUser.lastActive || nowIso,
-                        roles: serverUser.roles || ['user'],
-                        settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                        phone: serverUser.phone || fbUser.phoneNumber || '',
-                        avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                        bio: serverUser.bio || '',
-                        karmaPoints: serverUser.karmaPoints || 0,
-                        joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                        location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
-                        interests: serverUser.interests || [],
-                        postsCount: serverUser.postsCount || 0,
-                        followersCount: serverUser.followersCount || 0,
-                        followingCount: serverUser.followingCount || 0,
-                        notifications: [],
-                    };
-                    await setCurrentPrincipal({ user: userData, role: 'user' });
-                    await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-                    return;
-                } catch (error) {
-                    console.error('Failed to get user UUID from server:', error);
-                    throw error;
-                }
-            } catch (signInError: any) {
-                // If sign in fails with user-not-found, try to register
-                if (signInError.code === 'auth/user-not-found') {
-                    try {
-                        // Try to register new user
-                        const fbUser = await signUpWithEmail(email, password);
-                        await sendVerification(fbUser);
-
-                        Alert.alert(
-                            t('auth:email.verifyTitle'),
-                            t('auth:email.verificationRequired'),
-                            [{ text: t('common:confirm') }]
-                        );
-                        return;
-                    } catch (signUpError: any) {
-                        // If sign up fails with email-already-in-use, try to sign in again
-                        // This might happen if user was created between attempts
-                        if (signUpError.code === 'auth/email-already-in-use') {
-                            const fbUser = await signInWithEmail(email, password);
-                            // Get user data and proceed with login (same logic as above)
-                            const { apiService } = await import('../utils/apiService');
-                            const resolveResponse = await apiService.resolveUserId({
-                                firebase_uid: fbUser.uid,
-                                email: email
-                            });
-
-                            if (resolveResponse.success && resolveResponse.user) {
-                                const serverUser = resolveResponse.user;
-                                const userData = {
-                                    id: serverUser.id,
-                                    name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                                    email: serverUser.email || email,
-                                    isActive: serverUser.isActive !== false,
-                                    lastActive: serverUser.lastActive || nowIso,
-                                    roles: serverUser.roles || ['user'],
-                                    settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                                    phone: serverUser.phone || fbUser.phoneNumber || '',
-                                    avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                                    bio: serverUser.bio || '',
-                                    karmaPoints: serverUser.karmaPoints || 0,
-                                    joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                                    location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
-                                    interests: serverUser.interests || [],
-                                    postsCount: serverUser.postsCount || 0,
-                                    followersCount: serverUser.followersCount || 0,
-                                    followingCount: serverUser.followingCount || 0,
-                                    notifications: [],
-                                };
-                                await setCurrentPrincipal({ user: userData, role: 'user' });
-                                await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-                                return;
-                            }
-                        }
-                        throw signUpError;
-                    }
-                } else {
-                    // For other sign-in errors (like wrong-password), throw to be handled below
-                    throw signInError;
-                }
+            if (result.kind === 'verification_sent') {
+                Alert.alert(
+                    t('auth:email.verifyTitle'),
+                    t('auth:email.verificationRequired'),
+                    [{ text: t('common:confirm') }]
+                );
+                return;
             }
+
+            // The session is established in AuthSessionService; sync the Zustand projection.
+            await useUserStore.getState().checkAuthStatus();
+            await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+            return;
         } catch (error: any) {
-            console.error('Auth action failed', error);
             let msg = t('common:genericTryAgain');
             if (error.code === 'auth/wrong-password') {
                 msg = t('auth:email.wrongPassword', 'סיסמה לא נכונה. אנא נסה שוב.');
