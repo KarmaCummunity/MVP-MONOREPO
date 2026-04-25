@@ -42,6 +42,11 @@ interface HeaderSectionProps {
   hideSortButton?: boolean;
   /** When true, the offer/search mode toggle is not shown (e.g. admin-only screens). */
   hideModeToggle?: boolean;
+  /** Bump to remount SearchBar with new initial filter/sort snapshot (e.g. after AsyncStorage hydrate). */
+  searchBarRemountKey?: number;
+  initialSearchText?: string;
+  initialSelectedFilters?: string[];
+  initialSelectedSorts?: string[];
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -56,6 +61,10 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   onSearch,
   hideSortButton = false,
   hideModeToggle = false,
+  searchBarRemountKey = 0,
+  initialSearchText,
+  initialSelectedFilters,
+  initialSelectedSorts,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -109,11 +118,15 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
         </View>
         <View style={headerStyles.searchBarWrapper}>
           <SearchBar
+            key={`header-search-${searchBarRemountKey}`}
             placeholder={placeholder}
             filterOptions={filterOptions}
             sortOptions={sortOptions}
             searchData={searchData}
             onSearch={onSearch}
+            initialSearchText={initialSearchText}
+            initialSelectedFilters={initialSelectedFilters}
+            initialSelectedSorts={initialSelectedSorts}
             onFiltersChange={handleFiltersChange}
             onSortsChange={handleSortsChange}
             onRemoveFilterRequested={(fn) => { removeFilterRef.current = fn; }}

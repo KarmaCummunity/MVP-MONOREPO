@@ -157,6 +157,7 @@
       "immigrants": "Immigrants",
       "community": "Community",
       "task_assign_me": "Only my tasks",
+      "task_show_completed": "Show completed tasks",
       "task_status_open": "Status: Open",
       "task_status_in_progress": "Status: In progress",
       "task_status_stuck": "Status: Stuck",

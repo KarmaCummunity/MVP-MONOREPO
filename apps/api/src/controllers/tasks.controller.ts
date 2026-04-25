@@ -107,6 +107,29 @@ function parseStatusQueryParam(
   return parsed.length ? parsed : undefined;
 }
 
+const TASK_PRIORITY_VALUES: TaskPriority[] = ["low", "medium", "high"];
+
+function parsePriorityQueryParam(
+  raw: string | string[] | undefined,
+): TaskPriority[] | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const parts = (
+    Array.isArray(raw)
+      ? raw.flatMap((s) => String(s).split(","))
+      : String(raw).split(",")
+  )
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return undefined;
+  }
+  const allowed = new Set<string>(TASK_PRIORITY_VALUES);
+  const parsed = parts.filter((p) => allowed.has(p)) as TaskPriority[];
+  return parsed.length ? parsed : undefined;
+}
+
 function orderByClause(sort: TasksListSort | undefined): string {
   switch (sort) {
     case "created_asc":
@@ -435,7 +458,7 @@ export class TasksController {
   @UseGuards(JwtAuthGuard)
   async listTasks(
     @Query("status") status?: string | string[],
-    @Query("priority") priority?: TaskPriority,
+    @Query("priority") priority?: string | string[],
     @Query("category") category?: string,
     @Query("assignee") assignee?: string,
     @Query("q") searchQuery?: string,
@@ -457,6 +480,7 @@ export class TasksController {
       const offset = Math.max(isNaN(offsetNum) ? 0 : offsetNum, 0);
 
       const statusList = parseStatusQueryParam(status);
+      const priorityList = parsePriorityQueryParam(priority);
       const sortValues: TasksListSort[] = [
         "created_desc",
         "created_asc",
@@ -473,9 +497,13 @@ export class TasksController {
 
       const statusCachePart =
         statusList && statusList.length > 0 ? statusList.join(",") : "all";
+      const priorityCachePart =
+        priorityList && priorityList.length > 0
+          ? priorityList.join(",")
+          : "all";
 
       // Build cache key from query parameters (include search query if present)
-      const cacheKey = `tasks_list_${statusCachePart}_${priority || "all"}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${sort}_${limit}_${offset}`;
+      const cacheKey = `tasks_list_${statusCachePart}_${priorityCachePart}_${category || "all"}_${assignee || "all"}_${searchQuery || "all"}_${sort}_${limit}_${offset}`;
 
       // Cache restored - race condition was fixed by awaiting cache clearing in create/update/delete
       // Try to get from cache (but don't fail if Redis is unavailable)
@@ -504,9 +532,14 @@ export class TasksController {
         }
       }
 
-      if (priority) {
-        params.push(priority);
-        filters.push(`priority = $${params.length}`);
+      if (priorityList && priorityList.length > 0) {
+        if (priorityList.length === 1) {
+          params.push(priorityList[0]);
+          filters.push(`priority = $${params.length}`);
+        } else {
+          params.push(priorityList);
+          filters.push(`priority = ANY($${params.length}::text[])`);
+        }
       }
 
       if (category) {
