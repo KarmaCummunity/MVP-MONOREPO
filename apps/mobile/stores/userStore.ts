@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
 import { logger } from '../utils/loggerService';
+import { ensureUserProfileUuid } from '../utils/ensureUserProfileUuid';
 
 // Auth mode of the current session
 export type AuthMode = 'guest' | 'demo' | 'real';
@@ -256,7 +257,17 @@ export const useUserStore = create<UserState>((set, get) => ({
         });
         return;
       }
-      const enriched = await enrichUserWithOrgRoles(principal.user);
+      let profileUser = principal.user;
+      if (principal.role !== 'guest') {
+        profileUser = await ensureUserProfileUuid(principal.user);
+        if (profileUser.id !== principal.user.id) {
+          await AsyncStorage.setItem('current_user', JSON.stringify(profileUser));
+          logger.info('Auth', 'Persisted user after profile UUID normalization', {
+            previousIdLength: principal.user.id?.length ?? 0,
+          });
+        }
+      }
+      const enriched = await enrichUserWithOrgRoles(profileUser);
       // Treat any non-guest role as real auth
       try {
         const { DatabaseService } = await import('../src/infrastructure/database.service');
@@ -281,8 +292,12 @@ export const useUserStore = create<UserState>((set, get) => ({
           authMode: 'guest',
         });
       } else {
+        const fallbackUser =
+          principal.role !== 'guest' && principal.user
+            ? await ensureUserProfileUuid(principal.user)
+            : principal.user;
         set({
-          selectedUser: principal.user,
+          selectedUser: fallbackUser,
           isAuthenticated: true,
           isGuestMode: false,
           authMode: 'real',
@@ -339,7 +354,9 @@ export const useUserStore = create<UserState>((set, get) => ({
               )
             ]);
 
-            const enrichedUser = await enrichWithTimeout;
+            let enrichedUser = await enrichWithTimeout;
+            enrichedUser = await ensureUserProfileUuid(enrichedUser);
+            await AsyncStorage.setItem('current_user', JSON.stringify(enrichedUser));
 
             set({
               selectedUser: enrichedUser,
@@ -413,7 +430,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                   )
                 ]);
 
-                const enrichedUser = await enrichWithTimeout;
+                let enrichedUser = await enrichWithTimeout;
+                enrichedUser = await ensureUserProfileUuid(enrichedUser);
+                await AsyncStorage.setItem('current_user', JSON.stringify(enrichedUser));
 
                 set({
                   selectedUser: enrichedUser,
@@ -681,11 +700,12 @@ export const useUserStore = create<UserState>((set, get) => ({
                   const userResponse = await apiService.getUserById(firebaseUser.email);
                   if (userResponse.success && userResponse.data) {
                     const serverUser = userResponse.data as ApiUserRecord;
-                    const userData = mapApiUserToUser(serverUser, {
+                    let userData = mapApiUserToUser(serverUser, {
                       displayName: firebaseUser.displayName ?? undefined,
                       email: firebaseUser.email ?? undefined,
                       photoURL: firebaseUser.photoURL ?? undefined,
                     });
+                    userData = await ensureUserProfileUuid(userData);
 
                     await AsyncStorage.setItem('current_user', JSON.stringify(userData));
                     await AsyncStorage.setItem('auth_mode', 'real');
@@ -720,11 +740,12 @@ export const useUserStore = create<UserState>((set, get) => ({
 
               // Use UUID from server
               const serverUser = (resolveResponse as { user: ApiUserRecord }).user;
-              const userData = mapApiUserToUser(serverUser, {
+              let userData = mapApiUserToUser(serverUser, {
                 displayName: firebaseUser.displayName ?? undefined,
                 email: firebaseUser.email ?? undefined,
                 photoURL: firebaseUser.photoURL ?? undefined,
               });
+              userData = await ensureUserProfileUuid(userData);
 
               // Save to AsyncStorage for persistence
               await AsyncStorage.setItem('current_user', JSON.stringify(userData));
