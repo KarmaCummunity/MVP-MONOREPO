@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -19,6 +19,13 @@ import { FeedItem } from '../types/feed';
 import { useFeedData } from '../hooks/useFeedData';
 import PostReelItem from './Feed/PostReelItem';
 import FeedHeader from './Feed/FeedHeader';
+import FeedFilterSheet from './Feed/FeedFilterSheet';
+import {
+  applyFeedFilters,
+  DEFAULT_FEED_FILTER_STATE,
+  feedFiltersActive,
+  type FeedFilterState,
+} from '../utils/feedFilters';
 import CommentsModal from './CommentsModal';
 import OptionsModal from './Feed/OptionsModal';
 import ReportPostModal from './Feed/ReportPostModal';
@@ -66,6 +73,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   // Edit State
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedItemForEdit, setSelectedItemForEdit] = useState<FeedItem | null>(null);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [feedFilterState, setFeedFilterState] = useState<FeedFilterState>(DEFAULT_FEED_FILTER_STATE);
 
   // Post menu hook
   const {
@@ -111,6 +120,13 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   // Custom Hook for Data
   const { feed, loading, refreshing, refresh } = useFeedData(feedMode);
 
+  const filteredFeed = useMemo(
+    () => applyFeedFilters(feed, feedFilterState),
+    [feed, feedFilterState],
+  );
+
+  const filtersActive = useMemo(() => feedFiltersActive(feedFilterState), [feedFilterState]);
+
   // Scroll Handling
   const lastScrollY = useRef(0);
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -133,6 +149,10 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     logger.debug('PostsReelsScreen', 'Navigating to CommunityStatsScreen');
     navigation.navigate('CommunityStatsScreen');
   }, [navigation]);
+
+  const handleFilterPress = useCallback(() => {
+    setFilterSheetVisible(true);
+  }, []);
 
   const handlePostPress = useCallback((item: FeedItem) => {
     logger.debug('PostsReelsScreen', 'Post pressed', { itemId: item.id });
@@ -236,21 +256,29 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     );
   }, [handlePostPress, handleCommentPress, handleMorePress, numColumns]);
 
-  const renderEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      {!loading && (
-        <>
-          <Text style={styles.emptyText}>{t('feed.empty_title') || 'אין פוסטים עדיין'}</Text>
-          <Text style={styles.emptySubtext}>
-            {feedMode === 'friends'
-              ? (t('feed.empty_friends') || 'הוסף חברים כדי לראות פוסטים!')
-              : (t('feed.empty_discovery') || 'היה הראשון לפרסם!')
-            }
-          </Text>
-        </>
-      )}
-    </View>
-  );
+  const renderEmptyComponent = () => {
+    const filteredOut = !loading && feed.length > 0 && filteredFeed.length === 0;
+    return (
+      <View style={styles.emptyContainer}>
+        {!loading && (
+          <>
+            <Text style={styles.emptyText}>
+              {filteredOut
+                ? (t('feed.empty_filtered') || 'אין תוצאות לפי הסינון')
+                : (t('feed.empty_title') || 'אין פוסטים עדיין')}
+            </Text>
+            <Text style={styles.emptySubtext}>
+              {filteredOut
+                ? (t('feed.empty_filtered_hint') || 'שנה את האפשרויות או לחץ איפוס')
+                : feedMode === 'friends'
+                  ? (t('feed.empty_friends') || 'הוסף חברים כדי לראות פוסטים!')
+                  : (t('feed.empty_discovery') || 'היה הראשון לפרסם!')}
+            </Text>
+          </>
+        )}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -261,12 +289,14 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
             feedMode={feedMode}
             setFeedMode={setFeedMode}
             onStatsPress={handleStatsPress}
+            onFilterPress={handleFilterPress}
+            filterActive={filtersActive}
             t={t}
           />
         )}
 
         {/* Floating Slider Control - Rendered independently to respect its absolute positioning */}
-        {!loading && feed.length > 0 && !hideTopBar && (
+        {!loading && filteredFeed.length > 0 && !hideTopBar && (
           <VerticalGridSlider
             numColumns={numColumns}
             onNumColumnsChange={(cols) => {
@@ -278,7 +308,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
         {/* Feed List */}
         <FlatList
-          data={feed}
+          data={filteredFeed}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           key={numColumns} // Force re-render on column change
@@ -301,6 +331,13 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           windowSize={10}
           removeClippedSubviews={false}
           showsVerticalScrollIndicator={false}
+        />
+
+        <FeedFilterSheet
+          visible={filterSheetVisible}
+          onClose={() => setFilterSheetVisible(false)}
+          value={feedFilterState}
+          onChange={setFeedFilterState}
         />
 
         {/* Modals */}

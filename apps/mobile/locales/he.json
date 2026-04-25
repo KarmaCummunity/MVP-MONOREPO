@@ -64,9 +64,33 @@
         "friends": "חברים",
         "discovery": "גילוי"
       },
+      "filterAccessibility": "סינון ומיון פוסטים",
       "empty_title": "אין פוסטים עדיין",
       "empty_friends": "הוסף חברים כדי לראות פוסטים!",
-      "empty_discovery": "היה הראשון לפרסם!"
+      "empty_discovery": "היה הראשון לפרסם!",
+      "empty_filtered": "אין תוצאות לפי הסינון הנוכחי",
+      "empty_filtered_hint": "שנה את האפשרויות או לחץ איפוס בחלון הסינון",
+      "filterSheet": {
+        "title": "סינון ומיון",
+        "reset": "איפוס",
+        "done": "סיום",
+        "sortSection": "מיון",
+        "sortDate": "לפי תאריך",
+        "sortDateHint": "החדשים ביותר למעלה",
+        "sortEngagement": "לפי מעורבות",
+        "sortEngagementHint": "לייקים והערות",
+        "sortRelevance": "לפי התאמה",
+        "sortRelevanceHint": "שילוב מעורבות ועדכניות",
+        "filterSection": "סינון",
+        "onlyOpen": "רק פוסטים פתוחים",
+        "onlyOpenHint": "משימות, נסיעות ופריטים שעדיין זמינים",
+        "verifiedOnly": "רק מיוצרים מאומתים",
+        "verifiedOnlyHint": "משתמשים עם אימות אימייל",
+        "contentSection": "סוג תוכן",
+        "includeTasks": "הצג משימות",
+        "includeRides": "הצג נסיעות",
+        "includeItems": "הצג פריטים ותרומות"
+      }
     },
     "rides": {
       "offered": "טרמפ זמין",

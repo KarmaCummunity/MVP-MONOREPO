@@ -59,6 +59,39 @@
     "favorites": "Favorites",
     "posts": "Posts",
     "inactive": "Inactive",
+    "feed": {
+      "tabs": {
+        "friends": "Friends",
+        "discovery": "Discovery"
+      },
+      "filterAccessibility": "Filter and sort posts",
+      "empty_title": "No posts yet",
+      "empty_friends": "Add friends to see their posts!",
+      "empty_discovery": "Be the first to post!",
+      "empty_filtered": "No results for the current filters",
+      "empty_filtered_hint": "Change options or tap Reset in the filter panel",
+      "filterSheet": {
+        "title": "Filter and sort",
+        "reset": "Reset",
+        "done": "Done",
+        "sortSection": "Sort",
+        "sortDate": "By date",
+        "sortDateHint": "Newest first",
+        "sortEngagement": "By engagement",
+        "sortEngagementHint": "Likes and comments",
+        "sortRelevance": "By relevance",
+        "sortRelevanceHint": "Blend of engagement and freshness",
+        "filterSection": "Filters",
+        "onlyOpen": "Open posts only",
+        "onlyOpenHint": "Tasks, rides, and items still available",
+        "verifiedOnly": "Verified authors only",
+        "verifiedOnlyHint": "Users with verified email",
+        "contentSection": "Content types",
+        "includeTasks": "Show tasks",
+        "includeRides": "Show rides",
+        "includeItems": "Show items and donations"
+      }
+    },
     "rides": {
       "offered": "Ride",
       "completed": "Ride Completed",
