@@ -19,6 +19,8 @@ import { JwtService } from "./jwt.service";
 
 describe("JwtService", () => {
   let service: JwtService;
+  // Canonical user_profiles.id UUID used across all valid-token tests (SSoT).
+  const TEST_USER_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-1234567890ab";
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,7 +32,7 @@ describe("JwtService", () => {
   describe("Token Signing (SEC-001.1)", () => {
     it("should create a valid JWT with 3 parts", async () => {
       const result = await service.createTokenPair({
-        id: "test-user-id",
+        id: TEST_USER_UUID,
         email: "test@example.com",
         roles: ["user"],
       });
@@ -45,7 +47,7 @@ describe("JwtService", () => {
 
     it("should use HMAC-SHA256 (not plain SHA-256)", async () => {
       const result = await service.createTokenPair({
-        id: "test-user-id",
+        id: TEST_USER_UUID,
         email: "test@example.com",
         roles: ["user"],
       });
@@ -65,7 +67,7 @@ describe("JwtService", () => {
 
     it("should include correct claims in the payload", async () => {
       const result = await service.createTokenPair({
-        id: "user-uuid-123",
+        id: TEST_USER_UUID,
         email: "user@karma.com",
         roles: ["user", "admin"],
       });
@@ -75,7 +77,7 @@ describe("JwtService", () => {
         Buffer.from(payloadBase64, "base64url").toString(),
       );
 
-      expect(payload.userId).toBe("user-uuid-123");
+      expect(payload.userId).toBe(TEST_USER_UUID);
       expect(payload.email).toBe("user@karma.com");
       expect(payload.roles).toEqual(["user", "admin"]);
       expect(payload.type).toBe("access");
@@ -85,7 +87,7 @@ describe("JwtService", () => {
 
     it("should set different expiry for access vs refresh tokens", async () => {
       const result = await service.createTokenPair({
-        id: "user-id",
+        id: TEST_USER_UUID,
         email: "user@test.com",
         roles: ["user"],
       });
@@ -102,23 +104,58 @@ describe("JwtService", () => {
     });
   });
 
+  describe("SSoT enforcement (UUID-bound subject)", () => {
+    it("refuses to mint tokens whose user id is not a canonical user_profiles UUID", async () => {
+      // Firebase-style UID (28 chars, no dashes) — must be rejected.
+      await expect(
+        service.createTokenPair({
+          id: "FbAbCdEfGhIjKlMnOpQrStUv12",
+          email: "x@y.com",
+          roles: ["user"],
+        }),
+      ).rejects.toThrow(/UUID/);
+
+      // Email is not a UUID — must be rejected.
+      await expect(
+        service.createTokenPair({
+          id: "alice@example.com",
+          email: "alice@example.com",
+          roles: ["user"],
+        }),
+      ).rejects.toThrow(/UUID/);
+    });
+
+    it("accepts a canonical user_profiles.id UUID", async () => {
+      const canonical = "a1b2c3d4-e5f6-4a7b-8c9d-1234567890ab";
+      const tokens = await service.createTokenPair({
+        id: canonical,
+        email: "ok@example.com",
+        roles: ["user"],
+      });
+      const payload = JSON.parse(
+        Buffer.from(tokens.accessToken.split(".")[1], "base64url").toString(),
+      );
+      expect(payload.userId).toBe(canonical);
+    });
+  });
+
   describe("Token Verification (SEC-001.1)", () => {
     it("should verify a valid access token", async () => {
       const tokens = await service.createTokenPair({
-        id: "verify-user",
+        id: TEST_USER_UUID,
         email: "verify@test.com",
         roles: ["user"],
       });
 
       const payload = await service.verifyToken(tokens.accessToken);
-      expect(payload.userId).toBe("verify-user");
+      expect(payload.userId).toBe(TEST_USER_UUID);
       expect(payload.email).toBe("verify@test.com");
       expect(payload.type).toBe("access");
     });
 
     it("should reject a tampered token", async () => {
       const tokens = await service.createTokenPair({
-        id: "user-original",
+        id: TEST_USER_UUID,
         email: "original@test.com",
         roles: ["user"],
       });
