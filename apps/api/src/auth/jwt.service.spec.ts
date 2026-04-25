@@ -137,6 +137,21 @@ describe("JwtService", () => {
       );
       expect(payload.userId).toBe(canonical);
     });
+
+    it("accepts any well-formed UUID (not just v4)", async () => {
+      // v1 UUID — must not be rejected. Postgres' `uuid` column accepts it and we must not
+      // brick login for a user whose row was generated with a non-v4 UUID.
+      const v1Uuid = "e4eaaaf2-d142-11e1-b3e4-080027620cdd";
+      const tokens = await service.createTokenPair({
+        id: v1Uuid,
+        email: "v1@example.com",
+        roles: ["user"],
+      });
+      const payload = JSON.parse(
+        Buffer.from(tokens.accessToken.split(".")[1], "base64url").toString(),
+      );
+      expect(payload.userId).toBe(v1Uuid);
+    });
   });
 
   describe("Token Verification (SEC-001.1)", () => {

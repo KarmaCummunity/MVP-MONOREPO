@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Branded type and runtime guard for the canonical user identifier.
 // - Reached from: AuthSessionService and any boundary that must enforce UUID identity.
-// - SSoT: `user_profiles.id` (UUID v1-v5) is the only legal canonical user id in the app.
+// - SSoT: `user_profiles.id` (Postgres UUID column) is the only legal canonical user id in the app.
 
 /**
  * Canonical user profile UUID (matches `user_profiles.id` on the server).
@@ -9,13 +9,19 @@
  */
 export type UserProfileId = string & { readonly __brand: 'UserProfileId' };
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/**
+ * Permissive UUID guard. Accepts any 8-4-4-4-12 hex layout that Postgres' `uuid` column will
+ * accept. We intentionally do NOT restrict by version (`[1-5]`) or variant (`[89ab]`) bits —
+ * Postgres accepts every well-formed UUID (including v6/v7 and the nil UUID), and rejecting them
+ * client-side would brick login for any user whose row was generated with a non-v4 UUID.
+ *
+ * Firebase UIDs (28-char alphanumeric, no dashes) and Google `sub` values (digits only) do NOT
+ * match this format and will return false.
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Type guard: returns true if `value` is a canonical user profile UUID string.
- *
- * NOTE: Firebase UIDs and Google `sub` values do NOT match this format and will return false.
  */
 export function isCanonicalUserProfileUuid(
   value: unknown,

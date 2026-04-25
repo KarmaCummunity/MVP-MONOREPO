@@ -79,12 +79,21 @@ beforeEach(() => {
 });
 
 describe('userProfileId guard', () => {
-  it('isCanonicalUserProfileUuid accepts a valid v4 UUID and rejects firebase-style ids', () => {
+  it('isCanonicalUserProfileUuid accepts any well-formed UUID and rejects firebase-style ids', () => {
     expect(isCanonicalUserProfileUuid(VALID_UUID)).toBe(true);
+    // Postgres uuid_generate_v4() output (v4 UUID).
+    expect(isCanonicalUserProfileUuid('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+    // v1 UUID (still a valid UUID — must be accepted).
+    expect(isCanonicalUserProfileUuid('e4eaaaf2-d142-11e1-b3e4-080027620cdd')).toBe(true);
+    // Uppercase form.
+    expect(isCanonicalUserProfileUuid('A1B2C3D4-E5F6-4A7B-8C9D-1234567890AB')).toBe(true);
+    // Non-UUID identifiers used to slip through previously.
     expect(isCanonicalUserProfileUuid('FbU1d28CharsGoogleStyleUid12')).toBe(false);
     expect(isCanonicalUserProfileUuid('not-a-uuid')).toBe(false);
     expect(isCanonicalUserProfileUuid('')).toBe(false);
     expect(isCanonicalUserProfileUuid(undefined)).toBe(false);
+    // Firebase UID (28 alphanumerics, no dashes).
+    expect(isCanonicalUserProfileUuid('abcDEF123456789012345678901234')).toBe(false);
     expect(asUserProfileId(VALID_UUID)).toBe(VALID_UUID);
     expect(() => asUserProfileId('firebase-uid-123')).toThrow();
   });

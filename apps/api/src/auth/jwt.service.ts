@@ -10,12 +10,16 @@ import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { randomBytes, createHash, createHmac } from "crypto";
 
+// Permissive UUID guard: accepts any 8-4-4-4-12 hex layout (matches what Postgres' `uuid`
+// column accepts). We intentionally do NOT restrict by version/variant bits — refusing to mint
+// tokens for legacy non-v4 UUIDs would brick login for those users.
 const USER_PROFILE_UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Canonical user-profile UUID guard.
- * Used inside `JwtService.createTokenPair` to refuse minting tokens with non-UUID actor ids.
+ * Used inside `JwtService.createTokenPair` to refuse minting tokens with non-UUID actor ids
+ * (e.g. firebase_uid or google_sub leaking through as the JWT subject).
  */
 export function isCanonicalUserProfileUuid(value: unknown): value is string {
   return typeof value === "string" && USER_PROFILE_UUID_REGEX.test(value);
