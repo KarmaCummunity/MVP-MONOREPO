@@ -13,6 +13,7 @@ import { useAdminProtection } from '../hooks/useAdminProtection';
 import UserSelector from '../components/UserSelector';
 import TaskHoursModal from '../components/TaskHoursModal';
 import HeaderComp from '../components/HeaderComp';
+import { taskFilterStateToApiTaskFilters, type TaskFilterState } from '../utils/taskFilterQuery';
 
 type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
 type TaskPriority = 'low' | 'medium' | 'high';
@@ -207,15 +208,19 @@ export default function AdminTasksScreen() {
     const seq = ++fetchTasksSeqRef.current;
     setLoading(true);
     setError(null);
-    console.log('🔄 Fetching tasks...', { query, filterStatuses, listSort, filterPriorities, filterAssignee, selectedUserId: selectedUser?.id });
+    const filterState: TaskFilterState = {
+      ...(query.trim() ? { textSearch: { text: query } } : {}),
+      ...(filterStatuses.length > 0 ? { status: filterStatuses } : {}),
+      ...(filterPriorities.length > 0 ? { priority: filterPriorities } : {}),
+      ownership: filterAssignee === 'me' ? ['mine'] : ['all'],
+    };
+    const apiFilters = taskFilterStateToApiTaskFilters(filterState, {
+      currentUserId: selectedUser?.id,
+      sort: listSort,
+    });
+    console.log('🔄 Fetching tasks...', { filterState, apiFilters, selectedUserId: selectedUser?.id });
     try {
-      const res: ApiResponse<AdminTask[]> = await apiService.getTasks({
-        q: query || undefined,
-        status: filterStatuses.length > 0 ? filterStatuses : undefined,
-        sort: listSort,
-        priority: filterPriorities.length > 0 ? filterPriorities : undefined,
-        assignee: filterAssignee === 'me' ? selectedUser?.id : undefined,
-      });
+      const res: ApiResponse<AdminTask[]> = await apiService.getTasks(apiFilters);
       if (seq !== fetchTasksSeqRef.current) {
         return;
       }
