@@ -26,6 +26,7 @@ import {
   CreateChallengeEntryDto,
   GetChallengesFilterDto,
 } from "../dto/community-challenge.dto";
+import { UserResolutionService } from "../../users/services/user-resolution.service";
 
 @Controller("api/community-challenges")
 export class CommunityGroupChallengesController {
@@ -41,7 +42,26 @@ export class CommunityGroupChallengesController {
     "is_active",
   ];
 
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly userResolutionService: UserResolutionService,
+  ) {}
+
+  /**
+   * Resolve caller user_id query param (UUID, email, or firebase_uid) to user_profiles.id.
+   * Ensures creator checks match DB even when the client sends a non-UUID identifier.
+   */
+  private async resolveActorUserId(userId: string): Promise<string> {
+    const resolved = await this.userResolutionService.resolveUserId(userId, {
+      throwOnNotFound: false,
+      cacheResult: true,
+      logError: false,
+    });
+    if (!resolved) {
+      throw new BadRequestException("Invalid or unknown user_id");
+    }
+    return resolved;
+  }
 
   private buildChallengeFilters(filters: GetChallengesFilterDto): {
     whereClauses: string[];
@@ -887,6 +907,8 @@ export class CommunityGroupChallengesController {
       throw new BadRequestException("user_id is required");
     }
 
+    const actorUserId = await this.resolveActorUserId(userId);
+
     this.logger.log(`Updating challenge ${challengeId}`);
 
     const client = await this.pool.connect();
@@ -905,7 +927,7 @@ export class CommunityGroupChallengesController {
         throw new NotFoundException("Challenge not found");
       }
 
-      if (challenge.creator_id !== userId) {
+      if (challenge.creator_id !== actorUserId) {
         throw new BadRequestException(
           "Only the creator can update this challenge",
         );
@@ -1017,6 +1039,8 @@ export class CommunityGroupChallengesController {
       throw new BadRequestException("user_id is required");
     }
 
+    const actorUserId = await this.resolveActorUserId(userId);
+
     this.logger.log(`Deleting challenge ${challengeId}`);
 
     const client = await this.pool.connect();
@@ -1035,7 +1059,7 @@ export class CommunityGroupChallengesController {
         throw new NotFoundException("Challenge not found");
       }
 
-      if (challenge.creator_id !== userId) {
+      if (challenge.creator_id !== actorUserId) {
         throw new BadRequestException(
           "Only the creator can delete this challenge",
         );

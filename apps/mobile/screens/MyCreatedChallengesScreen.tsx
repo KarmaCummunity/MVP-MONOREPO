@@ -153,7 +153,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
                 showToast(t('messages.errorDeleting'), 'error');
               }
             } catch (error) {
-              console.error('Error deleting challenge:', error);
+              logger.error('MyCreatedChallengesScreen', 'Error deleting challenge', { error });
               showToast(t('messages.errorDeleting'), 'error');
             } finally {
               setLoading(false);
