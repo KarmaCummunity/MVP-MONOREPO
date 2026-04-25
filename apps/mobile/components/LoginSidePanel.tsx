@@ -118,7 +118,8 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
         settings: { language: 'he', darkMode: false, notificationsEnabled: true },
       };
 
-      await setSelectedUserWithMode(guestUser, 'real');
+      // Character preview is a local synthetic user, not a DB profile — use guest auth mode.
+      await setSelectedUserWithMode(guestUser, 'guest');
       onLoginSuccess?.();
     } catch (error) {
       logger.error('LoginSidePanel', 'Login error', { error });
@@ -131,7 +132,7 @@ const LoginSidePanel: React.FC<LoginSidePanelProps> = ({
       await setGuestMode();
       onLoginSuccess?.();
     } catch (error) {
-      console.error('Guest mode error:', error);
+      logger.error('LoginSidePanel', 'Guest mode error', { error });
       Alert.alert('שגיאה', 'אירעה שגיאה במהלך הכניסה');
     }
   };
