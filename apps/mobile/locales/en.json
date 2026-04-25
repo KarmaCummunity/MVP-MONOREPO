@@ -87,6 +87,7 @@
         "verifiedOnly": "Verified authors only",
         "verifiedOnlyHint": "Users with verified email",
         "contentSection": "Content types",
+        "contentSectionHint": "When a category is off, plain text/photo posts are hidden too",
         "includeTasks": "Show tasks",
         "includeRides": "Show rides",
         "includeItems": "Show items and donations"

@@ -3,6 +3,38 @@ import type { FeedItem } from '../types/feed';
 
 export type FeedSortMode = 'date' | 'engagement' | 'relevance';
 
+/** High-level bucket for content-type toggles (matches ProfileScreen-style grouping). */
+export type FeedContentBucket = 'task' | 'ride' | 'item_or_donation' | 'general_post';
+
+export function getFeedContentBucket(item: FeedItem): FeedContentBucket {
+  const st = item.subtype;
+  const ty = item.type;
+
+  if (
+    st === 'task_assignment' ||
+    st === 'task_completion' ||
+    ty === 'task_post'
+  ) {
+    return 'task';
+  }
+
+  if (st === 'ride' || st === 'ride_offered' || !!item.rideId) {
+    return 'ride';
+  }
+
+  if (
+    st === 'item' ||
+    st === 'donation' ||
+    !!item.itemId ||
+    item.price !== undefined ||
+    !!item.category
+  ) {
+    return 'item_or_donation';
+  }
+
+  return 'general_post';
+}
+
 export interface FeedFilterState {
   sortMode: FeedSortMode;
   /** Tasks, rides, and open items/donations that accept responses */
@@ -31,19 +63,26 @@ function hoursSince(iso: string): number {
 
 /** Mirrors feed-card rules for "open" vs closed content (tasks, rides, items, donations). */
 export function isFeedItemOpen(item: FeedItem): boolean {
-  if (item.subtype === 'task_assignment' || item.type === 'task_post') {
+  const bucket = getFeedContentBucket(item);
+
+  if (bucket === 'task') {
     const s = item.taskData?.status;
     if (!s) return true;
     return s === 'open' || s === 'in_progress';
   }
 
-  if (item.subtype === 'ride' || item.subtype === 'ride_offered') {
+  if (bucket === 'ride') {
     const rs = item.status;
     if (!rs) return true;
     return rs === 'active' || rs === 'full';
   }
 
-  if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
+  if (bucket === 'item_or_donation') {
+    if (item.subtype === 'donation') {
+      const ds = item.status;
+      if (!ds) return true;
+      return ds === 'active';
+    }
     const st = item.status;
     if (st && ['delivered', 'completed', 'expired', 'cancelled'].includes(st)) {
       return false;
@@ -51,26 +90,25 @@ export function isFeedItemOpen(item: FeedItem): boolean {
     return true;
   }
 
-  if (item.subtype === 'donation') {
-    const ds = item.status;
-    if (!ds) return true;
-    return ds === 'active';
-  }
-
+  // Text / photo posts and other feed entries without a closable workflow
   return true;
 }
 
 function passesContentType(item: FeedItem, f: FeedFilterState): boolean {
-  if (item.subtype === 'task_assignment' || item.type === 'task_post') {
+  const bucket = getFeedContentBucket(item);
+
+  if (bucket === 'task') {
     return f.includeTasks;
   }
-  if (item.subtype === 'ride' || item.subtype === 'ride_offered') {
+  if (bucket === 'ride') {
     return f.includeRides;
   }
-  if (item.subtype === 'item' || item.subtype === 'donation') {
+  if (bucket === 'item_or_donation') {
     return f.includeItemsAndDonations;
   }
-  return true;
+
+  // General posts: show only when every structured category is enabled (narrowing rides/tasks/items hides "plain" posts too).
+  return f.includeTasks && f.includeRides && f.includeItemsAndDonations;
 }
 
 function passesVerified(item: FeedItem, f: FeedFilterState): boolean {
