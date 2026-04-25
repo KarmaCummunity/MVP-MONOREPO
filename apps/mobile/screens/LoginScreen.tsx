@@ -123,8 +123,8 @@ export default function LoginScreen() {
                 return;
             }
 
-            // The session is established in AuthSessionService; sync the Zustand projection.
-            await useUserStore.getState().checkAuthStatus();
+            // Mirror the live session into the Zustand projection (no isLoading toggle).
+            useUserStore.getState().syncFromSession();
             await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
             return;
         } catch (error: any) {
