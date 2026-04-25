@@ -38,7 +38,7 @@ export interface NotificationData {
   title: string;
   body: string;
   data?: any;
-  type: 'message' | 'follow' | 'like' | 'comment' | 'system';
+  type: 'message' | 'follow' | 'like' | 'comment' | 'system' | 'daily_challenge_reminder';
   timestamp: string;
   read: boolean;
   userId: string;
@@ -621,8 +621,17 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
 
     const notifications = await getNotifications(userId);
     const unreadCount = notifications.filter(notification => !notification.read).length;
-    console.log('📊 Unread notifications count:', unreadCount);
-    return unreadCount;
+    let extra = 0;
+    try {
+      const { getPendingDailyReportCount } = await import('./dailyChallengeReminder');
+      const pending = await getPendingDailyReportCount(userId);
+      if (pending > 0) extra = 1;
+    } catch {
+      // optional module / tracker unavailable
+    }
+    const total = unreadCount + extra;
+    console.log('📊 Unread notifications count:', total, '(server unread:', unreadCount, 'daily reminder slot:', extra, ')');
+    return total;
   } catch (error) {
     console.error('❌ Get unread notification count error:', error);
     return 0;

@@ -221,6 +221,12 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       if (__DEV__) console.log('[DailyHabitsQuickView] Modal closed, refreshing data');
       await loadTodayData();
       if (__DEV__) console.log('[DailyHabitsQuickView] Data refreshed successfully');
+      try {
+        const { emitDailyChallengeTrackerRefresh } = await import('../../utils/dailyChallengeReminder');
+        emitDailyChallengeTrackerRefresh();
+      } catch {
+        /* optional */
+      }
     } catch (err) {
       if (__DEV__) console.error('[DailyHabitsQuickView] Save error:', err);
       throw err;
