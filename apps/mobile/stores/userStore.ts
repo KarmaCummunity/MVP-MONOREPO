@@ -320,6 +320,9 @@ export const useUserStore = create<UserState>((set, get) => ({
       isAuthenticated: true,
       isGuestMode: state.authMode === 'guest',
       authMode: state.authMode,
+      // Force isLoading off in case anything upstream left it on. The auth-gated stack must mount
+      // immediately so the queued navigation reset can dispatch against `HomeStack`.
+      isLoading: false,
     });
 
     // Fire-and-forget enrichment.

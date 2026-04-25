@@ -18,6 +18,71 @@ import { logger } from '../utils/loggerService';
 import { establishSessionFromGoogleResponse } from '../session/loginFlows';
 import { useUserStore } from '../stores/userStore';
 
+// Shape of the response we accept from `POST /auth/google`. Kept narrow on purpose.
+interface GoogleAuthServerResponse {
+  success: boolean;
+  user: { id: string; email?: string; name?: string; avatar?: string; avatar_url?: string; roles?: string[] };
+  tokens?: { accessToken: string; refreshToken: string; expiresIn: number };
+  error?: string;
+}
+
+/**
+ * Posts the Google OAuth tokens to the server and returns the validated response.
+ * Throws with a server-supplied message on any non-2xx response or invalid payload.
+ */
+async function fetchGoogleAuthResponse(body: {
+  idToken?: string;
+  accessToken?: string;
+  firebaseUid: string;
+}): Promise<GoogleAuthServerResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': `KarmaCommunity-${Platform.OS}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({} as Record<string, unknown>));
+    logger.error('FirebaseGoogleButton', 'Server /auth/google returned non-2xx', {
+      status: response.status,
+      statusText: response.statusText,
+      errorData,
+    });
+    throw new Error(
+      (errorData as any)?.error ||
+        (errorData as any)?.message ||
+        `Server error: ${response.status}`,
+    );
+  }
+
+  const data = (await response.json()) as GoogleAuthServerResponse;
+  if (!data?.success || !data.user?.id) {
+    logger.error('FirebaseGoogleButton', 'Server /auth/google returned invalid payload', {
+      hasSuccess: data?.success,
+      hasUser: !!data?.user,
+      hasUserId: !!data?.user?.id,
+    });
+    throw new Error(data?.error || 'Invalid response from server');
+  }
+  return data;
+}
+
+/**
+ * Map a Phase-1 (auth) error to a user-visible Hebrew message.
+ */
+function authPhaseErrorMessage(error: any): string {
+  if (error?.code === 'auth/popup-closed-by-user') return 'ההתחברות בוטלה';
+  if (error?.code === 'auth/popup-blocked') {
+    return 'הדפדפן חסם את חלון ההתחברות. אנא אפשר pop-ups.';
+  }
+  if (error?.code === 'auth/cancelled-popup-request') return 'ההתחברות בוטלה';
+  if (error?.code === 'auth/network-request-failed') return 'בעיית רשת. בדוק חיבור לאינטרנט.';
+  return 'שגיאה בהתחברות. נסה שוב.';
+}
+
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
   const [loading, setLoading] = useState(false);
@@ -32,172 +97,94 @@ export default function FirebaseGoogleButton() {
       return;
     }
 
+    setLoading(true);
+    setError('');
+
+    // Phase 1: Firebase popup + server `/auth/google` call. Failures here are surfaced as
+    // user-visible auth errors.
+    let serverResponse: Awaited<ReturnType<typeof fetchGoogleAuthResponse>>;
+    let firebaseUid: string;
     try {
-      logger.debug('FirebaseGoogleButton', 'Setting loading state');
-      setLoading(true);
-      setError('');
-
-      logger.debug('FirebaseGoogleButton', 'Getting Firebase instance');
-      const { app } = getFirebase();
-      logger.debug('FirebaseGoogleButton', 'Firebase app status', { exists: !!app });
-
-      logger.debug('FirebaseGoogleButton', 'Getting Auth instance');
-      const auth = getAuth(app);
-      logger.debug('FirebaseGoogleButton', 'Auth status', { exists: !!auth });
-
-      logger.debug('FirebaseGoogleButton', 'Creating Google Provider');
-      const provider = new GoogleAuthProvider();
-      logger.debug('FirebaseGoogleButton', 'Provider created');
-
-      logger.debug('FirebaseGoogleButton', 'Setting provider parameters');
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      logger.debug('FirebaseGoogleButton', 'Parameters set');
-
       logger.debug('FirebaseGoogleButton', 'Opening Google popup');
+      const { app } = getFirebase();
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
       const result = await signInWithPopup(auth, provider);
-
-      logger.debug('FirebaseGoogleButton', 'Popup returned', { hasResult: !!result });
-
-      // Extract Google Credential to get the Google Access Token and ID Token
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleAccessToken = credential?.accessToken;
       const googleIdToken = credential?.idToken;
+      firebaseUid = result.user.uid;
 
-      logger.debug('FirebaseGoogleButton', 'Google credentials extracted', {
-        hasAccessToken: !!googleAccessToken,
+      logger.debug('FirebaseGoogleButton', 'Popup returned, calling server', {
+        firebaseUid,
         hasIdToken: !!googleIdToken,
-      });
-
-      const user = result.user;
-      logger.debug('FirebaseGoogleButton', 'User data received', {
-        uid: user.uid,
-        email: user.email,
-      });
-
-      logger.debug('FirebaseGoogleButton', 'Sending to server for verification', {
+        hasAccessToken: !!googleAccessToken,
         apiUrl: API_BASE_URL,
-        firebaseUid: user.uid,
       });
 
-      // Send Google tokens and Firebase UID to server
-      // Firebase UID is different from Google ID - we need to send it separately
-      const response = await fetch(`${API_BASE_URL}/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': `KarmaCommunity-${Platform.OS}`,
-        },
-        body: JSON.stringify({
-          idToken: googleIdToken,
-          accessToken: googleAccessToken,
-          firebaseUid: user.uid, // Send Firebase UID (from Firebase Auth)
-        }),
+      serverResponse = await fetchGoogleAuthResponse({
+        idToken: googleIdToken,
+        accessToken: googleAccessToken,
+        firebaseUid,
       });
+    } catch (error: any) {
+      logger.error('FirebaseGoogleButton', 'Auth phase failed', {
+        message: error?.message,
+        code: error?.code,
+      });
+      setError(authPhaseErrorMessage(error));
+      setLoading(false);
+      return;
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error('FirebaseGoogleButton', 'Server error response', {
-          errorData,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
-      }
-
-      const serverResponse = await response.json();
-
-      if (!serverResponse.success || !serverResponse.user) {
-        throw new Error(serverResponse.error || 'Invalid response from server');
-      }
-
-      logger.info('FirebaseGoogleButton', 'Server authentication successful', {
+    // Phase 2: Session establishment + navigation. From this point on, server-side
+    // authentication has SUCCEEDED. Any failure here is a *client-side* projection problem;
+    // we must NOT show "login failed" because the user is already authenticated server-side.
+    try {
+      logger.info('FirebaseGoogleButton', 'Server auth ok, establishing session', {
         userId: serverResponse.user.id,
         email: serverResponse.user.email,
         hasTokens: !!serverResponse.tokens,
       });
 
-      // Single SSoT pipeline: tokens + canonical UUID + persistence are handled by AuthSessionService.
-      await establishSessionFromGoogleResponse(serverResponse, { firebaseUid: user.uid });
-      // Mirror the live session into the Zustand projection synchronously (no isLoading toggle,
-      // no AsyncStorage round-trip), so the auth-gated stack mounts before the navigation reset.
+      await establishSessionFromGoogleResponse(serverResponse, { firebaseUid });
       useUserStore.getState().syncFromSession();
-      logger.debug('FirebaseGoogleButton', 'Session established via AuthSessionService');
+      logger.info('FirebaseGoogleButton', 'Session established');
 
-      // Give React time to update state and re-render before navigation
-      // Use longer timeout for iOS/mobile web to ensure state is fully updated
-      const isMobileWeb = Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth <= 768;
-      const timeoutDuration = isMobileWeb ? 300 : 100;
-      await new Promise(resolve => setTimeout(resolve, timeoutDuration));
-
-      // Use requestAnimationFrame to ensure DOM/state updates are complete
-      await new Promise(resolve => {
+      // Give React time to flush the new auth-gated stack before issuing the reset.
+      const isMobileWeb =
+        Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth <= 768;
+      await new Promise((resolve) => setTimeout(resolve, isMobileWeb ? 300 : 100));
+      await new Promise((resolve) => {
         if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-          });
+          requestAnimationFrame(() => requestAnimationFrame(resolve as any));
         } else {
           setTimeout(resolve, 50);
         }
       });
 
-      logger.debug('FirebaseGoogleButton', 'Navigating to HomeStack');
-
-      // Check guards before navigation
-      // After successful login, user is authenticated
-      const guardContext = {
-        isAuthenticated: true,
-        isGuestMode: false,
-        isAdmin: false,
-      };
-
       const guardResult = await checkNavigationGuards(
-        {
-          type: 'reset',
-          index: 0,
-          routes: [{ name: 'HomeStack' }],
-        },
-        guardContext
+        { type: 'reset', index: 0, routes: [{ name: 'HomeStack' }] },
+        { isAuthenticated: true, isGuestMode: false, isAdmin: false },
       );
 
-      if (!guardResult.allowed) {
-        // If guard blocks, try redirect if provided
-        if (guardResult.redirectTo) {
-          await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Use reset instead of replace for more reliable navigation after auth
-      // This ensures a clean navigation stack
-      await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-      logger.info('FirebaseGoogleButton', 'Google login success');
-
-      // Reset loading state after navigation
-      setLoading(false);
-
-    } catch (error: any) {
-      logger.error('FirebaseGoogleButton', 'Google login error', {
-        error: error.message,
-        code: error.code,
-        stack: error.stack,
-      });
-
-      let errorMessage = '';
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'ההתחברות בוטלה';
-        logger.debug('FirebaseGoogleButton', 'User closed the popup');
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'הדפדפן חסם את חלון ההתחברות. אנא אפשר pop-ups.';
-        logger.warn('FirebaseGoogleButton', 'Popup was blocked by browser');
+      if (!guardResult.allowed && guardResult.redirectTo) {
+        await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
       } else {
-        errorMessage = 'שגיאה בהתחברות. נסה שוב.';
-        logger.warn('FirebaseGoogleButton', 'Unknown error', { code: error.code });
+        await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
       }
-
-      setError(errorMessage);
+      logger.info('FirebaseGoogleButton', 'Google login success');
+    } catch (error: any) {
+      // Auth succeeded; only the post-auth projection/navigation failed. Log loudly but DO NOT
+      // show the "auth failed" banner — that would make the user think login broke when in fact
+      // their session is already valid in storage.
+      logger.error('FirebaseGoogleButton', 'Post-auth projection/navigation error (non-fatal)', {
+        message: error?.message,
+        stack: error?.stack,
+      });
+    } finally {
       setLoading(false);
     }
   };

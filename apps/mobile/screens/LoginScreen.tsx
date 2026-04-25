@@ -110,34 +110,48 @@ export default function LoginScreen() {
         }
 
         setIsLoading(true);
+
+        // Phase 1: Firebase sign-in + server resolve + session establish. Failures here are
+        // user-visible auth errors.
+        let result: Awaited<ReturnType<typeof loginWithEmailAndEstablishSession>>;
         try {
-            // Single SSoT pipeline: Firebase sign-in + server resolve + session establish.
-            const result = await loginWithEmailAndEstablishSession(email, password);
-
-            if (result.kind === 'verification_sent') {
-                Alert.alert(
-                    t('auth:email.verifyTitle'),
-                    t('auth:email.verificationRequired'),
-                    [{ text: t('common:confirm') }]
-                );
-                return;
-            }
-
-            // Mirror the live session into the Zustand projection (no isLoading toggle).
-            useUserStore.getState().syncFromSession();
-            await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-            return;
+            result = await loginWithEmailAndEstablishSession(email, password);
         } catch (error: any) {
             let msg = t('common:genericTryAgain');
-            if (error.code === 'auth/wrong-password') {
+            if (error?.code === 'auth/wrong-password') {
                 msg = t('auth:email.wrongPassword', 'סיסמה לא נכונה. אנא נסה שוב.');
-            } else if (error.code === 'auth/email-already-in-use') {
+            } else if (error?.code === 'auth/email-already-in-use') {
                 msg = t('auth:email.emailAlreadyRegistered', 'המייל כבר רשום. אנא בדוק את הסיסמה.');
-            } else if (error.code === 'auth/user-not-found') {
-                // This shouldn't happen in unified flow, but handle it gracefully
+            } else if (error?.code === 'auth/user-not-found') {
+                msg = t('common:genericTryAgain');
+            } else if (error?.code === 'auth/network-request-failed') {
                 msg = t('common:genericTryAgain');
             }
             Alert.alert(t('common:error'), msg);
+            setIsLoading(false);
+            return;
+        }
+
+        if (result.kind === 'verification_sent') {
+            Alert.alert(
+                t('auth:email.verifyTitle'),
+                t('auth:email.verificationRequired'),
+                [{ text: t('common:confirm') }]
+            );
+            setIsLoading(false);
+            return;
+        }
+
+        // Phase 2: Session has been established server-side AND persisted. Any failure beyond
+        // this point is a client-side projection/navigation issue — do NOT show "login failed".
+        try {
+            useUserStore.getState().syncFromSession();
+            await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+        } catch (postAuthError) {
+            // Auth succeeded; only the projection/navigation failed. Log and continue.
+            // The user's session is valid in storage; refreshing will land them on Home.
+            // eslint-disable-next-line no-console
+            console.warn('[LoginScreen] Post-auth navigation failed (non-fatal):', postAuthError);
         } finally {
             setIsLoading(false);
         }
