@@ -1697,6 +1697,47 @@ Author (Mobile)          API Server               PostgreSQL          Operator (
 |-----------|-------|---------------|
 | **Snyk** | Dependency vulnerability scanning in CI | `SNYK_TOKEN` (optional) |
 
+### 8.4.1 User Identity SSoT (Single Source of Truth)
+
+> **Authoritative contract** for the canonical user identifier across the system.
+
+#### Canonical id
+
+- The **only** canonical user identifier is `user_profiles.id` (UUID, generated server-side).
+- Firebase UID, Google `sub`, and email are **mapping inputs** consumed by `UserResolutionService`. They MUST NOT be used as the actor identifier in client state, JWTs, or ownership checks without first being resolved to `user_profiles.id`.
+
+#### JWT contract
+
+- All JWTs minted by the API embed the canonical UUID in the `userId` claim (the project's equivalent of `sub`).
+- `JwtService.createTokenPair` enforces this at runtime: an attempt to mint a token whose `id` is not a canonical `user_profiles.id` UUID is rejected with an error and an audit log entry. See `apps/api/src/auth/jwt.service.ts` (`isCanonicalUserProfileUuid`).
+- `JwtAuthGuard` falls back to Firebase ID token verification only as a **legacy compatibility path**. Even on that path, the request's `request.user.userId` is set to the resolved `user_profiles.id` from the database, never to `firebase_uid`.
+- Tokens minted before this contract that still carry a Firebase UID `userId` continue to be accepted until they expire (1h access / 30d refresh). All **new** logins issue UUID-bound tokens.
+
+#### API style
+
+- For authenticated routes, prefer deriving the actor user id from `request.user.userId` (already canonical UUID).
+- Where a `user_id` query parameter is unavoidable for legacy compatibility (e.g. the community challenges read endpoints), the controller MUST resolve the value through `UserResolutionService.resolveUserId` before comparing it to a UUID column. See:
+  - `apps/api/src/controllers/community-group-challenges.controller.ts` — uses the controller-private `resolveUserIdOrThrow` helper for all `@Query("user_id")` parameters.
+  - `apps/api/src/controllers/tasks.controller.ts`, `chat.controller.ts`, `community-members.controller.ts` — already resolve via `UserResolutionService`.
+
+#### Resolve endpoint
+
+- `POST /api/users/resolve-id` is the **mapping endpoint**. Inputs: `firebase_uid` and/or `email`. Output: the canonical `user_profiles.id` plus a JWT token pair bound to the UUID. This endpoint is the only path that should resolve external identifiers from the client.
+
+#### Client SSoT projection (mobile)
+
+- A single module — `apps/mobile/session/AuthSessionService.ts` — owns:
+  - `establishSession(payload)` — canonicalizes `payload.user.id`, persists tokens + minimal user snapshot atomically, emits state.
+  - `restoreSession()` — loads persisted session; if the persisted id is not canonical, attempts ONE server-side resolution; **hard fails** the session (clears all artifacts) on failure rather than silent partial auth.
+  - `clearSession()` — single deterministic teardown of all auth-related AsyncStorage keys.
+- Branded type `UserProfileId` and `isCanonicalUserProfileUuid()` (see `apps/mobile/session/userProfileId.ts`) gate the boundary of `establishSession`.
+- `userStore` (Zustand) is a **thin projection** that delegates all canonicalization to `AuthSessionService`. The Firebase `onAuthStateChanged` listener no longer re-runs resolve; it only clears the session on Firebase sign-out.
+
+#### Guest / synthetic users
+
+- Local preview users (`guest_*`, `demo_*`) MUST NOT be sent to `/api/users/resolve-id`. `AuthSessionService` short-circuits them.
+- Guest mode is in-memory only (no persistence) and is mutually exclusive with `authMode: 'real'`.
+
 ### 8.5 Expo Application Services (EAS)
 
 | Component | Usage |
