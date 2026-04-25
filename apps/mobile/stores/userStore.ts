@@ -60,6 +60,7 @@ interface UserState {
   setSelectedUser: (user: User | null) => Promise<void>;
   setSelectedUserWithMode: (user: User | null, mode: AuthMode) => Promise<void>;
   setCurrentPrincipal: (principal: { user: User | null; role: Role }) => Promise<void>;
+  syncFromSession: () => void;
   signOut: () => Promise<void>;
   setGuestMode: () => Promise<void>;
   setDemoUser: () => Promise<void>;
@@ -232,11 +233,41 @@ export const useUserStore = create<UserState>((set, get) => ({
         return;
       }
 
+      // SSoT compatibility: synthetic preview users (`guest_*`, `demo_*`) MUST NOT be treated as
+      // real auth. Auto-correct to a guest session — keeps existing UI flows working without
+      // sending synthetic ids to the server resolve endpoint.
+      const candidateId = String(principal.user.id || '');
+      if (candidateId.startsWith('guest_') || candidateId.startsWith('demo_')) {
+        logger.debug('userStore', 'Synthetic id seen in setCurrentPrincipal; routing to guest mode', {
+          idPrefix: candidateId.slice(0, 8),
+        });
+        AuthSessionService.setGuestSession();
+        set({
+          selectedUser: null,
+          isAuthenticated: true,
+          isGuestMode: true,
+          authMode: 'guest',
+        });
+        return;
+      }
+
       // Real authentication: delegate canonicalization & persistence to AuthSessionService.
       const sessionUser = await AuthSessionService.establishSession(
         toEstablishPayload(principal.user, 'real'),
       );
 
+      // Reflect the new session in the Zustand projection IMMEDIATELY so consumers (navigation,
+      // auth-gated screens) can react synchronously. Do NOT toggle `isLoading` here — that would
+      // mount the loading screen and unmount the auth stack mid-login, breaking navigation.
+      const projected = projectSessionUser(sessionUser)!;
+      set({
+        selectedUser: projected,
+        isAuthenticated: true,
+        isGuestMode: false,
+        authMode: 'real',
+      });
+
+      // Side-effects that should happen on real auth, but must NOT block the UI projection.
       try {
         const { DatabaseService } = await import('../utils/databaseService');
         await DatabaseService.clearLocalCollections();
@@ -244,14 +275,16 @@ export const useUserStore = create<UserState>((set, get) => ({
         logger.warn('userStore', 'Failed to clear local collections on real auth (non-fatal)', { error: String(e) });
       }
 
-      const projected = projectSessionUser(sessionUser)!;
-      const enriched = await enrichUserWithOrgRoles(projected);
-      set({
-        selectedUser: enriched,
-        isAuthenticated: true,
-        isGuestMode: false,
-        authMode: 'real',
-      });
+      // Async enrichment (org roles, super-admin overrides). Update the store again on completion;
+      // failures fall back silently to the already-projected user.
+      try {
+        const enriched = await enrichUserWithOrgRoles(projected);
+        if (enriched && enriched.id === projected.id) {
+          set({ selectedUser: enriched });
+        }
+      } catch (e) {
+        logger.warn('userStore', 'enrichUserWithOrgRoles failed (non-fatal)', { error: String(e) });
+      }
     } catch (error) {
       logger.error('userStore', 'setCurrentPrincipal failed', { error: String(error) });
       // Fail closed: clear session if we cannot establish it.
@@ -263,6 +296,43 @@ export const useUserStore = create<UserState>((set, get) => ({
         authMode: 'guest',
       });
     }
+  },
+
+  /**
+   * Sync the Zustand projection from the in-memory AuthSessionService session.
+   *
+   * Used after establishSession was called directly (e.g. from `loginFlows.ts`). Unlike
+   * `checkAuthStatus`, this does NOT toggle `isLoading` and does NOT re-read AsyncStorage —
+   * it simply mirrors the live session into the store so navigation can proceed without
+   * remounting the loading screen.
+   */
+  syncFromSession: () => {
+    const state = AuthSessionService.getState();
+    if (!state.isAuthenticated || !state.user) {
+      // Do nothing: the only consumers of `syncFromSession` are post-establishSession callers
+      // which already have an authenticated session. Falling through to `checkAuthStatus` covers
+      // unexpected misuse.
+      return;
+    }
+    const projected = projectSessionUser(state.user)!;
+    set({
+      selectedUser: projected,
+      isAuthenticated: true,
+      isGuestMode: state.authMode === 'guest',
+      authMode: state.authMode,
+    });
+
+    // Fire-and-forget enrichment.
+    void (async () => {
+      try {
+        const enriched = await enrichUserWithOrgRoles(projected);
+        if (enriched && enriched.id === projected.id) {
+          set({ selectedUser: enriched });
+        }
+      } catch (e) {
+        logger.warn('userStore', 'syncFromSession enrichment failed (non-fatal)', { error: String(e) });
+      }
+    })();
   },
 
   setSelectedUserWithMode: async (user: User | null, mode: AuthMode) => {
@@ -472,6 +542,7 @@ export const useUser = () => {
     setSelectedUserWithMode: store.setSelectedUserWithMode,
     role: computeRole(store.selectedUser, store.authMode),
     setCurrentPrincipal: store.setCurrentPrincipal,
+    syncFromSession: store.syncFromSession,
     isUserSelected: store.selectedUser !== null,
     isLoading: store.isLoading,
     signOut: store.signOut,
