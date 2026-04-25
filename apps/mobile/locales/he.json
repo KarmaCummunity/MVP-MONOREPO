@@ -64,9 +64,12 @@
         "friends": "חברים",
         "discovery": "גילוי"
       },
+      "filterAccessibility": "סינון ומיון פוסטים",
       "empty_title": "אין פוסטים עדיין",
       "empty_friends": "הוסף חברים כדי לראות פוסטים!",
-      "empty_discovery": "היה הראשון לפרסם!"
+      "empty_discovery": "היה הראשון לפרסם!",
+      "empty_filtered": "אין תוצאות לפי הסינון הנוכחי",
+      "empty_filtered_hint": "שנה את האפשרויות או לחץ איפוס בחלון הסינון"
     },
     "rides": {
       "offered": "טרמפ זמין",

@@ -615,8 +615,18 @@ export class PostsController {
                     p.created_at,
                     p.updated_at,
                     CASE 
-                        WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', COALESCE(u.name, 'ללא שם'), 'avatar_url', COALESCE(u.avatar_url, ''))
-                        ELSE json_build_object('id', p.author_id, 'name', 'משתמש לא נמצא', 'avatar_url', '')
+                        WHEN u.id IS NOT NULL THEN json_build_object(
+                            'id', u.id,
+                            'name', COALESCE(u.name, 'ללא שם'),
+                            'avatar_url', COALESCE(u.avatar_url, ''),
+                            'email_verified', COALESCE(u.email_verified, false)
+                        )
+                        ELSE json_build_object(
+                            'id', p.author_id,
+                            'name', 'משתמש לא נמצא',
+                            'avatar_url', '',
+                            'email_verified', false
+                        )
                     END as author,
                     CASE WHEN t.id IS NOT NULL THEN json_build_object(
                         'id', t.id, 
@@ -793,7 +803,12 @@ export class PostsController {
           const mappedRows = fallbackRes.rows.map(
             (row: Record<string, unknown>) => ({
               ...row,
-              author: { id: row.author_id, name: "משתמש", avatar_url: "" },
+              author: {
+                id: row.author_id,
+                name: "משתמש",
+                avatar_url: "",
+                email_verified: false,
+              },
               task: null,
               is_liked: false,
               ride_data: null,
@@ -851,8 +866,18 @@ export class PostsController {
                     p.created_at,
                     p.updated_at,
                     CASE 
-                        WHEN u.id IS NOT NULL THEN json_build_object('id', u.id, 'name', COALESCE(u.name, 'ללא שם'), 'avatar_url', COALESCE(u.avatar_url, ''))
-                        ELSE json_build_object('id', p.author_id, 'name', 'משתמש לא נמצא', 'avatar_url', '')
+                        WHEN u.id IS NOT NULL THEN json_build_object(
+                            'id', u.id,
+                            'name', COALESCE(u.name, 'ללא שם'),
+                            'avatar_url', COALESCE(u.avatar_url, ''),
+                            'email_verified', COALESCE(u.email_verified, false)
+                        )
+                        ELSE json_build_object(
+                            'id', p.author_id,
+                            'name', 'משתמש לא נמצא',
+                            'avatar_url', '',
+                            'email_verified', false
+                        )
                 END as author,
                     CASE WHEN t.id IS NOT NULL THEN json_build_object(
                         'id', t.id, 

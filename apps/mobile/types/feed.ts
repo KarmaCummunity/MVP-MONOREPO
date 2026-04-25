@@ -6,6 +6,8 @@ export interface FeedUser {
     name?: string | null;
     avatar?: string;
     karmaPoints?: number;
+    /** When provided by the API (posts/tasks author join) */
+    emailVerified?: boolean;
 }
 
 export interface TaskAssignee {

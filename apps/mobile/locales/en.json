@@ -59,6 +59,18 @@
     "favorites": "Favorites",
     "posts": "Posts",
     "inactive": "Inactive",
+    "feed": {
+      "tabs": {
+        "friends": "Friends",
+        "discovery": "Discovery"
+      },
+      "filterAccessibility": "Filter and sort posts",
+      "empty_title": "No posts yet",
+      "empty_friends": "Add friends to see their posts!",
+      "empty_discovery": "Be the first to post!",
+      "empty_filtered": "No results for the current filters",
+      "empty_filtered_hint": "Change options or tap Reset in the filter panel"
+    },
     "rides": {
       "offered": "Ride",
       "completed": "Ride Completed",

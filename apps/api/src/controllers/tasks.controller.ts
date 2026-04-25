@@ -605,13 +605,13 @@ export class TasksController {
       const sql = `
         SELECT 
             t.id, t.title, t.description, t.status, t.priority, t.category, t.due_date, t.assignees, t.tags, t.checklist, t.parent_task_id, t.estimated_hours, t.created_at, t.updated_at,
-            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
+            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false)) 
              FROM user_profiles u 
              WHERE u.id::text = t.created_by::text 
                 OR u.firebase_uid = t.created_by::text
                 OR u.google_id = t.created_by::text
              LIMIT 1) as creator_details,
-            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
+            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false))) 
              FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
             (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtask_count,
             (SELECT json_build_object('id', pt.id, 'title', pt.title) 
@@ -727,13 +727,13 @@ export class TasksController {
       const { rows } = await this.pool.query(
         `SELECT 
             t.id, t.title, t.description, t.status, t.priority, t.category, t.due_date, t.assignees, t.tags, t.checklist, t.created_by, t.parent_task_id, t.estimated_hours, t.created_at, t.updated_at,
-            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
+            (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false)) 
              FROM user_profiles u 
              WHERE u.id::text = t.created_by::text 
                 OR u.firebase_uid = t.created_by::text
                 OR u.google_id = t.created_by::text
              LIMIT 1) as creator_details,
-            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
+            (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false))) 
              FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
             COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours
          FROM tasks t WHERE t.id = $1`,
@@ -783,9 +783,9 @@ export class TasksController {
           t.id, t.title, t.description, t.status, t.priority, t.category, 
           t.due_date, t.assignees, t.tags, t.checklist, t.parent_task_id, t.estimated_hours,
           t.created_at, t.updated_at,
-          (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
+          (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false)) 
            FROM user_profiles u WHERE u.id = CAST(t.created_by AS UUID)) as creator_details,
-          (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
+          (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false))) 
            FROM user_profiles u WHERE u.id = ANY(t.assignees::UUID[])) as assignees_details,
           (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtask_count,
           COALESCE((SELECT SUM(actual_hours)::NUMERIC FROM task_time_logs WHERE task_id = t.id), 0) as actual_hours
@@ -856,9 +856,9 @@ export class TasksController {
         )
         SELECT 
           tt.*,
-          (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url) 
+          (SELECT json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false)) 
            FROM user_profiles u WHERE u.id = CAST(tt.created_by AS UUID)) as creator_details,
-          (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url)) 
+          (SELECT json_agg(json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'avatar_url', u.avatar_url, 'email_verified', COALESCE(u.email_verified, false))) 
            FROM user_profiles u WHERE u.id = ANY(tt.assignees::UUID[])) as assignees_details,
           (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = tt.id) as subtask_count
         FROM task_tree tt

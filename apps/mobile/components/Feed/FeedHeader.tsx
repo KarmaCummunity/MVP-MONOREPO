@@ -12,10 +12,19 @@ interface FeedHeaderProps {
     feedMode: 'friends' | 'discovery';
     setFeedMode: (mode: 'friends' | 'discovery') => void;
     onStatsPress: () => void;
+    onFilterPress: () => void;
+    filterActive?: boolean;
     t: (key: string) => string;
 }
 
-const FeedHeader: React.FC<FeedHeaderProps> = ({ feedMode, setFeedMode, onStatsPress, t }) => {
+const FeedHeader: React.FC<FeedHeaderProps> = ({
+    feedMode,
+    setFeedMode,
+    onStatsPress,
+    onFilterPress,
+    filterActive = false,
+    t,
+}) => {
     return (
         <View style={styles.floatingHeaderContainer}>
             <View style={styles.headerContentWrapper}>
@@ -53,6 +62,17 @@ const FeedHeader: React.FC<FeedHeaderProps> = ({ feedMode, setFeedMode, onStatsP
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Filter */}
+                <TouchableOpacity
+                    style={styles.statsButton}
+                    onPress={onFilterPress}
+                    activeOpacity={0.8}
+                    accessibilityLabel={t('feed.filterAccessibility')}
+                >
+                    <Ionicons name="filter" size={20} color={colors.primary} />
+                    {filterActive ? <View style={styles.filterBadge} /> : null}
+                </TouchableOpacity>
 
                 {/* Stats Button */}
                 <TouchableOpacity
@@ -138,6 +158,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
+        position: 'relative',
+    },
+    filterBadge: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.secondary,
+        borderWidth: 1,
+        borderColor: colors.white,
     },
 });
 
