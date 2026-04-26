@@ -231,82 +231,127 @@ export const getConversationById = async (conversationId: string, userId: string
 
 type OutgoingMessage = Omit<Message, 'id'>;
 
+function mapBackendRowToConversation(backendConv: any): Conversation {
+  return {
+    id: backendConv.id,
+    participants: backendConv.participants,
+    lastMessageText: backendConv.last_message_content || '',
+    lastMessageTime: backendConv.last_message_time || backendConv.created_at,
+    unreadCount: backendConv.unread_count || 0,
+    createdAt: backendConv.created_at,
+  };
+}
+
+/** Hydrate participants from backend when local chat row has none. */
+async function tryHydrateParticipantsFromBackendList(
+  senderId: string,
+  conversationId: string
+): Promise<string[] | null> {
+  if (!USE_BACKEND) {
+    return null;
+  }
+  try {
+    const convResponse = await apiService.getUserConversations(senderId);
+    if (!convResponse.success || !convResponse.data || !Array.isArray(convResponse.data)) {
+      return null;
+    }
+    const backendConv = convResponse.data.find((c: any) => c.id === conversationId);
+    if (!backendConv?.participants) {
+      return null;
+    }
+    const senderView = mapBackendRowToConversation(backendConv);
+    await db.createChat(senderId, conversationId, senderView);
+    return backendConv.participants;
+  } catch (error) {
+    logger.warn('ChatService', 'Failed to get conversation from backend', { error });
+    return null;
+  }
+}
+
+/** Match by id or legacy_id in metadata when local + first fetch miss. */
+async function tryRecoverParticipantsFromBackendList(
+  senderId: string,
+  conversationId: string
+): Promise<string[] | null> {
+  if (!USE_BACKEND) {
+    return null;
+  }
+  try {
+    const allConvsResponse = await apiService.getUserConversations(senderId);
+    if (!allConvsResponse.success || !allConvsResponse.data || !Array.isArray(allConvsResponse.data)) {
+      return null;
+    }
+    const foundConv = allConvsResponse.data.find(
+      (c: any) =>
+        c.id === conversationId || (c.metadata && c.metadata.legacy_id === conversationId)
+    );
+    if (!foundConv?.participants?.length) {
+      return null;
+    }
+    logger.info('ChatService', 'Recovered participants from backend', { participants: foundConv.participants });
+    return foundConv.participants;
+  } catch (error) {
+    logger.warn('ChatService', 'Failed to recover participants from backend', { error });
+    return null;
+  }
+}
+
+async function persistFallbackParticipantsForConversation(
+  message: OutgoingMessage,
+  fallbackParticipants: string[]
+): Promise<string[]> {
+  logger.info('ChatService', 'Using fallback participants', { participants: fallbackParticipants });
+  const fallbackConversation: Conversation = {
+    id: message.conversationId,
+    participants: fallbackParticipants,
+    lastMessageText: '',
+    lastMessageTime: new Date().toISOString(),
+    unreadCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  for (const participantId of fallbackParticipants) {
+    await db.createChat(participantId, message.conversationId, fallbackConversation);
+  }
+  return fallbackParticipants;
+}
+
 async function loadParticipantsListForSendMessage(
   message: OutgoingMessage,
   fallbackParticipants?: string[]
 ): Promise<string[]> {
-  let senderView = await getConversationById(message.conversationId, message.senderId);
+  const senderView = await getConversationById(message.conversationId, message.senderId);
   let participants = senderView?.participants || [];
 
-  if (participants.length === 0 && USE_BACKEND) {
-    try {
-      const convResponse = await apiService.getUserConversations(message.senderId);
-      if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
-        const backendConv = convResponse.data.find((c: any) => c.id === message.conversationId);
-        if (backendConv && backendConv.participants) {
-          participants = backendConv.participants;
-          senderView = {
-            id: backendConv.id,
-            participants: backendConv.participants,
-            lastMessageText: backendConv.last_message_content || '',
-            lastMessageTime: backendConv.last_message_time || backendConv.created_at,
-            unreadCount: backendConv.unread_count || 0,
-            createdAt: backendConv.created_at,
-          };
-          await db.createChat(message.senderId, message.conversationId, senderView);
-        }
-      }
-    } catch (error) {
-      logger.warn('ChatService', 'Failed to get conversation from backend', { error });
+  if (participants.length === 0) {
+    const fromBackend = await tryHydrateParticipantsFromBackendList(
+      message.senderId,
+      message.conversationId
+    );
+    if (fromBackend) {
+      participants = fromBackend;
     }
   }
 
   if (participants.length === 0) {
     logger.warn('ChatService', 'No participants found for conversation, attempting to recover', {
       conversationId: message.conversationId,
-      senderId: message.senderId
+      senderId: message.senderId,
     });
-
-    if (USE_BACKEND) {
-      try {
-        const allConvsResponse = await apiService.getUserConversations(message.senderId);
-        if (allConvsResponse.success && allConvsResponse.data && Array.isArray(allConvsResponse.data)) {
-          const foundConv = allConvsResponse.data.find((c: any) =>
-            c.id === message.conversationId ||
-            (c.metadata && c.metadata.legacy_id === message.conversationId)
-          );
-
-          if (foundConv && foundConv.participants && foundConv.participants.length > 0) {
-            participants = foundConv.participants;
-            logger.info('ChatService', 'Recovered participants from backend', { participants });
-          }
-        }
-      } catch (error) {
-        logger.warn('ChatService', 'Failed to recover participants from backend', { error });
-      }
+    const recovered = await tryRecoverParticipantsFromBackendList(
+      message.senderId,
+      message.conversationId
+    );
+    if (recovered) {
+      participants = recovered;
     }
+  }
 
-    if (participants.length === 0 && fallbackParticipants && fallbackParticipants.length > 0) {
-      participants = fallbackParticipants;
-      logger.info('ChatService', 'Using fallback participants', { participants });
+  if (participants.length === 0 && fallbackParticipants?.length) {
+    participants = await persistFallbackParticipantsForConversation(message, fallbackParticipants);
+  }
 
-      const fallbackConversation: Conversation = {
-        id: message.conversationId,
-        participants: fallbackParticipants,
-        lastMessageText: '',
-        lastMessageTime: new Date().toISOString(),
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-      };
-
-      for (const participantId of fallbackParticipants) {
-        await db.createChat(participantId, message.conversationId, fallbackConversation);
-      }
-    }
-
-    if (participants.length === 0) {
-      throw new Error('Conversation not found or has no participants. Please create a new conversation.');
-    }
+  if (participants.length === 0) {
+    throw new Error('Conversation not found or has no participants. Please create a new conversation.');
   }
 
   return participants;

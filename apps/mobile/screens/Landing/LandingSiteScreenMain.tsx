@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import type { ScrollView } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ScrollContainer from '../../components/ScrollContainer';
@@ -139,6 +140,163 @@ async function runLandingVisitTrackingAndStats(
   }
 }
 
+function extractStatNumber(stat: unknown): number {
+  if (typeof stat === 'number') {
+    return stat;
+  }
+  if (stat && typeof stat === 'object' && 'value' in stat) {
+    const raw = (stat as { value?: unknown }).value;
+    return typeof raw === 'number' ? raw : 0;
+  }
+  return 0;
+}
+
+function mapCommunityStatsToLandingStats(communityStats: Record<string, unknown>): LandingStats {
+  return {
+    siteVisits: extractStatNumber(communityStats.siteVisits) || 0,
+    totalMoneyDonated: extractStatNumber(communityStats.totalMoneyDonated) || 0,
+    totalUsers: extractStatNumber(communityStats.totalUsers) || 0,
+    itemDonations: extractStatNumber(communityStats.itemDonations) || 0,
+    completedRides: extractStatNumber(communityStats.completedRides) || 0,
+    recurringDonationsAmount: extractStatNumber(communityStats.recurringDonationsAmount) || 0,
+    uniqueDonors: extractStatNumber(communityStats.uniqueDonors) || 0,
+    completedTasks: extractStatNumber(communityStats.completed_tasks) || 0,
+  };
+}
+
+function navigateLandingSectionOnWeb(
+  sectionId: string,
+  setActiveSection: React.Dispatch<React.SetStateAction<string | null>>,
+): void {
+  const scrollToSection = (retryCount = 0): void => {
+    try {
+      if (sectionId === 'top') {
+        scrollLandingWebToTop(sectionId, setActiveSection);
+        return;
+      }
+
+      const element = getSectionElement(sectionId);
+      logger.info('LandingSiteScreen', `Found element for ${sectionId}:`, {
+        found: !!element,
+        elementId: element?.id ?? element?.dataset?.nativeid ?? null,
+        retryCount,
+      });
+
+      if (element) {
+        scrollLandingWebElementIntoSection(element, sectionId, setActiveSection);
+      } else if (retryCount < 10) {
+        setTimeout(() => scrollToSection(retryCount + 1), 100);
+        logger.info('LandingSiteScreen', `Retrying to find section: ${sectionId}, attempt ${retryCount + 1}`);
+      } else {
+        logger.warn('LandingSiteScreen', `Section not found after ${retryCount} retries: ${sectionId}`);
+      }
+    } catch (error) {
+      logger.error('LandingSiteScreen', 'Error scrolling to section', { error, sectionId });
+    }
+  };
+
+  scrollToSection();
+}
+
+function tryScrollNativeLandingToTop(
+  sectionId: string,
+  scrollViewRef: React.RefObject<ScrollView | null>,
+): boolean {
+  if (sectionId !== 'top' || !scrollViewRef.current) {
+    return false;
+  }
+  scrollViewRef.current.scrollTo?.({ y: 0, animated: true });
+  logger.info('LandingSiteScreen', 'Scrolled to top via ScrollView ref');
+  return true;
+}
+
+/** Scroll-spy + DOM observation; module scope keeps `LandingSiteScreen` cognitive complexity in budget. */
+function registerLandingScrollSpy(
+  setActiveSection: React.Dispatch<React.SetStateAction<string | null>>,
+): () => void {
+  const sectionIds = [
+    'stats',
+    'vision',
+    'problems',
+    'features',
+    'about',
+    'how',
+    'who',
+    'values',
+    'core-mottos',
+    'hierarchy',
+    'roadmap',
+    'contact',
+    'faq',
+  ];
+
+  const observerOptions = {
+    root: null,
+    rootMargin: '-20% 0px -70% 0px',
+    threshold: 0,
+  };
+
+  const observerCallback = (entries: IntersectionObserverEntry[]) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) {
+        return;
+      }
+      const targetElement = entry.target as HTMLElement;
+      const identifier = targetElement.id || targetElement.dataset.nativeid || '';
+      const sectionId = identifier.replace('section-', '');
+      if (!sectionId) {
+        return;
+      }
+      logger.info('ScrollSpy', `Section ${sectionId} is now in view`);
+      setActiveSection(sectionId);
+    });
+  };
+
+  const observer = new IntersectionObserver(observerCallback, observerOptions);
+  const observedElements = new Set<HTMLElement>();
+
+  const observeSection = (id: string, retryCount = 0): void => {
+    const element = getSectionElement(id);
+    if (element) {
+      if (!observedElements.has(element)) {
+        observer.observe(element);
+        observedElements.add(element);
+        logger.info('ScrollSpy', `Observing section: ${id}`);
+      }
+      return;
+    }
+
+    if (retryCount < 20) {
+      setTimeout(() => observeSection(id, retryCount + 1), 100);
+      if (retryCount === 0) {
+        logger.info('ScrollSpy', `Section not found yet: ${id}, will retry`);
+      }
+      return;
+    }
+
+    logger.warn('ScrollSpy', `Section not found after ${retryCount} retries: ${id}`);
+  };
+
+  sectionIds.forEach((id) => {
+    observeSection(id);
+  });
+
+  let mutationObserver: MutationObserver | null = null;
+  if (typeof MutationObserver !== 'undefined') {
+    mutationObserver = new MutationObserver(() => {
+      sectionIds.forEach((id) => observeSection(id));
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  return () => {
+    logger.info('ScrollSpy', 'Cleaning up observers');
+    observer.disconnect();
+    observedElements.clear();
+    mutationObserver?.disconnect();
+  };
+}
+
 export const LandingSiteScreen: React.FC = () => {
   logger.debug('LandingSite', 'Component rendered', undefined, { periodic: true });
 
@@ -161,8 +319,6 @@ export const LandingSiteScreen: React.FC = () => {
   const statsVersionRef = useRef<string>(''); // Use ref instead of state to prevent unnecessary re-renders
   const [showDonationModal, setShowDonationModal] = useState(false);
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const scrollSpyObserverRef = useRef<IntersectionObserver | null>(null);
-  const observedElementsRef = useRef<Set<HTMLElement>>(new Set());
 
   // Ensure top bar and bottom bar are visible when this screen is focused
   // This fixes the issue where bars disappear when navigating from TopBar's AboutButton
@@ -192,44 +348,14 @@ export const LandingSiteScreen: React.FC = () => {
       platform: Platform.OS,
     });
 
-    // For web, use DOM scrolling with container targeting to prevent window scroll
     if (IS_WEB) {
-      const scrollToSection = (retryCount = 0) => {
-        try {
-          if (sectionId === 'top') {
-            scrollLandingWebToTop(sectionId, setActiveSection);
-            return;
-          }
-
-          const element = getSectionElement(sectionId);
-          logger.info('LandingSiteScreen', `Found element for ${sectionId}:`, {
-            found: !!element,
-            elementId: element?.id || element?.dataset?.nativeid || null,
-            retryCount,
-          });
-
-          if (element) {
-            scrollLandingWebElementIntoSection(element, sectionId, setActiveSection);
-          } else if (retryCount < 10) {
-            setTimeout(() => scrollToSection(retryCount + 1), 100);
-            logger.info('LandingSiteScreen', `Retrying to find section: ${sectionId}, attempt ${retryCount + 1}`);
-          } else {
-            logger.warn('LandingSiteScreen', `Section not found after ${retryCount} retries: ${sectionId}`);
-          }
-        } catch (error) {
-          logger.error('LandingSiteScreen', 'Error scrolling to section', { error, sectionId });
-        }
-      };
-
-      scrollToSection();
-    } else if (sectionId === 'top' && scrollViewRef.current) {
-      scrollViewRef.current.scrollTo?.({ y: 0, animated: true });
-      logger.info('LandingSiteScreen', 'Scrolled to top via ScrollView ref');
-    } else {
-      // Should implemented map of refs for sections if needed for native
-      // But currently this feature is mostly for web landing page
-      logger.warn('LandingSiteScreen', 'Native scrolling not implemented for specific sections');
+      navigateLandingSectionOnWeb(sectionId, setActiveSection);
+      return;
     }
+    if (tryScrollNativeLandingToTop(sectionId, scrollViewRef)) {
+      return;
+    }
+    logger.warn('LandingSiteScreen', 'Native scrolling not implemented for specific sections');
   };
 
   // Shared loadStats function - used by both initial load and auto-refresh
@@ -239,28 +365,12 @@ export const LandingSiteScreen: React.FC = () => {
       setIsLoadingStats(true);
       logger.info('LandingSite', 'Loading stats', { forceRefresh });
       const communityStats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
+      // תמיכה בשני פורמטים: מספר ישיר או אובייקט עם שדה value (see mapCommunityStatsToLandingStats)
+      const statsData = mapCommunityStatsToLandingStats(
+        communityStats as Record<string, unknown>,
+      );
 
-      // Extract values - handle both direct values and nested value objects
-      // תמיכה בשני פורמטים: מספר ישיר או אובייקט עם שדה value
-      // Support for two formats: direct number or object with value field
-      const getValue = (stat: any): number => {
-        if (typeof stat === 'number') return stat;
-        if (stat && typeof stat === 'object' && 'value' in stat) return stat.value || 0;
-        return 0;
-      };
-
-      const statsData = {
-        siteVisits: getValue(communityStats.siteVisits) || 0,
-        totalMoneyDonated: getValue(communityStats.totalMoneyDonated) || 0,
-        totalUsers: getValue(communityStats.totalUsers) || 0,
-        itemDonations: getValue(communityStats.itemDonations) || 0,
-        completedRides: getValue(communityStats.completedRides) || 0,
-        recurringDonationsAmount: getValue(communityStats.recurringDonationsAmount) || 0,
-        uniqueDonors: getValue(communityStats.uniqueDonors) || 0,
-        completedTasks: getValue(communityStats.completed_tasks) || 0,
-      };
-
-      logger.info('LandingSite', 'Stats loaded', statsData, { periodic: true });
+      logger.info('LandingSite', 'Stats loaded', { statsData }, { periodic: true });
       setStats(statsData);
     } catch (error) {
       logger.error('LandingSite', 'Failed to load stats', { error });
@@ -334,84 +444,12 @@ export const LandingSiteScreen: React.FC = () => {
   }, [loadStats]);
 
 
-  // Scroll Spy - Track which section is currently in view
+  // Scroll Spy - Track which section is currently in view (web)
   useEffect(() => {
-    if (!IS_WEB) return; // Works on all web screens including mobile
-
-    const sectionIds = ['stats', 'vision', 'problems', 'features', 'about', 'how', 'who', 'values', 'core-mottos', 'hierarchy', 'roadmap', 'contact', 'faq'];
-
-    // Create Intersection Observer
-    const observerOptions = {
-      root: null, // viewport
-      rootMargin: '-20% 0px -70% 0px', // Trigger when section is in middle third of viewport
-      threshold: 0,
-    };
-
-    const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const targetElement = entry.target as HTMLElement;
-          const identifier = targetElement.id || targetElement.dataset.nativeid || '';
-          const sectionId = identifier.replace('section-', '');
-          if (!sectionId) {
-            return;
-          }
-          logger.info('ScrollSpy', `Section ${sectionId} is now in view`);
-          setActiveSection(sectionId);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-    const observedElements = observedElementsRef.current;
-    observedElements.clear();
-    scrollSpyObserverRef.current = observer;
-
-    const observeSection = (id: string, retryCount = 0) => {
-      const element = getSectionElement(id);
-      if (element) {
-        if (!observedElements.has(element)) {
-          observer.observe(element);
-          observedElements.add(element);
-          logger.info('ScrollSpy', `Observing section: ${id}`);
-        }
-        return true;
-      }
-
-      // Retry if element not found yet (DOM might still be rendering)
-      // ניסיון חוזר אם האלמנט עדיין לא נמצא (DOM עדיין יכול להיות בתהליך רינדור)
-      if (retryCount < 20) {
-        setTimeout(() => observeSection(id, retryCount + 1), 100);
-        if (retryCount === 0) {
-          logger.info('ScrollSpy', `Section not found yet: ${id}, will retry`);
-        }
-      } else {
-        logger.warn('ScrollSpy', `Section not found after ${retryCount} retries: ${id}`);
-      }
-      return false;
-    };
-
-    // Observe all sections initially
-    sectionIds.forEach((id) => {
-      observeSection(id);
-    });
-
-    let mutationObserver: MutationObserver | null = null;
-    if (typeof MutationObserver !== 'undefined') {
-      mutationObserver = new MutationObserver(() => {
-        sectionIds.forEach(id => observeSection(id));
-      });
-      mutationObserver.observe(document.body, { childList: true, subtree: true });
+    if (!IS_WEB) {
+      return;
     }
-
-    // Cleanup
-    return () => {
-      logger.info('ScrollSpy', 'Cleaning up observers');
-      observer.disconnect();
-      observedElements.clear();
-      scrollSpyObserverRef.current = null;
-      mutationObserver?.disconnect();
-    };
+    return registerLandingScrollSpy(setActiveSection);
   }, []);
 
   return (
