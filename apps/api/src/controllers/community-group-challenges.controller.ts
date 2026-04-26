@@ -33,6 +33,21 @@ export class CommunityGroupChallengesController {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  /** Accept both `user_id` and `userId` query keys (mobile / legacy clients). */
+  private resolveQueryUserId(
+    user_id?: string,
+    userId?: string,
+  ): string | undefined {
+    const v = (user_id || userId || "").trim();
+    return v || undefined;
+  }
+
+  private isUuidString(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
   /**
    * Create a new community challenge
    * Also creates a post automatically in the feed
@@ -284,10 +299,12 @@ export class CommunityGroupChallengesController {
    */
   @Get("daily-tracker")
   async getDailyTrackerData(
-    @Query("user_id") userId: string,
+    @Query("user_id") user_id?: string,
+    @Query("userId") userIdAlt?: string,
     @Query("start_date") startDate?: string,
     @Query("end_date") endDate?: string,
   ) {
+    const userId = this.resolveQueryUserId(user_id, userIdAlt);
     if (!userId) {
       throw new BadRequestException("user_id is required");
     }
@@ -800,10 +817,12 @@ export class CommunityGroupChallengesController {
   @Get(":id/entries")
   async getChallengeEntries(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @Query("user_id") user_id?: string,
+    @Query("userId") userIdAlt?: string,
     @Query("limit") limit?: number,
     @Query("offset") offset?: number,
   ) {
+    const userId = this.resolveQueryUserId(user_id, userIdAlt);
     if (!userId) {
       throw new BadRequestException("user_id is required");
     }
@@ -905,8 +924,10 @@ export class CommunityGroupChallengesController {
   async updateChallenge(
     @Param("id") challengeId: string,
     @Body() dto: UpdateCommunityGroupChallengeDto,
-    @Query("user_id") userId: string,
+    @Query("user_id") user_id?: string,
+    @Query("userId") userIdAlt?: string,
   ) {
+    const userId = this.resolveQueryUserId(user_id, userIdAlt);
     if (!userId) {
       throw new BadRequestException("user_id is required");
     }
@@ -929,7 +950,16 @@ export class CommunityGroupChallengesController {
         throw new NotFoundException("Challenge not found");
       }
 
-      if (challenge.creator_id !== userId) {
+      if (!this.isUuidString(userId)) {
+        throw new BadRequestException("user_id must be a valid UUID");
+      }
+
+      const {
+        rows: [allowed],
+      } = await client.query(`SELECT ($1::uuid = creator_id) AS ok`, [
+        userId,
+      ]);
+      if (!allowed?.ok) {
         throw new BadRequestException(
           "Only the creator can update this challenge",
         );
@@ -1041,8 +1071,10 @@ export class CommunityGroupChallengesController {
   @Delete(":id")
   async deleteChallenge(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @Query("user_id") user_id?: string,
+    @Query("userId") userIdAlt?: string,
   ) {
+    const userId = this.resolveQueryUserId(user_id, userIdAlt);
     if (!userId) {
       throw new BadRequestException("user_id is required");
     }
@@ -1065,7 +1097,16 @@ export class CommunityGroupChallengesController {
         throw new NotFoundException("Challenge not found");
       }
 
-      if (challenge.creator_id !== userId) {
+      if (!this.isUuidString(userId)) {
+        throw new BadRequestException("user_id must be a valid UUID");
+      }
+
+      const {
+        rows: [allowed],
+      } = await client.query(`SELECT ($1::uuid = creator_id) AS ok`, [
+        userId,
+      ]);
+      if (!allowed?.ok) {
         throw new BadRequestException(
           "Only the creator can delete this challenge",
         );
