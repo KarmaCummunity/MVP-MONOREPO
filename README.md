@@ -4,7 +4,6 @@
 
 - `apps/api` – שרת ה-NestJS (לשעבר `KC-MVP-server`)
 - `apps/mobile` – אפליקציית ה-Expo/React Native (לשעבר `MVP`)
-- `apps/dev-bot` – בוט/CLI (לשעבר `dev-bot`)
 - `docs` – תיעוד ומסמכים
 
 ## התקנה
@@ -28,12 +27,6 @@ npm run dev:api
 npm run dev:mobile
 ```
 
-- בוט:
-
-```bash
-npm run dev:bot
-```
-
 ## מבנה תיקיות
 
 ```text
@@ -41,7 +34,6 @@ kc-monorepo/
   apps/
     api/        # KC-MVP-server
     mobile/     # MVP
-    dev-bot/    # dev-bot
   packages/     # קוד וקונפיגורציות משותפים (לעתיד)
   docs/         # תיעוד
 ```
