@@ -17,6 +17,10 @@ import { getCategoryLabel } from '../utils/itemCategoryUtils';
 import { useToast } from '../utils/toastService';
 import VerticalGridSlider from '../components/VerticalGridSlider';
 import { postsService } from '../utils/postsService';
+import {
+  isItemOrDonationPostRow,
+  mapApiPostToFeedItemForItemsScreen,
+} from '../utils/mapApiPostToFeedItemForItemsScreen';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
@@ -258,105 +262,6 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
   const dummyItems: DonationItem[] = useMemo(() => [], []);
 
-  // Helper to map API post to FeedItem (same as useFeedData.mapPostToItem)
-  const mapPostToFeedItem = (post: any): FeedItem | null => {
-    // הגנה מפני post null/undefined
-    if (!post || !post.id) {
-      console.warn('⚠️ mapPostToFeedItem: post is null or missing id', post);
-      return null;
-    }
-
-    // Extract item data if available
-    const itemData = post.item_data || {};
-    let metadata = {};
-    try {
-      metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : (post.metadata || {});
-    } catch (e) {
-      console.warn('⚠️ Failed to parse metadata:', e);
-    }
-
-    // Ensure user is always defined (same format as useFeedData)
-    // בדיקה מפורטת יותר
-    let author = null;
-    if (post.author) {
-      author = post.author;
-    } else if (post.author_id) {
-      // אם אין author object, ניצור אחד בסיסי
-      author = { id: post.author_id, name: null, avatar_url: null };
-    }
-
-    const userId = author?.id || post.author_id || 'unknown';
-    const userName = author?.name || 'common.unknownUser';
-    const userAvatar = author?.avatar_url || undefined;
-
-    // וידוא שה-user תמיד מוגדר
-    if (!userId || userId === 'unknown') {
-      console.warn('⚠️ mapPostToFeedItem: post without valid user', { postId: post.id, author, author_id: post.author_id });
-    }
-
-    // Get status from item_data or ride_data
-    let itemStatus: string | undefined;
-    if (post.item_data) {
-      itemStatus = post.item_data.status;
-    } else if (post.ride_data) {
-      itemStatus = post.ride_data.status;
-    }
-
-    const pt = post.post_type;
-    const isChallengePost =
-      pt === 'community_challenge' || pt === 'personal_challenge';
-    const itemCategoryForFeed =
-      !isChallengePost && (pt === 'item' || pt === 'donation')
-        ? itemData?.category || (metadata as any)?.category
-        : undefined;
-    let challengeId: string | undefined;
-    let challengeFrequency: string | undefined;
-    let challengeDifficulty: string | undefined;
-    let challengeCategoryLabel: string | undefined;
-    if (isChallengePost && metadata && typeof metadata === 'object') {
-      const m = metadata as Record<string, unknown>;
-      const cid = m.challenge_id ?? m.personal_challenge_id;
-      if (typeof cid === 'string') challengeId = cid;
-      if (typeof m.frequency === 'string') challengeFrequency = m.frequency;
-      if (typeof m.difficulty === 'string') challengeDifficulty = m.difficulty;
-      if (typeof m.category === 'string') challengeCategoryLabel = m.category;
-    }
-
-    return {
-      id: post.id,
-      type: post.post_type || 'post',
-      subtype: post.post_type, // Same as useFeedData - e.g. 'item', 'donation', 'ride'
-      title: post.title || 'post.noTitle', // Same as useFeedData
-      description: post.description || '',
-      thumbnail: post.images && post.images.length > 0 ? post.images[0] : null, // Same as useFeedData
-      user: {
-        id: userId,
-        name: userName,
-        avatar: userAvatar,
-      },
-      likes: parseInt(post.likes || '0'),
-      comments: parseInt(post.comments || '0'),
-      isLiked: post.is_liked || false,
-      timestamp: (post.created_at && !isNaN(new Date(post.created_at).getTime()))
-        ? new Date(post.created_at).toISOString()
-        : new Date().toISOString(),
-      // Item-specific fields (never use challenge metadata.category as item category)
-      category: itemCategoryForFeed,
-      challengeId,
-      challengeFrequency,
-      challengeDifficulty,
-      challengeCategoryLabel,
-      // Add status for items and donations
-      status: itemStatus,
-      // Add IDs for updating posts
-      // IMPORTANT: For items, ALWAYS prefer item_data.id (from JOIN) - this is the most reliable source
-      // item_id column might be a timestamp if post was created incorrectly
-      itemId: post.item_data?.id || (post.item_id && !/^\d{10,13}$/.test(post.item_id) ? post.item_id : undefined),
-      rideId: post.ride_id || post.ride_data?.id,
-      taskId: post.task_id || post.task?.id,
-    };
-  };
-
   // פונקציה נפרדת לטעינת פריטים/פוסטים שנוכל לקרוא לה גם אחרי שמירה
   const loadItems = async () => {
     try {
@@ -371,19 +276,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           const postsResponse = await postsService.getPosts(200, 0, uid);
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => {
-              const ptype = post.post_type;
-              if (ptype === 'community_challenge' || ptype === 'personal_challenge') {
-                return false;
-              }
-              return ptype === 'item' || ptype === 'donation' || post.item_id;
-            });
+            const itemPosts = postsResponse.data.filter(isItemOrDonationPostRow);
             
             console.log('📊 סה"כ פוסטים:', postsResponse.data.length, 'פוסטים של פריטים:', itemPosts.length);
             
             // ממפה את הפוסטים עם הגנה מפני user undefined
             const mappedPosts = itemPosts
-              .map(mapPostToFeedItem)
+              .map(mapApiPostToFeedItemForItemsScreen)
               .filter((post: FeedItem | null): post is FeedItem => 
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
               ); // מסנן פוסטים ללא user תקין
@@ -416,17 +315,11 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => {
-              const ptype = post.post_type;
-              if (ptype === 'community_challenge' || ptype === 'personal_challenge') {
-                return false;
-              }
-              return ptype === 'item' || ptype === 'donation' || post.item_id;
-            });
+            const itemPosts = postsResponse.data.filter(isItemOrDonationPostRow);
             
             // ממפה את הפוסטים
             const mappedPosts = itemPosts
-              .map(mapPostToFeedItem)
+              .map(mapApiPostToFeedItemForItemsScreen)
               .filter((post: FeedItem | null): post is FeedItem => 
                 post !== null && post !== undefined && !!post.user && !!post.user.id && !!post.user.name
               );
