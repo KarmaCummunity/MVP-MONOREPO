@@ -10,12 +10,14 @@ import {
   ADMIN_TASKS_FILTER_OPTIONS,
   ADMIN_TASKS_SORT_OPTIONS,
 } from './adminTasksScreen.constants';
-import { buildPersistedAdminTaskFilterKeys } from './adminTasksScreen.utils';
+import { buildPersistedAdminTaskFilterKeys, sanitizeAdminTasksHeaderFilterKeys } from './adminTasksScreen.utils';
 import { styles, stylesWithListContent } from './adminTasksScreen.styles';
 import { AdminTasksPickerField } from './AdminTasksPickerField';
 import { useAdminTasksScreen } from './useAdminTasksScreen';
+import { useToast } from '../../utils/toastService';
 
 export default function AdminTasksScreen() {
+  const { ToastComponent } = useToast();
   const {
     navigation,
     t,
@@ -79,14 +81,17 @@ export default function AdminTasksScreen() {
           initialSearchText={hasPersistedSnapshot ? query : undefined}
           initialSelectedFilters={
             hasPersistedSnapshot
-              ? buildPersistedAdminTaskFilterKeys(
-                filterAssignee,
-                filterStatuses,
-                filterPriorities,
-                includeDoneWhenNoStatusFilter,
+              ? sanitizeAdminTasksHeaderFilterKeys(
+                buildPersistedAdminTaskFilterKeys(
+                  filterAssignee,
+                  filterStatuses,
+                  filterPriorities,
+                  includeDoneWhenNoStatusFilter,
+                ),
               )
               : undefined
           }
+          sanitizeSelectedFilters={sanitizeAdminTasksHeaderFilterKeys}
           initialSelectedSorts={hasPersistedSnapshot ? [listSort] : undefined}
         />
       </View>
@@ -191,6 +196,7 @@ export default function AdminTasksScreen() {
           <Ionicons name="add" size={24} color={colors.white} />
         </TouchableOpacity>
       )}
+      {ToastComponent}
     </SafeAreaView>
   );
 }

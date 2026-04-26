@@ -31,7 +31,20 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
       }
     }
   }
+  // With any status chip, the API ignores "show completed"; keep state/storage consistent.
+  if (statuses.length > 0) {
+    includeDoneWhenNoStatusFilter = false;
+  }
   return { assignee, statuses, priorities, includeDoneWhenNoStatusFilter };
+}
+
+/** Drop redundant "show completed" when any status chip is selected (same as fetch semantics). */
+export function sanitizeAdminTasksHeaderFilterKeys(filterKeys: string[]): string[] {
+  const hasStatusChip = filterKeys.some((k) => k.startsWith('task_status_'));
+  if (!hasStatusChip) {
+    return [...filterKeys];
+  }
+  return filterKeys.filter((k) => k !== FILTER_KEY_SHOW_COMPLETED);
 }
 
 export function formatTaskListPriorityHebrew(priority: string): string {
@@ -71,10 +84,10 @@ export function buildPersistedAdminTaskFilterKeys(
   if (assignee === 'me') {
     keys.push('task_assign_me');
   }
-  if (includeDoneWhenNoStatusFilter) {
+  const dedupStatuses = [...new Set(statuses)];
+  if (includeDoneWhenNoStatusFilter && dedupStatuses.length === 0) {
     keys.push(FILTER_KEY_SHOW_COMPLETED);
   }
-  const dedupStatuses = [...new Set(statuses)];
   for (const s of dedupStatuses) {
     keys.push(`task_status_${s}`);
   }

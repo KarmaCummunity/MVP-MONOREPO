@@ -27,6 +27,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
   Logger,
 } from "@nestjs/common";
@@ -35,6 +36,10 @@ import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import type { SessionTokenPayload } from "../auth/jwt.service";
+import type { Request } from "express";
+import { ItemsService } from "../items/items.service";
+import { randomUUID } from "crypto";
 
 interface CreateDonationDto {
   donor_id: string;
@@ -81,6 +86,7 @@ export class DonationsController {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly redisCache: RedisCacheService,
+    private readonly itemsService: ItemsService,
   ) {}
 
   /**
@@ -136,6 +142,336 @@ export class DonationsController {
     // Cache for 30 minutes - categories are static data
     await this.redisCache.set(cacheKey, rows[0], 30 * 60);
     return { success: true, data: rows[0] };
+  }
+
+  private async ensureKnowledgeCommunityLinksTable() {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS knowledge_community_links (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        url TEXT NOT NULL,
+        description TEXT,
+        link_type VARCHAR(32) NOT NULL DEFAULT 'group',
+        created_by_user_id UUID,
+        created_by_display TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_knowledge_community_links_created_at
+       ON knowledge_community_links (created_at DESC)`,
+    );
+  }
+
+  private async ensureTasksTableMinimal() {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'open',
+        priority VARCHAR(10) NOT NULL DEFAULT 'medium',
+        category VARCHAR(50),
+        due_date TIMESTAMPTZ,
+        assignees UUID[] DEFAULT ARRAY[]::UUID[],
+        tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+        checklist JSONB,
+        created_by UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        parent_task_id UUID,
+        estimated_hours NUMERIC(10,2)
+      )
+    `);
+  }
+
+  private async getRootAdminUserId(): Promise<string | null> {
+    const rootEmail = process.env.ROOT_ADMIN_EMAIL;
+    if (!rootEmail?.trim()) {
+      return null;
+    }
+    const { rows } = await this.pool.query(
+      `SELECT id FROM user_profiles WHERE lower(trim(email)) = lower(trim($1)) LIMIT 1`,
+      [rootEmail.trim()],
+    );
+    return rows[0]?.id ?? null;
+  }
+
+  /** Public: list community knowledge links (newest first). */
+  @Get("knowledge/links")
+  async listKnowledgeCommunityLinks() {
+    try {
+      await this.ensureKnowledgeCommunityLinksTable();
+      const { rows } = await this.pool.query(
+        `SELECT id, url, description,
+                link_type AS "linkType",
+                created_at AS "createdAt",
+                created_by_user_id AS "createdByUserId",
+                created_by_display AS "createdByDisplay"
+         FROM knowledge_community_links
+         ORDER BY created_at DESC
+         LIMIT 500`,
+      );
+      return { success: true, data: rows };
+    } catch (error) {
+      this.logger.error("listKnowledgeCommunityLinks", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to list knowledge links",
+      };
+    }
+  }
+
+  /** Public: add a knowledge link (no admin approval). */
+  @Post("knowledge/links")
+  async createKnowledgeCommunityLink(
+    @Body()
+    body: {
+      url: string;
+      description?: string;
+      linkType?: string;
+      createdByUserId?: string | null;
+      displayName?: string | null;
+    },
+  ) {
+    try {
+      await this.ensureKnowledgeCommunityLinksTable();
+      const raw = typeof body?.url === "string" ? body.url.trim() : "";
+      if (!raw || raw.length > 2048) {
+        return {
+          success: false,
+          error: "url is required (max 2048 characters)",
+        };
+      }
+      let normalized = raw;
+      if (!/^https?:\/\//i.test(normalized)) {
+        normalized = `https://${normalized}`;
+      }
+      try {
+        // eslint-disable-next-line no-new
+        new URL(normalized);
+      } catch {
+        return { success: false, error: "invalid url" };
+      }
+      const description =
+        typeof body.description === "string"
+          ? body.description.trim().slice(0, 500)
+          : "";
+      const linkType =
+        body.linkType === "organization" ? "organization" : "group";
+      const displayName =
+        typeof body.displayName === "string"
+          ? body.displayName.trim().slice(0, 120)
+          : null;
+      const uuidRe =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const createdByUserId =
+        typeof body.createdByUserId === "string" &&
+        uuidRe.test(body.createdByUserId)
+          ? body.createdByUserId
+          : null;
+
+      const { rows } = await this.pool.query(
+        `INSERT INTO knowledge_community_links (url, description, link_type, created_by_user_id, created_by_display)
+         VALUES ($1, $2, $3, $4::uuid, $5)
+         RETURNING id, url, description,
+           link_type AS "linkType",
+           created_at AS "createdAt",
+           created_by_user_id AS "createdByUserId",
+           created_by_display AS "createdByDisplay"`,
+        [
+          normalized,
+          description || null,
+          linkType,
+          createdByUserId,
+          displayName,
+        ],
+      );
+      return { success: true, data: rows[0] };
+    } catch (error) {
+      this.logger.error("createKnowledgeCommunityLink", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to save knowledge link",
+      };
+    }
+  }
+
+  /** Admin: delete a knowledge link. */
+  @Delete("knowledge/links/:id")
+  @UseGuards(JwtAuthGuard)
+  async deleteKnowledgeCommunityLink(
+    @Param("id") id: string,
+    @Req() req: Request & { user?: SessionTokenPayload },
+  ) {
+    try {
+      const roles = req.user?.roles || [];
+      const isAdmin =
+        roles.includes("admin") ||
+        roles.includes("super_admin") ||
+        roles.includes("org_admin");
+      if (!isAdmin) {
+        return { success: false, error: "Admin access required" };
+      }
+      const uuidRe =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRe.test(id)) {
+        return { success: false, error: "Invalid id" };
+      }
+      await this.ensureKnowledgeCommunityLinksTable();
+      const { rowCount } = await this.pool.query(
+        `DELETE FROM knowledge_community_links WHERE id = $1::uuid`,
+        [id],
+      );
+      if (!rowCount) {
+        return { success: false, error: "Link not found" };
+      }
+      return { success: true, message: "deleted" };
+    } catch (error) {
+      this.logger.error("deleteKnowledgeCommunityLink", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete knowledge link",
+      };
+    }
+  }
+
+  /**
+   * Authenticated user: create internal task for root admin (Knowledge offer flow).
+   * Lives under donations API so routing is stable (see SRS §2.3.3).
+   */
+  @Post("knowledge/contribution-request")
+  @UseGuards(JwtAuthGuard)
+  async createKnowledgeContributionRequest(
+    @Body() body: { message?: string },
+    @Req() req: Request & { user?: SessionTokenPayload },
+  ) {
+    try {
+      await this.ensureTasksTableMinimal();
+      const sessionUser = req.user;
+      if (!sessionUser?.userId) {
+        return { success: false, error: "Authentication required" };
+      }
+
+      const rawMessage =
+        typeof body?.message === "string" ? body.message.trim() : "";
+      if (rawMessage.length > 4000) {
+        return {
+          success: false,
+          error: "Message too long (max 4000 characters)",
+        };
+      }
+
+      const superAdminId = await this.getRootAdminUserId();
+      if (!superAdminId) {
+        this.logger.warn(
+          "knowledge/contribution-request: ROOT_ADMIN_EMAIL not configured",
+        );
+        return {
+          success: false,
+          error:
+            "Server is not configured to receive knowledge requests (missing ROOT_ADMIN_EMAIL)",
+        };
+      }
+
+      const { rows: profileRows } = await this.pool.query(
+        `SELECT id, name, email FROM user_profiles WHERE id = $1::uuid LIMIT 1`,
+        [sessionUser.userId],
+      );
+      const profile = profileRows[0] as
+        | { id: string; name: string | null; email: string | null }
+        | undefined;
+      if (!profile) {
+        return { success: false, error: "User profile not found" };
+      }
+
+      const requesterLabel =
+        profile.name?.trim() || profile.email?.trim() || "משתמש/ת";
+      const title = `בקשה לתרומת מידע — ${requesterLabel}`.slice(0, 255);
+      const descriptionLines = [
+        "משימה שנפתחה ממסך תרומות › ידע (מצב מציע). יש ליצור קשר עם המבקש/ת לתיאום תרומת הידע.",
+        "",
+        "—— פרטי המבקש/ת ——",
+        `מזהה משתמש (UUID): ${profile.id}`,
+        `שם: ${profile.name || "—"}`,
+        `אימייל: ${profile.email || "—"}`,
+        "",
+        "—— תוכן / פרטי המידע שהוזנו ——",
+        rawMessage.length > 0 ? rawMessage : "(לא הוזן טקסט נוסף בטופס)",
+        "",
+        "הערה: בעתיד ניתן יהיה לצרף קובץ/סרטון/טקסט ישירות מהאפליקציה.",
+      ];
+      const description = descriptionLines.join("\n");
+
+      const due = new Date();
+      due.setDate(due.getDate() + 14);
+
+      const sql = `
+        INSERT INTO tasks (title, description, status, priority, category, due_date, assignees, tags, checklist, created_by, parent_task_id, estimated_hours)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::UUID[], $8::TEXT[], $9::JSONB, $10::UUID, $11::UUID, $12::NUMERIC)
+        RETURNING id, title, description, status, priority, category, due_date, assignees, tags, checklist, created_by, parent_task_id, estimated_hours, created_at, updated_at
+      `;
+      const assigneeUUIDs = [superAdminId];
+      const params = [
+        title.trim(),
+        description,
+        "open",
+        "medium",
+        "knowledge_offer",
+        due.toISOString(),
+        assigneeUUIDs,
+        ["donations", "knowledge", "volunteer_intent"],
+        null,
+        profile.id,
+        null,
+        null,
+      ];
+
+      const { rows } = await this.pool.query(sql, params);
+      const newTask = rows[0];
+
+      const timestamp = new Date().toISOString();
+      try {
+        await this.itemsService.create(
+          "notifications",
+          superAdminId,
+          randomUUID(),
+          {
+            title: "משימה חדשה",
+            body: `הוקצתה לך משימה חדשה: ${newTask.title}`,
+            type: "system",
+            timestamp,
+            read: false,
+            userId: superAdminId,
+            data: { taskId: newTask.id },
+          },
+        );
+      } catch (notifyErr) {
+        this.logger.warn(
+          "knowledge/contribution-request: notification skipped",
+          notifyErr,
+        );
+      }
+
+      return { success: true, data: newTask };
+    } catch (error) {
+      this.logger.error("knowledge/contribution-request failed:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create knowledge contribution request",
+      };
+    }
   }
 
   @Post()

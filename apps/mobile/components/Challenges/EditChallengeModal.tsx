@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primary,
     padding: 12,
     borderRadius: 8,
     marginTop: 16,

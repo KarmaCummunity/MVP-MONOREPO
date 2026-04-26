@@ -131,6 +131,49 @@ class ApiService {
     );
   }
 
+  /** JWT — creates admin task for root admin (Knowledge offer); route lives under donations API. */
+  async createKnowledgeContributionRequest(payload: {
+    message?: string;
+  }): Promise<ApiResponse> {
+    return this.request(
+      '/api/donations/knowledge/contribution-request',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload ?? {}),
+      },
+      true,
+      TASKS_HTTP_TIMEOUT_MS,
+    );
+  }
+
+  async getKnowledgeCommunityLinks(): Promise<ApiResponse<any[]>> {
+    return this.request('/api/donations/knowledge/links', {}, true, 30_000);
+  }
+
+  async createKnowledgeCommunityLink(body: {
+    url: string;
+    description?: string;
+    linkType?: 'group' | 'organization';
+    createdByUserId?: string | null;
+    displayName?: string | null;
+  }): Promise<ApiResponse> {
+    return this.request(
+      '/api/donations/knowledge/links',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+      true,
+      30_000,
+    );
+  }
+
+  async deleteKnowledgeCommunityLink(linkId: string): Promise<ApiResponse> {
+    return this.request(`/api/donations/knowledge/links/${linkId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async updateTask(taskId: string, updateData: any): Promise<ApiResponse> {
     return this.request(
       `/api/tasks/${taskId}`,

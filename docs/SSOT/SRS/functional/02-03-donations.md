@@ -9,7 +9,7 @@
   - `GET /api/donations/categories` — list all categories
   - `GET /api/donations/categories/:slug` — get category by slug
 - **Categories observed in mobile navigation (30+):**
-  - **Money**, **Items** (food, clothes, books, furniture, medical, technology, games, plants, waste, art, sports, music, recipes, riddles), **Time**, **Knowledge**, **Animals**, **Housing**, **Support**, **Education**, **Environment**, **Mental Health**, **Languages**, **Dreams**, **Fertility**, **Jobs**, **Matchmaking** (matchmaking — romantic/singles, see §2.3.3), **Golden Age**
+  - **Money**, **Items** (food, clothes, books, furniture, medical, technology, games, plants, waste, art, sports, music, recipes, riddles), **Time**, **Knowledge**, **Animals**, **Housing**, **Support**, **Education**, **Environment**, **Mental Health**, **Languages**, **Dreams**, **Fertility**, **Jobs**, **Matchmaking** (matchmaking — romantic/singles, see §2.3.4), **Golden Age**
 
 #### 2.3.2 Donation CRUD
 
@@ -25,7 +25,14 @@
 - **Business logic:** SQL-based CRUD in controller (no separate service file)
 - **Database:** `donations` table with donor/recipient UUIDs, amounts, category reference
 
-#### 2.3.3 Donation Category Naming: Matchmaking vs Shiduchim Tov
+#### 2.3.3 Knowledge category UX (mobile `KnowledgeScreen`)
+
+- **Seeker mode (`mode=search`):** The screen SHALL **not** show legacy mock “educational links” or mock community listings. It SHALL show the **public list** of community-submitted knowledge links (`GET /api/donations/knowledge/links`). **Adding** a link SHALL occur in **offerer** mode via `AddLinkComponent` (category `knowledge`) backed by `POST /api/donations/knowledge/links`.
+- **Offerer mode (`mode=offer`):** The screen SHALL invite users who want to **volunteer knowledge** to submit a short message. Submitting SHALL create an **internal admin task** (title pattern **בקשה לתרומת מידע —** *requester*, body with requester profile + message text) assigned to the **root super-admin** (resolved server-side via `ROOT_ADMIN_EMAIL`). Endpoint: `POST /api/donations/knowledge/contribution-request` (`JwtAuthGuard` only). Optional free-text `message` (length-capped). If the server cannot route the task (e.g. missing `ROOT_ADMIN_EMAIL`), the client SHALL surface a clear error (e.g. toast); **no** client-side `mailto` fallback.
+- **Community knowledge links:** `GET /api/donations/knowledge/links` (public list), `POST /api/donations/knowledge/links` (public create — no admin approval), `DELETE /api/donations/knowledge/links/:id` (admin/org_admin/super_admin only). Storage: table `knowledge_community_links` (created at runtime if missing).
+- **Future:** Direct upload of files/video/text from the app for knowledge offers is **out of scope** for this slice; only the intake described above is required.
+
+#### 2.3.4 Donation Category Naming: Matchmaking vs Shiduchim Tov
 
 This section disambiguates two distinct concepts that share similar Hebrew vocabulary.
 

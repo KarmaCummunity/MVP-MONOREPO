@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import colors from '../../globals/colors';
 import { rowDirection } from '../../globals/responsive';
 import apiService, { ApiResponse } from '../../utils/apiService';
+import { toastService } from '../../utils/toastService';
 import { useUser } from '../../stores/userStore';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { taskFilterStateToApiTaskFilters, type TaskFilterState } from '../../utils/taskFilterQuery';
@@ -341,11 +342,17 @@ export function useAdminTasksScreen() {
   };
 
   const createTask = async () => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim()) {
+      const msg = 'נא להזין כותרת למשימה';
+      toastService.showError(msg);
+      return;
+    }
 
     // Validate created_by is available
     if (!selectedUser?.id) {
-      setError('שגיאה: לא ניתן לזהות את המשתמש הנוכחי. נסה להתחבר מחדש.');
+      const msg = 'שגיאה: לא ניתן לזהות את המשתמש הנוכחי. נסה להתחבר מחדש.';
+      setError(msg);
+      toastService.showError(msg);
       return;
     }
 
@@ -355,6 +362,7 @@ export function useAdminTasksScreen() {
       const dueParsed = parseCreateTaskDueDate(formData.due_date.trim());
       if (!dueParsed.ok) {
         setError(dueParsed.message);
+        toastService.showError(dueParsed.message);
         setCreating(false);
         return;
       }
@@ -365,7 +373,9 @@ export function useAdminTasksScreen() {
 
       const res: ApiResponse<AdminTask> = await apiService.createTask(body);
       if (!res.success) {
-        setError(mapCreateTaskApiErrorMessage(res.error));
+        const msg = mapCreateTaskApiErrorMessage(res.error);
+        setError(msg);
+        toastService.showError(msg);
       } else if (res.data) {
         if (formData.parent_task_id) {
           await checkAndUpdateParentStatus(formData.parent_task_id);
@@ -373,10 +383,13 @@ export function useAdminTasksScreen() {
         await fetchTasks();
         resetForm();
         setShowForm(false);
+        toastService.showSuccess('המשימה נוצרה בהצלחה');
       }
     } catch (err) {
       console.error('Error creating task:', err);
-      setError('שגיאה ביצירת משימה - נסה שוב');
+      const msg = 'שגיאה ביצירת משימה - נסה שוב';
+      setError(msg);
+      toastService.showError(msg);
     } finally {
       setCreating(false);
     }
@@ -399,12 +412,17 @@ export function useAdminTasksScreen() {
       const res: ApiResponse<AdminTask> = await apiService.updateTask(task.id, { status: 'open' });
       if (res.success && res.data) {
         await fetchTasks();
+        toastService.showSuccess('סטטוס המשימה עודכן');
       } else {
-        setError(res.error || 'שגיאה בעדכון סטטוס המשימה');
+        const msg = res.error || 'שגיאה בעדכון סטטוס המשימה';
+        setError(msg);
+        toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error toggling task status:', err);
-      setError('שגיאה בעדכון סטטוס המשימה - נסה שוב');
+      const msg = 'שגיאה בעדכון סטטוס המשימה - נסה שוב';
+      setError(msg);
+      toastService.showError(msg);
     } finally {
       setUpdating(null);
     }
@@ -412,19 +430,25 @@ export function useAdminTasksScreen() {
 
   const handleSaveHours = async (hours: number) => {
     if (!pendingTaskId || !selectedUser?.id) {
-      throw new Error('משתמש לא זוהה');
+      const msg = 'משתמש לא זוהה';
+      toastService.showError(msg);
+      throw new Error(msg);
     }
 
     // Log hours first
     const logRes = await apiService.logTaskHours(pendingTaskId, hours, selectedUser.id);
     if (!logRes.success) {
-      throw new Error(logRes.error || 'שגיאה ברישום שעות');
+      const msg = logRes.error || 'שגיאה ברישום שעות';
+      toastService.showError(msg);
+      throw new Error(msg);
     }
 
     // Then update status to done
     const updateRes = await apiService.updateTask(pendingTaskId, { status: 'done' });
     if (!updateRes.success) {
-      throw new Error(updateRes.error || 'שגיאה בעדכון סטטוס המשימה');
+      const msg = updateRes.error || 'שגיאה בעדכון סטטוס המשימה';
+      toastService.showError(msg);
+      throw new Error(msg);
     }
 
     // Refresh tasks
@@ -434,6 +458,7 @@ export function useAdminTasksScreen() {
     setShowHoursModal(false);
     setPendingTaskId(null);
     setPendingTask(null);
+    toastService.showSuccess('המשימה סומנה כבוצעה והשעות נרשמו');
   };
 
   const openEdit = (task: AdminTask) => {
@@ -462,7 +487,9 @@ export function useAdminTasksScreen() {
       if (formData.due_date.trim()) {
         const date = new Date(formData.due_date);
         if (Number.isNaN(date.getTime())) {
-          setError('תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD');
+          const msg = 'תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD';
+          setError(msg);
+          toastService.showError(msg);
           setUpdating(null);
           return;
         }
@@ -496,14 +523,21 @@ export function useAdminTasksScreen() {
         setShowForm(false);
         resetForm();
         setEditingId(null);
+        toastService.showSuccess('המשימה עודכנה בהצלחה');
       } else if (res.error?.includes('הרשאה')) {
-        setError('אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.');
+        const msg = 'אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.';
+        setError(msg);
+        toastService.showError(msg);
       } else {
-        setError(res.error || 'שגיאה בעדכון משימה');
+        const msg = res.error || 'שגיאה בעדכון משימה';
+        setError(msg);
+        toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error updating task:', err);
-      setError('שגיאה בעדכון משימה - נסה שוב');
+      const msg = 'שגיאה בעדכון משימה - נסה שוב';
+      setError(msg);
+      toastService.showError(msg);
     } finally {
       setUpdating(null);
     }
@@ -516,12 +550,17 @@ export function useAdminTasksScreen() {
       const res = await apiService.deleteTask(taskId);
       if (res.success) {
         await fetchTasks();
+        toastService.showSuccess('המשימה נמחקה בהצלחה');
       } else {
-        setError(res.error || 'שגיאה במחיקת משימה');
+        const msg = res.error || 'שגיאה במחיקת משימה';
+        setError(msg);
+        toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error deleting task:', err);
-      setError('שגיאה במחיקת משימה - נסה שוב');
+      const msg = 'שגיאה במחיקת משימה - נסה שוב';
+      setError(msg);
+      toastService.showError(msg);
     } finally {
       setDeleting(null);
     }

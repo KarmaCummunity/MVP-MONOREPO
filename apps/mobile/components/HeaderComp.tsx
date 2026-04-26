@@ -47,6 +47,7 @@ interface HeaderSectionProps {
   initialSearchText?: string;
   initialSelectedFilters?: string[];
   initialSelectedSorts?: string[];
+  sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -65,6 +66,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   initialSearchText,
   initialSelectedFilters,
   initialSelectedSorts,
+  sanitizeSelectedFilters,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -133,6 +135,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
             onRemoveSortRequested={(fn) => { removeSortRef.current = fn; }}
             renderSelectedRow={false}
             hideSortButton={hideSortButton}
+            sanitizeSelectedFilters={sanitizeSelectedFilters}
           />
         </View>
         {!hideModeToggle && (

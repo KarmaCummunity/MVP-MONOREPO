@@ -38,6 +38,8 @@ interface SearchBarProps {
   renderSelectedRow?: boolean;
   // Whether to hide the sort button explicitly
   hideSortButton?: boolean;
+  /** Optional post-process for filter keys (e.g. admin tasks: drop show-completed when status chips are on). */
+  sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
 
 const SearchBar = ({
@@ -56,14 +58,16 @@ const SearchBar = ({
   onRemoveSortRequested,
   renderSelectedRow = true,
   hideSortButton = false,
+  sanitizeSelectedFilters,
 }: SearchBarProps) => {
   const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
   const { t } = useTranslation(['search', 'common', 'trump']);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>(
-    () => initialSelectedFilters ?? [],
-  );
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(() => {
+    const raw = initialSelectedFilters ?? [];
+    return sanitizeSelectedFilters ? sanitizeSelectedFilters(raw) : raw;
+  });
   const [selectedSorts, setSelectedSorts] = useState<string[]>(
     () => initialSelectedSorts ?? [],
   );
@@ -232,9 +236,10 @@ const SearchBar = ({
 
   const handleFilterSelection = (option: string) => {
     setSelectedFilters((prevFilters) => {
-      const newFilters = prevFilters.includes(option)
+      const toggled = prevFilters.includes(option)
         ? prevFilters.filter((item) => item !== option)
         : [...prevFilters, option];
+      const newFilters = sanitizeSelectedFilters ? sanitizeSelectedFilters(toggled) : toggled;
 
       // Notify parent of filter changes
       onFiltersChange?.(newFilters);

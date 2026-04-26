@@ -17,7 +17,7 @@ const ModeToggleButton: React.FC<ModeToggleButtonProps> = ({ mode, onToggle }) =
   return (
     <TouchableOpacity style={localStyles.toggleWrapper} onPress={onToggle} activeOpacity={0.9}>
       <View style={localStyles.toggleBackground}>
-        {/* Helper (Offerer) - Left side in LTR, Right side in RTL (handled by row-reverse) */}
+        {/* Legacy visual contract (donation sub-screens): first segment uses !mode for "selected" styling */}
         <View
           style={[
             localStyles.toggleSegment,
@@ -36,7 +36,6 @@ const ModeToggleButton: React.FC<ModeToggleButtonProps> = ({ mode, onToggle }) =
           </Text>
         </View>
 
-        {/* Seeker - Right side in LTR, Left side in RTL */}
         <View
           style={[
             localStyles.toggleSegment,
