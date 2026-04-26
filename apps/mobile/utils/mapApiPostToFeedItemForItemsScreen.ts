@@ -163,15 +163,18 @@ export function mapApiPostToFeedItemForItemsScreen(post: unknown): FeedItem | nu
       name: userName,
       avatar: userAvatar,
     },
-    likes: parseInt(String(p.likes ?? '0'), 10),
-    comments: parseInt(String(p.comments ?? '0'), 10),
+    likes: Number.parseInt(String(p.likes ?? '0'), 10),
+    comments: Number.parseInt(String(p.comments ?? '0'), 10),
     isLiked: Boolean(p.is_liked),
     timestamp: feedTimestamp(p.created_at),
     category: itemCategoryForFeed(pt, itemData, metadata),
     ...challengeExtras,
     status: postItemStatus(p),
     itemId: resolveItemIdColumn(p),
-    rideId: (p.ride_id as string | undefined) || p.ride_data?.id,
-    taskId: (p.task_id as string | undefined) || undefined,
+    rideId:
+      typeof p.ride_id === 'string' && p.ride_id.length > 0
+        ? p.ride_id
+        : p.ride_data?.id,
+    taskId: typeof p.task_id === 'string' && p.task_id.length > 0 ? p.task_id : undefined,
   };
 }

@@ -80,41 +80,46 @@ function hoursSince(iso: string): number {
   return Math.max(0, (Date.now() - t) / (1000 * 60 * 60));
 }
 
+function isTaskFeedItemOpen(item: FeedItem): boolean {
+  const s = item.taskData?.status;
+  if (!s) return true;
+  return s === 'open' || s === 'in_progress';
+}
+
+function isRideFeedItemOpen(item: FeedItem): boolean {
+  const rs = item.status;
+  if (!rs) return true;
+  return rs === 'active' || rs === 'full';
+}
+
+function isItemOrDonationFeedItemOpen(item: FeedItem): boolean {
+  if (item.subtype === 'donation') {
+    const ds = item.status;
+    if (!ds) return true;
+    return ds === 'active';
+  }
+  const st = item.status;
+  if (st && ['delivered', 'completed', 'expired', 'cancelled'].includes(st)) {
+    return false;
+  }
+  return true;
+}
+
+const bucketOpenHandlers: Record<
+  FeedContentBucket,
+  (item: FeedItem) => boolean
+> = {
+  task: isTaskFeedItemOpen,
+  ride: isRideFeedItemOpen,
+  item_or_donation: isItemOrDonationFeedItemOpen,
+  challenge: () => true,
+  general_post: () => true,
+};
+
 /** Mirrors feed-card rules for "open" vs closed content (tasks, rides, items, donations). */
 export function isFeedItemOpen(item: FeedItem): boolean {
   const bucket = getFeedContentBucket(item);
-
-  if (bucket === 'task') {
-    const s = item.taskData?.status;
-    if (!s) return true;
-    return s === 'open' || s === 'in_progress';
-  }
-
-  if (bucket === 'ride') {
-    const rs = item.status;
-    if (!rs) return true;
-    return rs === 'active' || rs === 'full';
-  }
-
-  if (bucket === 'item_or_donation') {
-    if (item.subtype === 'donation') {
-      const ds = item.status;
-      if (!ds) return true;
-      return ds === 'active';
-    }
-    const st = item.status;
-    if (st && ['delivered', 'completed', 'expired', 'cancelled'].includes(st)) {
-      return false;
-    }
-    return true;
-  }
-
-  if (bucket === 'challenge') {
-    return true;
-  }
-
-  // Text / photo posts and other feed entries without a closable workflow
-  return true;
+  return bucketOpenHandlers[bucket](item);
 }
 
 function passesContentType(item: FeedItem, f: FeedFilterState): boolean {
