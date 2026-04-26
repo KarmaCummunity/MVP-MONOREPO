@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 // Ensure layout is RTL friendly manually where needed
 const isRTL = I18nManager.isRTL;
 
-export interface RideOfferFormProps {
+export type RideOfferFormProps = Readonly<{
     // Destination
     destination: string;
     onDestinationChange: (val: string) => void;
@@ -71,7 +71,7 @@ export interface RideOfferFormProps {
     detectedAddress?: string;
     isLocating?: boolean;
     isLocationError?: boolean;
-}
+}>;
 
 function RideOfferForm({
     destination, onDestinationChange,
@@ -101,7 +101,7 @@ function RideOfferForm({
 
     // Ensure rideDate is always a valid Date
     const validRideDate = React.useMemo(() => {
-        if (!rideDate || !(rideDate instanceof Date) || isNaN(rideDate.getTime())) {
+        if (!rideDate || !(rideDate instanceof Date) || Number.isNaN(rideDate.getTime())) {
             return new Date();
         }
         return rideDate;

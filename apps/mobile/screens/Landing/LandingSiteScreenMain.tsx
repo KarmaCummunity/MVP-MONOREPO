@@ -40,7 +40,7 @@ import { ContactSection } from './sections/ContactSection';
 const VISIT_TRACKED_KEY = 'kc_site_visit_tracked';
 
 function getWebSessionStorage(): Storage | null {
-  if (!IS_WEB || typeof globalThis.window === 'undefined') {
+  if (!IS_WEB || globalThis.window === undefined) {
     return null;
   }
   return globalThis.sessionStorage;
@@ -237,16 +237,13 @@ export const LandingSiteScreen: React.FC = () => {
       };
 
       scrollToSection();
+    } else if (sectionId === 'top' && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo?.({ y: 0, animated: true });
+      logger.info('LandingSiteScreen', 'Scrolled to top via ScrollView ref');
     } else {
-      // For native, use ScrollView ref
-      if (sectionId === 'top' && scrollViewRef.current) {
-        scrollViewRef.current.scrollTo?.({ y: 0, animated: true });
-        logger.info('LandingSiteScreen', 'Scrolled to top via ScrollView ref');
-      } else {
-        // Should implemented map of refs for sections if needed for native
-        // But currently this feature is mostly for web landing page
-        logger.warn('LandingSiteScreen', 'Native scrolling not implemented for specific sections');
-      }
+      // Should implemented map of refs for sections if needed for native
+      // But currently this feature is mostly for web landing page
+      logger.warn('LandingSiteScreen', 'Native scrolling not implemented for specific sections');
     }
   };
 
@@ -369,7 +366,7 @@ export const LandingSiteScreen: React.FC = () => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const targetElement = entry.target as HTMLElement;
-          const identifier = targetElement.id || targetElement.getAttribute('data-nativeid') || '';
+          const identifier = targetElement.id || targetElement.dataset.nativeid || '';
           const sectionId = identifier.replace('section-', '');
           if (!sectionId) {
             return;

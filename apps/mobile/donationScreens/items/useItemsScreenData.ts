@@ -175,7 +175,7 @@ export function useItemsScreenData(
         i18n.t('post.reopenSuccess', { ns: 'common', defaultValue: 'הפוסט נפתח מחדש' }),
       );
       if (loadItemsRef.current) {
-        void loadItemsRef.current().catch((err: unknown) => {
+        loadItemsRef.current().catch((err: unknown) => {
           console.error('Error reloading items after reopen:', err);
         });
       }

@@ -385,7 +385,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
         console.log('[AdminAdminsScreen] selectedUser?.id:', selectedUser?.id);
 
         if (Platform.OS === 'web') {
-            if (typeof window !== 'undefined' && window.confirm(`האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`)) {
+            if (globalThis.window !== undefined && globalThis.window.confirm(`האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`)) {
                 await performRemoveManager();
             }
         } else {

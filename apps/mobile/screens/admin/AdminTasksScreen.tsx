@@ -209,7 +209,7 @@ export default function AdminTasksScreen() {
   const [tasks, setTasks] = useState<AdminTask[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState<boolean>(false);
+  const [, setCreating] = useState<boolean>(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -275,7 +275,7 @@ export default function AdminTasksScreen() {
       const nextSort = sortKeys?.[0];
       if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
         setListSort(nextSort as TasksListSort);
-      } else if (sortKeys && sortKeys.length === 0) {
+      } else if (sortKeys?.length === 0) {
         setListSort('created_desc');
       }
     },
@@ -358,9 +358,14 @@ export default function AdminTasksScreen() {
     setLoading(true);
     setError(null);
     const explicitStatusSelected = filterStatuses.length > 0;
-    const effectiveStatuses: TaskStatus[] | undefined = explicitStatusSelected
-      ? [...new Set(filterStatuses)]
-      : (includeDoneWhenNoStatusFilter ? undefined : TASK_STATUSES_EXCLUDING_DONE);
+    let effectiveStatuses: TaskStatus[] | undefined;
+    if (explicitStatusSelected) {
+      effectiveStatuses = [...new Set(filterStatuses)];
+    } else if (includeDoneWhenNoStatusFilter) {
+      effectiveStatuses = undefined;
+    } else {
+      effectiveStatuses = TASK_STATUSES_EXCLUDING_DONE;
+    }
 
     const filterState: TaskFilterState = {
       ...(query.trim() ? { textSearch: { text: query } } : {}),
@@ -509,7 +514,7 @@ export default function AdminTasksScreen() {
       let parsedDueDate = null;
       if (formData.due_date.trim()) {
         const date = new Date(formData.due_date);
-        if (isNaN(date.getTime())) {
+        if (Number.isNaN(date.getTime())) {
           setError('תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD');
           setCreating(false);
           return;
@@ -520,8 +525,8 @@ export default function AdminTasksScreen() {
       // Parse estimated_hours
       let parsedEstimatedHours = null;
       if (formData.estimated_hours && formData.estimated_hours.trim()) {
-        const hours = parseFloat(formData.estimated_hours.trim());
-        if (!isNaN(hours) && hours > 0) {
+        const hours = Number.parseFloat(formData.estimated_hours.trim());
+        if (!Number.isNaN(hours) && hours > 0) {
           parsedEstimatedHours = hours;
         }
       }
@@ -830,7 +835,7 @@ export default function AdminTasksScreen() {
       let parsedDueDate = null;
       if (formData.due_date.trim()) {
         const date = new Date(formData.due_date);
-        if (isNaN(date.getTime())) {
+        if (Number.isNaN(date.getTime())) {
           setError('תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD');
           setUpdating(null);
           return;
@@ -841,8 +846,8 @@ export default function AdminTasksScreen() {
       // Parse estimated_hours
       let parsedEstimatedHours = null;
       if (formData.estimated_hours && formData.estimated_hours.trim()) {
-        const hours = parseFloat(formData.estimated_hours.trim());
-        if (!isNaN(hours) && hours > 0) {
+        const hours = Number.parseFloat(formData.estimated_hours.trim());
+        if (!Number.isNaN(hours) && hours > 0) {
           parsedEstimatedHours = hours;
         }
       }
@@ -865,13 +870,10 @@ export default function AdminTasksScreen() {
         setShowForm(false);
         resetForm();
         setEditingId(null);
+      } else if (res.error?.includes('הרשאה')) {
+        setError('אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.');
       } else {
-        // Handle specific permission error
-        if (res.error?.includes('הרשאה')) {
-          setError('אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.');
-        } else {
-          setError(res.error || 'שגיאה בעדכון משימה');
-        }
+        setError(res.error || 'שגיאה בעדכון משימה');
       }
     } catch (err) {
       console.error('Error updating task:', err);

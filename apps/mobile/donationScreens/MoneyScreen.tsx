@@ -102,7 +102,7 @@ export default function MoneyScreen({
   // console.log('💰 MoneyScreen - Component rendered');
   // console.log('💰 MoneyScreen - Navigation object:', navigation);
   // console.log('💰 MoneyScreen - Navigation state:', JSON.stringify(navigation.getState(), null, 2));
-  const [, setSelectedRecipient] = useState<string>('');
+  const [_selectedRecipient, setSelectedRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('50');
 
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
@@ -142,7 +142,7 @@ export default function MoneyScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [selectedSort, setSelectedSort] = useState("");
-  const [, setRefreshKey] = useState(0);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Build external charities from donationResources to appear as donation cards
   const externalCharities = React.useMemo(() => {

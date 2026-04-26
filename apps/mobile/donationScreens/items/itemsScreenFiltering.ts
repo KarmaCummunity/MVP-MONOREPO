@@ -147,7 +147,7 @@ export function getFilteredItemsForItemsScreen(params: {
   }
 
   const ns = { ns: 'items' as const };
-  const typeTagLabels = [
+  const typeTagLabels = new Set([
     t('donationScreen.tags.sofas', ns),
     t('donationScreen.tags.wardrobes', ns),
     t('donationScreen.tags.beds', ns),
@@ -157,7 +157,7 @@ export function getFilteredItemsForItemsScreen(params: {
     t('donationScreen.tags.kitchen', ns),
     t('donationScreen.tags.electronics', ns),
     t('donationScreen.tags.toys', ns),
-  ];
+  ]);
 
   if (selectedFilters.length > 0) {
     selectedFilters.forEach((f) => {
@@ -179,9 +179,9 @@ export function getFilteredItemsForItemsScreen(params: {
         filtered = filtered.filter((item) => item.category === catId);
       }
 
-      if (typeTagLabels.includes(f)) {
+      if (typeTagLabels.has(f)) {
         filtered = filtered.filter((item) => {
-          const tagsArray = typeof item.tags === 'string' ? item.tags.split(',') : (item.tags || []);
+          const tagsArray = typeof item.tags === 'string' ? item.tags.split(',') : (item.tags ?? []);
           return tagsArray.includes(f);
         });
       }

@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Alert, Dimensions, Platform } from 'react-native';
+import type { ListRenderItemInfo } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
@@ -8,14 +10,13 @@ import ItemDetailsModal from '../components/ItemDetailsModal';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { db } from '../utils/databaseService';
 import { useToast } from '../utils/toastService';
-import { isLandscape, isMobileWeb } from '../globals/responsive';
+import { isLandscape, isMobileWeb, getScreenInfo, BREAKPOINTS } from '../globals/responsive';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
 import { useTranslation } from 'react-i18next';
-import { getScreenInfo, BREAKPOINTS } from '../globals/responsive';
 import { itemsScreenStyles } from './items/itemsScreen.styles';
 import { useItemsScreenData } from './items/useItemsScreenData';
 import { useItemsScreenFilters } from './items/useItemsScreenFilters';
@@ -24,6 +25,27 @@ import { ItemsScreenOfferMode } from './items/ItemsScreenOfferMode';
 import type { ItemsScreenProps, ItemType, DonationItem } from './items/itemsScreen.types';
 
 export type { ItemsScreenProps } from './items/itemsScreen.types';
+
+function promptLargeImageAlert(
+  ti: TFunction,
+  tc: TFunction,
+  base64: string,
+  resolve: (value: string | null) => void,
+): void {
+  Alert.alert(ti('donationScreen.alerts.imageLargeTitle'), ti('donationScreen.alerts.imageLargeMessage'), [
+    { text: ti('donationScreen.alerts.imageLargeContinue'), onPress: () => resolve(base64) },
+    { text: tc('cancel'), onPress: () => resolve(null), style: 'cancel' },
+  ]);
+}
+
+function readBlobAsDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('FileReader failed'));
+    reader.readAsDataURL(blob);
+  });
+}
 
 export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const { ToastComponent } = useToast();
@@ -103,25 +125,14 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     try {
       const response = await fetch(uri);
       const blob = await response.blob();
-
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          const sizeInMB = (base64.length * 0.75) / (1024 * 1024);
-
-          if (sizeInMB > 5) {
-            Alert.alert(ti('donationScreen.alerts.imageLargeTitle'), ti('donationScreen.alerts.imageLargeMessage'), [
-              { text: ti('donationScreen.alerts.imageLargeContinue'), onPress: () => resolve(base64) },
-              { text: tc('cancel'), onPress: () => resolve(null), style: 'cancel' },
-            ]);
-          } else {
-            resolve(base64);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      const base64 = await readBlobAsDataUrl(blob);
+      const sizeInMB = (base64.length * 0.75) / (1024 * 1024);
+      if (sizeInMB > 5) {
+        return await new Promise<string | null>((resolve) => {
+          promptLargeImageAlert(ti, tc, base64, resolve);
+        });
+      }
+      return base64;
     } catch {
       Alert.alert(ti('donationScreen.alerts.convertErrorTitle'), ti('donationScreen.alerts.convertErrorMessage'));
       return null;
@@ -218,7 +229,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       };
 
       setAllItems((prev) => [newItemForState, ...prev]);
-      void loadItems();
+      loadItems().catch((err: unknown) => {
+        console.error('Error reloading items after create:', err);
+      });
 
       setTitle('');
       setDescription('');
@@ -258,8 +271,15 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setSelectedItem(null);
   };
 
+  const onFeedPostPress = useCallback((feedItem: FeedItem) => {
+    console.log('Post pressed:', feedItem.id);
+  }, []);
+  const onFeedCommentPress = useCallback((feedItem: FeedItem) => {
+    console.log('Comment pressed:', feedItem.id);
+  }, []);
+
   const renderPostItem = useCallback(
-    ({ item }: { item: FeedItem }) => {
+    ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
       const itemWidth = numColumns > 1 ? availableWidth / numColumns : availableWidth;
 
@@ -268,18 +288,14 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           item={item}
           cardWidth={itemWidth}
           numColumns={numColumns}
-          onPress={(feedItem) => {
-            console.log('Post pressed:', feedItem.id);
-          }}
-          onCommentPress={(feedItem) => {
-            console.log('Comment pressed:', feedItem.id);
-          }}
+          onPress={onFeedPostPress}
+          onCommentPress={onFeedCommentPress}
           onMorePress={handleMorePress}
           onPostClosed={handlePostClosed}
         />
       );
     },
-    [numColumns, screenPadding, width, handleMorePress, handlePostClosed],
+    [numColumns, screenPadding, width, handleMorePress, handlePostClosed, onFeedPostPress, onFeedCommentPress],
   );
 
   const renderEmptyPosts = useCallback(

@@ -61,7 +61,7 @@ export function ItemsScreenSearchMode({
               ? t('donationScreen.search.sectionFiltered')
               : t('donationScreen.search.sectionRecommended')}
           </Text>
-          {(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
+          {Boolean(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
             <TouchableOpacity style={s.clearButton} onPress={onClearAll}>
               <Text style={s.clearButtonText}>{t('donationScreen.search.clearAll')}</Text>
             </TouchableOpacity>

@@ -52,8 +52,8 @@ export default function LoginScreen() {
 
     const notifyAuthError = (message: string) => {
         setEmailAuthError(message);
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-            window.alert(`${t('common:error')}: ${message}`);
+        if (Platform.OS === 'web' && globalThis.window !== undefined) {
+            globalThis.window.alert(`${t('common:error')}: ${message}`);
         } else {
             Alert.alert(t('common:error'), message);
         }
@@ -223,7 +223,7 @@ export default function LoginScreen() {
                             const newUser = await signUpWithEmail(emailNorm, password);
                             await sendVerification(newUser);
                             setEmailAuthError(null);
-                            if (Platform.OS === 'web' && typeof globalThis.window !== 'undefined') {
+                            if (Platform.OS === 'web' && globalThis.window !== undefined) {
                                 globalThis.window.alert(
                                     `${t('auth:email.verifyTitle')}\n\n${t('auth:email.verificationRequired')}`
                                 );

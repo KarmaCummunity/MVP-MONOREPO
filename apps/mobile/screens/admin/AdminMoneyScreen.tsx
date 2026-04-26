@@ -107,7 +107,6 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
-  const [pollingId, setPollingId] = useState<ReturnType<typeof setInterval> | null>(null);
   const [isWipeVisible, setIsWipeVisible] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [isMounted, setIsMounted] = useState(false);
@@ -122,7 +121,6 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
       logger.debug(LOG_SOURCE, 'Polling donations tick');
       loadDonations();
     }, 5000);
-    setPollingId(id);
     setIsMounted(true);
     return () => {
       if (id) {

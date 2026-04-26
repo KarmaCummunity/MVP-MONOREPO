@@ -6,8 +6,34 @@ import colors from '../../globals/colors';
 import { landingSharedStyleSheet } from './styles';
 import { IS_WEB, IS_MOBILE_WEB, IS_TABLET, SCREEN_WIDTH } from './constants';
 
-/** Non-nested font size for CTA labels (avoids Sonar nested-ternary noise). */
-const ctaPillTextFontSize = IS_MOBILE_WEB ? 14 : IS_WEB ? 18 : 20;
+function ctaPillTextFontSizePick(): number {
+  if (IS_MOBILE_WEB) return 14;
+  if (IS_WEB) return 18;
+  return 20;
+}
+
+function mottoSubtitleFontSizePick(): number {
+  if (IS_MOBILE_WEB) return 16;
+  if (!IS_WEB) return 26;
+  return IS_TABLET ? 22 : 20;
+}
+
+function webNativePair<T>(mobile: T, web: T, native: T): T {
+  if (IS_MOBILE_WEB) return mobile;
+  if (IS_WEB) return web;
+  return native;
+}
+
+const ctaPillTextFontSize = ctaPillTextFontSizePick();
+const mottoSubtitleFontSize = mottoSubtitleFontSizePick();
+const mottoSubtitleLineHeight = webNativePair(24, 32, 36);
+const sectionSubTitleFontSize = webNativePair(14, 18, 24);
+const sectionSubTitleMarginTop = webNativePair(10, 15, 20);
+const sectionSubTitleMarginBottom = webNativePair(6, 8, 12);
+const paragraphFontSize = webNativePair(14, 18, 20);
+const paragraphLineHeight = webNativePair(20, 28, 30);
+const coreMottoTextFontSize = mottoSubtitleFontSizePick();
+const coreMottoTextLineHeight = mottoSubtitleLineHeight;
 
 export const landingSiteScreenStyles = StyleSheet.create({
   ...landingSharedStyleSheet,
@@ -39,11 +65,11 @@ export const landingSiteScreenStyles = StyleSheet.create({
     marginTop: IS_MOBILE_WEB ? 2 : 4,
   },
   mottoSubtitle: {
-    fontSize: IS_MOBILE_WEB ? 16 : (IS_WEB ? (IS_TABLET ? 22 : 20) : 26),
+    fontSize: mottoSubtitleFontSize,
     color: colors.textPrimary,
     textAlign: 'center',
     fontWeight: '700',
-    lineHeight: IS_MOBILE_WEB ? 24 : (IS_WEB ? 32 : 36),
+    lineHeight: mottoSubtitleLineHeight,
     fontStyle: 'italic',
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
@@ -99,12 +125,12 @@ export const landingSiteScreenStyles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   sectionSubTitle: {
-    fontSize: IS_MOBILE_WEB ? 14 : (IS_WEB ? 18 : 24),
+    fontSize: sectionSubTitleFontSize,
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
-    marginTop: IS_MOBILE_WEB ? 10 : (IS_WEB ? 15 : 20),
-    marginBottom: IS_MOBILE_WEB ? 6 : (IS_WEB ? 8 : 12)
+    marginTop: sectionSubTitleMarginTop,
+    marginBottom: sectionSubTitleMarginBottom,
   },
   featuresGrid: {
     flexDirection: 'row',
@@ -115,9 +141,9 @@ export const landingSiteScreenStyles = StyleSheet.create({
     marginTop: IS_MOBILE_WEB ? 12 : 20,
   },
   paragraph: {
-    fontSize: IS_MOBILE_WEB ? 14 : (IS_WEB ? 18 : 20),
+    fontSize: paragraphFontSize,
     color: colors.textPrimary,
-    lineHeight: IS_MOBILE_WEB ? 20 : (IS_WEB ? 28 : 30),
+    lineHeight: paragraphLineHeight,
     textAlign: 'center',
     marginTop: IS_MOBILE_WEB ? 8 : 12,
     maxWidth: IS_MOBILE_WEB ? '95%' : (IS_TABLET ? '80%' : '90%'),
@@ -846,11 +872,11 @@ export const landingSiteScreenStyles = StyleSheet.create({
     flexShrink: 0,
   },
   coreMottoText: {
-    fontSize: IS_MOBILE_WEB ? 16 : (IS_WEB ? (IS_TABLET ? 22 : 20) : 24),
+    fontSize: coreMottoTextFontSize,
     color: colors.textPrimary,
     textAlign: 'right',
     fontWeight: '700',
-    lineHeight: IS_MOBILE_WEB ? 24 : (IS_WEB ? 32 : 36),
+    lineHeight: coreMottoTextLineHeight,
     fontStyle: 'italic',
     flex: 1,
   },

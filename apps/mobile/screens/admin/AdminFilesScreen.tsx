@@ -22,9 +22,9 @@ import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { pickDocument, validateFile, FileData, formatFileSize } from '../../utils/fileService';
 import { uploadFileWithProgress, buildAdminFilePath } from '../../utils/storageService';
 
-interface AdminFilesScreenProps {
+type AdminFilesScreenProps = Readonly<{
     navigation: NavigationProp<AdminStackParamList>;
-}
+}>;
 
 interface GeneralFile {
     id: string;
@@ -63,7 +63,8 @@ export default function AdminFilesScreen({ navigation }: AdminFilesScreenProps) 
             } else {
                 setFiles([]);
             }
-        } catch (e) {
+        } catch (e: unknown) {
+            console.error('AdminFilesScreen.loadFiles', e);
             Alert.alert('שגיאה', 'לא ניתן לטעון קבצים');
         } finally {
             setIsLoading(false);

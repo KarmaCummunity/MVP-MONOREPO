@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { NavigationProp, useRoute } from '@react-navigation/native';
+import { NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../../globals/constants';
@@ -46,9 +46,6 @@ interface HoursReport {
 }
 
 export default function AdminTimeManagementScreen({ navigation }: AdminTimeManagementScreenProps) {
-  const route = useRoute();
-  const routeParams = (route.params as any) || {};
-  const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;

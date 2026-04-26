@@ -15,8 +15,6 @@ type UseTrumpScreenDataArgs = {
 
 export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDataArgs) {
   const [allRides, setAllRides] = useState<any[]>([]);
-  const [_filteredRides, setFilteredRides] = useState<any[]>([]);
-  const [_recentRides, setRecentRides] = useState<any[]>([]);
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
@@ -71,15 +69,9 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
           setRecentPosts([]);
         }
 
-        const shouldIncludePast =
-          includePastOverride !== undefined
-            ? includePastOverride
-            : selectedFilters.includes('includePast');
+        const shouldIncludePast = includePastOverride ?? selectedFilters.includes('includePast');
 
-        const [activeRides, myHistory] = await Promise.all([
-          db.listRides(uid, { includePast: shouldIncludePast }),
-          selectedUserId ? db.getUserRides(selectedUserId, 'driver') : Promise.resolve([]),
-        ]);
+        const activeRides = await db.listRides(uid, { includePast: shouldIncludePast });
 
         const enrichedRides = await Promise.all(
           (activeRides || []).map(async (ride: any) => {
@@ -101,16 +93,9 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
         );
 
         setAllRides(enrichedRides);
-        const userRecent = (myHistory || []).map((r: any) => ({
-          ...r,
-          status: r.status || 'active',
-          price: r.price || 0,
-        }));
-        setRecentRides(userRecent);
       } catch (e) {
         console.error('Failed to load rides', e);
         setAllRides([]);
-        setRecentRides([]);
       }
     },
     [selectedUserId, mode, selectedFilters]
@@ -243,8 +228,6 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
   useEffect(() => {
     if (mode) {
       setFilteredPosts(getFilteredRides() as FeedItem[]);
-    } else {
-      setFilteredRides(getFilteredRides() as any[]);
     }
   }, [getFilteredRides, mode]);
 

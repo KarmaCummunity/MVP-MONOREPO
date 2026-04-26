@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import type { ListRenderItemInfo } from 'react-native';
 import { NavigationProp, ParamListBase, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
@@ -141,8 +142,11 @@ export default function TrumpScreen({
     setSelectedRide(null);
   };
 
+  const noopFeedPress = useCallback((_feedItem: FeedItem) => {}, []);
+  const noopCommentPress = useCallback((_feedItem: FeedItem) => {}, []);
+
   const renderPostItem = useCallback(
-    ({ item }: { item: FeedItem }) => {
+    ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
       const itemWidth = numColumns > 1 ? availableWidth / numColumns : availableWidth;
       return (
@@ -150,14 +154,14 @@ export default function TrumpScreen({
           item={item}
           cardWidth={itemWidth}
           numColumns={numColumns}
-          onPress={() => {}}
-          onCommentPress={() => {}}
+          onPress={noopFeedPress}
+          onCommentPress={noopCommentPress}
           onMorePress={handleMorePress}
           onPostClosed={trumpData.handlePostClosed}
         />
       );
     },
-    [numColumns, screenPadding, width, handleMorePress, trumpData.handlePostClosed]
+    [numColumns, screenPadding, width, handleMorePress, trumpData.handlePostClosed, noopFeedPress, noopCommentPress],
   );
 
   const renderEmptyPosts = useCallback(

@@ -19,6 +19,12 @@ export function mapPostToFeedItemForItemsScreen(post: unknown): FeedItem | null 
     console.warn('⚠️ Failed to parse metadata:', e);
   }
 
+  const countFromUnknown = (raw: unknown): number => {
+    if (typeof raw === 'number' && Number.isFinite(raw)) return Math.trunc(raw);
+    if (typeof raw === 'string') return Number.parseInt(raw, 10) || 0;
+    return 0;
+  };
+
   type AuthorShape = { id?: string; name?: string | null; avatar_url?: string | null };
   let author: AuthorShape | null = null;
   if (p.author) {
@@ -73,8 +79,8 @@ export function mapPostToFeedItemForItemsScreen(post: unknown): FeedItem | null 
       name: userName,
       avatar: userAvatar,
     },
-    likes: parseInt(String(p.likes || '0'), 10),
-    comments: parseInt(String(p.comments || '0'), 10),
+    likes: countFromUnknown(p.likes),
+    comments: countFromUnknown(p.comments),
     isLiked: Boolean(p.is_liked),
     timestamp: ts,
     category: (itemData?.category as string) || (metadata as { category?: string }).category,

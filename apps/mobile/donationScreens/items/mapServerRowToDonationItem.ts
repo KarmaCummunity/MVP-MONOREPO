@@ -1,12 +1,18 @@
 import type { DonationItem } from './itemsScreen.types';
 
+function titleFromRow(raw: unknown): string {
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
+  return '';
+}
+
 /** Maps dedicated-items API/SQLite row to DonationItem. */
 export function mapServerRowToDonationItem(item: Record<string, unknown>): DonationItem {
   const loc = item.location && typeof item.location === 'object' ? (item.location as Record<string, string>) : null;
   return {
     id: String(item.id),
     ownerId: String(item.owner_id ?? item.ownerId ?? ''),
-    title: String(item.title ?? ''),
+    title: titleFromRow(item.title),
     description: item.description as string | undefined,
     category: item.category as DonationItem['category'],
     condition: item.condition as DonationItem['condition'],

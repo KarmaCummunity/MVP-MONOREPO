@@ -32,7 +32,9 @@ function InstagramWebIframe() {
 export const InstagramSection = () => {
   const openInstagram = () => {
     logger.info('LandingSite', 'Click - instagram from section');
-    void Linking.openURL(INSTAGRAM_URL);
+    Linking.openURL(INSTAGRAM_URL).catch(() => {
+      logger.warn('LandingSite', 'Could not open Instagram URL');
+    });
   };
 
   return (

@@ -110,7 +110,7 @@ export function useTrumpOfferRideFlow({
   }, [useCurrentLocation, t, isMounted]);
 
   const handleDateChange = useCallback((date: Date) => {
-    if (date && date instanceof Date && !isNaN(date.getTime())) {
+    if (date && date instanceof Date && !Number.isNaN(date.getTime())) {
       setRideDate(date);
     } else {
       setRideDate(new Date());
