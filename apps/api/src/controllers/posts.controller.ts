@@ -32,6 +32,35 @@ interface UpdateCommentBody {
   text: string;
 }
 
+/** Allowed feed sort keys for GET /api/posts (SRS §2.5.6). */
+type FeedSortKey =
+  | "created_at_desc"
+  | "created_at_asc"
+  | "likes_desc"
+  | "likes_asc"
+  | "comments_desc"
+  | "comments_asc";
+
+const FEED_SORT_ORDER_BY: Record<FeedSortKey, string> = {
+  created_at_desc: "p.created_at DESC",
+  created_at_asc: "p.created_at ASC",
+  likes_desc: "p.likes DESC NULLS LAST, p.created_at DESC",
+  likes_asc: "p.likes ASC NULLS LAST, p.created_at DESC",
+  comments_desc: "p.comments DESC NULLS LAST, p.created_at DESC",
+  comments_asc: "p.comments ASC NULLS LAST, p.created_at DESC",
+};
+
+function parseFeedSort(sortArg?: string): FeedSortKey {
+  const key = (sortArg ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_") as FeedSortKey;
+  if (key in FEED_SORT_ORDER_BY) {
+    return key;
+  }
+  return "created_at_desc";
+}
+
 @Controller("api/posts")
 export class PostsController {
   private readonly logger = new Logger(PostsController.name);
@@ -588,6 +617,8 @@ export class PostsController {
     @Query("post_type") postType?: string,
     @Query("item_id") itemId?: string,
     @Query("ride_id") rideId?: string,
+    @Query("author_id") authorId?: string,
+    @Query("sort") sortArg?: string,
   ) {
     try {
       await this.ensurePostsTable();
@@ -595,6 +626,8 @@ export class PostsController {
 
       const limit = parseInt(limitArg) || 20;
       const offset = parseInt(offsetArg) || 0;
+      const sortKey = parseFeedSort(sortArg);
+      const orderByClause = FEED_SORT_ORDER_BY[sortKey];
 
       // Build query with optional user_id for checking if user liked each post
       // Use explicit column names to avoid conflicts in JOIN queries
@@ -707,6 +740,12 @@ export class PostsController {
         paramIndex++;
       }
 
+      if (authorId) {
+        whereConditions.push(`p.author_id = $${paramIndex}`);
+        params.push(authorId);
+        paramIndex++;
+      }
+
       // Now we know the param index for userId
       const userIdParamIndex = paramIndex;
 
@@ -734,7 +773,7 @@ export class PostsController {
       }
 
       query += `
-                ORDER BY p.created_at DESC
+                ORDER BY ${orderByClause}
                 LIMIT $1 OFFSET $2
             `;
 
@@ -743,6 +782,8 @@ export class PostsController {
         offset,
         userId,
         hasUserId: !!userId,
+        sort: sortKey,
+        authorId: authorId ?? null,
       });
 
       try {
@@ -785,15 +826,27 @@ export class PostsController {
         this.logger.log("⚠️ [getPosts] Attempting fallback query...");
 
         try {
+          const fallbackWhereParts = whereConditions.map((c) =>
+            c.replace(/\bp\./g, "posts."),
+          );
+          const fallbackWhereSql =
+            fallbackWhereParts.length > 0
+              ? `WHERE ${fallbackWhereParts.join(" AND ")}`
+              : "";
+          const fallbackOrderBy = orderByClause.replace(/\bp\./g, "posts.");
           const fallbackQuery = `
                         SELECT 
                             id, author_id, title, description, images, likes, comments, created_at,
                             post_type, metadata, ride_id, item_id
                         FROM posts
-                        ORDER BY created_at DESC
+                        ${fallbackWhereSql}
+                        ORDER BY ${fallbackOrderBy}
                         LIMIT $1 OFFSET $2
                     `;
-          const fallbackParams = [limit, offset];
+          const fallbackParams =
+            userId && postLikesExists
+              ? params.slice(0, -1)
+              : [...params];
           const fallbackRes = await this.pool.query(
             fallbackQuery,
             fallbackParams,
