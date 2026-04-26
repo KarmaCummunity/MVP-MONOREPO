@@ -43,9 +43,7 @@ export class SyncController {
   private async getFirebaseUser(
     firebase_uid?: string,
     email?: string,
-  ): Promise<
-    { ok: true; user: UserRecord } | { ok: false; error: string }
-  > {
+  ): Promise<{ ok: true; user: UserRecord } | { ok: false; error: string }> {
     if (!firebase_uid && !email) {
       return { ok: false, error: "Must provide firebase_uid or email" };
     }
