@@ -1,0 +1,13 @@
+---
+description: Expo / React Native app (apps/mobile) — patterns and checks
+globs: apps/mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# `@kc/mobile` (Expo / React Native + web)
+
+- Follow mobile-related SRS: `docs/SSOT/SRS/04-frontend-architecture.md` and the relevant functional areas (e.g. auth, chat, posts). RTL and i18n (Hebrew default, English) are first-class; respect existing `locales/` usage.
+- Reuse project utilities and services under `utils/`, `stores/`, and shared patterns in nearby screens before adding parallel abstractions.
+- Auth and API calls must stay consistent with `authService` / `apiService` and existing guards; do not embed secrets in source.
+- Prefer **minimal UI diffs** that match existing components and spacing. Colocate new UI with existing patterns (tabs, top bar, web mode via `webModeStore` / landing where applicable).
+- Run targeted lint for the app when you change many files: `npm run lint --workspace @kc/mobile` (or the screen-specific checks you already use in CI).

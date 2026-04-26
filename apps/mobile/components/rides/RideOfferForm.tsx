@@ -1,5 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, I18nManager } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  I18nManager,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
@@ -10,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 // Ensure layout is RTL friendly manually where needed
 const isRTL = I18nManager.isRTL;
 
-interface RideOfferFormProps {
+export interface RideOfferFormProps {
     // Destination
     destination: string;
     onDestinationChange: (val: string) => void;
@@ -53,9 +61,11 @@ interface RideOfferFormProps {
     availableTags: string[];
 
     // Submit
-    onSubmit: () => void;
+    onSubmit: () => void | Promise<void>;
     isValid: boolean;
     hideDestinationInput?: boolean;
+    /** When true, publish button shows progress and ignores presses */
+    isSubmitting?: boolean;
 
     // Location Details
     detectedAddress?: string;
@@ -63,11 +73,11 @@ interface RideOfferFormProps {
     isLocationError?: boolean;
 }
 
-const RideOfferForm: React.FC<RideOfferFormProps> = ({
+function RideOfferForm({
     destination, onDestinationChange,
     fromLocation, onFromLocationChange,
     useCurrentLocation, onToggleCurrentLocation,
-    detectedAddress, isLocating, isLocationError, // Destructure new props
+    detectedAddress, isLocating, isLocationError,
     departureTime, onDepartureTimeChange,
     immediateDeparture, onToggleImmediateDeparture,
     leavingToday, onToggleLeavingToday,
@@ -78,8 +88,8 @@ const RideOfferForm: React.FC<RideOfferFormProps> = ({
     seats, onSeatsChange,
     price, onPriceChange,
     selectedTags, onToggleTag, availableTags,
-    onSubmit, isValid, hideDestinationInput
-}) => {
+    onSubmit, isValid, hideDestinationInput, isSubmitting = false
+}: RideOfferFormProps) {
     const { t } = useTranslation();
     const priceInputRef = useRef<TextInput>(null);
     const [needToPay, setNeedToPay] = useState(price !== '0' && price !== '');
@@ -355,16 +365,20 @@ const RideOfferForm: React.FC<RideOfferFormProps> = ({
 
             {/* Submit Button */}
             <TouchableOpacity
-                style={[styles.offerButton, !isValid && { opacity: 0.5 }]}
-                onPress={onSubmit}
-                disabled={!isValid}
+                style={[styles.offerButton, (!isValid || isSubmitting) && { opacity: 0.5 }]}
+                onPress={() => void onSubmit()}
+                disabled={!isValid || isSubmitting}
             >
-                <Text style={styles.offerButtonText}>{t('trump:ui.publishRide')}</Text>
+                {isSubmitting ? (
+                    <ActivityIndicator color={colors.backgroundPrimary} />
+                ) : (
+                    <Text style={styles.offerButtonText}>{t('trump:ui.publishRide')}</Text>
+                )}
             </TouchableOpacity>
 
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
     formContainer: {

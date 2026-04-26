@@ -1,0 +1,13 @@
+---
+description: NestJS API (apps/api) — patterns and checks
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# `@kc/api` (NestJS)
+
+- Stack: NestJS, PostgreSQL, Redis — align with `docs/SSOT/SRS/05-backend-architecture.md` and functional areas as needed.
+- Favor the **clean layering target** in `docs/SSOT/CODE_QUALITY/layers-and-boundaries.md`: domain stays free of framework/DB imports; depend inward. When legacy code does not match yet, do not "fix the world" in one PR — log pending refactors in `tech-debt-log.md` if outside task scope.
+- **Errors:** domain-style errors in domain; map to HTTP in controllers/guards/filters. Do not expose raw stack traces to clients (`constraints.md`).
+- **Types:** prefer shared contract types from `@kc/shared-types` when touching API surface area; keep DTOs validated (class-validator where the project already uses it).
+- After substantive changes, run the relevant package scripts (e.g. `npm run lint` / tests in `apps/api` if you touched test-worthy logic).

@@ -388,7 +388,7 @@ export const sendMessage = async (
                     // Also delete old conversation if it exists
                     try {
                       await DatabaseService.delete(DB_COLLECTIONS.CHATS, participantId, message.conversationId);
-                    } catch (e) {
+                    } catch {
                       // Ignore if doesn't exist
                     }
                   }
@@ -903,7 +903,7 @@ export const createSampleChatData = async (userId: string): Promise<void> => {
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
         return await AsyncStorage.getItem('auth_mode');
-      } catch (e) {
+      } catch {
         return null;
       }
     })();

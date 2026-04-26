@@ -24,6 +24,8 @@ const FIREBASE_MEASUREMENT_ID = process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID 
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+/** Public landing Instagram handle only (no password; not secret). Build-time for web export. */
+const INSTAGRAM_USERNAME = process.env.EXPO_PUBLIC_INSTAGRAM_USERNAME ?? 'karma_community_';
 
 // Define colors locally for config usage (colors.tsx cannot be imported in JS config)
 const colors = {
@@ -158,6 +160,7 @@ export default {
       EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: FIREBASE_MESSAGING_SENDER_ID,
       EXPO_PUBLIC_FIREBASE_APP_ID: FIREBASE_APP_ID,
       EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID: FIREBASE_MEASUREMENT_ID,
+      EXPO_PUBLIC_INSTAGRAM_USERNAME: INSTAGRAM_USERNAME,
       firebase: {
         prod: {
           EXPO_PUBLIC_FIREBASE_API_KEY: FIREBASE_API_KEY,
