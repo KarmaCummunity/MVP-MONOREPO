@@ -223,8 +223,8 @@ export default function LoginScreen() {
                             const newUser = await signUpWithEmail(emailNorm, password);
                             await sendVerification(newUser);
                             setEmailAuthError(null);
-                            if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                                window.alert(
+                            if (Platform.OS === 'web' && typeof globalThis.window !== 'undefined') {
+                                globalThis.window.alert(
                                     `${t('auth:email.verifyTitle')}\n\n${t('auth:email.verificationRequired')}`
                                 );
                             } else {

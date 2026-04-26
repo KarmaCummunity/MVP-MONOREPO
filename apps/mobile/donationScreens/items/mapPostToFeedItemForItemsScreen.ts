@@ -3,7 +3,7 @@ import type { FeedItem, PostType } from '../../types/feed';
 /** Maps API post payload to FeedItem for items donation screen (aligned with useFeedData shape). */
 export function mapPostToFeedItemForItemsScreen(post: unknown): FeedItem | null {
   const p = post as Record<string, unknown> | null | undefined;
-  if (!p || !p.id) {
+  if (!p?.id) {
     console.warn('⚠️ mapPostToFeedItemForItemsScreen: post is null or missing id', post);
     return null;
   }

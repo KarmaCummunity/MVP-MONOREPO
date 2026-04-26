@@ -15,8 +15,8 @@ type UseTrumpScreenDataArgs = {
 
 export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDataArgs) {
   const [allRides, setAllRides] = useState<any[]>([]);
-  const [, setFilteredRides] = useState<any[]>([]);
-  const [, setRecentRides] = useState<any[]>([]);
+  const [_filteredRides, setFilteredRides] = useState<any[]>([]);
+  const [_recentRides, setRecentRides] = useState<any[]>([]);
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
@@ -125,9 +125,12 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
     setFilteredPosts((prev) => prev.filter((p) => p.id !== postId));
     setRecentPosts((prev) => prev.filter((p) => p.id !== postId));
     setTimeout(() => {
-      void loadRidesRef.current?.().catch((err: unknown) => {
-        console.error('Error reloading rides after close:', err);
-      });
+      const runner = loadRidesRef.current;
+      if (runner) {
+        runner().catch((err: unknown) => {
+          console.error('Error reloading rides after close:', err);
+        });
+      }
     }, 100);
   }, []);
 
@@ -141,9 +144,12 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
       toastService.showSuccess(
         i18n.t('post.reopenSuccess', { ns: 'common', defaultValue: 'הפוסט נפתח מחדש' }),
       );
-      void loadRidesRef.current?.().catch((err: unknown) => {
-        console.error('Error reloading rides after reopen:', err);
-      });
+      const reloader = loadRidesRef.current;
+      if (reloader) {
+        reloader().catch((err: unknown) => {
+          console.error('Error reloading rides after reopen:', err);
+        });
+      }
     } else {
       toastService.showError(
         result.error ||
@@ -154,16 +160,22 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
 
   useEffect(() => {
     if (!mode) {
-      void loadRides();
+      loadRides().catch((err: unknown) => {
+        console.error('Error loading rides:', err);
+      });
       return;
     }
     const shouldIncludePast = selectedFilters.includes('includePast');
-    void loadRides(shouldIncludePast);
+    loadRides(shouldIncludePast).catch((err: unknown) => {
+      console.error('Error loading rides:', err);
+    });
   }, [mode, selectedFilters, loadRides]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadRides();
+      loadRides().catch((err: unknown) => {
+        console.error('Error loading rides on focus:', err);
+      });
     }, [loadRides])
   );
 

@@ -825,8 +825,7 @@ class ApiService {
     return this.request(url);
   }
 
-  async deletePost(postId: string, userId: string): Promise<ApiResponse> {
-    void userId; // caller context / future optimistic UI; server uses JWT
+  async deletePost(postId: string, _userId: string): Promise<ApiResponse> {
     return this.request(`/api/posts/${postId}`, {
       method: 'DELETE',
     });

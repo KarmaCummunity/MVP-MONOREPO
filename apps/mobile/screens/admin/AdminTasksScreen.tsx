@@ -98,6 +98,33 @@ function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   return { assignee, statuses, priorities, includeDoneWhenNoStatusFilter };
 }
 
+function formatTaskListPriorityHebrew(priority: string): string {
+  if (priority === 'high') return 'גבוהה';
+  if (priority === 'medium') return 'בינונית';
+  return 'נמוכה';
+}
+
+function formatTaskListStatusHebrew(status: string): string {
+  switch (status) {
+    case 'open':
+      return 'פתוחה';
+    case 'in_progress':
+      return 'בתהליך';
+    case 'stuck':
+      return 'תקוע';
+    case 'testing':
+      return 'בבדיקה';
+    case 'done':
+      return 'בוצעה';
+    default:
+      return 'בארכיון';
+  }
+}
+
+function taskHoursToNumber(hours: unknown): number {
+  return Number.parseFloat(String(hours));
+}
+
 function buildPersistedAdminTaskFilterKeys(
   assignee: 'all' | 'me',
   statuses: TaskStatus[],
@@ -652,18 +679,14 @@ export default function AdminTasksScreen() {
               {/* Priority Badge */}
               <View style={[styles.badge, styles[`priority_${item.priority}` as const]]}>
                 <Text style={styles.badgeText}>
-                  {item.priority === 'high' ? 'גבוהה' : item.priority === 'medium' ? 'בינונית' : 'נמוכה'}
+                  {formatTaskListPriorityHebrew(item.priority)}
                 </Text>
               </View>
 
               {/* Status Badge */}
               <View style={[styles.badge, styles[`status_${item.status}` as const]]}>
                 <Text style={styles.badgeText}>
-                  {item.status === 'open' ? 'פתוחה' :
-                    item.status === 'in_progress' ? 'בתהליך' :
-                      item.status === 'stuck' ? 'תקוע' :
-                        item.status === 'testing' ? 'בבדיקה' :
-                          item.status === 'done' ? 'בוצעה' : 'בארכיון'}
+                  {formatTaskListStatusHebrew(item.status)}
                 </Text>
               </View>
 
@@ -717,19 +740,19 @@ export default function AdminTasksScreen() {
             </View>
 
             {/* Hours Display */}
-            {((item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0) ||
-              (item.actual_hours && parseFloat(String(item.actual_hours)) > 0)) && (
+            {((item.estimated_hours && taskHoursToNumber(item.estimated_hours) > 0) ||
+              (item.actual_hours && taskHoursToNumber(item.actual_hours) > 0)) && (
                 <View style={[styles.hoursRow, { flexDirection: rowDirection('row-reverse') }]}>
-                  {item.estimated_hours && parseFloat(String(item.estimated_hours)) > 0 && (
+                  {item.estimated_hours && taskHoursToNumber(item.estimated_hours) > 0 && (
                     <View style={[styles.badge, styles.hoursBadge]}>
                       <Ionicons name="time-outline" size={12} color={colors.info} />
-                      <Text style={styles.hoursText}>מוערך: {parseFloat(String(item.estimated_hours)).toFixed(1)} שעות</Text>
+                      <Text style={styles.hoursText}>מוערך: {taskHoursToNumber(item.estimated_hours).toFixed(1)} שעות</Text>
                     </View>
                   )}
-                  {item.actual_hours && parseFloat(String(item.actual_hours)) > 0 && (
+                  {item.actual_hours && taskHoursToNumber(item.actual_hours) > 0 && (
                     <View style={[styles.badge, styles.hoursBadge, styles.actualHoursBadge]}>
                       <Ionicons name="checkmark-circle-outline" size={12} color={colors.success} />
-                      <Text style={[styles.hoursText, { color: colors.success }]}>בוצע: {parseFloat(String(item.actual_hours)).toFixed(1)} שעות</Text>
+                      <Text style={[styles.hoursText, { color: colors.success }]}>בוצע: {taskHoursToNumber(item.actual_hours).toFixed(1)} שעות</Text>
                     </View>
                   )}
                 </View>

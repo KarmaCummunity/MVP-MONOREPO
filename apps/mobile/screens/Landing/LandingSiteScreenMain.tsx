@@ -37,6 +37,67 @@ import { InstagramSection } from './sections/InstagramSection';
 import { FAQSection } from './sections/FAQSection';
 import { ContactSection } from './sections/ContactSection';
 
+const VISIT_TRACKED_KEY = 'kc_site_visit_tracked';
+
+function getWebSessionStorage(): Storage | null {
+  if (!IS_WEB || typeof globalThis.window === 'undefined') {
+    return null;
+  }
+  return globalThis.sessionStorage;
+}
+
+function isLandingVisitAlreadyTrackedInSession(): boolean {
+  const s = getWebSessionStorage();
+  return s ? s.getItem(VISIT_TRACKED_KEY) === 'true' : false;
+}
+
+function markLandingVisitTrackedInSession(): void {
+  const s = getWebSessionStorage();
+  if (s) {
+    s.setItem(VISIT_TRACKED_KEY, 'true');
+  }
+}
+
+function clearLandingVisitTrackedInSession(): void {
+  const s = getWebSessionStorage();
+  if (s) {
+    s.removeItem(VISIT_TRACKED_KEY);
+  }
+}
+
+/** Visit tracking + initial stats; split out to keep the effect callback simple for static analysis. */
+async function runLandingVisitTrackingAndStats(
+  loadStats: (forceRefresh: boolean) => Promise<void>,
+): Promise<void> {
+  if (isLandingVisitAlreadyTrackedInSession()) {
+    logger.info('LandingSite', 'Visit already tracked in this session, skipping');
+    await loadStats(false);
+    return;
+  }
+  if (!IS_WEB || !USE_BACKEND) {
+    logger.info('LandingSite', 'Skipping site visit tracking', { IS_WEB, USE_BACKEND });
+    await loadStats(false);
+    return;
+  }
+  try {
+    markLandingVisitTrackedInSession();
+    logger.info('LandingSite', 'Tracking site visit...');
+    const response = await apiService.trackSiteVisit();
+    if (response.success) {
+      logger.info('LandingSite', 'Site visit tracked successfully');
+      await loadStats(true);
+      return;
+    }
+    logger.warn('LandingSite', 'Site visit tracking failed', { error: response.error });
+    clearLandingVisitTrackedInSession();
+    await loadStats(false);
+  } catch (error) {
+    logger.error('LandingSite', 'Failed to track site visit', { error });
+    clearLandingVisitTrackedInSession();
+    await loadStats(false);
+  }
+}
+
 export const LandingSiteScreen: React.FC = () => {
   logger.debug('LandingSite', 'Component rendered', undefined, { periodic: true });
 
@@ -103,7 +164,7 @@ export const LandingSiteScreen: React.FC = () => {
               logger.info('LandingSiteScreen', 'Scrolled to top via container');
             } else {
               // Fallback if container not found
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              globalThis.window.scrollTo({ top: 0, behavior: 'smooth' });
             }
             return;
           }
@@ -121,7 +182,7 @@ export const LandingSiteScreen: React.FC = () => {
             let scrollContainer: HTMLElement | null = null;
 
             while (parent) {
-              const style = window.getComputedStyle(parent);
+              const style = globalThis.window.getComputedStyle(parent);
               // Check for our specific scroll container or general overflow
               if (
                 parent.getAttribute('data-scroll-container') === 'true' ||
@@ -282,72 +343,9 @@ export const LandingSiteScreen: React.FC = () => {
 
   useEffect(() => {
     logger.info('LandingSite', 'useEffect triggered - Landing page mounted', { IS_WEB, USE_BACKEND });
-
-    // Use sessionStorage to prevent double tracking across all instances
-    // שימוש ב-sessionStorage למניעת ספירה כפולה בכל ה-instances
-    const VISIT_TRACKED_KEY = 'kc_site_visit_tracked';
-
-    // Track site visit - only on web and if backend is available
-    // ספירת ביקור באתר - רק ב-web ואם השרת זמין
-    // שינוי: שימוש ב-sessionStorage למניעת כפילות בכל ה-instances
-    // Change: Use sessionStorage to prevent double tracking across all instances
-    const trackVisitAndLoadStats = async () => {
-      // Check if visit already tracked in this session (shared across all component instances)
-      // בדיקה אם הביקור כבר נספר ב-session זה (משותף לכל ה-instances של הקומפוננטה)
-      const visitTracked = IS_WEB && typeof window !== 'undefined'
-        ? sessionStorage.getItem(VISIT_TRACKED_KEY) === 'true'
-        : false;
-
-      if (visitTracked) {
-        logger.info('LandingSite', 'Visit already tracked in this session, skipping');
-        await loadStats(false);
-        return;
-      }
-
-      if (IS_WEB && USE_BACKEND) {
-        try {
-          // Mark as tracked immediately in sessionStorage to prevent double calls
-          // סימון כנספר מיד ב-sessionStorage כדי למנוע קריאות כפולות
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem(VISIT_TRACKED_KEY, 'true');
-          }
-
-          logger.info('LandingSite', 'Tracking site visit...');
-          const response = await apiService.trackSiteVisit();
-          if (response.success) {
-            logger.info('LandingSite', 'Site visit tracked successfully');
-            // Reload stats with forceRefresh to get updated site_visits count
-            // טעינה מחדש של סטטיסטיקות עם forceRefresh כדי לקבל את מספר הביקורים המעודכן
-            await loadStats(true);
-          } else {
-            logger.warn('LandingSite', 'Site visit tracking failed', { error: response.error });
-            // Reset flag on failure so we can retry
-            // איפוס הדגל בכשל כדי שנוכל לנסות שוב
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem(VISIT_TRACKED_KEY);
-            }
-            // Still load stats even if tracking failed
-            await loadStats(false);
-          }
-        } catch (error) {
-          logger.error('LandingSite', 'Failed to track site visit', { error });
-          // Reset flag on error so we can retry
-          // איפוס הדגל בשגיאה כדי שנוכל לנסות שוב
-          if (typeof window !== 'undefined') {
-            sessionStorage.removeItem(VISIT_TRACKED_KEY);
-          }
-          // Still load stats even if tracking failed
-          await loadStats(false);
-        }
-      } else {
-        // If not web or backend not available, just load stats
-        logger.info('LandingSite', 'Skipping site visit tracking', { IS_WEB, USE_BACKEND });
-        await loadStats(false);
-      }
-    };
-
-    trackVisitAndLoadStats();
-
+    runLandingVisitTrackingAndStats(loadStats).catch((err: unknown) => {
+      logger.error('LandingSite', 'runLandingVisitTrackingAndStats failed', { error: err });
+    });
     return () => {
       logger.info('LandingSite', 'Landing page unmounted');
     };

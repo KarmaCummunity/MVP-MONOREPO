@@ -24,7 +24,7 @@ import { apiService } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
 interface AdminAdminsScreenProps {
-    navigation: NavigationProp<AdminStackParamList>;
+    readonly navigation: NavigationProp<AdminStackParamList>;
 }
 
 const LOG_SOURCE = 'AdminAdminsScreen';

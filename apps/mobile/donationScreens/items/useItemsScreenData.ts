@@ -145,7 +145,9 @@ export function useItemsScreenData(
   });
 
   useEffect(() => {
-    void loadItems();
+    loadItems().catch((err: unknown) => {
+      console.error('Error loading items:', err);
+    });
   }, [loadItems]);
 
   const handlePostClosed = useCallback((postId: string) => {
@@ -153,8 +155,9 @@ export function useItemsScreenData(
     setRecentPosts((prev) => prev.filter((p) => p.id !== postId));
 
     setTimeout(() => {
-      if (loadItemsRef.current) {
-        void loadItemsRef.current().catch((err: unknown) => {
+      const reloader = loadItemsRef.current;
+      if (reloader) {
+        reloader().catch((err: unknown) => {
           console.error('Error reloading items after close:', err);
         });
       }

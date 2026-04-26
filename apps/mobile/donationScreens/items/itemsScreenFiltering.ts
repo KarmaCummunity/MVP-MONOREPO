@@ -25,12 +25,14 @@ export function buildItemsSortOptionLabels(t: ItemsScreenTranslate): string[] {
 export function buildItemsFilterOptionLabels(t: ItemsScreenTranslate, itemType: ItemType): string[] {
   const ns = { ns: 'items' as const };
   const cats = ITEM_CATEGORY_DEFS.map((d) => t(d.labelKey, ns));
-  const typeSpecificKeys =
-    itemType === 'furniture'
-      ? (['tags.sofas', 'tags.wardrobes', 'tags.beds'] as const)
-      : itemType === 'clothes'
-        ? (['tags.men', 'tags.women', 'tags.kids'] as const)
-        : (['tags.kitchen', 'tags.electronics', 'tags.toys'] as const);
+  let typeSpecificKeys: readonly string[];
+  if (itemType === 'furniture') {
+    typeSpecificKeys = ['tags.sofas', 'tags.wardrobes', 'tags.beds'] as const;
+  } else if (itemType === 'clothes') {
+    typeSpecificKeys = ['tags.men', 'tags.women', 'tags.kids'] as const;
+  } else {
+    typeSpecificKeys = ['tags.kitchen', 'tags.electronics', 'tags.toys'] as const;
+  }
   const typeSpecific = typeSpecificKeys.map((k) => t(`donationScreen.${k}`, ns));
   const base = FILTER_BASE_KEYS.map((k) => t(`donationScreen.filters.${k}`, ns));
   return [...cats, ...typeSpecific, ...base];

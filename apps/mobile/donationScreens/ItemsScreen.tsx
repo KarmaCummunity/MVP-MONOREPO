@@ -79,7 +79,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setSelectedPostForReport,
   } = usePostMenu({
     onReopen: (item) => {
-      void handlePostReopen(item);
+      handlePostReopen(item).catch((err: unknown) => {
+        console.error('Error reopening post from items screen:', err);
+      });
     },
   });
 

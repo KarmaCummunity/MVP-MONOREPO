@@ -99,7 +99,9 @@ export function useTrumpOfferRideFlow({
     };
 
     if (useCurrentLocation) {
-      void getLocation();
+      getLocation().catch((err: unknown) => {
+        console.error('Error in getLocation effect:', err);
+      });
     }
 
     return () => {
@@ -138,15 +140,15 @@ export function useTrumpOfferRideFlow({
   const handleCreateRide = useCallback(async () => {
     if (!isFormValid()) {
       const errors: string[] = [];
-      if (!toLocation || !toLocation.trim()) errors.push('יש להזין יעד');
+      if (!toLocation?.trim()) errors.push('יש להזין יעד');
       if (useCurrentLocation) {
         if (!detectedAddress || isLocationError) {
           errors.push('אנא המתן לזיהוי המיקום או הזן כתובת ידנית');
         }
-      } else if (!fromLocation || !fromLocation.trim()) {
+      } else if (!fromLocation?.trim()) {
         errors.push('יש להזין כתובת יציאה');
       }
-      if (!immediateDeparture && (!departureTime || !departureTime.trim())) {
+      if (!immediateDeparture && !departureTime?.trim()) {
         errors.push('יש להזין שעת יציאה');
       }
       if (isRecurring && !recurrenceUnit) {

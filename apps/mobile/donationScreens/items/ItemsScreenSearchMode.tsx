@@ -12,7 +12,7 @@ import { itemsScreenStyles } from './itemsScreen.styles';
 
 type Styles = typeof itemsScreenStyles;
 
-export type ItemsScreenSearchModeProps = {
+export type ItemsScreenSearchModeProps = Readonly<{
   styles: Styles;
   t: ItemsScreenTranslate;
   numColumns: number;
@@ -25,7 +25,7 @@ export type ItemsScreenSearchModeProps = {
   selectedFilters: string[];
   selectedSorts: string[];
   onClearAll: () => void;
-};
+}>;
 
 export function ItemsScreenSearchMode({
   styles: s,

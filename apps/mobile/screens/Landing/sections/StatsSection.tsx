@@ -9,7 +9,91 @@ import type { LandingStats } from '../types';
 import { logger } from '../../../utils/loggerService';
 import { StatsDetailModal } from '../modals/StatsDetailModal';
 
-export const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boolean }> = ({ stats, isLoadingStats }) => {
+type StatCardConfig = {
+  type: string;
+  modalTitle: string;
+  valueText: (stats: LandingStats) => string;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  cardStyle?: object;
+};
+
+const STAT_CARDS: StatCardConfig[] = [
+  {
+    type: 'siteVisits',
+    modalTitle: 'ביקורים באתר',
+    valueText: (s) => s.siteVisits.toLocaleString('he-IL'),
+    label: 'ביקורים באתר',
+    icon: 'eye-outline',
+    color: colors.info,
+  },
+  {
+    type: 'totalMoneyDonated',
+    modalTitle: 'תרומות כספיות',
+    valueText: (s) => `${s.totalMoneyDonated.toLocaleString('he-IL')} ₪`,
+    label: 'ש"ח שנתרמו ישירות',
+    icon: 'cash-outline',
+    color: colors.success,
+  },
+  {
+    type: 'totalUsers',
+    modalTitle: 'חברי קהילה רשומים',
+    valueText: (s) => s.totalUsers.toLocaleString('he-IL'),
+    label: 'חברי קהילה רשומים',
+    icon: 'heart-outline',
+    color: colors.secondary,
+  },
+  {
+    type: 'itemDonations',
+    modalTitle: 'פריטים שפורסמו',
+    valueText: (s) => s.itemDonations.toLocaleString('he-IL'),
+    label: 'פריטים שפורסמו',
+    icon: 'cube-outline',
+    color: colors.accent,
+  },
+  {
+    type: 'completedRides',
+    modalTitle: 'נסיעות קהילתיות',
+    valueText: (s) => s.completedRides.toLocaleString('he-IL'),
+    label: 'נסיעות קהילתיות',
+    icon: 'car-outline',
+    color: colors.greenBright,
+    cardStyle: { backgroundColor: colors.greenBright + '15', borderColor: colors.greenBright + '40' },
+  },
+  {
+    type: 'recurringDonationsAmount',
+    modalTitle: 'תרומות קבועות',
+    valueText: (s) => `${s.recurringDonationsAmount.toLocaleString('he-IL')} ₪`,
+    label: 'תרומות קבועות פעילות',
+    icon: 'repeat-outline',
+    color: colors.success,
+  },
+  {
+    type: 'uniqueDonors',
+    modalTitle: 'תורמים פעילים',
+    valueText: (s) => s.uniqueDonors.toLocaleString('he-IL'),
+    label: 'תורמים פעילים',
+    icon: 'people-outline',
+    color: colors.info,
+  },
+  {
+    type: 'completedTasks',
+    modalTitle: 'משימות שבוצעו',
+    valueText: (s) => s.completedTasks.toLocaleString('he-IL'),
+    label: 'משימות שבוצעו',
+    icon: 'checkmark-done-outline',
+    color: colors.success,
+    cardStyle: { backgroundColor: colors.success + '15', borderColor: colors.success + '40' },
+  },
+];
+
+type StatsSectionProps = Readonly<{
+  stats: LandingStats;
+  isLoadingStats: boolean;
+}>;
+
+export const StatsSection: React.FC<StatsSectionProps> = ({ stats, isLoadingStats }) => {
   const [selectedStat, setSelectedStat] = useState<{
     type: string;
     title: string;
@@ -18,9 +102,16 @@ export const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boole
     color: string;
   } | null>(null);
 
-  const handleStatPress = (type: string, title: string, value: number, icon: string, color: string) => {
-    logger.info('StatsSection', `Stat card pressed: ${type}`);
-    setSelectedStat({ type, title, value, icon, color });
+  const openStat = (c: StatCardConfig) => {
+    logger.info('StatsSection', `Stat card pressed: ${c.type}`);
+    const raw = stats[c.type as keyof LandingStats];
+    setSelectedStat({
+      type: c.type,
+      title: c.modalTitle,
+      value: raw,
+      icon: c.icon,
+      color: c.color,
+    });
   };
 
   return (
@@ -44,108 +135,31 @@ export const StatsSection: React.FC<{ stats: LandingStats; isLoadingStats: boole
         </View>
       ) : (
         <View style={styles.statsGrid}>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('siteVisits', 'ביקורים באתר', stats.siteVisits, 'eye-outline', colors.info)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="eye-outline" size={isMobileWeb ? 24 : 32} color={colors.info} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.siteVisits.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>ביקורים באתר</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('totalMoneyDonated', 'תרומות כספיות', stats.totalMoneyDonated, 'cash-outline', colors.success)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="cash-outline" size={isMobileWeb ? 24 : 32} color={colors.success} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.totalMoneyDonated.toLocaleString('he-IL')} ₪</Text>
-            <Text style={styles.statLabel}>{'ש"ח שנתרמו ישירות'}</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('totalUsers', 'חברי קהילה רשומים', stats.totalUsers, 'heart-outline', colors.secondary)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="heart-outline" size={isMobileWeb ? 24 : 32} color={colors.secondary} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.totalUsers.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>חברי קהילה רשומים</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('itemDonations', 'פריטים שפורסמו', stats.itemDonations, 'cube-outline', colors.accent)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="cube-outline" size={isMobileWeb ? 24 : 32} color={colors.accent} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.itemDonations.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>פריטים שפורסמו</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.statCard, { backgroundColor: colors.greenBright + '15', borderColor: colors.greenBright + '40' }]}
-            onPress={() => handleStatPress('completedRides', 'נסיעות קהילתיות', stats.completedRides, 'car-outline', colors.greenBright)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="car-outline" size={isMobileWeb ? 24 : 32} color={colors.greenBright} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.completedRides.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>נסיעות קהילתיות</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('recurringDonationsAmount', 'תרומות קבועות', stats.recurringDonationsAmount, 'repeat-outline', colors.success)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="repeat-outline" size={isMobileWeb ? 24 : 32} color={colors.success} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.recurringDonationsAmount.toLocaleString('he-IL')} ₪</Text>
-            <Text style={styles.statLabel}>תרומות קבועות פעילות</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => handleStatPress('uniqueDonors', 'תורמים פעילים', stats.uniqueDonors, 'people-outline', colors.info)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="people-outline" size={isMobileWeb ? 24 : 32} color={colors.info} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.uniqueDonors.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>תורמים פעילים</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.statCard, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}
-            onPress={() => handleStatPress('completedTasks', 'משימות שבוצעו', stats.completedTasks, 'checkmark-done-outline', colors.success)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="checkmark-done-outline" size={isMobileWeb ? 24 : 32} color={colors.success} style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.completedTasks.toLocaleString('he-IL')}</Text>
-            <Text style={styles.statLabel}>משימות שבוצעו</Text>
-            <Ionicons name="chevron-back-outline" size={isMobileWeb ? 16 : 20} color={colors.textSecondary} style={styles.statChevron} />
-          </TouchableOpacity>
+          {STAT_CARDS.map((c) => (
+            <TouchableOpacity
+              key={c.type}
+              style={c.cardStyle ? [styles.statCard, c.cardStyle] : styles.statCard}
+              onPress={() => openStat(c)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={c.icon}
+                size={isMobileWeb ? 24 : 32}
+                color={c.color}
+                style={styles.statIcon}
+              />
+              <Text style={styles.statNumber}>{c.valueText(stats)}</Text>
+              <Text style={styles.statLabel}>{c.label}</Text>
+              <Ionicons
+                name="chevron-back-outline"
+                size={isMobileWeb ? 16 : 20}
+                color={colors.textSecondary}
+                style={styles.statChevron}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
       )}
-
-      {/* CTA Button - Go to App */}
-      {/* <View style={styles.ctaRow}>
-        <TouchableOpacity
-          style={styles.primaryCta}
-          onPress={onGoToApp}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="phone-portrait-outline" size={isMobileWeb ? 16 : 22} color={colors.white} style={styles.ctaIcon} />
-          <Text style={styles.primaryCtaText}>עבור לאפליקציה</Text>
-        </TouchableOpacity>
-      </View> */}
     </Section>
   );
 };
-

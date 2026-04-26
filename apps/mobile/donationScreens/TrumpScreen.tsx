@@ -93,7 +93,9 @@ export default function TrumpScreen({
     setSelectedPostForReport,
   } = usePostMenu({
     onReopen: (item) => {
-      void trumpData.handlePostReopen(item);
+      trumpData.handlePostReopen(item).catch((err: unknown) => {
+        console.error('Error reopening post from Trump screen:', err);
+      });
     },
   });
 

@@ -6,6 +6,9 @@ import colors from '../../globals/colors';
 import { landingSharedStyleSheet } from './styles';
 import { IS_WEB, IS_MOBILE_WEB, IS_TABLET, SCREEN_WIDTH } from './constants';
 
+/** Non-nested font size for CTA labels (avoids Sonar nested-ternary noise). */
+const ctaPillTextFontSize = IS_MOBILE_WEB ? 14 : IS_WEB ? 18 : 20;
+
 export const landingSiteScreenStyles = StyleSheet.create({
   ...landingSharedStyleSheet,
   container: {
@@ -67,7 +70,7 @@ export const landingSiteScreenStyles = StyleSheet.create({
   primaryCtaText: {
     color: colors.white,
     fontWeight: '800',
-    fontSize: IS_MOBILE_WEB ? 14 : (IS_WEB ? 18 : 20),
+    fontSize: ctaPillTextFontSize,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
@@ -91,7 +94,7 @@ export const landingSiteScreenStyles = StyleSheet.create({
   secondaryCtaText: {
     color: colors.info,
     fontWeight: '800',
-    fontSize: IS_MOBILE_WEB ? 14 : (IS_WEB ? 18 : 20),
+    fontSize: ctaPillTextFontSize,
     textAlign: 'center',
     letterSpacing: 0.3,
   },

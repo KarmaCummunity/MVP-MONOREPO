@@ -23,7 +23,7 @@ import { itemsScreenStyles } from './itemsScreen.styles';
 
 type Styles = typeof itemsScreenStyles;
 
-export type ItemsScreenOfferModeProps = {
+export type ItemsScreenOfferModeProps = Readonly<{
   styles: Styles;
   t: ItemsScreenTranslate;
   titleInputRef: RefObject<TextInput | null>;
@@ -52,7 +52,7 @@ export type ItemsScreenOfferModeProps = {
   recentPosts: FeedItem[];
   onMorePress: (item: FeedItem, position?: { x: number; y: number }) => void;
   onPostClosed: (postId: string) => void;
-};
+}>;
 
 export function ItemsScreenOfferMode({
   styles: s,
