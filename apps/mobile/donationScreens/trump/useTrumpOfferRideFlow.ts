@@ -5,6 +5,114 @@ import { useTranslation } from 'react-i18next';
 
 import { db } from '../../utils/databaseService';
 
+type TrumpRidePayload = {
+  driverId: string;
+  driverName: string;
+  from: string;
+  to: string;
+  date: string;
+  time: string;
+  seats: number;
+  price: number;
+  noSmoking: boolean;
+  petsAllowed: boolean;
+  kidsFriendly: boolean;
+  isRecurring: boolean;
+  recurrenceFrequency: number;
+  recurrenceUnit: 'day' | 'week' | 'month' | null;
+  status: string;
+};
+
+function collectTrumpOfferRideValidationErrors(params: {
+  toLocation: string;
+  useCurrentLocation: boolean;
+  detectedAddress: string;
+  isLocationError: boolean;
+  fromLocation: string;
+  immediateDeparture: boolean;
+  departureTime: string;
+  isRecurring: boolean;
+  recurrenceUnit: 'day' | 'week' | 'month' | null;
+}): string[] {
+  const errors: string[] = [];
+  if (!params.toLocation?.trim()) {
+    errors.push('יש להזין יעד');
+  }
+  if (params.useCurrentLocation) {
+    if (!params.detectedAddress || params.isLocationError) {
+      errors.push('אנא המתן לזיהוי המיקום או הזן כתובת ידנית');
+    }
+  } else if (!params.fromLocation?.trim()) {
+    errors.push('יש להזין כתובת יציאה');
+  }
+  if (!params.immediateDeparture && !params.departureTime?.trim()) {
+    errors.push('יש להזין שעת יציאה');
+  }
+  if (params.isRecurring && !params.recurrenceUnit) {
+    errors.push('יש לבחור תדירות לנסיעה חוזרת');
+  }
+  return errors;
+}
+
+function trumpOfferRideDateToSave(
+  immediateDeparture: boolean,
+  leavingToday: boolean,
+  rideDate: Date,
+): string {
+  if (immediateDeparture || leavingToday) {
+    return new Date().toISOString().split('T')[0];
+  }
+  const validDate =
+    rideDate && rideDate instanceof Date && !Number.isNaN(rideDate.getTime()) ? rideDate : new Date();
+  return validDate.toISOString().split('T')[0];
+}
+
+function trumpOfferRideTimeToSave(immediateDeparture: boolean, departureTime: string): string {
+  if (immediateDeparture) {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
+  return departureTime;
+}
+
+function applyTrumpRecurrenceStep(
+  nextDate: Date,
+  recurrenceUnit: 'day' | 'week' | 'month',
+  recurrenceFrequency: number,
+  instanceIndex: number,
+): void {
+  switch (recurrenceUnit) {
+    case 'day':
+      nextDate.setDate(nextDate.getDate() + recurrenceFrequency * instanceIndex);
+      break;
+    case 'week':
+      nextDate.setDate(nextDate.getDate() + recurrenceFrequency * 7 * instanceIndex);
+      break;
+    case 'month':
+      nextDate.setMonth(nextDate.getMonth() + recurrenceFrequency * instanceIndex);
+      break;
+  }
+}
+
+async function createTrumpRecurringRideInstances(
+  uid: string,
+  baseRideData: TrumpRidePayload,
+  baseDate: Date,
+  recurrenceUnit: 'day' | 'week' | 'month',
+  recurrenceFrequency: number,
+): Promise<void> {
+  const instancesToCreate = 5;
+  for (let i = 1; i <= instancesToCreate; i++) {
+    const nextDate = new Date(baseDate);
+    applyTrumpRecurrenceStep(nextDate, recurrenceUnit, recurrenceFrequency, i);
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+    const nextTimeStr = `${String(nextDate.getHours()).padStart(2, '0')}:${String(nextDate.getMinutes()).padStart(2, '0')}`;
+    const recurringRideData = { ...baseRideData, date: nextDateStr, time: nextTimeStr };
+    const recurringRideId = `${Date.now()}_${i}`;
+    await db.createRide(uid, recurringRideId, recurringRideData);
+  }
+}
+
 type Args = {
   mode: boolean;
   selectedUser: { id?: string; name?: string } | null | undefined;
@@ -139,21 +247,17 @@ export function useTrumpOfferRideFlow({
 
   const handleCreateRide = useCallback(async () => {
     if (!isFormValid()) {
-      const errors: string[] = [];
-      if (!toLocation?.trim()) errors.push('יש להזין יעד');
-      if (useCurrentLocation) {
-        if (!detectedAddress || isLocationError) {
-          errors.push('אנא המתן לזיהוי המיקום או הזן כתובת ידנית');
-        }
-      } else if (!fromLocation?.trim()) {
-        errors.push('יש להזין כתובת יציאה');
-      }
-      if (!immediateDeparture && !departureTime?.trim()) {
-        errors.push('יש להזין שעת יציאה');
-      }
-      if (isRecurring && !recurrenceUnit) {
-        errors.push('יש לבחור תדירות לנסיעה חוזרת');
-      }
+      const errors = collectTrumpOfferRideValidationErrors({
+        toLocation,
+        useCurrentLocation,
+        detectedAddress,
+        isLocationError,
+        fromLocation,
+        immediateDeparture,
+        departureTime,
+        isRecurring,
+        recurrenceUnit,
+      });
       Alert.alert(
         t('common:errorTitle') || 'שגיאה',
         errors.length > 0 ? errors.join('\n') : (t('trump:errors.formInvalid') || 'יש למלא את כל השדות הנדרשים')
@@ -165,25 +269,10 @@ export function useTrumpOfferRideFlow({
     try {
       const uid = selectedUser?.id || 'guest';
       const rideId = `${Date.now()}`;
+      const dateToSave = trumpOfferRideDateToSave(immediateDeparture, leavingToday, rideDate);
+      const timeToSave = trumpOfferRideTimeToSave(immediateDeparture, departureTime);
 
-      let dateToSave: string;
-      if (immediateDeparture || leavingToday) {
-        dateToSave = new Date().toISOString().split('T')[0];
-      } else {
-        const validDate =
-          rideDate && rideDate instanceof Date && !isNaN(rideDate.getTime()) ? rideDate : new Date();
-        dateToSave = validDate.toISOString().split('T')[0];
-      }
-
-      let timeToSave: string;
-      if (immediateDeparture) {
-        const now = new Date();
-        timeToSave = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      } else {
-        timeToSave = departureTime;
-      }
-
-      const baseRideData = {
+      const baseRideData: TrumpRidePayload = {
         driverId: uid,
         driverName: selectedUser?.name || 'Me',
         from: useCurrentLocation ? (detectedAddress || (t('trump:currentLocation') as string)) : fromLocation,
@@ -214,26 +303,13 @@ export function useTrumpOfferRideFlow({
       await db.createRide(uid, rideId, baseRideData);
 
       if (isRecurring && recurrenceUnit) {
-        const instancesToCreate = 5;
-        for (let i = 1; i <= instancesToCreate; i++) {
-          const nextDate = new Date(baseDate);
-          switch (recurrenceUnit) {
-            case 'day':
-              nextDate.setDate(nextDate.getDate() + recurrenceFrequency * i);
-              break;
-            case 'week':
-              nextDate.setDate(nextDate.getDate() + recurrenceFrequency * 7 * i);
-              break;
-            case 'month':
-              nextDate.setMonth(nextDate.getMonth() + recurrenceFrequency * i);
-              break;
-          }
-          const nextDateStr = nextDate.toISOString().split('T')[0];
-          const nextTimeStr = `${String(nextDate.getHours()).padStart(2, '0')}:${String(nextDate.getMinutes()).padStart(2, '0')}`;
-          const recurringRideData = { ...baseRideData, date: nextDateStr, time: nextTimeStr };
-          const recurringRideId = `${Date.now()}_${i}`;
-          await db.createRide(uid, recurringRideId, recurringRideData);
-        }
+        await createTrumpRecurringRideInstances(
+          uid,
+          baseRideData,
+          baseDate,
+          recurrenceUnit,
+          recurrenceFrequency,
+        );
       }
 
       setToLocation('');

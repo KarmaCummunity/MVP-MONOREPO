@@ -15,7 +15,7 @@ import {
   LazySection,
 } from './components';
 import { navigateToAppModeFromLanding } from './navigateToAppModeFromLanding';
-import { getSectionElement } from './utils';
+import { findNearestScrollableParent, getSectionElement } from './utils';
 import type { LandingStats } from './types';
 import { IS_WEB } from './constants';
 import { landingSiteScreenStyles as styles } from './landingSiteScreenStyles';
@@ -62,6 +62,47 @@ function clearLandingVisitTrackedInSession(): void {
   const s = getWebSessionStorage();
   if (s) {
     s.removeItem(VISIT_TRACKED_KEY);
+  }
+}
+
+function scrollLandingWebToTop(
+  sectionId: string,
+  setActiveSection: React.Dispatch<React.SetStateAction<string | null>>,
+): void {
+  const scrollContainer = document.querySelector('[data-scroll-container="true"]');
+  if (scrollContainer) {
+    scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    setActiveSection(sectionId);
+    logger.info('LandingSiteScreen', 'Scrolled to top via container');
+  } else {
+    globalThis.window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function scrollLandingWebElementIntoSection(
+  element: HTMLElement,
+  sectionId: string,
+  setActiveSection: React.Dispatch<React.SetStateAction<string | null>>,
+): void {
+  const scrollContainer = findNearestScrollableParent(element);
+  if (scrollContainer) {
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top);
+    const offset = 20;
+    scrollContainer.scrollTo({
+      top: scrollTop - offset,
+      behavior: 'smooth',
+    });
+    setActiveSection(sectionId);
+    logger.info('LandingSiteScreen', `Scrolled to section via container: ${sectionId}`);
+  } else {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+    setActiveSection(sectionId);
+    logger.warn('LandingSiteScreen', 'Scroll container not found, using scrollIntoView fallback');
   }
 }
 
@@ -156,76 +197,20 @@ export const LandingSiteScreen: React.FC = () => {
       const scrollToSection = (retryCount = 0) => {
         try {
           if (sectionId === 'top') {
-            // Find the specific scroll container specifically to avoid window scrolling
-            const scrollContainer = document.querySelector('[data-scroll-container="true"]');
-            if (scrollContainer) {
-              scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-              setActiveSection(sectionId);
-              logger.info('LandingSiteScreen', 'Scrolled to top via container');
-            } else {
-              // Fallback if container not found
-              globalThis.window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            scrollLandingWebToTop(sectionId, setActiveSection);
             return;
           }
 
           const element = getSectionElement(sectionId);
           logger.info('LandingSiteScreen', `Found element for ${sectionId}:`, {
             found: !!element,
-            elementId: element?.id || element?.getAttribute?.('data-nativeid') || null,
+            elementId: element?.id || element?.dataset?.nativeid || null,
             retryCount,
           });
 
           if (element) {
-            // Find the nearest scrollable parent explicitly
-            let parent = element.parentElement;
-            let scrollContainer: HTMLElement | null = null;
-
-            while (parent) {
-              const style = globalThis.window.getComputedStyle(parent);
-              // Check for our specific scroll container or general overflow
-              if (
-                parent.getAttribute('data-scroll-container') === 'true' ||
-                style.overflowY === 'auto' ||
-                style.overflowY === 'scroll'
-              ) {
-                scrollContainer = parent;
-                break;
-              }
-              parent = parent.parentElement;
-            }
-
-            if (scrollContainer) {
-              // Calculate position relative to the container
-              // We need to account for the element's position inside the container
-              const containerRect = scrollContainer.getBoundingClientRect();
-              const elementRect = element.getBoundingClientRect();
-
-              // Current scroll position + difference in tops
-              const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top);
-
-              // Add a small offset for breathing room (e.g., 20px)
-              const offset = 20;
-
-              scrollContainer.scrollTo({
-                top: scrollTop - offset,
-                behavior: 'smooth',
-              });
-
-              setActiveSection(sectionId);
-              logger.info('LandingSiteScreen', `Scrolled to section via container: ${sectionId}`);
-            } else {
-              // Fallback to scrollIntoView only if no container found (unlikely in our app structure)
-              // Use block: 'center' to avoid aggressive top alignment that might pull the window
-              element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-              });
-              setActiveSection(sectionId);
-              logger.warn('LandingSiteScreen', 'Scroll container not found, using scrollIntoView fallback');
-            }
+            scrollLandingWebElementIntoSection(element, sectionId, setActiveSection);
           } else if (retryCount < 10) {
-            // Retry if element not found yet (DOM might still be rendering)
             setTimeout(() => scrollToSection(retryCount + 1), 100);
             logger.info('LandingSiteScreen', `Retrying to find section: ${sectionId}, attempt ${retryCount + 1}`);
           } else {
