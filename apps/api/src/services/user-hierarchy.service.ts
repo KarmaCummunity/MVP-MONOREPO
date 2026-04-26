@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { randomUUID } from "crypto";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
@@ -75,6 +75,71 @@ export class UserHierarchyService {
     return (this.configService.get<string>("ROOT_ADMIN_EMAIL") || "")
       .toLowerCase()
       .trim();
+  }
+
+  /**
+   * Prevents pulling a strict *ancestor* (your manager chain) under yourself.
+   * If the requester already sits on the manager path above the target (direct
+   * manager or higher), the operation is allowed — including volunteers who are
+   * already linked to a manager below the requester.
+   */
+  private async assertRequesterMayPullTargetUnderSelf(
+    client: PoolClient,
+    requestingAdminId: string,
+    targetUserId: string,
+    targetParentId: string | null,
+    isSuperAdmin: boolean,
+    blockErrorHebrew: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    if (isSuperAdmin) {
+      return { ok: true };
+    }
+    const requesterIsOnPathAboveTarget =
+      targetParentId === requestingAdminId ||
+      (
+        await client.query(
+          `
+          WITH RECURSIVE up_from_target AS (
+            SELECT id, parent_manager_id, 1 AS depth
+            FROM user_profiles
+            WHERE id = $1
+            UNION ALL
+            SELECT p.id, p.parent_manager_id, u.depth + 1
+            FROM user_profiles p
+            INNER JOIN up_from_target u ON p.id = u.parent_manager_id
+            WHERE u.depth < 100
+          )
+          SELECT 1 FROM up_from_target WHERE id = $2 LIMIT 1
+        `,
+          [targetUserId, requestingAdminId],
+        )
+      ).rows.length > 0;
+
+    if (requesterIsOnPathAboveTarget) {
+      return { ok: true };
+    }
+
+    const { rows: ancestorHit } = await client.query(
+      `
+      WITH RECURSIVE ancestors_of_requester AS (
+        SELECT id, parent_manager_id, 1 AS depth
+        FROM user_profiles
+        WHERE id = $1
+        UNION ALL
+        SELECT p.id, p.parent_manager_id, a.depth + 1
+        FROM user_profiles p
+        INNER JOIN ancestors_of_requester a ON p.id = a.parent_manager_id
+        WHERE a.depth < 100
+      )
+      SELECT 1 FROM ancestors_of_requester WHERE id = $2 LIMIT 1
+    `,
+      [requestingAdminId, targetUserId],
+    );
+
+    if (ancestorHit.length > 0) {
+      return { ok: false, error: blockErrorHebrew };
+    }
+    return { ok: true };
   }
 
   async ensureSalarySeniorityColumns(): Promise<void> {
@@ -777,33 +842,18 @@ export class UserHierarchyService {
         return { success: true, message: "משתמש זה כבר מנהל תחתיך" };
       }
 
-      if (!isSuperAdmin) {
-        const { rows: chainCheck } = await client.query(
-          `
-          WITH RECURSIVE manager_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $1
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, mc.depth + 1
-            FROM user_profiles u
-            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
-            WHERE mc.depth < 100
-          )
-          SELECT 1 FROM manager_chain WHERE id = $2 LIMIT 1
-        `,
-          [requestingAdminId, targetUserId],
+      const promoteAdminHierarchy =
+        await this.assertRequesterMayPullTargetUnderSelf(
+          client,
+          requestingAdminId,
+          targetUserId,
+          targetUser[0].parent_manager_id,
+          isSuperAdmin,
+          "לא ניתן להפוך את המנהל שלך או מנהלים מעליו למנהל תחתיך",
         );
-
-        if (chainCheck.length > 0) {
-          await client.query("ROLLBACK");
-          return {
-            success: false,
-            error: "לא ניתן להפוך את המנהל שלך או מנהלים מעליו למנהל תחתיך",
-          };
-        }
+      if (!promoteAdminHierarchy.ok) {
+        await client.query("ROLLBACK");
+        return { success: false, error: promoteAdminHierarchy.error };
       }
 
       const currentRoles = Array.isArray(targetUser[0].roles)
@@ -1108,33 +1158,18 @@ export class UserHierarchyService {
         };
       }
 
-      if (!isSuperAdmin) {
-        const { rows: chainCheck } = await client.query(
-          `
-          WITH RECURSIVE manager_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $1
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, mc.depth + 1
-            FROM user_profiles u
-            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
-            WHERE mc.depth < 100
-          )
-          SELECT 1 FROM manager_chain WHERE id = $2 LIMIT 1
-        `,
-          [requestingAdminId, targetUserId],
+      const promoteVolunteerHierarchy =
+        await this.assertRequesterMayPullTargetUnderSelf(
+          client,
+          requestingAdminId,
+          targetUserId,
+          targetUser[0].parent_manager_id,
+          isSuperAdmin,
+          "לא ניתן להפוך את המנהל שלך או מנהלים מעליו למתנדב תחתיך",
         );
-
-        if (chainCheck.length > 0) {
-          await client.query("ROLLBACK");
-          return {
-            success: false,
-            error: "לא ניתן להפוך את המנהל שלך או מנהלים מעליו למתנדב תחתיך",
-          };
-        }
+      if (!promoteVolunteerHierarchy.ok) {
+        await client.query("ROLLBACK");
+        return { success: false, error: promoteVolunteerHierarchy.error };
       }
 
       const currentRoles = Array.isArray(targetUser[0].roles)

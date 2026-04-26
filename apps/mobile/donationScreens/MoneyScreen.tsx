@@ -15,7 +15,6 @@ import {
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute } from '@react-navigation/native';
 import { FontSizes } from '../globals/constants';
 // Empty arrays - replace with real data from API
-const charityNames: string[] = [];
 const charities: any[] = [];
 const donations: any[] = [];
 import { charitiesStore } from '../utils/charitiesStore';
@@ -103,7 +102,7 @@ export default function MoneyScreen({
   // console.log('💰 MoneyScreen - Component rendered');
   // console.log('💰 MoneyScreen - Navigation object:', navigation);
   // console.log('💰 MoneyScreen - Navigation state:', JSON.stringify(navigation.getState(), null, 2));
-  const [selectedRecipient, setSelectedRecipient] = useState<string>('');
+  const [_selectedRecipient, setSelectedRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('50');
 
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
@@ -143,7 +142,7 @@ export default function MoneyScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [selectedSort, setSelectedSort] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Build external charities from donationResources to appear as donation cards
   const externalCharities = React.useMemo(() => {
@@ -218,22 +217,6 @@ export default function MoneyScreen({
   const [selectedCharityForModal, setSelectedCharityForModal] = useState<any | null>(null);
   const [charityModalIsOfferMode, setCharityModalIsOfferMode] = useState<boolean>(true);
   const [charityModalAmount, setCharityModalAmount] = useState<string>('50');
-
-  // Quick donate preferred charity (fallback to top rated)
-  const preferredCharity = filteredCharities.length > 0
-    ? filteredCharities[0]
-    : (isRealAuth ? (charitiesStore[0] ? {
-      id: `store_${charitiesStore[0].id}`,
-      name: charitiesStore[0].name,
-      category: (charitiesStore[0].categories && charitiesStore[0].categories[0]) ? String(charitiesStore[0].categories[0]) : 'כללי',
-      location: charitiesStore[0].location?.city || 'כל הארץ',
-      rating: 4.8,
-      donors: 100,
-      description: charitiesStore[0].description || '',
-      image: '💝',
-      minDonation: 20,
-      _extUrl: charitiesStore[0].url,
-    } : null) : (dummyCharitiesBase[0] || null));
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -385,54 +368,6 @@ export default function MoneyScreen({
     return filtered;
   };
 
-  // Function to show charity details in search mode
-  const showCharityDetailsModal = (charity: any) => {
-    Alert.alert(
-      charity.name,
-      `${charity.description}\n\n📞 צור קשר: 03-1234567\n📧 אימייל: info@${charity.name.replace(/\s+/g, '').toLowerCase()}.org.il\n\nהאם תרצה לתרום לעמותה זו?`,
-      [
-        {
-          text: 'לא עכשיו',
-          style: 'cancel',
-        },
-        {
-          text: 'תרום עכשיו',
-          onPress: () => showDonationAmountModal(charity),
-        },
-      ]
-    );
-  };
-
-  // Function to select donation amount
-  const showDonationAmountModal = (charity: any) => {
-    Alert.prompt(
-      'בחר סכום לתרומה',
-      `לתרומה ל: ${charity.name}\n\nהכנס סכום:`,
-      [
-        {
-          text: 'ביטול',
-          style: 'cancel',
-        },
-        {
-          text: 'תרום',
-          onPress: (amount?: string) => {
-            if (amount && !isNaN(Number(amount))) {
-              Alert.alert(
-                'תרומה בוצעה',
-                `תודה על תרומתך בסך ₪${amount} ל-${charity.name}!`
-              );
-            } else {
-              Alert.alert('שגיאה', 'אנא הכנס סכום תקין');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '50'
-    );
-  };
-
-
   const menuOptions = [
     'חיסכון לתרומה',
     'הוראות קבע',
@@ -490,49 +425,6 @@ export default function MoneyScreen({
       // Otherwise, perform local filtering
       const filtered = getFilteredCharities();
       setFilteredCharities(filtered);
-    }
-  };
-
-  const handleDonate = () => {
-    if (!selectedRecipient || !amount) {
-      Alert.alert('שגיאה', 'אנא בחר נמען וסכום לפני התרומה.');
-    } else {
-      Alert.alert(
-        'תרומה בוצעה',
-        `תודה על תרומתך בסך ₪${amount} ל-${selectedRecipient}!`
-      );
-    }
-  };
-
-  // Open Bit app to donate to a specific phone with optional amount and note
-  const openBitDonation = async (phone: string, amountValue: number, note: string = 'תרומה לקהילה') => {
-    try {
-      // Deep link patterns used by Bit app; try multiple known schemes
-      const encodedNote = encodeURIComponent(note);
-      const attempts = [
-        // iOS modern
-        `bit://send?phone=${phone}&amount=${amountValue}&note=${encodedNote}`,
-        // Android possible
-        `com.poalim.bit://send?phone=${phone}&amount=${amountValue}&note=${encodedNote}`,
-        // Generic
-        `bitapp://send?phone=${phone}&amount=${amountValue}&note=${encodedNote}`,
-      ];
-
-      for (const url of attempts) {
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-          await Linking.openURL(url);
-          return;
-        }
-      }
-
-      // Fallbacks: try to open Bit app page or provide instruction
-      const appStoreLink = Platform.OS === 'ios'
-        ? 'https://apps.apple.com/il/app/bit/id1148052748'
-        : 'https://play.google.com/store/apps/details?id=com.poalim.bit';
-      await Linking.openURL(appStoreLink);
-    } catch (e) {
-      Alert.alert('Bit', 'לא ניתן לפתוח את Bit במכשיר זה כרגע.');
     }
   };
 

@@ -1,0 +1,44 @@
+---
+description: Deep bug / commit audit — high-severity correctness, must align with SSOT + kc-project-core
+alwaysApply: false
+---
+
+# Deep bug-finding and commit audit (automation and manual runs)
+
+Use this rule for runs whose goal is to find **critical** defects in recent work (automation, scheduled job, or `@` this rule in chat).
+
+## 0. Behavioral contract and sources of truth (required)
+
+1. **Primary contract:** The monorepo AI specification is in **`.cursor/rules/kc-project-core.mdc`** (always on in this workspace). Follow it: two sources of truth, scope, architecture boundaries, testing, communication gate, English for repo docs.
+2. **Ingest before judging severity or recommending fixes** (especially if the change might touch product behavior, security, or data):
+   - **SRS (What):** `docs/SSOT/SRS/README.md` — then the relevant `docs/SSOT/SRS/functional/*` or section file for the area under review. Do **not** treat a legacy single `docs/SSOT/SRS.md` as authority (it is not the SSOT layout in this repo).
+   - **Code quality (How):** `docs/SSOT/CODE_QUALITY/README.md` and, as needed, `layers-and-boundaries.md`, `constraints.md`, `testing.md`, `tech-debt-log.md`. Do **not** assume a single `docs/SSOT/CODE QUALITY.md` file.
+3. **Conflict:** Prefer **SRS**; log gaps in `docs/SSOT/SRS/10-gaps-and-assumptions.md` and/or `docs/SSOT/CODE_QUALITY/tech-debt-log.md` when the audit surfaces a spec/code mismatch.
+
+*Note:* Older prompts that say “read `docs/SSOT/SRS.md`” or “`docs/SSOT/CODE QUALITY.md`” are **superseded** in this repository by the paths above and by `kc-project-core.mdc`.
+
+## 1. Scope of the audit (high severity only)
+
+Focus on **meaningful blast radius**: data loss, crashes, security holes, auth/permission bypass, races that drop writes, null deref in critical paths, infinite loops, resource leaks, silent truncation, significant user-facing breakage.
+
+- Trace call chains and downstream effects; do not stop at the diff hunk.
+- **Ignore** style, minor UX-only issues, and theoretical problems without a plausible trigger.
+
+## 2. Confidence bar
+
+- You must be able to describe a **concrete** scenario that triggers the issue. If you cannot, do not treat it as critical; report with lower confidence or skip a PR.
+- If not highly confident the bug is real and the fix is correct, do **not** open a PR; a short report elsewhere is enough.
+
+## 3. Fix strategy (when a critical bug is confirmed)
+
+- **Minimal, high-confidence** change; no broad refactors in the same pass.
+- Add or update **tests** when it locks in behavior; follow `docs/SSOT/CODE_QUALITY/testing.md` and `kc-project-core` (domain/application logic → unit tests with error/edge cases).
+- **Feature / behavior mapping:** `kc-project-core` requires mapping substantive product behavior to SRS. For a **bugfix** that corrects wrong behavior, map to the relevant functional SRS area or NFR; use `Refactor logged: Yes` in `tech-debt-log.md` only for explicitly deferred out-of-scope work.
+
+## 4. Default outcome
+
+- Most days, **“no critical bugs found”** is the expected and acceptable result.
+
+## 5. Communication
+
+- For responses that include **fenced new code, diffs, or long proposed snippets**, follow the verification line in `kc-project-core` (first line: `Mapped to SRS: ... Refactor logged: ...`).

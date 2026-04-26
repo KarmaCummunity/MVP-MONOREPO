@@ -194,7 +194,7 @@ export class AuthenticationTester {
         if (!url.pathname.includes('oauth')) {
           issues.push('Redirect URI should contain oauth-related path');
         }
-      } catch (error) {
+      } catch {
         issues.push('Redirect URI is not a valid URL');
       }
     } else {
@@ -331,7 +331,7 @@ export class AuthenticationTester {
     
     for (const endpoint of endpointsToTest) {
       try {
-        const response = await fetch(endpoint, { 
+        await fetch(endpoint, {
           method: 'HEAD',
           mode: 'no-cors' // This will prevent CORS errors but limit response info
         });
@@ -379,8 +379,6 @@ export class AuthenticationTester {
       '.' +
       btoa('{"sub":"mock-user","email":"mock@test.dev","iat":1}') +
       '.MOCK_INVALID_SIGNATURE';
-    const invalidJWT = 'invalid.jwt.token';
-    const emptyJWT = '';
 
     try {
       // Test valid structure

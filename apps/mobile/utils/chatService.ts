@@ -229,303 +229,354 @@ export const getConversationById = async (conversationId: string, userId: string
   }
 };
 
+type OutgoingMessage = Omit<Message, 'id'>;
+
+function mapBackendRowToConversation(backendConv: any): Conversation {
+  return {
+    id: backendConv.id,
+    participants: backendConv.participants,
+    lastMessageText: backendConv.last_message_content || '',
+    lastMessageTime: backendConv.last_message_time || backendConv.created_at,
+    unreadCount: backendConv.unread_count || 0,
+    createdAt: backendConv.created_at,
+  };
+}
+
+/** Hydrate participants from backend when local chat row has none. */
+async function tryHydrateParticipantsFromBackendList(
+  senderId: string,
+  conversationId: string
+): Promise<string[] | null> {
+  if (!USE_BACKEND) {
+    return null;
+  }
+  try {
+    const convResponse = await apiService.getUserConversations(senderId);
+    if (!convResponse.success || !convResponse.data || !Array.isArray(convResponse.data)) {
+      return null;
+    }
+    const backendConv = convResponse.data.find((c: any) => c.id === conversationId);
+    if (!backendConv?.participants) {
+      return null;
+    }
+    const senderView = mapBackendRowToConversation(backendConv);
+    await db.createChat(senderId, conversationId, senderView);
+    return backendConv.participants;
+  } catch (error) {
+    logger.warn('ChatService', 'Failed to get conversation from backend', { error });
+    return null;
+  }
+}
+
+/** Match by id or legacy_id in metadata when local + first fetch miss. */
+async function tryRecoverParticipantsFromBackendList(
+  senderId: string,
+  conversationId: string
+): Promise<string[] | null> {
+  if (!USE_BACKEND) {
+    return null;
+  }
+  try {
+    const allConvsResponse = await apiService.getUserConversations(senderId);
+    if (!allConvsResponse.success || !allConvsResponse.data || !Array.isArray(allConvsResponse.data)) {
+      return null;
+    }
+    const foundConv = allConvsResponse.data.find(
+      (c: any) =>
+        c.id === conversationId || (c.metadata && c.metadata.legacy_id === conversationId)
+    );
+    if (!foundConv?.participants?.length) {
+      return null;
+    }
+    logger.info('ChatService', 'Recovered participants from backend', { participants: foundConv.participants });
+    return foundConv.participants;
+  } catch (error) {
+    logger.warn('ChatService', 'Failed to recover participants from backend', { error });
+    return null;
+  }
+}
+
+async function persistFallbackParticipantsForConversation(
+  message: OutgoingMessage,
+  fallbackParticipants: string[]
+): Promise<string[]> {
+  logger.info('ChatService', 'Using fallback participants', { participants: fallbackParticipants });
+  const fallbackConversation: Conversation = {
+    id: message.conversationId,
+    participants: fallbackParticipants,
+    lastMessageText: '',
+    lastMessageTime: new Date().toISOString(),
+    unreadCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  for (const participantId of fallbackParticipants) {
+    await db.createChat(participantId, message.conversationId, fallbackConversation);
+  }
+  return fallbackParticipants;
+}
+
+async function loadParticipantsListForSendMessage(
+  message: OutgoingMessage,
+  fallbackParticipants?: string[]
+): Promise<string[]> {
+  const senderView = await getConversationById(message.conversationId, message.senderId);
+  let participants = senderView?.participants || [];
+
+  if (participants.length === 0) {
+    const fromBackend = await tryHydrateParticipantsFromBackendList(
+      message.senderId,
+      message.conversationId
+    );
+    if (fromBackend) {
+      participants = fromBackend;
+    }
+  }
+
+  if (participants.length === 0) {
+    logger.warn('ChatService', 'No participants found for conversation, attempting to recover', {
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+    });
+    const recovered = await tryRecoverParticipantsFromBackendList(
+      message.senderId,
+      message.conversationId
+    );
+    if (recovered) {
+      participants = recovered;
+    }
+  }
+
+  if (participants.length === 0 && fallbackParticipants?.length) {
+    participants = await persistFallbackParticipantsForConversation(message, fallbackParticipants);
+  }
+
+  if (participants.length === 0) {
+    throw new Error('Conversation not found or has no participants. Please create a new conversation.');
+  }
+
+  return participants;
+}
+
+function buildBackendRequestPayload(
+  message: OutgoingMessage,
+  participants: string[]
+): Record<string, unknown> {
+  const backendMessageData: Record<string, unknown> = {
+    conversation_id: message.conversationId,
+    sender_id: message.senderId,
+    content: message.text || '',
+    message_type: message.type || 'text',
+    reply_to_id: message.replyTo || null,
+    participants: participants,
+  };
+
+  if (message.fileData) {
+    backendMessageData.file_url = message.fileData.uri;
+    backendMessageData.file_name = message.fileData.name;
+    backendMessageData.file_size = message.fileData.size || null;
+    backendMessageData.file_type = message.fileData.mimeType || message.fileData.type;
+
+    if (message.fileData.thumbnail || message.fileData.duration || message.fileData.dimensions) {
+      backendMessageData.metadata = JSON.stringify({
+        thumbnail: message.fileData.thumbnail,
+        duration: message.fileData.duration,
+        dimensions: message.fileData.dimensions,
+      });
+    }
+  }
+  return backendMessageData;
+}
+
+async function processBackendNewConversationIfNeeded(
+  message: OutgoingMessage,
+  responseData: any,
+  participants: string[]
+): Promise<void> {
+  if (!responseData.conversation_created || !responseData.conversation_id) {
+    return;
+  }
+  const newConversationId = responseData.conversation_id;
+  logger.info('ChatService', 'Backend created new conversation', {
+    oldId: message.conversationId,
+    newId: newConversationId
+  });
+
+  try {
+    const convResponse = await apiService.getUserConversations(message.senderId);
+    if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
+      const newConv = convResponse.data.find((c: any) => c.id === newConversationId);
+      if (newConv) {
+        const updatedConversation: Conversation = {
+          id: newConversationId,
+          participants: newConv.participants || participants,
+          lastMessageText: message.text || '',
+          lastMessageTime: message.timestamp,
+          unreadCount: newConv.unread_count || 0,
+          createdAt: newConv.created_at || new Date().toISOString(),
+        };
+
+        const finalParticipants = newConv.participants || participants;
+        for (const participantId of finalParticipants) {
+          await db.createChat(participantId, newConversationId, updatedConversation);
+          try {
+            await DatabaseService.delete(DB_COLLECTIONS.CHATS, participantId, message.conversationId);
+          } catch {
+            // Ignore if doesn't exist
+          }
+        }
+
+        message.conversationId = newConversationId;
+
+        logger.info('ChatService', 'Updated local storage with new conversation UUID', {
+          newConversationId,
+          participants: finalParticipants
+        });
+
+        finalParticipants.forEach((participantId: string) => {
+          notifyConversationListeners(participantId);
+        });
+        return;
+      }
+      logger.warn('ChatService', 'New conversation not found in backend response', { newConversationId });
+    }
+  } catch (error) {
+    logger.error('ChatService', 'Failed to get new conversation from backend', { error });
+    const updatedConversation: Conversation = {
+      id: newConversationId,
+      participants: participants,
+      lastMessageText: message.text || '',
+      lastMessageTime: message.timestamp,
+      unreadCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    for (const participantId of participants) {
+      await db.createChat(participantId, newConversationId, updatedConversation);
+    }
+
+    message.conversationId = newConversationId;
+    participants.forEach(participantId => {
+      notifyConversationListeners(participantId);
+    });
+  }
+}
+
+async function obtainMessageIdFromBackend(
+  message: OutgoingMessage,
+  participants: string[]
+): Promise<{ messageId: string; backendMessage: any }> {
+  if (!USE_BACKEND) {
+    return { messageId: generateId('msg'), backendMessage: null };
+  }
+  let messageId: string;
+  let backendMessage: any = null;
+  try {
+    const backendMessageData = buildBackendRequestPayload(message, participants);
+    const response = await apiService.sendMessage(backendMessageData);
+
+    if (response.success && response.data) {
+      backendMessage = response.data;
+      messageId = response.data.id;
+      await processBackendNewConversationIfNeeded(message, response.data, participants);
+      logger.info('ChatService', 'Message sent to backend', { messageId });
+    } else {
+      throw new Error(response.error || 'Failed to send message to backend');
+    }
+  } catch (backendError) {
+    logger.error('ChatService', 'Backend send message error', { error: backendError });
+    messageId = generateId('msg');
+  }
+  return { messageId, backendMessage };
+}
+
+async function persistMessageDelivery(
+  message: OutgoingMessage,
+  participants: string[],
+  messageId: string,
+  backendMessage: any
+): Promise<string> {
+  const newMessage: Message = {
+    ...message,
+    id: messageId,
+    status: backendMessage ? 'sent' : 'sending',
+  };
+
+  for (const participantId of participants) {
+    await db.createMessage(participantId, messageId, newMessage);
+  }
+
+  let displayText = message.text;
+  if (message.type === 'image') displayText = '📷 תמונה';
+  else if (message.type === 'video') displayText = '🎥 סרטון';
+  else if (message.type === 'file') displayText = '📎 קובץ';
+
+  for (const participantId of participants) {
+    const existing = await db.getChat(participantId, message.conversationId);
+    const baseConv: Conversation = (existing as Conversation) || {
+      id: message.conversationId,
+      participants,
+      lastMessageText: '',
+      lastMessageTime: new Date().toISOString(),
+      unreadCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const isRecipient = participantId !== message.senderId;
+    const unreadCount = isRecipient ? (baseConv.unreadCount || 0) + 1 : 0;
+
+    const updatedConversation: Conversation = {
+      ...baseConv,
+      lastMessageText: displayText,
+      lastMessageTime: message.timestamp,
+      unreadCount,
+    };
+
+    await db.createChat(participantId, message.conversationId, updatedConversation);
+    logger.debug('ChatService', 'Updated conversation for participant', { participantId });
+  }
+
+  logger.info('ChatService', 'Message sent', { messageId });
+  logger.debug('ChatService', 'Conversation participants', { participants });
+
+  for (const participantId of participants) {
+    notifyMessageListeners(message.conversationId, participantId);
+  }
+
+  logger.debug('ChatService', 'Notifying conversation listeners', { participants });
+  participants.forEach(participantId => {
+    logger.debug('ChatService', 'Notifying participant', { participantId });
+    notifyConversationListeners(participantId);
+
+    if (participantId !== message.senderId) {
+      const senderName = 'משתמש';
+      sendMessageNotification(senderName, message.text, message.conversationId, participantId);
+    }
+  });
+
+  if (USE_BACKEND && backendMessage) {
+    setTimeout(async () => {
+      for (const participantId of participants) {
+        try {
+          await getConversations(participantId);
+          notifyConversationListeners(participantId);
+        } catch (error) {
+          logger.warn('ChatService', 'Failed to refresh conversations after message', { error });
+        }
+      }
+    }, 500);
+  }
+
+  return messageId;
+}
+
 export const sendMessage = async (
   message: Omit<Message, 'id'>,
   fallbackParticipants?: string[]
 ): Promise<string | { messageId: string; newConversationId?: string }> => {
   try {
-    let messageId: string;
-    let backendMessage: any = null;
-
-    // Get conversation to find participants
-    let senderView = await getConversationById(message.conversationId, message.senderId);
-    let participants = senderView?.participants || [];
-
-    // If conversation not found locally, try to get from backend
-    if (participants.length === 0 && USE_BACKEND) {
-      try {
-        // Try to get conversation from backend
-        const convResponse = await apiService.getUserConversations(message.senderId);
-        if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
-          const backendConv = convResponse.data.find((c: any) => c.id === message.conversationId);
-          if (backendConv && backendConv.participants) {
-            participants = backendConv.participants;
-            // Save locally for future use
-            senderView = {
-              id: backendConv.id,
-              participants: backendConv.participants,
-              lastMessageText: backendConv.last_message_content || '',
-              lastMessageTime: backendConv.last_message_time || backendConv.created_at,
-              unreadCount: backendConv.unread_count || 0,
-              createdAt: backendConv.created_at,
-            };
-            await db.createChat(message.senderId, message.conversationId, senderView);
-          }
-        }
-      } catch (error) {
-        logger.warn('ChatService', 'Failed to get conversation from backend', { error });
-      }
-    }
-
-    // If still no participants, try to get from backend or reconstruct
-    if (participants.length === 0) {
-      logger.warn('ChatService', 'No participants found for conversation, attempting to recover', {
-        conversationId: message.conversationId,
-        senderId: message.senderId
-      });
-
-      // Try to get conversation from backend by checking all user conversations
-      if (USE_BACKEND) {
-        try {
-          const allConvsResponse = await apiService.getUserConversations(message.senderId);
-          if (allConvsResponse.success && allConvsResponse.data && Array.isArray(allConvsResponse.data)) {
-            // Look for conversation by ID or by legacy_id in metadata
-            const foundConv = allConvsResponse.data.find((c: any) =>
-              c.id === message.conversationId ||
-              (c.metadata && c.metadata.legacy_id === message.conversationId)
-            );
-
-            if (foundConv && foundConv.participants && foundConv.participants.length > 0) {
-              participants = foundConv.participants;
-              logger.info('ChatService', 'Recovered participants from backend', { participants });
-            }
-          }
-        } catch (error) {
-          logger.warn('ChatService', 'Failed to recover participants from backend', { error });
-        }
-      }
-
-      // If still no participants, try to use fallback participants if provided
-      if (participants.length === 0 && fallbackParticipants && fallbackParticipants.length > 0) {
-        participants = fallbackParticipants;
-        logger.info('ChatService', 'Using fallback participants', { participants });
-
-        // Save conversation locally with fallback participants
-        const fallbackConversation: Conversation = {
-          id: message.conversationId,
-          participants: fallbackParticipants,
-          lastMessageText: '',
-          lastMessageTime: new Date().toISOString(),
-          unreadCount: 0,
-          createdAt: new Date().toISOString(),
-        };
-
-        for (const participantId of fallbackParticipants) {
-          await db.createChat(participantId, message.conversationId, fallbackConversation);
-        }
-      }
-
-      // If still no participants, we can't send the message
-      if (participants.length === 0) {
-        throw new Error('Conversation not found or has no participants. Please create a new conversation.');
-      }
-    }
-
-    // Send to backend if enabled
-    if (USE_BACKEND) {
-      try {
-        // Convert frontend format to backend format
-        const backendMessageData: any = {
-          conversation_id: message.conversationId,
-          sender_id: message.senderId,
-          content: message.text || '',
-          message_type: message.type || 'text',
-          reply_to_id: message.replyTo || null,
-          participants: participants, // Include participants so backend can create conversation if needed
-        };
-
-        // Handle file data if present
-        if (message.fileData) {
-          backendMessageData.file_url = message.fileData.uri;
-          backendMessageData.file_name = message.fileData.name;
-          backendMessageData.file_size = message.fileData.size || null;
-          backendMessageData.file_type = message.fileData.mimeType || message.fileData.type;
-
-          // Store additional metadata in metadata field
-          if (message.fileData.thumbnail || message.fileData.duration || message.fileData.dimensions) {
-            backendMessageData.metadata = JSON.stringify({
-              thumbnail: message.fileData.thumbnail,
-              duration: message.fileData.duration,
-              dimensions: message.fileData.dimensions,
-            });
-          }
-        }
-
-        const response = await apiService.sendMessage(backendMessageData);
-
-        if (response.success && response.data) {
-          backendMessage = response.data;
-          messageId = response.data.id;
-
-          // If backend created a new conversation (with new UUID), update local storage
-          if (response.data.conversation_created && response.data.conversation_id) {
-            const newConversationId = response.data.conversation_id;
-            logger.info('ChatService', 'Backend created new conversation', {
-              oldId: message.conversationId,
-              newId: newConversationId
-            });
-
-            // Get the conversation details from backend to save locally
-            try {
-              const convResponse = await apiService.getUserConversations(message.senderId);
-              if (convResponse.success && convResponse.data && Array.isArray(convResponse.data)) {
-                const newConv = convResponse.data.find((c: any) => c.id === newConversationId);
-                if (newConv) {
-                  // Map backend format to frontend format
-                  const updatedConversation: Conversation = {
-                    id: newConversationId,
-                    participants: newConv.participants || participants,
-                    lastMessageText: message.text || '',
-                    lastMessageTime: message.timestamp,
-                    unreadCount: newConv.unread_count || 0,
-                    createdAt: newConv.created_at || new Date().toISOString(),
-                  };
-
-                  // Save new conversation for all participants
-                  const finalParticipants = newConv.participants || participants;
-                  for (const participantId of finalParticipants) {
-                    await db.createChat(participantId, newConversationId, updatedConversation);
-                    // Also delete old conversation if it exists
-                    try {
-                      await DatabaseService.delete(DB_COLLECTIONS.CHATS, participantId, message.conversationId);
-                    } catch (e) {
-                      // Ignore if doesn't exist
-                    }
-                  }
-
-                  // Update message conversationId to new UUID - IMPORTANT: This updates the conversation ID for the rest of the function
-                  message.conversationId = newConversationId;
-
-                  logger.info('ChatService', 'Updated local storage with new conversation UUID', {
-                    newConversationId,
-                    participants: finalParticipants
-                  });
-
-                  // Notify listeners about the new conversation - this will refresh ChatListScreen
-                  finalParticipants.forEach((participantId: string) => {
-                    notifyConversationListeners(participantId);
-                  });
-                } else {
-                  logger.warn('ChatService', 'New conversation not found in backend response', { newConversationId });
-                }
-              }
-            } catch (error) {
-              logger.error('ChatService', 'Failed to get new conversation from backend', { error });
-              // Still update with basic info
-              const updatedConversation: Conversation = {
-                id: newConversationId,
-                participants: participants,
-                lastMessageText: message.text || '',
-                lastMessageTime: message.timestamp,
-                unreadCount: 0,
-                createdAt: new Date().toISOString(),
-              };
-
-              for (const participantId of participants) {
-                await db.createChat(participantId, newConversationId, updatedConversation);
-              }
-
-              message.conversationId = newConversationId;
-              participants.forEach(participantId => {
-                notifyConversationListeners(participantId);
-              });
-            }
-          }
-
-          logger.info('ChatService', 'Message sent to backend', { messageId });
-        } else {
-          throw new Error(response.error || 'Failed to send message to backend');
-        }
-      } catch (backendError) {
-        logger.error('ChatService', 'Backend send message error', { error: backendError });
-        // Fall through to local storage fallback
-        messageId = generateId('msg');
-      }
-    } else {
-      messageId = generateId('msg');
-    }
-
-    // Create message object
-    const newMessage: Message = {
-      ...message,
-      id: messageId,
-      status: backendMessage ? 'sent' : 'sending', // If sent to backend, mark as sent
-    };
-
-    // Save locally for all participants (for offline support and real-time updates)
-    for (const participantId of participants) {
-      await db.createMessage(participantId, messageId, newMessage);
-    }
-
-    let displayText = message.text;
-    if (message.type === 'image') displayText = '📷 תמונה';
-    else if (message.type === 'video') displayText = '🎥 סרטון';
-    else if (message.type === 'file') displayText = '📎 קובץ';
-
-    // Update conversation for all participants
-    for (const participantId of participants) {
-      const existing = await db.getChat(participantId, message.conversationId);
-      const baseConv: Conversation = (existing as Conversation) || {
-        id: message.conversationId,
-        participants,
-        lastMessageText: '',
-        lastMessageTime: new Date().toISOString(),
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-      };
-
-      const isRecipient = participantId !== message.senderId;
-      const unreadCount = isRecipient ? (baseConv.unreadCount || 0) + 1 : 0;
-
-      const updatedConversation: Conversation = {
-        ...baseConv,
-        lastMessageText: displayText,
-        lastMessageTime: message.timestamp,
-        unreadCount,
-      };
-
-      await db.createChat(participantId, message.conversationId, updatedConversation);
-      logger.debug('ChatService', 'Updated conversation for participant', { participantId });
-    }
-
-    logger.info('ChatService', 'Message sent', { messageId });
-    logger.debug('ChatService', 'Conversation participants', { participants });
-
-    // Notify listeners about the new message for each participant
-    for (const participantId of participants) {
-      notifyMessageListeners(message.conversationId, participantId);
-    }
-
-    // Notify conversation listeners for all participants
-    // This will trigger ChatListScreen to refresh and show the new conversation
-    logger.debug('ChatService', 'Notifying conversation listeners', { participants });
-    participants.forEach(participantId => {
-      logger.debug('ChatService', 'Notifying participant', { participantId });
-      notifyConversationListeners(participantId);
-
-      // Send notification to other participants (not the sender)
-      if (participantId !== message.senderId) {
-        const senderName = 'משתמש'; // TODO: Get actual sender name
-        sendMessageNotification(senderName, message.text, message.conversationId, participantId);
-      }
-    });
-
-    // Force refresh conversations from backend to ensure new conversation appears
-    if (USE_BACKEND && backendMessage) {
-      // Trigger a refresh of conversations for all participants
-      setTimeout(async () => {
-        for (const participantId of participants) {
-          try {
-            await getConversations(participantId);
-            notifyConversationListeners(participantId);
-          } catch (error) {
-            logger.warn('ChatService', 'Failed to refresh conversations after message', { error });
-          }
-        }
-      }, 500); // Small delay to ensure backend has processed the message
-    }
-
-    return messageId;
+    const participants = await loadParticipantsListForSendMessage(message, fallbackParticipants);
+    const { messageId, backendMessage } = await obtainMessageIdFromBackend(message, participants);
+    return await persistMessageDelivery(message, participants, messageId, backendMessage);
   } catch (error) {
     logger.error('ChatService', 'Send message error', { error });
     throw error;
@@ -903,7 +954,7 @@ export const createSampleChatData = async (userId: string): Promise<void> => {
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
         return await AsyncStorage.getItem('auth_mode');
-      } catch (e) {
+      } catch {
         return null;
       }
     })();

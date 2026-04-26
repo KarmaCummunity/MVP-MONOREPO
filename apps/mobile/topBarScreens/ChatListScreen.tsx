@@ -2,7 +2,7 @@
 // - Purpose: List of user conversations with search, pull-to-refresh, and live updates.
 // - Reached from: Top bar navigation and stacks (Home/Search/Profile/Donations) via 'ChatListScreen'.
 // - Provides: Merges real conversations (via `chatService`) with demo ones in non-real auth; navigates to 'ChatDetailScreen' with params.
-// - Reads from context: `useUser()` -> selectedUser, isRealAuth.
+// - Reads from context: `useUser()` -> selectedUser.
 // - Params on navigate to detail: `{ conversationId, otherUserId, userName, userAvatar }`.
 // - External deps/services: `chatService` (get/subscribe), i18n, Haptics, static users from `fakeData` and `characterTypes`.
 // ChatListScreen – professional, concise, with in-file demo support and live updates
@@ -25,7 +25,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 export default function ChatListScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const { selectedUser, isRealAuth } = useUser();
+  const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -171,12 +171,6 @@ export default function ChatListScreen() {
       loadUserProfiles(Array.from(allParticipantIds)).catch(console.error);
     }
   }, [conversations, selectedUser, usersMap, loadUserProfiles]);
-
-  // Resolve display data for conversations (other user, last message, unread)
-  const combinedUsers = useMemo(() => {
-    // No demo/static users – rely on real user data from backend elsewhere if available
-    return [] as ChatUser[];
-  }, []);
 
   const filteredSortedConversations = useMemo(() => {
     if (!selectedUser) return [] as ChatConversation[];

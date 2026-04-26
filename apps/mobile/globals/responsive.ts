@@ -111,7 +111,7 @@ export const isMobileWeb = () => {
 
 export const isTabletWeb = () => {
   if (!isWeb) return false;
-  const { width, height } = Dimensions.get('window');
+  const { width } = Dimensions.get('window');
   return width > 768 && width <= 1024;
 };
 
@@ -204,7 +204,7 @@ export const responsiveWidth = (
   mobilePercent: number,
   maxWidth?: number
 ): number | string => {
-  const { width, isDesktop, isLargeDesktop } = getScreenInfo();
+  const { width, isDesktop } = getScreenInfo();
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const calculatedWidth = (width * mobilePercent) / 100;
 
@@ -219,7 +219,7 @@ export const responsiveWidth = (
 
 // Responsive button styles helper - returns button style props
 export const getResponsiveButtonStyles = () => {
-  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
+  const { isTablet, isLargeDesktop } = getScreenInfo();
   const { width } = Dimensions.get('window');
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
 
@@ -236,7 +236,7 @@ export const getResponsiveButtonStyles = () => {
 
 // Responsive container styles helper - returns container style props
 export const getResponsiveContainerStyles = () => {
-  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
+  const { isTablet, isLargeDesktop } = getScreenInfo();
   const { width } = Dimensions.get('window');
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
 
@@ -250,7 +250,7 @@ export const getResponsiveContainerStyles = () => {
 
 // Responsive modal styles helper
 export const getResponsiveModalStyles = () => {
-  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
+  const { isTablet, isLargeDesktop } = getScreenInfo();
   const { width } = Dimensions.get('window');
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
 
@@ -265,7 +265,7 @@ export const getResponsiveModalStyles = () => {
 
 // Responsive menu styles helper - for dropdown menus
 export const getResponsiveMenuStyles = () => {
-  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
+  const { isTablet, isLargeDesktop } = getScreenInfo();
   const { width } = Dimensions.get('window');
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
 

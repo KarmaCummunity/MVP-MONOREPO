@@ -3,82 +3,82 @@
 ## [2.5.0] - 2025-12-24
 
 ### Added
-- **סקריפט אוטומטי להעתקת דאטה מ-Production ל-Development**
-  - `scripts/copy-prod-to-dev.sh` - סקריפט ראשי שמבצע את כל התהליך אוטומטית
-  - `scripts/setup-db-urls.sh` - סקריפט אינטראקטיבי להגדרת URLs של מסדי הנתונים
-  - `src/scripts/verify-import.ts` - סקריפט אימות מפורט
-  - הוספת npm scripts: `data:copy-prod-to-dev`, `data:setup-urls`, `data:verify`
-  - תיעוד מפורט ב-`COPY_DATA_QUICK_START.md`
+- **Automatic script for copying data from Production to Development**
+  - `scripts/copy-prod-to-dev.sh` - main script that performs the whole process automatically
+  - `scripts/setup-db-urls.sh` - an interactive script for setting up database URLs
+  - `src/scripts/verify-import.ts` - Detailed verification script
+  - Adding npm scripts: `data:copy-prod-to-dev`, `data:setup-urls`, `data:verify`
+  - Detailed documentation in `COPY_DATA_QUICK_START.md`
 
 ### Features
-1. **ייצוא אוטומטי** - מייצא את כל הטבלאות מ-production (49 טבלאות)
-2. **אנונימיזציה** - מסווה מיילים וטלפונים אוטומטית
-3. **גיבוי** - שומר גיבוי של development לפני החלפה
-4. **ייבוא חכם** - מייבא את הדאטה עם טיפול בשגיאות per-row
-5. **אימות** - מאמת שהכל עבד ומציג סטטיסטיקות מפורטות
+1. **Automatic export** - exports all tables from production (49 tables)
+2. **Anonymization** - Automatically masks emails and phone numbers
+3. **Backup** - Saves a backup of development before replacement
+4. **Smart import** - Imports the data with per-row error handling
+5. **Verification** - verifies that everything worked and displays detailed statistics
 
 ### Improvements
-- **תיקון סקריפט ייבוא:**
-  - בדיקה אם טבלה קיימת לפני TRUNCATE
-  - טיפול בשגיאות per-row במקום להיכשל על השורה הראשונה
-  - דיווח מפורט על שורות שדולגו (UUID vs Firebase UID mismatches)
+- **import script correction:**
+  - Checking if a table exists before TRUNCATE
+  - Handling per-row errors instead of failing on the first row
+  - Detailed report on skipped lines (UUID vs Firebase UID mismatches)
   
 ### Safety Features
-- בדיקת כיוון - מוודא שמעתיקים prod→dev ולא להפך
-- זיהוי שרתים - מזהה אם ה-URLs מתחלפים (ballast vs caboose)
-- אישור משתמש - מבקש אישור מפורש לפני התחלה
-- גיבוי אוטומטי - שומר את development לפני החלפה
-- אנונימיזציה - מגן על פרטיות המשתמשים
+- Direction check - makes sure that copies prod→dev and not the other way around
+- server detection - detects if the URLs change (ballast vs caboose)
+- User authorization - requests explicit authorization before starting
+- Automatic backup - saves the development before replacing
+- Anonymization - protects user privacy
 
 ### Test Results
-✅ **הרצה מוצלחת ראשונה:**
-- 1,797 שורות הועתקו בהצלחה
-- 33 משתמשים, 1,583 סטטיסטיקות קהילה, 14 תרומות, 18 נסיעות
-- אנונימיזציה עבדה מעולה
-- גיבוי נוצר (336KB)
-- תוצאות מפורטות ב-`DATA_COPY_SUCCESS.md`
+✅ **First successful run:**
+- 1,797 lines were copied successfully
+- 33 users, 1,583 community statistics, 14 contributions, 18 trips
+- Anonymization worked great
+- Backup created (336KB)
+- Detailed results in `DATA_COPY_SUCCESS.md`
 
 ### Usage
 ```bash
-# הגדרת URLs (פעם ראשונה)
+# Setting URLs (first time)
 source ./scripts/setup-db-urls.sh
 
-# העתקה מלאה
+# Full copy
 ./scripts/copy-prod-to-dev.sh
 
-# או דרך npm
+# or via npm
 npm run data:copy-prod-to-dev
 
-# אימות בלבד
+# Authentication only
 npm run data:verify
 ```
 
 ### Options
-- `--skip-backup` - דילוג על גיבוי של development
-- `--skip-anonymize` - דילוג על אנונימיזציה (לא מומלץ!)
+- `--skip-backup` - skip development backup
+- `--skip-anonymize` - skipping anonymization (not recommended!)
 
 ### Known Issues
-- חלק מהשורות דולגו בגלל UUID vs Firebase UID mismatches
-- טבלאות legacy (`users`, `chats`, `messages`) לא קיימות ב-development
-- פתרון: הסקריפט מדלג על שורות בעייתיות ומדווח עליהן
+- Some lines were omitted due to UUID vs Firebase UID mismatches
+- Legacy tables (`users`, `chats`, `messages`) do not exist in development
+- Solution: the script skips problematic lines and reports them
 
 ---
 
 ## [1.7.7] - 2025-12-24
 
 ### Fixed
-- **תיקון קריטי: שגיאת Foreign Key Constraints בטבלאות Posts**
-  - פתרנו שגיאה שגרמה לנפילת השרת ב-Railway-dev: `column "id" referenced in foreign key constraint does not exist`
-  - השגיאה התרחשה כאשר טבלאות ישנות (`posts`, `post_comments`) היו קיימות במבנה שונה מהמבנה הנדרש
-  - התיקון: שינינו את בדיקות קיום הטבלאות ב-3 בלוקים של `DO $$` להיות יותר מקיפות
+- **Critical fix: Foreign Key Constraints error in Posts tables**
+  - We solved an error that caused the server to crash in Railway-dev: `column "id" referenced in foreign key constraint does not exist`
+  - The error occurred when old tables (`posts`, `post_comments`) existed in a structure different from the required structure
+  - The fix: We changed the checks for the existence of the tables in 3 blocks of `DO $$` to be more comprehensive
 
 ### Technical Details - Foreign Key Validation
-במקום לבדוק רק שהטבלה קיימת:
+Instead of just checking that the table exists:
 ```sql
 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'posts') THEN
 ```
 
-כעת בודקים גם שהעמודה הספציפית קיימת:
+Now we also check that the specific column exists:
 ```sql
 IF EXISTS (
     SELECT 1 FROM information_schema.columns 
@@ -100,32 +100,30 @@ IF EXISTS (
    - `comment_likes.user_id` → `user_profiles(id)`
 
 ### Impact
-- ✅ השרת עולה בהצלחה ב-Railway-dev גם כאשר יש טבלאות ישנות
-- ✅ מונע שגיאות foreign key constraint בעתיד
-- ✅ תואם לאחור - עובד גם עם דאטאבייס ריק וגם עם דאטאבייס קיים
-- ✅ אין מחיקה של נתונים קיימים - רק דילוג על הוספת constraints אם המבנה לא תקין
+- ✅ The server goes up successfully in Railway-dev even when there are old tables
+- ✅ Prevents foreign key constraint errors in the future
+- ✅ Backwards compatible - works both with an empty database and with an existing database
+- ✅ No deletion of existing data - only skipping adding constraints if the structure is not correct
 
 ### Prevention Strategy
-התיקון מונע בעיות דומות בעתיד על ידי:
-1. בדיקה מפורטת יותר של מבנה הטבלאות לפני הוספת constraints
-2. תיעוד מפורט בהערות הקוד על הסיבה לבדיקות אלו
-3. גישה "fail-safe" - אם המבנה לא תקין, מדלגים במקום לנפול
+The fix prevents similar problems in the future by:
+1. A more detailed examination of the structure of the tables before adding constraints
+2. Detailed documentation in the code comments about the reason for these tests
+3. "fail-safe" approach - if the structure is not in order, jump instead of falling
 
 ---
 
 ## [1.7.6] - 2025-11-23
 
 ### Fixed
-- **תיקון שגיאות TypeScript בקונטרולר Challenges:** תיקנו שגיאות קומפילציה ב-`challenges.controller.ts`
-  - הוספנו ערכי ברירת מחדל למאפיינים הנדרשים ב-DTOs
-  - תיקנו בעיות עם `strictPropertyInitialization` ב-TypeScript
-  - השגיאות שתוקנו: `Property 'X' has no initializer and is not definitely assigned in the constructor`
+- **Fixing TypeScript errors in the Challenges controller:** Fixed compilation errors in `challenges.controller.ts`
+  - We added default values to required properties in DTOs
+  - Fixed issues with `strictPropertyInitialization` in TypeScript
+  - The errors that were corrected: `Property 'X' has no initializer and is not definitely assigned in the constructor`
 
 ### Technical Details
-- שינינו את הגדרת המאפיינים ב-DTOs מ-`name!: string` ל-`name: string = ''`
-- זה מאפשר ל-TypeScript בהגדרות strict לקמפל בהצלחה תוך שמירה על התנהגות זהה
-
-### Classes Updated
+- We changed the property definition in DTOs from `name!: string` to `name: string = ''`
+- This allows TypeScript in strict settings to compile successfully while maintaining identical behavior### Classes Updated
 - `CreateChallengeDto`
 - `CreateResetLogDto`
 - `CreateRecordBreakDto`
@@ -135,30 +133,28 @@ IF EXISTS (
 ## [1.7.5] - 2025-11-23
 
 ### Fixed
-- **שמירת נתוני ביקורים באתר:** הוספנו את `site_visits` לרשימת הסטטיסטיקות ההתחלתיות כדי למנוע איפוס בעת עדכון השרת
-- **Data Persistence:** שיפרנו את מנגנון שמירת הנתונים ב-Railway עם הערות והודעות לוג מפורטות
+- **Saving site visit data:** We added `site_visits` to the initial statistics list to avoid resetting when updating the server
+- **Data Persistence:** We improved the data saving mechanism in Railway with comments and detailed log messages
 
 ### Added
-- הוספנו הודעות לוג מפורטות (`✨ Created` / `✅ Preserved`) כדי לעקוב אחר שמירת הסטטיסטיקות
-- הוספנו הערות בקוד המסבירות את מנגנון ה-`ON CONFLICT DO NOTHING`
-- נוספו מסמכי תיעוד:
-  - `RAILWAY_DATA_PERSISTENCE.md` - מדריך מפורט לשמירת נתונים ב-Railway
-  - עדכון `RAILWAY.md` עם סעיף על Data Persistence
+- We added detailed log messages (`✨ Created` / ` ✅ Preserved`) to track the saving of statistics
+- We added comments in the code explaining the ``ON CONFLICT DO NOTHING'' mechanism
+- Added documentation:
+  - `RAILWAY_DATA_PERSISTENCE.md` - a detailed guide to saving data in Railway
+  - Updating `RAILWAY.md` with a section on Data Persistence
 
 ### Technical Details
-- בקובץ `src/database/database.init.ts`:
-  - הוספנו `site_visits` לרשימת `defaultStats`
-  - שיפרנו את ההודעות ב-console.log כדי להבחין בין יצירת סטטיסטיקה חדשה לשמירת קיימת
-  - הוספנו `RETURNING` ל-query כדי לדעת אם הנתון נוצר או נשמר
+- In the `src/database/database.init.ts` file:
+  - We added `site_visits` to the `defaultStats` list
+  - Improved console.log messages to distinguish between creating new stats and saving existing ones
+  - We added `RETURNING' to the query to know if the data was created or saved
 
 ### Notes
-- השינוי מבטיח ש-`site_visits` ושאר הסטטיסטיקות **לא יתאפסו** בעת עדכון השרת ב-Railway
-- הנתונים נשמרים באמצעות `ON CONFLICT (stat_type, city, date_period) DO NOTHING`
-- **חשוב:** יש לוודא שהשרת מחובר ל-Postgres Plugin של Railway ולא למסד נתונים זמני
+- The change ensures that `site_visits` and the other statistics **will not be reset** when updating the server in Railway
+- The data is saved using `ON CONFLICT (stat_type, city, date_period) DO NOTHING`
+- **Important:** Make sure the server is connected to Railway's Postgres Plugin and not to a temporary database
 
 ---
 
-## [1.7.4] - קודם
-- גרסה קודמת
-
-
+## [1.7.4] - First
+- previous version

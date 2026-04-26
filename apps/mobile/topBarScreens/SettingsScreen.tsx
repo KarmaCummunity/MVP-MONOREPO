@@ -60,7 +60,7 @@ export default function SettingsScreen() {
     enabled: true,
   });
   const scrollViewRef = scrollRef;
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [, setRefreshKey] = useState(0);
   const { t } = useTranslation(['settings', 'common']);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'he');
   const [showLangModal, setShowLangModal] = useState(false);
@@ -124,11 +124,6 @@ export default function SettingsScreen() {
   console.log('⚙️ SettingsScreen - Rendered with isGuestMode:', isGuestMode);
   console.log('⚙️ SettingsScreen - Platform:', Platform.OS);
   console.log('⚙️ SettingsScreen - Screen dimensions:', { width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
-
-  const handleBackPress = () => {
-    console.log('⚙️ SettingsScreen - Back pressed');
-    navigation.goBack();
-  };
 
   const handleAboutPress = () => {
     console.log('⚙️ SettingsScreen - About pressed');
@@ -677,8 +672,6 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
           onScroll={(event) => {
             onScroll(event);
-            const offsetY = event.nativeEvent.contentOffset.y;
-            // console.log('📜 SettingsScreen - Layout measurement:', event.nativeEvent.layoutMeasurement);
           }}
           onScrollBeginDrag={() => {
             console.log('📜 SettingsScreen - Scroll begin drag detected!');

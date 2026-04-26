@@ -93,7 +93,7 @@ export default function OrgOnboardingScreen() {
         Alert.alert(t('auth:org.sentTitle') || 'נשלח', t('auth:org.sentMessage') || 'הבקשה נשלחה! לאחר אישור תקבלו גישה מורחבת.');
       }
       navigation.goBack();
-    } catch (e) {
+    } catch {
       Alert.alert(t('auth:org.errorTitle') || 'שגיאה', t('auth:org.errorSend') || 'שליחת הבקשה נכשלה');
     } finally {
       setIsSubmitting(false);
