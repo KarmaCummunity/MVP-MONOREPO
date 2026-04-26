@@ -61,6 +61,13 @@ export interface FeedItem {
     seats?: number;
     price?: number;
 
-    // Item specific (optional)
+    // Item specific (optional) — only for donation/item posts, not challenge metadata
     category?: string;
+
+    /** Community or personal challenge feed post (distinct from items). */
+    challengeId?: string;
+    challengeFrequency?: string;
+    challengeDifficulty?: string;
+    /** Challenge theme/category label (not the same as donation item category). */
+    challengeCategoryLabel?: string;
 }

@@ -15,9 +15,13 @@ import RideOfferedCard from './PostCard/RideOfferedCard';
 import RideCompletedCard from './PostCard/RideCompletedCard';
 import TaskAssignmentCard from './PostCard/TaskAssignmentCard';
 import TaskCompletionCard from './PostCard/TaskCompletionCard';
+import ChallengePostCard from './PostCard/ChallengePostCard';
 import QuickMessageModal from './QuickMessageModal';
 
 const { width } = Dimensions.get('window');
+
+const isChallengeSubtype = (subtype?: string) =>
+    subtype === 'community_challenge' || subtype === 'personal_challenge';
 
 interface PostReelItemProps {
     item: FeedItem;
@@ -110,9 +114,14 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
 
         // Items: always open unless explicitly closed by owner
         // Items are considered open until owner marks them as closed (delivered/completed/expired)
-        // Check both subtype === 'item' OR if item has a price (matching dispatch logic)
-        // Also check if item has itemId (meaning it's an item post) or category (another indicator)
-        if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
+        // Check subtype === 'item' OR item/donation signals — do not treat challenge metadata.category as an item
+        if (
+            item.subtype === 'item' ||
+            item.subtype === 'donation' ||
+            item.price !== undefined ||
+            item.itemId ||
+            (item.category && !isChallengeSubtype(item.subtype))
+        ) {
             const itemStatus = item.status;
             // If status is explicitly closed, don't show quick message
             if (itemStatus && ['delivered', 'completed', 'expired', 'cancelled'].includes(itemStatus)) {
@@ -143,6 +152,9 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         }
         if (item.subtype === 'donation') {
             return 'donation';
+        }
+        if (isChallengeSubtype(item.subtype)) {
+            return 'task';
         }
         return 'item';
     };
@@ -203,7 +215,10 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                     console.warn('❌ Invalid or missing ride ID:', rideId, 'Item:', item);
                     updateResult = { success: false, error: 'Ride ID not found or invalid' };
                 }
-            } else if (item.subtype === 'item' || item.subtype === 'donation') {
+            } else if (
+                (item.subtype === 'item' || item.subtype === 'donation') &&
+                !isChallengeSubtype(item.subtype)
+            ) {
                 // For items/donations, mark as delivered
                 // CRITICAL: item.itemId should come from item_data.id (from JOIN) or metadata.item_id
                 // If both are missing or are timestamps, we can't update the item
@@ -359,7 +374,17 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 4. Ride
+    // 4. Community / personal challenge (not item cards)
+    if (isChallengeSubtype(item.subtype)) {
+        return (
+            <>
+                <ChallengePostCard {...commonProps} />
+                {renderModal()}
+            </>
+        );
+    }
+
+    // 5. Ride
     if (item.subtype === 'ride') {
         // Distinguish completed vs offered
         if (item.status === 'completed') {
@@ -378,9 +403,13 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 5. Item (Regular) - Distinguish available vs delivered
-    // Check both subtype === 'item' OR if item has a price OR itemId or category (matching isPostOpen logic)
-    if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
+    // 6. Item (Regular) - Distinguish available vs delivered (donations handled above)
+    if (
+        item.subtype === 'item' ||
+        item.price !== undefined ||
+        item.itemId ||
+        (item.category && !isChallengeSubtype(item.subtype))
+    ) {
         // Check if item is delivered/completed/expired/cancelled
         const isItemDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
         
@@ -401,7 +430,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 6. Generic/Unknown Post Type
+    // 7. Generic/Unknown Post Type
     return (
         <>
             <RegularItemCard {...commonProps} />

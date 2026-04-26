@@ -302,6 +302,26 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       itemStatus = post.ride_data.status;
     }
 
+    const pt = post.post_type;
+    const isChallengePost =
+      pt === 'community_challenge' || pt === 'personal_challenge';
+    const itemCategoryForFeed =
+      !isChallengePost && (pt === 'item' || pt === 'donation')
+        ? itemData?.category || (metadata as any)?.category
+        : undefined;
+    let challengeId: string | undefined;
+    let challengeFrequency: string | undefined;
+    let challengeDifficulty: string | undefined;
+    let challengeCategoryLabel: string | undefined;
+    if (isChallengePost && metadata && typeof metadata === 'object') {
+      const m = metadata as Record<string, unknown>;
+      const cid = m.challenge_id ?? m.personal_challenge_id;
+      if (typeof cid === 'string') challengeId = cid;
+      if (typeof m.frequency === 'string') challengeFrequency = m.frequency;
+      if (typeof m.difficulty === 'string') challengeDifficulty = m.difficulty;
+      if (typeof m.category === 'string') challengeCategoryLabel = m.category;
+    }
+
     return {
       id: post.id,
       type: post.post_type || 'post',
@@ -320,8 +340,12 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       timestamp: (post.created_at && !isNaN(new Date(post.created_at).getTime()))
         ? new Date(post.created_at).toISOString()
         : new Date().toISOString(),
-      // Item-specific fields
-      category: itemData?.category || (metadata as any)?.category,
+      // Item-specific fields (never use challenge metadata.category as item category)
+      category: itemCategoryForFeed,
+      challengeId,
+      challengeFrequency,
+      challengeDifficulty,
+      challengeCategoryLabel,
       // Add status for items and donations
       status: itemStatus,
       // Add IDs for updating posts
@@ -347,9 +371,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           const postsResponse = await postsService.getPosts(200, 0, uid);
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => 
-              post.post_type === 'item' || post.post_type === 'donation' || post.item_id
-            );
+            const itemPosts = postsResponse.data.filter((post: any) => {
+              const ptype = post.post_type;
+              if (ptype === 'community_challenge' || ptype === 'personal_challenge') {
+                return false;
+              }
+              return ptype === 'item' || ptype === 'donation' || post.item_id;
+            });
             
             console.log('📊 סה"כ פוסטים:', postsResponse.data.length, 'פוסטים של פריטים:', itemPosts.length);
             
@@ -388,9 +416,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           
           if (postsResponse.success && Array.isArray(postsResponse.data)) {
             // מסנן רק פוסטים של פריטים (item או donation)
-            const itemPosts = postsResponse.data.filter((post: any) => 
-              post.post_type === 'item' || post.post_type === 'donation' || post.item_id
-            );
+            const itemPosts = postsResponse.data.filter((post: any) => {
+              const ptype = post.post_type;
+              if (ptype === 'community_challenge' || ptype === 'personal_challenge') {
+                return false;
+              }
+              return ptype === 'item' || ptype === 'donation' || post.item_id;
+            });
             
             // ממפה את הפוסטים
             const mappedPosts = itemPosts

@@ -4,7 +4,20 @@ import type { FeedItem } from '../types/feed';
 export type FeedSortMode = 'date' | 'engagement' | 'relevance';
 
 /** High-level bucket for content-type toggles (matches ProfileScreen-style grouping). */
-export type FeedContentBucket = 'task' | 'ride' | 'item_or_donation' | 'general_post';
+export type FeedContentBucket =
+  | 'task'
+  | 'ride'
+  | 'item_or_donation'
+  | 'challenge'
+  | 'general_post';
+
+function isChallengeFeedPost(item: FeedItem): boolean {
+  return (
+    item.subtype === 'community_challenge' ||
+    item.subtype === 'personal_challenge' ||
+    !!item.challengeId
+  );
+}
 
 export function getFeedContentBucket(item: FeedItem): FeedContentBucket {
   const st = item.subtype;
@@ -20,6 +33,10 @@ export function getFeedContentBucket(item: FeedItem): FeedContentBucket {
 
   if (st === 'ride' || st === 'ride_offered' || !!item.rideId) {
     return 'ride';
+  }
+
+  if (isChallengeFeedPost(item)) {
+    return 'challenge';
   }
 
   if (
@@ -44,6 +61,7 @@ export interface FeedFilterState {
   includeTasks: boolean;
   includeRides: boolean;
   includeItemsAndDonations: boolean;
+  includeChallenges: boolean;
 }
 
 export const DEFAULT_FEED_FILTER_STATE: FeedFilterState = {
@@ -53,6 +71,7 @@ export const DEFAULT_FEED_FILTER_STATE: FeedFilterState = {
   includeTasks: true,
   includeRides: true,
   includeItemsAndDonations: true,
+  includeChallenges: true,
 };
 
 function hoursSince(iso: string): number {
@@ -90,6 +109,10 @@ export function isFeedItemOpen(item: FeedItem): boolean {
     return true;
   }
 
+  if (bucket === 'challenge') {
+    return true;
+  }
+
   // Text / photo posts and other feed entries without a closable workflow
   return true;
 }
@@ -107,8 +130,17 @@ function passesContentType(item: FeedItem, f: FeedFilterState): boolean {
     return f.includeItemsAndDonations;
   }
 
+  if (bucket === 'challenge') {
+    return f.includeChallenges;
+  }
+
   // General posts: show only when every structured category is enabled (narrowing rides/tasks/items hides "plain" posts too).
-  return f.includeTasks && f.includeRides && f.includeItemsAndDonations;
+  return (
+    f.includeTasks &&
+    f.includeRides &&
+    f.includeItemsAndDonations &&
+    f.includeChallenges
+  );
 }
 
 function passesVerified(item: FeedItem, f: FeedFilterState): boolean {
@@ -156,6 +188,7 @@ export function feedFiltersActive(f: FeedFilterState): boolean {
     f.verifiedAuthorsOnly !== DEFAULT_FEED_FILTER_STATE.verifiedAuthorsOnly ||
     f.includeTasks !== DEFAULT_FEED_FILTER_STATE.includeTasks ||
     f.includeRides !== DEFAULT_FEED_FILTER_STATE.includeRides ||
-    f.includeItemsAndDonations !== DEFAULT_FEED_FILTER_STATE.includeItemsAndDonations
+    f.includeItemsAndDonations !== DEFAULT_FEED_FILTER_STATE.includeItemsAndDonations ||
+    f.includeChallenges !== DEFAULT_FEED_FILTER_STATE.includeChallenges
   );
 }

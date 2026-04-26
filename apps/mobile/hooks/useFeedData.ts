@@ -92,15 +92,42 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             itemStatus = post.ride_data.status;
         }
 
-        // Parse metadata to get item_id if needed
+        // Parse metadata to get item_id and challenge fields if needed
         let metadataItemId: string | undefined;
+        let parsedMetadata: Record<string, unknown> | null = null;
         try {
             if (post.metadata) {
-                const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : post.metadata;
-                metadataItemId = metadata?.item_id;
+                parsedMetadata =
+                    typeof post.metadata === 'string'
+                        ? JSON.parse(post.metadata)
+                        : post.metadata;
+                metadataItemId = parsedMetadata?.item_id as string | undefined;
             }
         } catch {
             // Ignore parse errors
+        }
+
+        const postTypeStr = String(post.post_type || '');
+        const isChallengePost =
+            postTypeStr === 'community_challenge' ||
+            postTypeStr === 'personal_challenge';
+
+        let challengeId: string | undefined;
+        let challengeFrequency: string | undefined;
+        let challengeDifficulty: string | undefined;
+        let challengeCategoryLabel: string | undefined;
+        if (isChallengePost && parsedMetadata && typeof parsedMetadata === 'object') {
+            const mid = parsedMetadata.challenge_id ?? parsedMetadata.personal_challenge_id;
+            if (typeof mid === 'string') challengeId = mid;
+            if (typeof parsedMetadata.frequency === 'string') {
+                challengeFrequency = parsedMetadata.frequency;
+            }
+            if (typeof parsedMetadata.difficulty === 'string') {
+                challengeDifficulty = parsedMetadata.difficulty;
+            }
+            if (typeof parsedMetadata.category === 'string') {
+                challengeCategoryLabel = parsedMetadata.category;
+            }
         }
 
         // For items: ALWAYS prefer item_data.id (from JOIN with items table) - this is the most reliable source
@@ -123,7 +150,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         }
 
         // Debug log for item/donation posts to help diagnose issues
-        if ((post.post_type === 'item' || post.post_type === 'donation')) {
+        if (post.post_type === 'item' || post.post_type === 'donation') {
             if (!finalItemId || /^\d{10,13}$/.test(finalItemId || '')) {
                 console.warn('⚠️ Invalid item ID for post:', {
                     postId: post.id,
@@ -137,10 +164,15 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             }
         }
 
+        const itemCategoryForFeed =
+            !isChallengePost && (post.post_type === 'item' || post.post_type === 'donation')
+                ? post.item_data?.category || (parsedMetadata?.category as string | undefined)
+                : undefined;
+
         return {
             id: post.id,
             type: post.post_type || 'post',
-            subtype: post.post_type, // e.g. 'task_assignment', 'ride'
+            subtype: post.post_type, // e.g. 'task_assignment', 'ride', 'community_challenge'
             title: post.title || 'post.noTitle', // Use key or default in UI
             description: post.description || '',
             thumbnail: post.images && post.images.length > 0 ? post.images[0] : null,
@@ -167,6 +199,11 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             itemId: finalItemId,
             rideId: post.ride_id || post.ride_data?.id,
             taskId: post.task_id || post.task?.id,
+            category: itemCategoryForFeed,
+            challengeId,
+            challengeFrequency,
+            challengeDifficulty,
+            challengeCategoryLabel,
             // Add ride-specific fields if this is a ride post
             ...rideData
         };

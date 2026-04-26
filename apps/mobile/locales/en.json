@@ -90,7 +90,12 @@
         "contentSectionHint": "When a category is off, plain text/photo posts are hidden too",
         "includeTasks": "Show tasks",
         "includeRides": "Show rides",
-        "includeItems": "Show items and donations"
+        "includeItems": "Show items and donations",
+        "includeChallenges": "Show community and personal challenges"
+      },
+      "challengePost": {
+        "badgeCommunity": "Community challenge",
+        "badgePersonal": "Personal challenge"
       }
     },
     "rides": {

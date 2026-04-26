@@ -73,7 +73,15 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
   };
 
   const toggleRow = (
-    key: keyof Pick<FeedFilterState, 'onlyOpenPosts' | 'verifiedAuthorsOnly' | 'includeTasks' | 'includeRides' | 'includeItemsAndDonations'>,
+    key: keyof Pick<
+      FeedFilterState,
+      | 'onlyOpenPosts'
+      | 'verifiedAuthorsOnly'
+      | 'includeTasks'
+      | 'includeRides'
+      | 'includeItemsAndDonations'
+      | 'includeChallenges'
+    >,
     label: string,
     hint?: string,
   ) => {
@@ -135,6 +143,7 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
             {toggleRow('includeTasks', t('feed.filterSheet.includeTasks'))}
             {toggleRow('includeRides', t('feed.filterSheet.includeRides'))}
             {toggleRow('includeItemsAndDonations', t('feed.filterSheet.includeItems'))}
+            {toggleRow('includeChallenges', t('feed.filterSheet.includeChallenges'))}
           </ScrollView>
 
           <TouchableOpacity style={styles.doneButton} onPress={onClose} activeOpacity={0.85}>

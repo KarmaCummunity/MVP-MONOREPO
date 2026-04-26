@@ -90,7 +90,12 @@
         "contentSectionHint": "כשמשביתים קטגוריה, פוסטים רגילים (טקסט/תמונה) יוסתרו גם כן",
         "includeTasks": "הצג משימות",
         "includeRides": "הצג נסיעות",
-        "includeItems": "הצג פריטים ותרומות"
+        "includeItems": "הצג פריטים ותרומות",
+        "includeChallenges": "הצג אתגרים קהילתיים ואישיים"
+      },
+      "challengePost": {
+        "badgeCommunity": "אתגר קהילתי",
+        "badgePersonal": "אתגר אישי"
       }
     },
     "rides": {
