@@ -14,6 +14,7 @@ import { FontSizes } from '../../globals/constants';
 import TimePicker from '../TimePicker';
 import DatePicker from '../DatePicker';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 // Ensure layout is RTL friendly manually where needed
 const isRTL = I18nManager.isRTL;
@@ -72,6 +73,222 @@ export type RideOfferFormProps = Readonly<{
     isLocating?: boolean;
     isLocationError?: boolean;
 }>;
+
+type RecurrenceUnitValue = 'day' | 'week' | 'month';
+
+function getRecurrencePreviewUnitText(
+  t: TFunction,
+  recurrenceUnit: RecurrenceUnitValue,
+  recurrenceFrequency: number,
+): string {
+  if (recurrenceUnit === 'day') {
+    return recurrenceFrequency === 1 ? t('trump:ui.recurrenceDay') : t('trump:ui.recurrenceDays');
+  }
+  if (recurrenceUnit === 'week') {
+    return recurrenceFrequency === 1 ? t('trump:ui.recurrenceWeek') : t('trump:ui.recurrenceWeeks');
+  }
+  return recurrenceFrequency === 1 ? t('trump:ui.recurrenceMonth') : t('trump:ui.recurrenceMonths');
+}
+
+type RideTimeDateRecurringFieldsProps = Readonly<{
+  validRideDate: Date;
+  onDatePicked: (date: Date | null) => void;
+  immediateDeparture: boolean;
+  onToggleImmediateDeparture: (val: boolean) => void;
+  departureTime: string;
+  onDepartureTimeChange: (val: string) => void;
+  leavingToday: boolean;
+  onToggleLeavingToday: (val: boolean) => void;
+  isRecurring: boolean;
+  onToggleRecurring: (val: boolean) => void;
+  recurrenceFrequency: number;
+  onRecurrenceFrequencyChange: (val: number) => void;
+  recurrenceUnit: RecurrenceUnitValue | null;
+  onRecurrenceUnitChange: (val: RecurrenceUnitValue | null) => void;
+}>;
+
+function RideTimeDateRecurringFields({
+  validRideDate,
+  onDatePicked,
+  immediateDeparture,
+  onToggleImmediateDeparture,
+  departureTime,
+  onDepartureTimeChange,
+  leavingToday,
+  onToggleLeavingToday,
+  isRecurring,
+  onToggleRecurring,
+  recurrenceFrequency,
+  onRecurrenceFrequencyChange,
+  recurrenceUnit,
+  onRecurrenceUnitChange,
+}: RideTimeDateRecurringFieldsProps) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <Text style={styles.label}>
+        {t('trump:ui.timePickerPlaceholder')} <Text style={styles.requiredStar}>*</Text>
+      </Text>
+
+      <TouchableOpacity
+        style={styles.checkboxRow}
+        onPress={() => { onToggleImmediateDeparture(!immediateDeparture); }}
+      >
+        <View style={[styles.checkbox, immediateDeparture && styles.checkboxChecked]}>
+          {immediateDeparture && <Icon name="checkmark" size={16} color="white" />}
+        </View>
+        <Text style={styles.checkboxLabel}>{t('trump:ui.immediateDeparture')}</Text>
+      </TouchableOpacity>
+
+      {!immediateDeparture && (
+        <View style={styles.dateTimeContainer}>
+          <TimePicker
+            value={departureTime}
+            onTimeChange={onDepartureTimeChange}
+            placeholder={t('trump:ui.timePickerPlaceholder')}
+          />
+
+          <TouchableOpacity
+            style={[styles.checkboxRow, { marginTop: 12 }]}
+            onPress={() => { onToggleLeavingToday(!leavingToday); }}
+          >
+            <View style={[styles.checkbox, leavingToday && styles.checkboxChecked]}>
+              {leavingToday && <Icon name="checkmark" size={16} color="white" />}
+            </View>
+            <Text style={styles.checkboxLabel}>{t('trump:ui.leavingToday')}</Text>
+          </TouchableOpacity>
+
+          {!leavingToday && (
+            <View style={{ marginTop: 12 }}>
+              <DatePicker
+                value={validRideDate}
+                onChange={onDatePicked}
+                placeholder={t('trump:ui.selectDate')}
+                minimumDate={new Date()}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.checkboxRow,
+          { marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
+        ]}
+        onPress={() => {
+          const newValue = !isRecurring;
+          onToggleRecurring(newValue);
+          if (!newValue) {
+            onRecurrenceUnitChange(null);
+            onRecurrenceFrequencyChange(1);
+          }
+        }}
+      >
+        <View style={[styles.checkbox, isRecurring && styles.checkboxChecked]}>
+          {isRecurring && <Icon name="checkmark" size={16} color="white" />}
+        </View>
+        <Text style={styles.checkboxLabel}>{t('trump:ui.recurringRide')}</Text>
+      </TouchableOpacity>
+
+      {isRecurring && (
+        <View style={[styles.dateTimeContainer, { marginTop: 12 }]}>
+          <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 12 }]}>
+            {t('trump:ui.recurrenceConfigLabel')}
+          </Text>
+
+          <View style={styles.recurrenceRow}>
+            <View style={styles.recurrenceFrequencyContainer}>
+              <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 8 }]}>
+                {t('trump:ui.recurrenceFrequencyLabel')}
+              </Text>
+              <View style={styles.counterRow}>
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => onRecurrenceFrequencyChange(Math.max(1, recurrenceFrequency - 1))}
+                >
+                  <Text style={styles.counterText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.counterValue}>{recurrenceFrequency}</Text>
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => onRecurrenceFrequencyChange(Math.min(12, recurrenceFrequency + 1))}
+                >
+                  <Text style={styles.counterText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.recurrenceUnitContainer}>
+              <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 8 }]}>
+                {t('trump:ui.recurrenceUnitLabel')}
+              </Text>
+              <View style={styles.recurrenceUnitOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.recurrenceUnitOption,
+                    recurrenceUnit === 'day' && styles.recurrenceUnitOptionSelected,
+                  ]}
+                  onPress={() => onRecurrenceUnitChange('day')}
+                >
+                  <Text
+                    style={[
+                      styles.recurrenceUnitOptionText,
+                      recurrenceUnit === 'day' && styles.recurrenceUnitOptionTextSelected,
+                    ]}
+                  >
+                    {t('trump:ui.recurrenceDay')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.recurrenceUnitOption,
+                    recurrenceUnit === 'week' && styles.recurrenceUnitOptionSelected,
+                  ]}
+                  onPress={() => onRecurrenceUnitChange('week')}
+                >
+                  <Text
+                    style={[
+                      styles.recurrenceUnitOptionText,
+                      recurrenceUnit === 'week' && styles.recurrenceUnitOptionTextSelected,
+                    ]}
+                  >
+                    {t('trump:ui.recurrenceWeek')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.recurrenceUnitOption,
+                    recurrenceUnit === 'month' && styles.recurrenceUnitOptionSelected,
+                  ]}
+                  onPress={() => onRecurrenceUnitChange('month')}
+                >
+                  <Text
+                    style={[
+                      styles.recurrenceUnitOptionText,
+                      recurrenceUnit === 'month' && styles.recurrenceUnitOptionTextSelected,
+                    ]}
+                  >
+                    {t('trump:ui.recurrenceMonth')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {recurrenceUnit && (
+            <Text style={[styles.recurrencePreview, { marginTop: 12, textAlign: 'right' }]}>
+              {t('trump:ui.recurrencePreview', {
+                frequency: recurrenceFrequency,
+                unit: getRecurrencePreviewUnitText(t, recurrenceUnit, recurrenceFrequency),
+              })}
+            </Text>
+          )}
+        </View>
+      )}
+    </>
+  );
+}
 
 function RideOfferForm({
     destination, onDestinationChange,
@@ -172,153 +389,22 @@ function RideOfferForm({
 
             {/* 3. Time & Date Logic */}
             <View style={styles.section}>
-                <Text style={styles.label}>
-                    {t('trump:ui.timePickerPlaceholder')} <Text style={styles.requiredStar}>*</Text>
-                </Text>
-
-                {/* Immediate Departure Checkbox */}
-                <TouchableOpacity
-                    style={styles.checkboxRow}
-                    onPress={() => onToggleImmediateDeparture(!immediateDeparture)}
-                >
-                    <View style={[styles.checkbox, immediateDeparture && styles.checkboxChecked]}>
-                        {immediateDeparture && <Icon name="checkmark" size={16} color="white" />}
-                    </View>
-                    <Text style={styles.checkboxLabel}>{t('trump:ui.immediateDeparture')}</Text>
-                </TouchableOpacity>
-
-                {!immediateDeparture && (
-                    <View style={styles.dateTimeContainer}>
-                        {/* Time Picker */}
-                        <TimePicker
-                            value={departureTime}
-                            onTimeChange={onDepartureTimeChange}
-                            placeholder={t('trump:ui.timePickerPlaceholder')}
-                        />
-
-                        {/* Leaving Today Checkbox */}
-                        <TouchableOpacity
-                            style={[styles.checkboxRow, { marginTop: 12 }]}
-                            onPress={() => onToggleLeavingToday(!leavingToday)}
-                        >
-                            <View style={[styles.checkbox, leavingToday && styles.checkboxChecked]}>
-                                {leavingToday && <Icon name="checkmark" size={16} color="white" />}
-                            </View>
-                            <Text style={styles.checkboxLabel}>{t('trump:ui.leavingToday')}</Text>
-                        </TouchableOpacity>
-
-                        {/* Date Picker (if not today) */}
-                        {!leavingToday && (
-                            <View style={{ marginTop: 12 }}>
-                                <DatePicker
-                                    value={validRideDate}
-                                    onChange={handleDateChange}
-                                    placeholder={t('trump:ui.selectDate')}
-                                    minimumDate={new Date()}
-                                />
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* Recurring Ride Checkbox */}
-                <TouchableOpacity
-                    style={[styles.checkboxRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }]}
-                    onPress={() => {
-                        const newValue = !isRecurring;
-                        onToggleRecurring(newValue);
-                        if (!newValue) {
-                            onRecurrenceUnitChange(null);
-                            onRecurrenceFrequencyChange(1);
-                        }
-                    }}
-                >
-                    <View style={[styles.checkbox, isRecurring && styles.checkboxChecked]}>
-                        {isRecurring && <Icon name="checkmark" size={16} color="white" />}
-                    </View>
-                    <Text style={styles.checkboxLabel}>{t('trump:ui.recurringRide')}</Text>
-                </TouchableOpacity>
-
-                {/* Recurrence Configuration (shown when recurring is enabled) */}
-                {isRecurring && (
-                    <View style={[styles.dateTimeContainer, { marginTop: 12 }]}>
-                        <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 12 }]}>
-                            {t('trump:ui.recurrenceConfigLabel')}
-                        </Text>
-
-                        {/* Frequency Counter */}
-                        <View style={styles.recurrenceRow}>
-                            <View style={styles.recurrenceFrequencyContainer}>
-                                <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 8 }]}>
-                                    {t('trump:ui.recurrenceFrequencyLabel')}
-                                </Text>
-                                <View style={styles.counterRow}>
-                                    <TouchableOpacity
-                                        style={styles.counterBtn}
-                                        onPress={() => onRecurrenceFrequencyChange(Math.max(1, recurrenceFrequency - 1))}
-                                    >
-                                        <Text style={styles.counterText}>-</Text>
-                                    </TouchableOpacity>
-                                    <Text style={styles.counterValue}>{recurrenceFrequency}</Text>
-                                    <TouchableOpacity
-                                        style={styles.counterBtn}
-                                        onPress={() => onRecurrenceFrequencyChange(Math.min(12, recurrenceFrequency + 1))}
-                                    >
-                                        <Text style={styles.counterText}>+</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-
-                            {/* Unit Selection */}
-                            <View style={styles.recurrenceUnitContainer}>
-                                <Text style={[styles.label, { fontSize: FontSizes.small, marginBottom: 8 }]}>
-                                    {t('trump:ui.recurrenceUnitLabel')}
-                                </Text>
-                                <View style={styles.recurrenceUnitOptions}>
-                                    <TouchableOpacity
-                                        style={[styles.recurrenceUnitOption, recurrenceUnit === 'day' && styles.recurrenceUnitOptionSelected]}
-                                        onPress={() => onRecurrenceUnitChange('day')}
-                                    >
-                                        <Text style={[styles.recurrenceUnitOptionText, recurrenceUnit === 'day' && styles.recurrenceUnitOptionTextSelected]}>
-                                            {t('trump:ui.recurrenceDay')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.recurrenceUnitOption, recurrenceUnit === 'week' && styles.recurrenceUnitOptionSelected]}
-                                        onPress={() => onRecurrenceUnitChange('week')}
-                                    >
-                                        <Text style={[styles.recurrenceUnitOptionText, recurrenceUnit === 'week' && styles.recurrenceUnitOptionTextSelected]}>
-                                            {t('trump:ui.recurrenceWeek')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.recurrenceUnitOption, recurrenceUnit === 'month' && styles.recurrenceUnitOptionSelected]}
-                                        onPress={() => onRecurrenceUnitChange('month')}
-                                    >
-                                        <Text style={[styles.recurrenceUnitOptionText, recurrenceUnit === 'month' && styles.recurrenceUnitOptionTextSelected]}>
-                                            {t('trump:ui.recurrenceMonth')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Preview text */}
-                        {recurrenceUnit && (
-                            <Text style={[styles.recurrencePreview, { marginTop: 12, textAlign: 'right' }]}>
-                                {(() => {
-                                    const unitText = recurrenceUnit === 'day'
-                                        ? (recurrenceFrequency === 1 ? t('trump:ui.recurrenceDay') : t('trump:ui.recurrenceDays'))
-                                        : recurrenceUnit === 'week'
-                                            ? (recurrenceFrequency === 1 ? t('trump:ui.recurrenceWeek') : t('trump:ui.recurrenceWeeks'))
-                                            : (recurrenceFrequency === 1 ? t('trump:ui.recurrenceMonth') : t('trump:ui.recurrenceMonths'));
-                                    return t('trump:ui.recurrencePreview', { frequency: recurrenceFrequency, unit: unitText });
-                                })()}
-                            </Text>
-                        )}
-                    </View>
-                )}
-
+                <RideTimeDateRecurringFields
+                    validRideDate={validRideDate}
+                    onDatePicked={handleDateChange}
+                    immediateDeparture={immediateDeparture}
+                    onToggleImmediateDeparture={onToggleImmediateDeparture}
+                    departureTime={departureTime}
+                    onDepartureTimeChange={onDepartureTimeChange}
+                    leavingToday={leavingToday}
+                    onToggleLeavingToday={onToggleLeavingToday}
+                    isRecurring={isRecurring}
+                    onToggleRecurring={onToggleRecurring}
+                    recurrenceFrequency={recurrenceFrequency}
+                    onRecurrenceFrequencyChange={onRecurrenceFrequencyChange}
+                    recurrenceUnit={recurrenceUnit}
+                    onRecurrenceUnitChange={onRecurrenceUnitChange}
+                />
             </View>
 
             {/* 4. Seats & Price */}

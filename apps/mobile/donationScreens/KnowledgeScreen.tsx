@@ -73,7 +73,7 @@ const educationalLinks = [
     description: 'שיעורי אמנות ויצירה לכל הגילאים',
     url: 'https://www.youtube.com/c/ArtForKidsHub',
     icon: 'brush-outline',
-    color: colors.pinkDeep,
+    color: colors.pink,
     category: 'אמנות',
   },
 ];

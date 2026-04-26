@@ -6,6 +6,10 @@ import { db } from '../../utils/databaseService';
 import { postsService } from '../../utils/postsService';
 import type { FeedItem } from '../../types/feed';
 import { mapPostToFeedItemForTrumpScreen } from './mapPostToFeedItemForTrumpScreen';
+import {
+  getFilteredPostsForTrumpMode,
+  getFilteredRidesForListMode,
+} from './getFilteredRidesForTrumpScreen';
 
 type UseTrumpScreenDataArgs = {
   mode: boolean;
@@ -166,63 +170,15 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
 
   const getFilteredRides = useCallback(() => {
     if (mode) {
-      let filtered = [...allPosts];
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter(
-          (post) =>
-            (post.user?.name?.toLowerCase()?.includes(q) ?? false) ||
-            (post.from?.toLowerCase()?.includes(q) ?? false) ||
-            (post.to?.toLowerCase()?.includes(q) ?? false) ||
-            (post.title?.toLowerCase()?.includes(q) ?? false) ||
-            (post.description?.toLowerCase()?.includes(q) ?? false)
-        );
-      }
-      if (selectedFilters.length > 0) {
-        selectedFilters.forEach((f) => {
-          if (f === 'noCostSharing') filtered = filtered.filter((p) => (p.price ?? 0) === 0);
-        });
-      }
-      const selectedSort = selectedSorts[0];
-      if (selectedSort) {
-        if (selectedSort === t('trump:sort.byPrice'))
-          filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-        else if (selectedSort === t('trump:sort.byDate'))
-          filtered.sort(
-            (a, b) =>
-              new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime()
-          );
-      }
-      return filtered;
-    }
-
-    let filtered = [...allRides];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (ride) =>
-          (ride.driverName?.toLowerCase()?.includes(q) ?? false) ||
-          (ride.from?.toLowerCase()?.includes(q) ?? false) ||
-          (ride.to?.toLowerCase()?.includes(q) ?? false) ||
-          (ride.category?.toLowerCase()?.includes(q) ?? false)
+      return getFilteredPostsForTrumpMode(
+        allPosts,
+        searchQuery,
+        selectedFilters,
+        selectedSorts,
+        t
       );
     }
-    if (selectedFilters.length > 0) {
-      selectedFilters.forEach((f) => {
-        if (f === 'noCostSharing') filtered = filtered.filter((r) => (r.price ?? 0) === 0);
-        if (f === 'noSmoking') filtered = filtered.filter((r) => r.noSmoking);
-        if (f === 'withPets') filtered = filtered.filter((r) => r.petsAllowed);
-        if (f === 'withKids') filtered = filtered.filter((r) => r.kidsFriendly);
-      });
-    }
-    const selectedSort = selectedSorts[0];
-    if (selectedSort) {
-      if (selectedSort === t('trump:sort.byPrice'))
-        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-      else if (selectedSort === t('trump:sort.byDate'))
-        filtered.sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
-    }
-    return filtered;
+    return getFilteredRidesForListMode(allRides, searchQuery, selectedFilters, selectedSorts, t);
   }, [mode, allPosts, allRides, searchQuery, selectedFilters, selectedSorts, t]);
 
   useEffect(() => {

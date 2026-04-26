@@ -46,6 +46,14 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
     const [newManager, setNewManager] = useState<any>(null);
     const [isRemovingManager, setIsRemovingManager] = useState(false);
 
+    /** RN Web often breaks multi-button Alert.alert; use Modal like SettingsScreen logout. */
+    const [adminRoleConfirm, setAdminRoleConfirm] = useState<{
+        user: any;
+        isDemote: boolean;
+        title: string;
+        message: string;
+    } | null>(null);
+
     // Store eligible users separately
     const [eligibleUsers, setEligibleUsers] = useState<any[]>([]);
 
@@ -228,8 +236,9 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
             currentRoles
         });
 
-        if (isSuperAdmin) {
-            console.log('[AdminAdminsScreen] ❌ Blocked: Super admin');
+        // Protect designated accounts from demotion only; they must still be promotable if not admin yet.
+        if (isSuperAdmin && isAdmin) {
+            console.log('[AdminAdminsScreen] ❌ Blocked: Super admin (already admin)');
             Alert.alert('שגיאה', 'לא ניתן לשנות הרשאות למנהל הראשי');
             return;
         }
@@ -245,52 +254,49 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
             ? `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${user.name || user.email}?`
             : `האם אתה בטוח שברצונך להפוך את ${user.name || user.email} למנהל תחתיך?`;
 
-        console.log('[AdminAdminsScreen] 📢 Showing Alert.alert:', { title, message });
+        console.log('[AdminAdminsScreen] 📢 Opening admin role confirm modal:', { title, message, platform: Platform.OS });
 
-        Alert.alert(title, message, [
-            { 
-                text: 'ביטול', 
-                style: 'cancel',
-                onPress: () => {
-                    console.log('[AdminAdminsScreen] ❌ User cancelled');
-                }
-            },
-            {
-                text: 'אישור',
-                style: isAdmin ? 'destructive' : 'default',
-                onPress: async () => {
-                    console.log('[AdminAdminsScreen] ✅ User confirmed');
-                    console.log(`[AdminAdminsScreen] ${isAdmin ? 'Demoting' : 'Promoting'} user:`, {
-                        userId: user.id,
-                        userName: user.name,
-                        currentRoles: user.roles,
-                        requestingAdminId: selectedUser.id
-                    });
+        setAdminRoleConfirm({ user, isDemote: isAdmin, title, message });
+    };
 
-                    let res;
-                    if (isAdmin) {
-                        // Demote admin
-                        console.log('[AdminAdminsScreen] 📡 Calling demoteAdmin');
-                        res = await apiService.demoteAdmin(user.id, selectedUser.id);
-                    } else {
-                        // Promote to admin (will also set as subordinate)
-                        console.log('[AdminAdminsScreen] 📡 Calling promoteToAdmin');
-                        res = await apiService.promoteToAdmin(user.id, selectedUser.id);
-                    }
+    const cancelAdminRoleConfirm = () => {
+        console.log('[AdminAdminsScreen] ❌ User cancelled admin role confirm');
+        setAdminRoleConfirm(null);
+    };
 
-                    console.log(`[AdminAdminsScreen] 📡 ${isAdmin ? 'Demote' : 'Promote'} response:`, res);
+    const confirmAdminRoleChange = async () => {
+        const ctx = adminRoleConfirm;
+        if (!ctx || !selectedUser?.id) return;
 
-                    if (res.success) {
-                        Alert.alert('הצלחה', res.message || 'העדכון בוצע בהצלחה');
-                        console.log('[AdminAdminsScreen] ✅ Operation successful, reloading users with force refresh...');
-                        await loadUsers(true); // Force refresh to bypass cache
-                    } else {
-                        Alert.alert('שגיאה', res.error || 'נכשל בעדכון');
-                        console.log('[AdminAdminsScreen] ❌ Operation failed:', res.error);
-                    }
-                }
-            }
-        ]);
+        const { user, isDemote } = ctx;
+        setAdminRoleConfirm(null);
+
+        console.log('[AdminAdminsScreen] ✅ User confirmed admin role change', {
+            isDemote,
+            userId: user.id,
+            userName: user.name,
+            requestingAdminId: selectedUser.id,
+        });
+
+        let res;
+        if (isDemote) {
+            console.log('[AdminAdminsScreen] 📡 Calling demoteAdmin');
+            res = await apiService.demoteAdmin(user.id, selectedUser.id);
+        } else {
+            console.log('[AdminAdminsScreen] 📡 Calling promoteToAdmin');
+            res = await apiService.promoteToAdmin(user.id, selectedUser.id);
+        }
+
+        console.log(`[AdminAdminsScreen] 📡 ${isDemote ? 'Demote' : 'Promote'} response:`, res);
+
+        if (res.success) {
+            Alert.alert('הצלחה', res.message || 'העדכון בוצע בהצלחה');
+            console.log('[AdminAdminsScreen] ✅ Operation successful, reloading users with force refresh...');
+            await loadUsers(true);
+        } else {
+            Alert.alert('שגיאה', res.error || 'נכשל בעדכון');
+            console.log('[AdminAdminsScreen] ❌ Operation failed:', res.error);
+        }
     };
 
     const openManagerModal = (user: any) => {
@@ -764,7 +770,40 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                 }}
             />
 
-            < Modal visible={showManagerModal && !viewOnly} animationType="fade" transparent >
+            <Modal
+                visible={adminRoleConfirm !== null}
+                transparent
+                animationType="fade"
+                onRequestClose={cancelAdminRoleConfirm}
+            >
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.confirmModalCard}>
+                        <Text style={styles.confirmModalTitle}>{adminRoleConfirm?.title}</Text>
+                        <Text style={styles.confirmModalMessage}>{adminRoleConfirm?.message}</Text>
+                        <View style={styles.confirmModalButtons}>
+                            <TouchableOpacity
+                                style={[styles.confirmModalButton, styles.confirmModalButtonCancel]}
+                                onPress={cancelAdminRoleConfirm}
+                            >
+                                <Text style={styles.confirmModalButtonTextCancel}>ביטול</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.confirmModalButton,
+                                    adminRoleConfirm?.isDemote
+                                        ? styles.confirmModalButtonDestructive
+                                        : styles.confirmModalButtonPrimary,
+                                ]}
+                                onPress={confirmAdminRoleChange}
+                            >
+                                <Text style={styles.confirmModalButtonTextConfirm}>אישור</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal visible={showManagerModal && !viewOnly} animationType="fade" transparent>
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalHeader}>
@@ -858,8 +897,8 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                         </View>
                     </View>
                 </View>
-            </Modal >
-        </SafeAreaView >
+            </Modal>
+        </SafeAreaView>
     );
 }
 
@@ -906,7 +945,69 @@ const styles = StyleSheet.create({
     lockedButton: { backgroundColor: colors.textTertiary },
     actionBtnText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
 
-    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    confirmModalCard: {
+        backgroundColor: colors.background,
+        width: '90%',
+        maxWidth: 340,
+        borderRadius: 16,
+        padding: 24,
+        ...(Platform.OS === 'web' && {
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        }),
+    },
+    confirmModalTitle: {
+        fontSize: FontSizes.heading2,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    confirmModalMessage: {
+        fontSize: FontSizes.body,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    confirmModalButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+    },
+    confirmModalButton: {
+        flex: 1,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confirmModalButtonCancel: {
+        backgroundColor: colors.backgroundSecondary,
+    },
+    confirmModalButtonPrimary: {
+        backgroundColor: colors.primary,
+    },
+    confirmModalButtonDestructive: {
+        backgroundColor: colors.error,
+    },
+    confirmModalButtonTextCancel: {
+        fontSize: FontSizes.body,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
+    confirmModalButtonTextConfirm: {
+        fontSize: FontSizes.body,
+        fontWeight: '600',
+        color: colors.white,
+    },
     modalCard: { backgroundColor: colors.background, borderRadius: 16, padding: 20, maxHeight: '80%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: 'bold', flex: 1 },
