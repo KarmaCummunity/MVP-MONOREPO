@@ -10,7 +10,6 @@ Add a **single PR gate workflow** that runs on every pull request (and on pushes
 - Triggers: `pull_request`, `push` to `main` and `dev`
 - Steps: `npm ci` → **`npm run lint:ci`** (ESLint for `@kc/api` only) → `npm run test` → `npm run build`
 - **Why API-only lint:** `apps/mobile` currently reports hundreds of ESLint errors on `npm run lint --workspace @kc/mobile`. Until that backlog is cleared, PRs still run **mobile Jest tests** via `npm test`; only the ESLint gate is scoped to the API so CI is actionable on day one.
-- `apps/dev-bot`: no automated tests yet; the workspace omits a `test` script so `npm test --workspaces --if-present` does not fail the pipeline
 
 ## Follow-ups (not in this doc’s implementation)
 
