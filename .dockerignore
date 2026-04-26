@@ -23,5 +23,4 @@ apps/mobile/.expo/
 apps/mobile/dist/
 apps/mobile/android/
 apps/mobile/ios/
-apps/dev-bot/
 .cursor/
