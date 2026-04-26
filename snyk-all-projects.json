@@ -101,7 +101,7 @@
     "filesystemPolicy": false,
     "uniqueCount": 0,
     "projectName": "kc-monorepo",
-    "foundProjectCount": 4,
+    "foundProjectCount": 3,
     "displayTargetFile": "package.json",
     "hasUnknownVersions": false,
     "path": "/Users/navesarussi/KC/kc-monorepo"
@@ -208,7 +208,7 @@
     "filesystemPolicy": false,
     "uniqueCount": 0,
     "projectName": "@kc/api",
-    "foundProjectCount": 4,
+    "foundProjectCount": 3,
     "displayTargetFile": "apps/api/package.json",
     "hasUnknownVersions": false,
     "path": "/Users/navesarussi/KC/kc-monorepo/api"
@@ -362,7 +362,7 @@
               "modificationTime": "2024-03-13T12:24:01.140165Z"
             }
           ],
-          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, “Attack vector” is marked as “Local”.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
+          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, \u201cAttack vector\u201d is marked as \u201cLocal\u201d.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
           "epssDetails": null,
           "identifiers": {
             "CVE": [],
@@ -475,7 +475,7 @@
               "modificationTime": "2024-03-13T12:24:01.140165Z"
             }
           ],
-          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, “Attack vector” is marked as “Local”.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
+          "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime via the `makeres` function due to improperly deleting keys from the `reqs` object after execution of callbacks. This behavior causes the keys to remain in the `reqs` object, which leads to resource exhaustion.\r\n\r\nExploiting this vulnerability results in crashing the `node` process or in the application crash.\r\n\r\n**Note:**\r\nThis library is not maintained, and currently, there is no fix for this issue. To overcome this vulnerability, several dependent packages have eliminated the use of this library.\r\n\r\nTo trigger the memory leak, an attacker would need to have the ability to execute or influence the asynchronous operations that use the inflight module within the application. This typically requires access to the internal workings of the server or application, which is not commonly exposed to remote users. Therefore, \u201cAttack vector\u201d is marked as \u201cLocal\u201d.\n## PoC\n```js\r\nconst inflight = require('inflight');\r\n\r\nfunction testInflight() {\r\n  let i = 0;\r\n  function scheduleNext() {\r\n    let key = `key-${i++}`;\r\n    const callback = () => {\r\n    };\r\n    for (let j = 0; j < 1000000; j++) {\r\n      inflight(key, callback);\r\n    }\r\n\r\n    setImmediate(scheduleNext);\r\n  }\r\n\r\n\r\n  if (i % 100 === 0) {\r\n    console.log(process.memoryUsage());\r\n  }\r\n\r\n  scheduleNext();\r\n}\r\n\r\ntestInflight();\r\n```\n## Remediation\nThere is no fixed version for `inflight`.\n## References\n- [GitHub Issue](https://github.com/isaacs/inflight/issues/5)\n- [GitHub PR](https://github.com/logdna/logdna-agent/pull/157)\n",
           "epssDetails": null,
           "identifiers": {
             "CVE": [],
@@ -546,7 +546,7 @@
     },
     "uniqueCount": 0,
     "projectName": "@kc/mobile",
-    "foundProjectCount": 4,
+    "foundProjectCount": 3,
     "displayTargetFile": "apps/mobile/package.json",
     "hasUnknownVersions": false,
     "path": "/Users/navesarussi/KC/kc-monorepo/mobile"
@@ -654,7 +654,7 @@
     "uniqueCount": 0,
     "targetFile": "apps/mobile/ios/Podfile",
     "projectName": "ios",
-    "foundProjectCount": 4,
+    "foundProjectCount": 3,
     "displayTargetFile": "apps/mobile/ios/Podfile",
     "hasUnknownVersions": false,
     "path": "/Users/navesarussi/KC/kc-monorepo"
