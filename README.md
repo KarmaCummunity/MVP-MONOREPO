@@ -1,39 +1,46 @@
 # kc-monorepo
 
-מונורפו שמרכז את כל פרויקטי KC:
+Monorepo for all KC projects:
 
-- `apps/api` – שרת ה-NestJS (לשעבר `KC-MVP-server`)
-- `apps/mobile` – אפליקציית ה-Expo/React Native (לשעבר `MVP`)
-- `docs` – תיעוד ומסמכים
+- `apps/api` — NestJS server (formerly `KC-MVP-server`)
+- `apps/mobile` — Expo / React Native app (formerly `MVP`)
+- `docs` — documentation
 
-## התקנה
+## Documentation (SSOT)
+
+Operational Markdown, SRS, and code-quality docs live under **`docs/SSOT/`** — see [docs/SSOT/README.md](docs/SSOT/README.md).
+
+## Install
 
 ```bash
 cd kc-monorepo
 npm install
 ```
 
-## הרצה
+## Run
 
-- שרת API (development):
+- API (development):
 
 ```bash
 npm run dev:api
 ```
 
-- מובייל (Expo):
+- Mobile (Expo):
 
 ```bash
 npm run dev:mobile
 ```
 
-## מבנה תיקיות
+## Layout
 
 ```text
 kc-monorepo/
   apps/
     api/        # KC-MVP-server
     mobile/     # MVP
-  packages/     # קוד וקונפיגורציות משותפים (לעתיד)
-  docs/         # תיעוד
+  packages/     # shared code and configs (future)
+  docs/         # documentation
+  tools/quality/
+    sonar/      # Sonar analysis scripts (input under data/, output under out/)
+    snyk/       # Snyk reports (JSON)
 ```

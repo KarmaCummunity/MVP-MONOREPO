@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from 'firebase/auth';
 
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
@@ -27,7 +28,9 @@ import { checkNavigationGuards } from '../utils/navigationGuards';
 import {
     signInWithEmail,
     signUpWithEmail,
-    sendVerification
+    sendVerification,
+    getEmailAuthSituation,
+    signInWithGoogleThenLinkPassword,
 } from '../utils/authService';
 import FirebaseGoogleButton from '../components/FirebaseGoogleButton';
 import i18n from '../app/i18n';
@@ -44,6 +47,27 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    /** Visible on all platforms; Alert is unreliable on RN web. */
+    const [emailAuthError, setEmailAuthError] = useState<string | null>(null);
+
+    const notifyAuthError = (message: string) => {
+        setEmailAuthError(message);
+        if (Platform.OS === 'web' && globalThis.window !== undefined) {
+            globalThis.window.alert(`${t('common:error')}: ${message}`);
+        } else {
+            Alert.alert(t('common:error'), message);
+        }
+    };
+
+    const onEmailChange = (value: string) => {
+        setEmailAuthError(null);
+        setEmail(value);
+    };
+
+    const onPasswordChange = (value: string) => {
+        setEmailAuthError(null);
+        setPassword(value);
+    };
 
     // Animations
     const fadeAnim = useState(new Animated.Value(0))[0];
@@ -101,166 +125,183 @@ export default function LoginScreen() {
         }
     };
 
+    const resolveFirebaseUserToApp = async (fbUser: User, emailNorm: string, nowIso: string) => {
+        const { apiService } = await import('../utils/apiService');
+        const resolveResponse = await apiService.resolveUserId({
+            firebase_uid: fbUser.uid,
+            email: emailNorm,
+        });
+
+        if (!resolveResponse.success || !resolveResponse.user) {
+            const userResponse = await apiService.getUserById(fbUser.email || emailNorm);
+            if (userResponse.success && userResponse.data) {
+                const serverUser = userResponse.data;
+                const userData = {
+                    id: serverUser.id,
+                    name: serverUser.name || fbUser.displayName || emailNorm.split('@')[0],
+                    email: serverUser.email || emailNorm,
+                    isActive: serverUser.is_active !== false,
+                    lastActive: serverUser.last_active || nowIso,
+                    roles: serverUser.roles || ['user'],
+                    settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
+                    phone: serverUser.phone || fbUser.phoneNumber || '',
+                    avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
+                    bio: serverUser.bio || '',
+                    karmaPoints: serverUser.karma_points || 0,
+                    joinDate: serverUser.join_date || serverUser.created_at || nowIso,
+                    location: { city: serverUser.city || 'תל אביב', country: serverUser.country || 'Israel' },
+                    interests: serverUser.interests || [],
+                    postsCount: serverUser.posts_count || 0,
+                    followersCount: serverUser.followers_count || 0,
+                    followingCount: serverUser.following_count || 0,
+                    notifications: [],
+                };
+                await setCurrentPrincipal({ user: userData, role: 'user' });
+                await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+                return;
+            }
+            throw new Error('Failed to get user from server');
+        }
+
+        const serverUser = resolveResponse.user;
+        const userData = {
+            id: serverUser.id,
+            name: serverUser.name || fbUser.displayName || emailNorm.split('@')[0],
+            email: serverUser.email || emailNorm,
+            isActive: serverUser.isActive !== false,
+            lastActive: serverUser.lastActive || nowIso,
+            roles: serverUser.roles || ['user'],
+            settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
+            phone: serverUser.phone || fbUser.phoneNumber || '',
+            avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
+            bio: serverUser.bio || '',
+            karmaPoints: serverUser.karmaPoints || 0,
+            joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
+            location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
+            interests: serverUser.interests || [],
+            postsCount: serverUser.postsCount || 0,
+            followersCount: serverUser.followersCount || 0,
+            followingCount: serverUser.followingCount || 0,
+            notifications: [],
+        };
+        await setCurrentPrincipal({ user: userData, role: 'user' });
+        await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+    };
+
     const handleEmailAction = async () => {
+        setEmailAuthError(null);
         if (!email || !email.includes('@')) {
-            Alert.alert(t('common:error'), t('auth:email.invalidFormat'));
+            notifyAuthError(t('auth:email.invalidFormat'));
             return;
         }
 
         if (!password || password.length < 6) {
-            Alert.alert(t('common:error'), t('auth:email.passwordTooShort'));
+            notifyAuthError(t('auth:email.passwordTooShort'));
             return;
         }
 
+        const emailNorm = email.trim().toLowerCase();
         setIsLoading(true);
         try {
             const nowIso = new Date().toISOString();
+            const situation = await getEmailAuthSituation(emailNorm);
+            let fbUser: User | undefined;
 
-            // Try to sign in first (unified flow)
-            try {
-                const fbUser = await signInWithEmail(email, password);
-
-                // Get UUID from server using firebase_uid
+            if (situation.canPasswordLogin) {
+                fbUser = await signInWithEmail(emailNorm, password);
+            } else if (situation.hasGoogle && Platform.OS === 'web') {
+                fbUser = await signInWithGoogleThenLinkPassword(emailNorm, password);
+            } else if (situation.hasGoogle) {
+                notifyAuthError(t('auth:email.googleOnlyNative'));
+                return;
+            } else {
                 try {
-                    const { apiService } = await import('../utils/apiService');
-                    const resolveResponse = await apiService.resolveUserId({
-                        firebase_uid: fbUser.uid,
-                        email: email
-                    });
-
-                    if (!resolveResponse.success || !resolveResponse.user) {
-                        // Fallback: try to get user by email
-                        const userResponse = await apiService.getUserById(fbUser.email || email);
-                        if (userResponse.success && userResponse.data) {
-                            const serverUser = userResponse.data;
-                            const userData = {
-                                id: serverUser.id, // UUID from database
-                                name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                                email: serverUser.email || email,
-                                isActive: serverUser.is_active !== false,
-                                lastActive: serverUser.last_active || nowIso,
-                                roles: serverUser.roles || ['user'],
-                                settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                                phone: serverUser.phone || fbUser.phoneNumber || '',
-                                avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                                bio: serverUser.bio || '',
-                                karmaPoints: serverUser.karma_points || 0,
-                                joinDate: serverUser.join_date || serverUser.created_at || nowIso,
-                                location: { city: serverUser.city || 'תל אביב', country: serverUser.country || 'Israel' },
-                                interests: serverUser.interests || [],
-                                postsCount: serverUser.posts_count || 0,
-                                followersCount: serverUser.followers_count || 0,
-                                followingCount: serverUser.following_count || 0,
-                                notifications: [],
-                            };
-                            await setCurrentPrincipal({ user: userData, role: 'user' });
-                            await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
+                    fbUser = await signInWithEmail(emailNorm, password);
+                } catch (signInError: any) {
+                    if (signInError.code === 'auth/user-not-found') {
+                        try {
+                            const newUser = await signUpWithEmail(emailNorm, password);
+                            await sendVerification(newUser);
+                            setEmailAuthError(null);
+                            if (Platform.OS === 'web' && globalThis.window !== undefined) {
+                                globalThis.window.alert(
+                                    `${t('auth:email.verifyTitle')}\n\n${t('auth:email.verificationRequired')}`
+                                );
+                            } else {
+                                Alert.alert(
+                                    t('auth:email.verifyTitle'),
+                                    t('auth:email.verificationRequired'),
+                                    [{ text: t('common:confirm') }]
+                                );
+                            }
                             return;
-                        }
-                        throw new Error('Failed to get user from server');
-                    }
-
-                    // Use UUID from server
-                    const serverUser = resolveResponse.user;
-                    const userData = {
-                        id: serverUser.id, // UUID from database - this is the primary identifier
-                        name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                        email: serverUser.email || email,
-                        isActive: serverUser.isActive !== false,
-                        lastActive: serverUser.lastActive || nowIso,
-                        roles: serverUser.roles || ['user'],
-                        settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                        phone: serverUser.phone || fbUser.phoneNumber || '',
-                        avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                        bio: serverUser.bio || '',
-                        karmaPoints: serverUser.karmaPoints || 0,
-                        joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                        location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
-                        interests: serverUser.interests || [],
-                        postsCount: serverUser.postsCount || 0,
-                        followersCount: serverUser.followersCount || 0,
-                        followingCount: serverUser.followingCount || 0,
-                        notifications: [],
-                    };
-                    await setCurrentPrincipal({ user: userData, role: 'user' });
-                    await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-                    return;
-                } catch (error) {
-                    console.error('Failed to get user UUID from server:', error);
-                    throw error;
-                }
-            } catch (signInError: any) {
-                // If sign in fails with user-not-found, try to register
-                if (signInError.code === 'auth/user-not-found') {
-                    try {
-                        // Try to register new user
-                        const fbUser = await signUpWithEmail(email, password);
-                        await sendVerification(fbUser);
-
-                        Alert.alert(
-                            t('auth:email.verifyTitle'),
-                            t('auth:email.verificationRequired'),
-                            [{ text: t('common:confirm') }]
-                        );
-                        return;
-                    } catch (signUpError: any) {
-                        // If sign up fails with email-already-in-use, try to sign in again
-                        // This might happen if user was created between attempts
-                        if (signUpError.code === 'auth/email-already-in-use') {
-                            const fbUser = await signInWithEmail(email, password);
-                            // Get user data and proceed with login (same logic as above)
-                            const { apiService } = await import('../utils/apiService');
-                            const resolveResponse = await apiService.resolveUserId({
-                                firebase_uid: fbUser.uid,
-                                email: email
-                            });
-
-                            if (resolveResponse.success && resolveResponse.user) {
-                                const serverUser = resolveResponse.user;
-                                const userData = {
-                                    id: serverUser.id,
-                                    name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                                    email: serverUser.email || email,
-                                    isActive: serverUser.isActive !== false,
-                                    lastActive: serverUser.lastActive || nowIso,
-                                    roles: serverUser.roles || ['user'],
-                                    settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-                                    phone: serverUser.phone || fbUser.phoneNumber || '',
-                                    avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=12',
-                                    bio: serverUser.bio || '',
-                                    karmaPoints: serverUser.karmaPoints || 0,
-                                    joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-                                    location: serverUser.location || { city: 'תל אביב', country: 'Israel' },
-                                    interests: serverUser.interests || [],
-                                    postsCount: serverUser.postsCount || 0,
-                                    followersCount: serverUser.followersCount || 0,
-                                    followingCount: serverUser.followingCount || 0,
-                                    notifications: [],
-                                };
-                                await setCurrentPrincipal({ user: userData, role: 'user' });
-                                await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
-                                return;
+                        } catch (signUpError: any) {
+                            if (signUpError.code === 'auth/email-already-in-use') {
+                                const sit2 = await getEmailAuthSituation(emailNorm);
+                                if (sit2.hasGoogle && !sit2.canPasswordLogin && Platform.OS === 'web') {
+                                    fbUser = await signInWithGoogleThenLinkPassword(emailNorm, password);
+                                } else if (
+                                    Platform.OS === 'web' &&
+                                    sit2.methods.length === 0
+                                ) {
+                                    fbUser = await signInWithGoogleThenLinkPassword(emailNorm, password);
+                                } else {
+                                    fbUser = await signInWithEmail(emailNorm, password);
+                                }
+                            } else {
+                                throw signUpError;
                             }
                         }
-                        throw signUpError;
+                    } else if (
+                        signInError.code === 'auth/invalid-credential' ||
+                        signInError.code === 'auth/wrong-password'
+                    ) {
+                        const enumerationLikely = situation.methods.length === 0;
+                        if (Platform.OS === 'web' && enumerationLikely) {
+                            try {
+                                fbUser = await signInWithGoogleThenLinkPassword(emailNorm, password);
+                            } catch {
+                                notifyAuthError(t('auth:email.invalidCredentialTryGoogle'));
+                                return;
+                            }
+                        } else {
+                            const retry = await getEmailAuthSituation(emailNorm);
+                            if (
+                                Platform.OS === 'web' &&
+                                retry.hasGoogle &&
+                                !retry.canPasswordLogin
+                            ) {
+                                fbUser = await signInWithGoogleThenLinkPassword(emailNorm, password);
+                            } else {
+                                throw signInError;
+                            }
+                        }
+                    } else {
+                        throw signInError;
                     }
-                } else {
-                    // For other sign-in errors (like wrong-password), throw to be handled below
-                    throw signInError;
                 }
             }
+
+            if (!fbUser) {
+                throw new Error('Auth did not produce a Firebase user');
+            }
+            setEmailAuthError(null);
+            await resolveFirebaseUserToApp(fbUser, emailNorm, nowIso);
         } catch (error: any) {
             console.error('Auth action failed', error);
             let msg = t('common:genericTryAgain');
-            if (error.code === 'auth/wrong-password') {
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                 msg = t('auth:email.wrongPassword', 'סיסמה לא נכונה. אנא נסה שוב.');
             } else if (error.code === 'auth/email-already-in-use') {
                 msg = t('auth:email.emailAlreadyRegistered', 'המייל כבר רשום. אנא בדוק את הסיסמה.');
             } else if (error.code === 'auth/user-not-found') {
-                // This shouldn't happen in unified flow, but handle it gracefully
                 msg = t('common:genericTryAgain');
+            } else if (error.code === 'auth/google-email-mismatch') {
+                msg = t('auth:email.googleEmailMismatch');
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                msg = t('auth:email.popupClosed');
             }
-            Alert.alert(t('common:error'), msg);
+            notifyAuthError(msg);
         } finally {
             setIsLoading(false);
         }
@@ -325,7 +366,7 @@ export default function LoginScreen() {
                                 placeholder={t('auth:email.placeholderExample', 'name@example.com')}
                                 placeholderTextColor={colors.textTertiary}
                                 value={email}
-                                onChangeText={setEmail}
+                                onChangeText={onEmailChange}
                                 autoCapitalize="none"
                                 keyboardType="email-address"
                             />
@@ -339,7 +380,7 @@ export default function LoginScreen() {
                                     placeholder={t('auth:email.passwordPlaceholderExample', '******')}
                                     placeholderTextColor={colors.textTertiary}
                                     value={password}
-                                    onChangeText={setPassword}
+                                    onChangeText={onPasswordChange}
                                     secureTextEntry={!showPassword}
                                 />
                                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
@@ -363,6 +404,11 @@ export default function LoginScreen() {
                             )}
                         </TouchableOpacity>
 
+                        {emailAuthError ? (
+                            <Text style={styles.authErrorText} accessibilityLiveRegion="polite">
+                                {emailAuthError}
+                            </Text>
+                        ) : null}
 
                         {/* Guest Mode */}
                         <TouchableOpacity onPress={handleGuestLogin} style={styles.guestButton}>
@@ -543,6 +589,13 @@ const styles = StyleSheet.create({
         color: colors.white,
         fontSize: 16,
         fontWeight: '700',
+    },
+    authErrorText: {
+        marginTop: 12,
+        color: colors.error,
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
     },
     footerActions: {
         marginTop: 20,

@@ -825,9 +825,7 @@ class ApiService {
     return this.request(url);
   }
 
-  async deletePost(postId: string, userId: string): Promise<ApiResponse> {
-    // userId is used for local Optimistic UI updates if needed, but not sent to server
-    // Server extracts user ID from JWT token
+  async deletePost(postId: string, _userId: string): Promise<ApiResponse> {
     return this.request(`/api/posts/${postId}`, {
       method: 'DELETE',
     });

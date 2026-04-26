@@ -4,6 +4,8 @@
 # - Works with the new kc-monorepo structure where server is in apps/api and mobile is in apps/mobile.
 # - Steps: Free ports, docker compose up, build server, ensure DB schema via ts-node, start server, smoke-test APIs, start Expo.
 # - Inputs: PORT (server), EXPO_PORT (Expo dev server). Exports EXPO_PUBLIC_API_BASE_URL and flags.
+# - Code quality: lint, Snyk, and (if SONAR_TOKEN is set) Sonar run by default. Set SKIP_CHECKS=1
+#   only to bypass them temporarily when you must bring the stack up without that preflight.
 set -euo pipefail
 
 THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -144,7 +146,7 @@ log_success "Docker is available and running"
 # ============================================================================
 
 if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
-  log_warning "Skipping Code Quality & Security Checks as requested (SKIP_CHECKS=1)"
+  log_warning "Skipping Code Quality & Security checks as requested (SKIP_CHECKS=1)"
 else
   log_info "Running Code Quality & Security Checks (Lint, Snyk, Sonar)..."
 

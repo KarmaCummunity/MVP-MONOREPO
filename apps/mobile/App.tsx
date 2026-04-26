@@ -1,13 +1,13 @@
 // File overview:
 // - Purpose: Root application entry point for iOS/Android/Web with web mode support.
 // - Reached from: App registry (Expo) bootstraps this component.
-// - Provides: React Navigation container with `MainNavigator`, global `UserProvider`, gesture and safe-area roots, StatusBar.
+// - Provides: React Navigation container with `MainNavigator`, Zustand-backed session/web-mode/loading state, gesture and safe-area roots, StatusBar.
 // - Reads: AsyncStorage 'app_language' for i18n + RTL, Expo fonts, SplashScreen control, optional notificationService, WebBrowser auth completion.
 // - Listens: Push/in-app notification responses and deep links; when clicked, navigates to 'ChatDetailScreen' (with conversationId) or 'NotificationsScreen'.
 // - Downstream flow: App -> MainNavigator -> (LandingSiteScreen | LoginScreen | HomeStack/BottomNavigator) -> Tab stacks -> Screens.
 // - Side effects: Initializes i18n + RTL, loads fonts, hides splash, installs notification listener, holds a navigationRef for programmatic navigation.
 // - Route params: None (this is the top-level container).
-// - External deps/services: react-navigation, expo modules, i18n, UserContext, WebModeContext.
+// - External deps/services: react-navigation, expo modules, i18n, `stores/userStore`, `stores/webModeStore`, `stores/appLoadingStore`.
 //
 // IMPORTANT WEB MODE CHANGES:
 // - Container padding adjusts for web toggle button in app mode (48px top padding)
