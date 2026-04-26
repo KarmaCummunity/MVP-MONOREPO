@@ -1,72 +1,24 @@
 import { getResponsiveStyleBucket } from './styleBuckets';
 import { scaleSize } from './scale';
+import { pick4 } from './responsiveStylePresets';
 
 export const getResponsiveButtonStyles = () => {
   const { bucket } = getResponsiveStyleBucket();
 
   return {
-    paddingHorizontal:
-      bucket === 'largeDesktop'
-        ? 36
-        : bucket === 'desktopWeb'
-          ? 32
-          : bucket === 'tablet'
-            ? 28
-            : 24,
-    paddingVertical:
-      bucket === 'largeDesktop'
-        ? 18
-        : bucket === 'desktopWeb'
-          ? 16
-          : bucket === 'tablet'
-            ? 14
-            : 12,
-    minWidth:
-      bucket === 'largeDesktop'
-        ? 300
-        : bucket === 'desktopWeb'
-          ? 280
-          : bucket === 'tablet'
-            ? 240
-            : 200,
-    maxWidth:
-      bucket === 'largeDesktop'
-        ? 450
-        : bucket === 'desktopWeb'
-          ? 400
-          : bucket === 'tablet'
-            ? 360
-            : '100%',
-    borderRadius:
-      bucket === 'largeDesktop'
-        ? 15
-        : bucket === 'desktopWeb'
-          ? 14
-          : bucket === 'tablet'
-            ? 13
-            : 12,
-    fontSize:
-      bucket === 'largeDesktop'
-        ? 20
-        : bucket === 'desktopWeb'
-          ? 18
-          : bucket === 'tablet'
-            ? 17
-            : scaleSize(16),
+    paddingHorizontal: pick4(bucket, 24, 28, 32, 36),
+    paddingVertical: pick4(bucket, 12, 14, 16, 18),
+    minWidth: pick4(bucket, 200, 240, 280, 300),
+    maxWidth: pick4(bucket, '100%', 360, 400, 450),
+    borderRadius: pick4(bucket, 12, 13, 14, 15),
+    fontSize: pick4(bucket, scaleSize(16), 17, 18, 20),
     alignSelf: 'center' as const,
   };
 };
 
 export const getResponsiveContainerStyles = () => {
   const { bucket } = getResponsiveStyleBucket();
-  const pad =
-    bucket === 'largeDesktop'
-      ? 48
-      : bucket === 'desktopWeb'
-        ? 40
-        : bucket === 'tablet'
-          ? 32
-          : 20;
+  const pad = pick4(bucket, 20, 32, 40, 48);
 
   return {
     padding: pad,
