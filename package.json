@@ -15,6 +15,7 @@
     "build": "npm run build --workspaces --if-present",
     "start": "npm run start --workspace @kc/api",
     "lint": "npm run lint --workspaces --if-present",
+    "lint:ci": "npm run lint --workspace @kc/api",
     "test": "npm test --workspaces --if-present"
   },
   "engines": {
