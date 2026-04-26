@@ -71,6 +71,17 @@ const computeRole = (user: User | null, mode: AuthMode): Role => {
   return (roles.includes('admin') || roles.includes('super_admin') || roles.includes('org_admin')) ? 'admin' : 'user';
 };
 
+/** Operator workspace (Shiduchim Tov); admins/super_admins have implicit access per SRS §2.14 */
+export const userHasOperatorAccess = (user: User | null): boolean => {
+  if (!user) return false;
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  return (
+    roles.includes('operator') ||
+    roles.includes('admin') ||
+    roles.includes('super_admin')
+  );
+};
+
 
 const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
   try {
@@ -759,8 +770,13 @@ export const useUser = () => {
       // Super admin email check (fallback if roles not updated in DB)
       if (user.email === 'navesarussi@gmail.com') return true;
       const roles = Array.isArray(user.roles) ? user.roles : [];
-      return roles.includes('admin') || roles.includes('super_admin');
+      return (
+        roles.includes('admin') ||
+        roles.includes('super_admin') ||
+        roles.includes('org_admin')
+      );
     })(),
+    isOperator: userHasOperatorAccess(store.selectedUser),
     setGuestMode: store.setGuestMode,
     setDemoUser: store.setDemoUser,
     resetHomeScreen: store.resetHomeScreen,

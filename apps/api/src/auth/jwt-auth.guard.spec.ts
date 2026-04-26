@@ -69,6 +69,36 @@ describe("AdminAuthGuard RBAC Logic (SEC-003.1)", () => {
   });
 });
 
+describe("OperatorAuthGuard RBAC Logic (SRS §2.14)", () => {
+  function checkOperatorAccess(roles: string[]): boolean {
+    return (
+      roles.includes("operator") ||
+      roles.includes("admin") ||
+      roles.includes("super_admin")
+    );
+  }
+
+  it("should allow operator role", () => {
+    expect(checkOperatorAccess(["user", "operator"])).toBe(true);
+  });
+
+  it("should allow admin for oversight", () => {
+    expect(checkOperatorAccess(["user", "admin"])).toBe(true);
+  });
+
+  it("should allow super_admin for oversight", () => {
+    expect(checkOperatorAccess(["user", "super_admin"])).toBe(true);
+  });
+
+  it("should DENY org_admin without operator", () => {
+    expect(checkOperatorAccess(["user", "org_admin"])).toBe(false);
+  });
+
+  it("should DENY volunteer only", () => {
+    expect(checkOperatorAccess(["user", "volunteer"])).toBe(false);
+  });
+});
+
 describe("Notification Ownership Validation (SEC-003.2)", () => {
   // Test the ownership logic used in NotificationsController
   function validateOwnership(

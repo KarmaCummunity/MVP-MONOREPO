@@ -266,6 +266,41 @@ export class AdminAuthGuard extends JwtAuthGuard {
 }
 
 /**
+ * Guard for operator matching workspace (Shiduchim Tov).
+ * Operators handle manual matching; admins/super_admins have oversight access (SRS §2.14).
+ */
+@Injectable()
+export class OperatorAuthGuard extends JwtAuthGuard {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const canActivate = await super.canActivate(context);
+    if (!canActivate) return false;
+
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user;
+    if (!user) {
+      throw new UnauthorizedException("User session required");
+    }
+
+    const roles = user.roles || [];
+    const isOperator =
+      roles.includes("operator") ||
+      roles.includes("admin") ||
+      roles.includes("super_admin");
+    if (!isOperator) {
+      this.logger.warn("Operator access denied", {
+        userId: user.userId,
+        email: user.email,
+        roles: user.roles,
+        path: request.path,
+      });
+      throw new UnauthorizedException("Operator access required");
+    }
+
+    return true;
+  }
+}
+
+/**
  * Optional guard that allows both authenticated and guest access
  * Sets user data if token is provided and valid
  */

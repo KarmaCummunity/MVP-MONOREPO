@@ -10,6 +10,7 @@ import { FirebaseAdminService } from "./firebase-admin.service";
 import {
   JwtAuthGuard,
   AdminAuthGuard,
+  OperatorAuthGuard,
   OptionalAuthGuard,
 } from "./jwt-auth.guard";
 import { RedisCacheModule } from "../redis/redis-cache.module";
@@ -24,6 +25,7 @@ import { DatabaseModule } from "../database/database.module";
     FirebaseAdminService,
     JwtAuthGuard,
     AdminAuthGuard,
+    OperatorAuthGuard,
     OptionalAuthGuard,
   ],
   exports: [
@@ -33,6 +35,7 @@ import { DatabaseModule } from "../database/database.module";
     FirebaseAdminService,
     JwtAuthGuard,
     AdminAuthGuard,
+    OperatorAuthGuard,
     OptionalAuthGuard,
   ],
 })
