@@ -78,17 +78,16 @@ describe('chatService', () => {
     jest.clearAllMocks();
     mockConfig.USE_BACKEND = false;
     mockConfig.USE_FIRESTORE = false;
-    mockDb.getChat.mockResolvedValue(null);
-    mockDb.getUserChats.mockResolvedValue([]);
-    mockDb.getChatMessages.mockResolvedValue([]);
-    mockDb.getMessageReactions.mockResolvedValue([]);
+    mockDb.getChat.mockResolvedValue(null as never);
+    mockDb.getUserChats.mockResolvedValue([] as never);
+    mockDb.getChatMessages.mockResolvedValue([] as never);
+    mockDb.getMessageReactions.mockResolvedValue([] as never);
   });
 
   const loadChatService = () => require('../chatService') as typeof import('../chatService');
 
   it('creates conversation locally with sanitized participants', async () => {
     const { createConversation } = loadChatService();
-
     const id = await createConversation([' user-a ', 'user-b', 'user-a']);
 
     expect(id.startsWith('conv_')).toBe(true);
@@ -111,7 +110,6 @@ describe('chatService', () => {
 
   it('throws when creating a conversation with less than 2 participants', async () => {
     const { createConversation } = loadChatService();
-
     await expect(createConversation(['only-user'])).rejects.toThrow(
       'Conversation requires at least two participants',
     );
@@ -119,7 +117,6 @@ describe('chatService', () => {
 
   it('sends message in local mode and updates conversation counters', async () => {
     const { sendMessage } = loadChatService();
-
     mockDb.getChat.mockResolvedValueOnce({
       id: 'conv1',
       participants: ['sender', 'recipient'],
@@ -127,7 +124,7 @@ describe('chatService', () => {
       lastMessageTime: '2024-01-01T00:00:00.000Z',
       unreadCount: 0,
       createdAt: '2024-01-01T00:00:00.000Z',
-    });
+    } as never);
     mockDb.getChat.mockResolvedValueOnce({
       id: 'conv1',
       participants: ['sender', 'recipient'],
@@ -135,7 +132,7 @@ describe('chatService', () => {
       lastMessageTime: '2024-01-01T00:00:00.000Z',
       unreadCount: 0,
       createdAt: '2024-01-01T00:00:00.000Z',
-    });
+    } as never);
     mockDb.getChat.mockResolvedValueOnce({
       id: 'conv1',
       participants: ['sender', 'recipient'],
@@ -143,7 +140,7 @@ describe('chatService', () => {
       lastMessageTime: '2024-01-01T00:00:00.000Z',
       unreadCount: 0,
       createdAt: '2024-01-01T00:00:00.000Z',
-    });
+    } as never);
 
     const result = await sendMessage({
       conversationId: 'conv1',
