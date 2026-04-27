@@ -40,7 +40,10 @@ import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUp
 import { createSampleChatData, createConversation, conversationExists } from '../utils/chatService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
 import { apiService } from '../utils/apiService';
-import { mapCommunityChallengeFeedFields } from '../utils/mapCommunityChallengeFeedFields';
+import {
+  buildOpenTabEntryFromPost,
+  classifyOpenProfilePost,
+} from '../utils/profileOpenTabPostEntry';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { UserPreview as CharacterType } from '../globals/types';
 import { useToast } from '../utils/toastService';
@@ -176,110 +179,17 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
           const res = await apiService.getUserPosts(targetUserId, 50, selectedUser?.id);
           if (res.success && Array.isArray(res.data)) {
             res.data.forEach((p: any) => {
-              let shouldInclude = false;
-              let status = 'active';
-              let type = 'post';
-              const subtype = p.post_type;
-
-              // Determine if post should be in OPEN tab
-              if (p.post_type === 'task_assignment' || p.post_type === 'task_completion') {
-                const taskStatus = p.task?.status;
-                shouldInclude = taskStatus === 'open' || taskStatus === 'in_progress';
-                status = taskStatus || 'open';
-                type = 'task';
-              } else if (p.ride_data || p.post_type === 'ride') {
-                const rideStatus = p.ride_data?.status || 'active';
-                shouldInclude = rideStatus === 'active' || rideStatus === 'full';
-                status = rideStatus;
-                type = 'ride';
-                if (shouldInclude && p.ride_data?.id) existingRideIds.add(p.ride_data.id);
-              } else if (p.post_type === 'community_challenge') {
-                shouldInclude = true;
-                status = 'active';
-                type = 'post';
-              } else if ((p.item_data || p.post_type === 'item') || p.post_type === 'donation') {
-                const itemStatus = p.item_data?.status || 'available';
-                shouldInclude = itemStatus === 'available' || itemStatus === 'reserved' || itemStatus === 'active';
-                status = itemStatus;
-                type = p.post_type === 'donation' ? 'donation' : 'item';
-                if (shouldInclude && p.item_data?.id) existingItemIds.add(p.item_data.id);
-              } else {
-                // Regular posts - always active
-                shouldInclude = true;
+              const row = classifyOpenProfilePost(p);
+              if (!row?.shouldInclude) {
+                return;
               }
-
-              if (shouldInclude) {
-                let fromLocation = '';
-                let toLocation = '';
-
-                let seats = 0;
-                let price = 0;
-                let time = '';
-                let date = '';
-
-                if (type === 'ride') {
-                  const rData = p.ride_data;
-                  if (rData) {
-                    fromLocation = rData.from_location?.city || rData.from_location?.name || rData.from_location?.address || '';
-                    toLocation = rData.to_location?.city || rData.to_location?.name || rData.to_location?.address || '';
-
-                    seats = rData.available_seats || 0;
-                    price = rData.price_per_seat || 0;
-
-                    if (rData.departure_time) {
-                      const formatted = formatRideTime(rData.departure_time);
-                      time = formatted.time;
-                      date = formatted.date;
-                    }
-                  }
-                }
-
-                const chMappedOpen =
-                  p.post_type === 'community_challenge'
-                    ? mapCommunityChallengeFeedFields(p)
-                    : null;
-
-                allContent.push({
-                  id: p.id,
-                  title: p.title || '',
-                  thumbnail:
-                    chMappedOpen?.thumbnail != null
-                      ? chMappedOpen.thumbnail
-                      : (p.images && p.images.length > 0)
-                        ? p.images[0]
-                        : null,
-                  likes: p.likes || 0,
-                  comments: p.comments || 0,
-                  isLiked: p.is_liked || false,
-                  type: type as any,
-                  subtype: subtype,
-                  description: p.description || '',
-                  timestamp: p.created_at,
-                  status: status,
-                  user: user ? {
-                    id: user.id,
-                    name: user.name,
-                    avatar: user.avatar,
-                    karmaPoints: user.karmaPoints
-                  } : { id: 'unknown' },
-                  taskData: p.task,
-                  rideData: p.ride_data,
-                  itemData: p.item_data,
-                  from: fromLocation,
-                  to: toLocation,
-                  seats,
-                  price,
-                  time,
-                  date,
-                  rawData: p,
-                  // Add IDs for updating posts (critical for delete/close functionality)
-                  rideId: p.ride_id || p.ride_data?.id,
-                  itemId: p.item_data?.id || (p.item_id && !/^\d{10,13}$/.test(p.item_id) ? p.item_id : undefined),
-                  taskId: p.task_id || p.task?.id,
-                  challengeId: chMappedOpen?.challengeId,
-                  challengeData: chMappedOpen?.challengeData,
-                });
+              if (row.type === 'ride' && p.ride_data?.id) {
+                existingRideIds.add(p.ride_data.id);
               }
+              if ((row.type === 'item' || row.type === 'donation') && p.item_data?.id) {
+                existingItemIds.add(p.item_data.id);
+              }
+              allContent.push(buildOpenTabEntryFromPost(p, user, row));
             });
             console.log('📱 OpenRoute - Loaded posts from API:', res.data.length);
           }

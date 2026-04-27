@@ -1,4 +1,5 @@
 import type { ChallengeFeedData } from '../types/feed';
+import { parsePostMetadata } from './parsePostMetadata';
 
 /**
  * Maps API user-post / feed post row for `post_type === 'community_challenge'`
@@ -19,18 +20,8 @@ export function mapCommunityChallengeFeedFields(post: {
         return { thumbnail: null };
     }
 
-    const joined = post.community_challenge as ChallengeFeedData | null | undefined;
-    let meta: Record<string, unknown> | null = null;
-    try {
-        if (post.metadata) {
-            meta =
-                typeof post.metadata === 'string'
-                    ? (JSON.parse(post.metadata) as Record<string, unknown>)
-                    : (post.metadata as Record<string, unknown>);
-        }
-    } catch {
-        meta = null;
-    }
+    const meta = parsePostMetadata(post.metadata);
+    const joined = post.community_challenge;
     const metaChallengeId =
         typeof meta?.challenge_id === 'string' ? meta.challenge_id : undefined;
 
@@ -49,7 +40,9 @@ export function mapCommunityChallengeFeedFields(post: {
             (typeof meta?.category === 'string' ? meta.category : null),
         goal_value:
             joined?.goal_value ??
-            (meta?.goal_value as number | string | null | undefined),
+            (typeof meta?.goal_value === 'number' || typeof meta?.goal_value === 'string'
+                ? meta.goal_value
+                : undefined),
         deadline:
             joined?.deadline ??
             (typeof meta?.deadline === 'string' ? meta.deadline : null),
@@ -57,10 +50,9 @@ export function mapCommunityChallengeFeedFields(post: {
     };
 
     const challengeId = challengeData.id || post.community_challenge_id;
+    const img = challengeData.image_url;
     const thumbFromChallenge =
-        challengeData.image_url && String(challengeData.image_url).trim() !== ''
-            ? String(challengeData.image_url)
-            : null;
+        img && String(img).trim() !== '' ? String(img) : null;
     const thumbFromPost =
         post.images && post.images.length > 0 ? post.images[0] : null;
 
