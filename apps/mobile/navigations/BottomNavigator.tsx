@@ -21,7 +21,7 @@
 'use strict';
 import React from "react";
 import { Animated, Easing, View, StyleSheet, TouchableOpacity } from "react-native";
-import { createBottomTabNavigator, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation, CommonActions } from "@react-navigation/native";
 import HomeTabStack from "./HomeTabStack";
@@ -302,16 +302,21 @@ export default function BottomNavigator(): React.ReactElement {
         name="CreatePostTab"
         component={DonationsStack}
         options={{
-          tabBarButton: () => (
-            <TouchableOpacity
-              onPress={() => openComposer({ intent: 'give' })}
-              style={{ marginTop: -12 }}
-              accessibilityRole="button"
-              accessibilityLabel="Create give or request post"
-            >
-              <Ionicons name="add-circle" size={54} color={colors.primary} />
-            </TouchableOpacity>
-          ),
+          tabBarButton: (props: BottomTabBarButtonProps) => {
+            const { delayLongPress, ...rest } = props as any;
+            return (
+              <TouchableOpacity
+                {...rest}
+                delayLongPress={delayLongPress ?? undefined}
+                onPress={() => openComposer({ intent: 'give' })}
+                style={[props.style, { marginTop: -12, justifyContent: 'center', alignItems: 'center' }]}
+                accessibilityRole="button"
+                accessibilityLabel="Create give or request post"
+              >
+                <Ionicons name="add-circle" size={54} color={colors.primary} />
+              </TouchableOpacity>
+            );
+          },
         }}
         listeners={{
           tabPress: (e) => e.preventDefault(),
@@ -324,16 +329,6 @@ export default function BottomNavigator(): React.ReactElement {
           tabPress: (e) => handleTabPress(e, navigation, route.name),
         })}
       />
-      {isAdmin && (
-        <Tab.Screen
-          name="AdminTab"
-          component={AdminStack}
-          options={{ tabBarButton: adminTabBarButton }}
-          listeners={({ navigation, route }) => ({
-            tabPress: (e) => handleTabPress(e, navigation, route.name),
-          })}
-        />
-      )}
       <Tab.Screen
         name="HomeScreen"
         component={HomeTabStack}
@@ -341,6 +336,19 @@ export default function BottomNavigator(): React.ReactElement {
           tabPress: (e) => handleTabPress(e, navigation, route.name),
         })}
       />
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminTab"
+          component={AdminStack}
+          options={{ 
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' }
+          }}
+          listeners={({ navigation, route }) => ({
+            tabPress: (e) => handleTabPress(e, navigation, route.name),
+          })}
+        />
+      )}
 
     </Tab.Navigator>
     <CreatePostComposerModal />

@@ -77,11 +77,11 @@ export function useAdminTasksScreen() {
 
   const [query, setQuery] = useState('');
   const [filterStatuses, setFilterStatuses] = useState<TaskStatus[]>([]);
-  const [listSort, setListSort] = useState<TasksListSort>('created_desc');
+  const [listSort, setListSort] = useState<TasksListSort>('priority_status');
   const [filterPriorities, setFilterPriorities] = useState<TaskPriority[]>([]);
   const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [filterAssignee, setFilterAssignee] = useState<'all' | 'me'>('all');
-  const [includeDoneWhenNoStatusFilter, setIncludeDoneWhenNoStatusFilter] = useState(false);
+
   const [persistedHydrated, setPersistedHydrated] = useState(false);
   const [hasPersistedSnapshot, setHasPersistedSnapshot] = useState(false);
   const [searchBarRemountKey, setSearchBarRemountKey] = useState(0);
@@ -115,12 +115,12 @@ export function useAdminTasksScreen() {
       setFilterStatuses([...new Set(parsed.statuses)]);
       setFilterPriorities([...new Set(parsed.priorities)]);
       setFilterCategories([...new Set(parsed.categories)]);
-      setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
       const nextSort = sortKeys?.[0];
       if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
+
         setListSort(nextSort as TasksListSort);
       } else if (sortKeys?.length === 0) {
-        setListSort('created_desc');
+        setListSort('priority_status');
       }
     },
     [],
@@ -151,7 +151,6 @@ export function useAdminTasksScreen() {
         setFilterStatuses([...new Set(parsed.statuses)]);
         setFilterPriorities([...new Set(parsed.priorities)]);
         setFilterCategories([...new Set(parsed.categories)]);
-        setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
         if (data.sortKey && TASK_LIST_SORT_OPTIONS.some((o) => o.value === data.sortKey)) {
           setListSort(data.sortKey as TasksListSort);
         }
@@ -181,7 +180,6 @@ export function useAdminTasksScreen() {
         filterStatuses,
         filterPriorities,
         filterCategories,
-        includeDoneWhenNoStatusFilter,
       ),
       sortKey: listSort,
     };
@@ -196,7 +194,6 @@ export function useAdminTasksScreen() {
     filterStatuses,
     filterPriorities,
     filterCategories,
-    includeDoneWhenNoStatusFilter,
     listSort,
   ]);
 
@@ -208,8 +205,6 @@ export function useAdminTasksScreen() {
     let effectiveStatuses: TaskStatus[] | undefined;
     if (explicitStatusSelected) {
       effectiveStatuses = [...new Set(filterStatuses)];
-    } else if (includeDoneWhenNoStatusFilter) {
-      effectiveStatuses = undefined;
     } else {
       effectiveStatuses = TASK_STATUSES_EXCLUDING_DONE;
     }
@@ -249,7 +244,7 @@ export function useAdminTasksScreen() {
         setLoading(false);
       }
     }
-  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, includeDoneWhenNoStatusFilter, selectedUser]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser]);
 
   useEffect(() => {
     if (!persistedHydrated) {
@@ -262,7 +257,7 @@ export function useAdminTasksScreen() {
       fetchTasks();
     }
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, includeDoneWhenNoStatusFilter, persistedHydrated, fetchTasks]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, persistedHydrated, fetchTasks]);
 
   const resetForm = () => {
     setFormData({
@@ -639,7 +634,7 @@ export function useAdminTasksScreen() {
     filterAssignee,
     filterStatuses,
     filterPriorities,
-    includeDoneWhenNoStatusFilter,
+    filterCategories,
     listSort,
     rootTasksForList,
     renderItem,

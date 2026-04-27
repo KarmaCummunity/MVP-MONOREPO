@@ -152,8 +152,20 @@ function orderByClause(sort: TasksListSort | undefined): string {
     case "priority_status":
       return `ORDER BY 
           CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
-          t.status ASC,
+          CASE t.status 
+            WHEN 'reports' THEN 0
+            WHEN 'in_progress' THEN 1 
+            WHEN 'stuck' THEN 2 
+            WHEN 'open' THEN 3 
+            WHEN 'testing' THEN 4 
+            WHEN 'done' THEN 5 
+            WHEN 'archived' THEN 6 
+            ELSE 7 
+          END ASC,
+
+
           t.created_at DESC`;
+
     case "due_asc":
       return "ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC, t.id ASC";
     case "due_desc":

@@ -10,12 +10,12 @@ try {
 import { I18nManager } from 'react-native';
 
 // Load unified resources per language
-import he_all from '../locales/he.json';
-import en_all from '../locales/en.json';
+import he from '../locales/he';
+import en from '../locales/en';
 
 const resources = {
-  he: he_all as any,
-  en: en_all as any,
+  he: he as any,
+  en: en as any,
 };
 
 const initialLang = 'he';

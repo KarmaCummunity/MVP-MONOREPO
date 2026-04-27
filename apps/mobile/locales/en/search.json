@@ -1,0 +1,108 @@
+{
+  "adminTasksSearchPlaceholder": "Search tasks…",
+  "sortTitle": "Sort",
+  "filterTitle": "Filter",
+  "chooseFiltersTitle": "Choose filter options",
+  "chooseSortsTitle": "Choose sort options",
+  "popularSearches": [
+    "Food collection",
+    "Blood donation",
+    "Help the elderly",
+    "Garden cleanup",
+    "Teaching kids"
+  ],
+  "recentSearches": [
+    "Volunteers",
+    "Events",
+    "Donations",
+    "Urgent tasks"
+  ],
+  "tabs": {
+    "all": "All",
+    "donations": "Donations",
+    "events": "Events",
+    "users": "Users"
+  },
+  "userDefaultBio": "Community member",
+  "typeLabels": {
+    "user": "User"
+  },
+  "labels": {
+    "category": "Category",
+    "location": "Location",
+    "date": "Date"
+  },
+  "moreDetails": "More details",
+  "details": "Details",
+  "openFullDetails": "Open full details page",
+  "filters": {
+    "education": "Education",
+    "health": "Health",
+    "welfare": "Welfare",
+    "environment": "Environment",
+    "animals": "Animals",
+    "atRiskYouth": "At-risk youth",
+    "elderly": "Elderly",
+    "disabled": "Disabled",
+    "patients": "Patients",
+    "familiesInDistress": "Families in distress",
+    "immigrants": "Immigrants",
+    "community": "Community",
+    "task_assign_me": "Only my tasks",
+    "task_status_open": "Status: Open",
+    "task_status_in_progress": "Status: In progress",
+    "task_status_stuck": "Status: Stuck",
+    "task_status_testing": "Status: Testing",
+    "task_status_done": "Status: Done",
+    "task_status_archived": "Status: Archived",
+    "task_status_reports": "Status: Reports",
+    "task_priority_high": "Priority: High",
+    "task_priority_medium": "Priority: Medium",
+    "task_priority_low": "Priority: Low",
+    "task_category_פיתוח": "Category: Dev",
+    "task_category_שיווק": "Category: Marketing",
+    "task_category_שת״פ": "Category: Partners",
+    "task_category_ניהול": "Category: Management",
+    "task_category_עיצוב": "Category: Design",
+    "task_category_אחר": "Category: Other",
+    "task_category_דיווח": "Category: Reports"
+  },
+  "sort": {
+    "created_desc": "Newest first",
+    "created_asc": "Oldest first",
+    "priority_status": "Priority & status",
+    "due_asc": "Due date (soonest)",
+    "due_desc": "Due date (latest)",
+    "updated_desc": "Recently updated",
+    "alphabetical": "Alphabetical",
+    "byLocation": "By location",
+    "byCategory": "By category",
+    "byEstablishedDate": "By established date",
+    "byDonors": "By donors",
+    "byRating": "By rating",
+    "byRelevance": "By relevance"
+  },
+  "popularTitle": "Popular searches",
+  "recentTitle": "Recent searches",
+  "quickActions": {
+    "title": "Quick actions",
+    "urgentTasks": "Urgent tasks",
+    "upcomingEvents": "Upcoming events",
+    "newDonations": "New donations",
+    "activeVolunteers": "Active volunteers",
+    "showUrgentTasks": "Showing urgent tasks",
+    "showUpcomingEvents": "Showing upcoming events",
+    "showNewDonations": "Showing new donations",
+    "showActiveVolunteers": "Showing active volunteers"
+  },
+  "searching": "Searching...",
+  "resultsCount": "Found {{count}} results for \"{{query}}\"",
+  "noResultsFound": "No results found",
+  "tryChangingSearchTerms": "Try changing the search terms",
+  "ai": {
+    "fabLabel": "AI",
+    "title": "AI Assistant",
+    "placeholder": "Ask anything: where to find donations, how to publish, or navigating the app.",
+    "assistantReply": "Got it! I'll get back with an answer soon."
+  }
+}

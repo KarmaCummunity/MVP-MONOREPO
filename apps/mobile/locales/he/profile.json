@@ -1,0 +1,127 @@
+{
+  "title": "פרופיל",
+  "tabs": {
+    "posts": "פוסטים",
+    "reels": "רילס",
+    "tagged": "תיוגים"
+  },
+  "stats": {
+    "posts": "פוסטים",
+    "followers": "עוקבים",
+    "following": "עוקב/ת",
+    "karmaPointsSuffix": "נקודות קארמה"
+  },
+  "followersTitle": "עוקבים",
+  "followingTitle": "עוקב אחרי",
+  "sections": {
+    "recentActivity": "פעילות אחרונה",
+    "highlights": "היילייטים"
+  },
+  "reels": {
+    "noReelsYet": "אין סרטוני רילס עדיין",
+    "createFirstReel": "צור רילס ראשון כדי לשתף עם הקהילה",
+    "createReel": "צור רילס"
+  },
+  "tagged": {
+    "noTagsYet": "אין תיוגים עדיין",
+    "tagsAppearHere": "כאשר אנשים יתייגו אותך, זה יופיע כאן"
+  },
+  "posts": {
+    "loading": "טוען פוסטים...",
+    "noPostsYet": "אין פוסטים עדיין",
+    "createFirstPost": "הפוסטים שלך יופיעו כאן"
+  },
+  "alerts": {
+    "post": "פוסט",
+    "postNumber": "פוסט מספר {{number}}",
+    "newUser": "משתמש חדש",
+    "selectedUser": "נבחר משתמש: {{name}}",
+    "shareProfile": "שתף פרופיל",
+    "shareProfileDesc": "שתף את הפרופיל שלך עם אחרים",
+    "editProfile": "ערוך פרופיל",
+    "editProfileDesc": "ערוך את פרטי הפרופיל שלך",
+    "settings": "הגדרות",
+    "openSettings": "פתח הגדרות",
+    "help": "עזרה",
+    "openHelp": "פתח עזרה",
+    "activity": "פעילות",
+    "viewActivity": "צפה בפעילות",
+    "history": "היסטוריה",
+    "activityHistory": "היסטוריית פעילות",
+    "favorites": "מועדפים",
+    "yourFavorites": "המועדפים שלך"
+  },
+  "menu": {
+    "bookmarks": "מועדפים",
+    "communityStats": "סטטיסטיקות קהילה",
+    "shareProfile": "שתף פרופיל",
+    "editProfile": "ערוך פרופיל",
+    "settings": "הגדרות",
+    "help": "עזרה",
+    "login": "התחברות",
+    "switchUser": "שנה משתמש"
+  },
+  "activity": "פעילות",
+  "history": "היסטוריה",
+  "favorites": "מועדפים",
+  "discoverPeople": "גלה אנשים",
+  "discover": "גלה אנשים",
+  "notifications": "התראות",
+  "highlights": {
+    "new": "חדש",
+    "highlightIndex": "היילייט {{index}}"
+  },
+  "users": {
+    "loadError": "לא ניתן לטעון את המשתמשים.",
+    "selected": "נבחר",
+    "selectUserTitle": "בחר יוזר",
+    "selectUserSubtitle": "בחר יוזר כדי לראות את האפליקציה מנקודת המבט שלו"
+  },
+  "banner": {
+    "title": "השלם פרטים לחוויה מלאה",
+    "cta": "עריכת פרופיל",
+    "editTitle": "עריכת פרופיל",
+    "missing": {
+      "avatar": "תמונת פרופיל",
+      "fullName": "שם מלא",
+      "address": "כתובת"
+    },
+    "fields": {
+      "fullName": "שם מלא",
+      "avatar": "קישור לתמונת פרופיל",
+      "city": "עיר",
+      "country": "מדינה",
+      "bio": "ביוגרפיה"
+    }
+  },
+  "edit": {
+    "gallery": "גלריה",
+    "camera": "מצלמה",
+    "firstName": "שם פרטי",
+    "lastName": "שם משפחה",
+    "email": "אימייל",
+    "phone": "טלפון",
+    "city": "עיר",
+    "country": "מדינה",
+    "street": "רחוב",
+    "houseNumber": "מס׳",
+    "zipcode": "מיקוד",
+    "gender": "מגדר",
+    "genderPlaceholder": "זכר / נקבה / אחר",
+    "birthDate": "תאריך לידה",
+    "birthDatePlaceholder": "YYYY-MM-DD",
+    "website": "אתר",
+    "linkedin": "LinkedIn",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "preferredLanguage": "שפה מועדפת",
+    "preferredLanguagePlaceholder": "he / en",
+    "interests": "תחומי עניין",
+    "interestsPlaceholder": "מופרד בפסיקים"
+  },
+  "recent": {
+    "taskCompleted": "השלמת משימה: {{task}}",
+    "donated": "תרמת {{amount}} ל{{purpose}}",
+    "joinedEvent": "הצטרפת לאירוע: {{event}}"
+  }
+}

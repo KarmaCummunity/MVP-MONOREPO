@@ -85,7 +85,7 @@ class ApiService {
       | 'testing'
       | Array<'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing'>;
     priority?: 'low' | 'medium' | 'high' | Array<'low' | 'medium' | 'high'>;
-    category?: string;
+    category?: string | string[];
     assignee?: string;
     q?: string;
     sort?: string;

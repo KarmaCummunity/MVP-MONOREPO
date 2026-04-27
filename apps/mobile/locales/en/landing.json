@@ -1,0 +1,316 @@
+{
+  "appName": "KarmaCommunity",
+  "tagline": "A community that helps each other — donations, support, resources and human connections.",
+  "hero": {
+    "welcomeTitle": {
+      "large1": "The place",
+      "small1": "where",
+      "large2": "good",
+      "small2": "happens"
+    },
+    "values": {
+      "unity": "Unity",
+      "transparency": "Transparency",
+      "order": "Order"
+    },
+    "subtitle": "A social network connecting people who need help with people who want to help. Simple, transparent and from the heart.",
+    "whatsappButton": "Send me WhatsApp",
+    "joinLoginButton": "Join us",
+    "donateButton": "Donate to us",
+    "accessibility": {
+      "whatsapp": "Send WhatsApp message",
+      "joinLogin": "Go to sign in",
+      "donate": "Donate to organization"
+    }
+  },
+  "menu": {
+    "title": "Navigation menu",
+    "stats": "In numbers",
+    "vision": "Vision",
+    "problems": "Problems",
+    "features": "Features",
+    "about": "About",
+    "how": "How it works",
+    "who": "Who it's for",
+    "values": "Values",
+    "hierarchy": "Management structure",
+    "roadmap": "Roadmap",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "accessibility": {
+      "open": "Open navigation menu",
+      "close": "Close navigation menu",
+      "navigateTo": "Navigate to {{label}}"
+    }
+  },
+  "cta": {
+    "primary": "Download the app",
+    "secondary": "Contact me"
+  },
+  "features": {
+    "title": "What's inside the app?",
+    "subtitle": "Powerful and simple community tools"
+  },
+  "feature": {
+    "1": {
+      "title": "Mutual aid",
+      "text": "Posts of requests/offers to help in any area: food, furniture, time, knowledge and more."
+    },
+    "2": {
+      "title": "Chats and community",
+      "text": "Private and group chat, topic discussions, notifications for what matters to you."
+    },
+    "3": {
+      "title": "Proximity and discovery",
+      "text": "Search by location and interests, tailored recommendations, follow orgs and people."
+    },
+    "4": {
+      "title": "Community organizations",
+      "text": "Organizations have a dashboard, volunteers/resources management and approval flows."
+    }
+  },
+  "about": {
+    "me": {
+      "title": "About me",
+      "subtitle": "Platform founder, Nave Sarussi",
+      "paragraph": {
+        "1": "I'm a product developer who believes in the power of community. KarmaCommunity was born to make good more accessible —",
+        "2": "to connect those in need with those who can help, transparently and simply. Happy to chat if you'd like to hear more."
+      }
+    },
+    "links": {
+      "email": "Email",
+      "linkedin": "LinkedIn",
+      "github": "GitHub"
+    }
+  },
+  "project": {
+    "title": "About the project",
+    "subtitle": "Vision, challenges and solutions",
+    "paragraph": {
+      "1": "Karma Community (KC) presents a non-profit social network, combining capitalist efficiency with humanity and collaboration.",
+      "2": "A digital space enabling everyone to give and receive — time, money, items and knowledge — with a feed full of community action.",
+      "3": "Our motto: Giving is also receiving."
+    },
+    "section": {
+      "challenges": {
+        "title": "Today's challenges",
+        "bullet": {
+          "1": "Duplication — wasted resources and unnecessary competition",
+          "2": "Trust — standardization and transparency for donations and initiatives",
+          "3": "Community — building a soft and strong network in parallel"
+        }
+      },
+      "solution": {
+        "title": "The solution",
+        "text": "A unified, easy-to-use, transparent app — surfaces nearby giving/getting opportunities, connects people and orgs, and builds trust and cooperation."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "subtitle": "3 simple steps",
+    "step": {
+      "1": {
+        "title": "Join",
+        "text": "Sign up quickly, choose language and interests."
+      },
+      "2": {
+        "title": "Discover",
+        "text": "Find requests/offers by location, topic and community."
+      },
+      "3": {
+        "title": "Act",
+        "text": "Connect, help, share — and the community grows."
+      }
+    }
+  },
+  "audience": {
+    "title": "Who is it for?",
+    "subtitle": "Individuals and organizations",
+    "individuals": {
+      "title": "Individuals",
+      "text": "Sharing items, food donations, study help, small repairs, rides, emotional support, community discussion and more.",
+      "bullet": {
+        "1": "Donations and sharing",
+        "2": "Time and volunteering",
+        "3": "Knowledge and learning"
+      }
+    },
+    "orgs": {
+      "title": "Organizations",
+      "text": "Unified dashboard for requests, volunteers and resources; trust and transparency; approval flows.",
+      "bullet": {
+        "1": "Efficient dashboard",
+        "2": "Community around the org",
+        "3": "Trust and transparency"
+      }
+    }
+  },
+  "values": {
+    "title": "Our values",
+    "subtitle": "No ads, no harmful content, strong community"
+  },
+  "roadmap": {
+    "title": "Roadmap",
+    "subtitle": "Where we're heading",
+    "q3": "Pilot community launch",
+    "q4": "First orgs and dashboard",
+    "q1": "Nationwide scale and partnerships"
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "We'd love to chat, collaborate or welcome you",
+    "whatsappDirect": "Send WhatsApp",
+    "instagram": "Follow on Instagram",
+    "whatsappGroup": "Join WhatsApp group"
+  },
+  "faq": {
+    "q1": "Is it free to use?",
+    "a1": "Yes. It's a community initiative aiming to remain accessible to everyone.",
+    "q2": "How can I donate/volunteer?",
+    "a2": "Join as a user, join groups, or reach out for collaborations.",
+    "q3": "Is the app available for Android/iOS?",
+    "a3": "Yes. We have Android and iOS versions, and a convenient web version."
+  },
+  "stats": {
+    "title": "In numbers",
+    "subtitle": "Impact growing day by day",
+    "card": {
+      "1": {
+        "number": "10,000+",
+        "label": "Donations and resources"
+      },
+      "2": {
+        "number": "3,500+",
+        "label": "Volunteering and time"
+      },
+      "3": {
+        "number": "120+",
+        "label": "Partner organizations"
+      },
+      "4": {
+        "number": "50K+",
+        "label": "Connections between people"
+      }
+    }
+  },
+  "useCases": {
+    "title": "Common use-cases",
+    "subtitle": "How community helps community",
+    "item": {
+      "foodDistribution": "Food distribution to families",
+      "smallRepairs": "Small home repairs",
+      "tutoring": "Tutoring and knowledge",
+      "rides": "Rides and transport",
+      "emotionalSupport": "Emotional support and discussion",
+      "homeEquipment": "Home equipment and furniture"
+    }
+  },
+  "testimonials": {
+    "1": {
+      "text": "I found a volunteer who fixed my door in a day! Amazing to have a community that helps so fast.",
+      "user": "— Dana, Tel Aviv"
+    },
+    "2": {
+      "text": "We donated furniture through the app to a local family. It was simple and transparent.",
+      "user": "— Ido, Haifa"
+    },
+    "3": {
+      "text": "I found free math tutoring for an elderly neighbor. A wonderful connection formed.",
+      "user": "— Rotem, Jerusalem"
+    },
+    "title": "Community stories",
+    "subtitle": "What our users say"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Small moments of good"
+  },
+  "partners": {
+    "title": "Partners and communities",
+    "subtitle": "On the way, in action, by our side"
+  },
+  "trust": {
+    "title": "Trust & Transparency",
+    "subtitle": "Healthy community starts with trust",
+    "point": {
+      "1": "No ads, no harmful content",
+      "2": "Reporting and org approvals",
+      "3": "Privacy and respect for every user"
+    }
+  },
+  "finalCta": {
+    "title": "Join the community",
+    "subtitle": "Everyone can make an impact",
+    "primary": "Follow on Instagram",
+    "secondary": "Send WhatsApp"
+  },
+  "moreStats": {
+    "title": "More stats",
+    "subtitle": "Why it works",
+    "card": {
+      "1": "92% — report a great giving experience",
+      "2": "78% — improved sense of belonging",
+      "3": "5X — more repeat connections",
+      "4": "24/7 — an active community"
+    }
+  },
+  "categoriesGrid": {
+    "title": "Key giving categories",
+    "subtitle": "What matters to you?",
+    "item": {
+      "food": "Food",
+      "furniture": "Furniture",
+      "clothing": "Clothing",
+      "knowledge": "Knowledge",
+      "time": "Time",
+      "medical": "Medical",
+      "environment": "Environment",
+      "culture": "Culture"
+    }
+  },
+  "orgOnboarding": {
+    "title": "Organizations: how to join?",
+    "subtitle": "Short and transparent process",
+    "step": {
+      "1": "Fill a form — basic details, goals and needs.",
+      "2": "Short verification — transparency check, documents and contact details.",
+      "3": "Launch — dashboard, posts, volunteers and resources."
+    }
+  },
+  "manifesto": {
+    "title": "Manifesto",
+    "subtitle": "Why and what for",
+    "paragraph": {
+      "1": "In an era of noise, ads and interests — we choose community. A community that values action, solidarity and good spirit.",
+      "2": "Together we can connect needs to abilities, hearts to hands. Good is infrastructure, not a product.",
+      "3": "We commit to transparency, human dignity and a safe digital space. Together we build infrastructure that empowers community action — everywhere."
+    }
+  },
+  "moreTestimonials": {
+    "title": "More stories from the field",
+    "item1": "I met neighbors through KC, and suddenly there's a building community. Small things that make change. — Ilan, Petah Tikva",
+    "item2": "As a small org we got massive exposure to quality volunteers. The dashboard saved us hours. — Yad LaLev NGO",
+    "item3": "Gave a few hours a week, got a huge sense of meaning and new friends. — Sivan, Ramat Gan"
+  },
+  "moreFaq": {
+    "title": "More questions",
+    "q1": "How is privacy preserved?",
+    "a1": "We minimize data collection and give users control over visibility and exposure.",
+    "q2": "Are there ads?",
+    "a2": "No. The platform is ad-free and focuses solely on community content.",
+    "q3": "How do I report an issue?",
+    "a3": "There's a built-in reporting mechanism on every post/chat. You can also contact us directly via WhatsApp."
+  },
+  "footer": {
+    "text": "© {{year}} KarmaCommunity — Built with love."
+  },
+  "quickMessage": {
+    "ride": "Is this ride still relevant?",
+    "item": "Is this item still relevant?",
+    "success": "Message sent successfully",
+    "error": "Error sending message",
+    "sendButton": "Send quick message"
+  }
+}

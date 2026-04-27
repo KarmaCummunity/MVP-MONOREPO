@@ -1,4 +1,3 @@
-import { FILTER_KEY_SHOW_COMPLETED } from '../adminTasksScreen.constants';
 import {
   buildPersistedAdminTaskFilterKeys,
   parseAdminTaskHeaderFilters,
@@ -6,41 +5,44 @@ import {
 } from '../adminTasksScreen.utils';
 
 describe('sanitizeAdminTasksHeaderFilterKeys', () => {
-  it('removes show-completed when any status chip is present', () => {
+  it('returns keys as is since show-completed is removed', () => {
     expect(
       sanitizeAdminTasksHeaderFilterKeys([
-        FILTER_KEY_SHOW_COMPLETED,
         'task_status_done',
       ]),
     ).toEqual(['task_status_done']);
   });
-
-  it('keeps show-completed when no status chips', () => {
-    expect(sanitizeAdminTasksHeaderFilterKeys([FILTER_KEY_SHOW_COMPLETED])).toEqual([
-      FILTER_KEY_SHOW_COMPLETED,
-    ]);
-  });
 });
 
 describe('parseAdminTaskHeaderFilters', () => {
-  it('clears include-done flag when status chips are present (legacy double keys)', () => {
+  it('parses status chips correctly', () => {
     const parsed = parseAdminTaskHeaderFilters([
-      FILTER_KEY_SHOW_COMPLETED,
       'task_status_done',
     ]);
     expect(parsed.statuses).toEqual(['done']);
-    expect(parsed.includeDoneWhenNoStatusFilter).toBe(false);
+  });
+
+  it('parses priority and category chips correctly', () => {
+    const parsed = parseAdminTaskHeaderFilters([
+      'task_priority_high',
+      'task_category_פיתוח',
+    ]);
+    expect(parsed.priorities).toEqual(['high']);
+    expect(parsed.categories).toEqual(['פיתוח']);
   });
 });
 
 describe('buildPersistedAdminTaskFilterKeys', () => {
-  it('does not emit show-completed when status filters are set', () => {
-    const keys = buildPersistedAdminTaskFilterKeys('all', ['done'], [], true);
+  it('emits correct keys for statuses', () => {
+    const keys = buildPersistedAdminTaskFilterKeys('all', ['done'], [], []);
     expect(keys).toEqual(['task_status_done']);
   });
 
-  it('emits show-completed only when no status chips and flag is on', () => {
-    const keys = buildPersistedAdminTaskFilterKeys('all', [], [], true);
-    expect(keys).toEqual([FILTER_KEY_SHOW_COMPLETED]);
+  it('emits correct keys for multiple filters', () => {
+    const keys = buildPersistedAdminTaskFilterKeys('me', ['open'], ['high'], ['פיתוח']);
+    expect(keys).toContain('task_assign_me');
+    expect(keys).toContain('task_status_open');
+    expect(keys).toContain('task_priority_high');
+    expect(keys).toContain('task_category_פיתוח');
   });
 });

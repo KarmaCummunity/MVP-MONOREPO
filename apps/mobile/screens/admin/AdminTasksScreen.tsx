@@ -33,7 +33,6 @@ export default function AdminTasksScreen() {
     filterStatuses,
     filterPriorities,
     filterCategories,
-    includeDoneWhenNoStatusFilter,
     listSort,
     rootTasksForList,
     renderItem,
@@ -89,7 +88,6 @@ export default function AdminTasksScreen() {
                   filterStatuses,
                   filterPriorities,
                   filterCategories,
-                  includeDoneWhenNoStatusFilter,
                 ),
               )
               : undefined
@@ -114,7 +112,7 @@ export default function AdminTasksScreen() {
           ]}
           ListHeaderComponent={listHeaderBelowSearch}
           ListEmptyComponent={
-            loading ? null : <Text style={styles.emptyText}>אין משימות כרגע</Text>
+            loading ? null : <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
           }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
@@ -128,38 +126,42 @@ export default function AdminTasksScreen() {
       <Modal visible={showForm} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingId ? 'עריכת משימה' : 'משימה חדשה'}</Text>
+            <Text style={styles.modalTitle}>{editingId ? t('admin:tasks.editTask') : t('admin:tasks.newTask')}</Text>
 
-            <TextInput style={styles.modalInput} placeholder="כותרת" value={formData.title} onChangeText={(v) => setFormData({ ...formData, title: v })} />
-            <TextInput style={[styles.modalInput, { height: 60 }]} placeholder="תיאור" multiline value={formData.description} onChangeText={(v) => setFormData({ ...formData, description: v })} />
+            <TextInput style={styles.modalInput} placeholder={t('admin:tasks.title')} value={formData.title} onChangeText={(v) => setFormData({ ...formData, title: v })} />
+            <TextInput style={[styles.modalInput, { height: 60 }]} placeholder={t('admin:tasks.description')} multiline value={formData.description} onChangeText={(v) => setFormData({ ...formData, description: v })} />
 
             <View style={styles.row2}>
               <AdminTasksPickerField
-                label="עדיפות"
+                label={t('admin:tasks.priority')}
                 value={formData.priority}
                 onChange={(v) => setFormData({ ...formData, priority: v as TaskPriority })}
                 options={[
-                  { value: 'high', label: 'גבוהה' },
-                  { value: 'medium', label: 'בינונית' },
-                  { value: 'low', label: 'נמוכה' },
+                  { value: 'high', label: t('search:filters.task_priority_high').replace('עדיפות: ', '').replace('Priority: ', '') },
+                  { value: 'medium', label: t('search:filters.task_priority_medium').replace('עדיפות: ', '').replace('Priority: ', '') },
+                  { value: 'low', label: t('search:filters.task_priority_low').replace('עדיפות: ', '').replace('Priority: ', '') },
                 ]}
               />
               <AdminTasksPickerField
-                label="סטטוס"
+                label={t('admin:tasks.status')}
                 value={formData.status}
                 onChange={(v) => setFormData({ ...formData, status: v as TaskStatus })}
                 options={[
-                  { value: 'open', label: 'פתוחה' },
-                  { value: 'in_progress', label: 'בתהליך' },
-                  { value: 'stuck', label: 'תקוע' },
-                  { value: 'testing', label: 'בבדיקה' },
-                  { value: 'done', label: 'בוצעה' },
+                  { value: 'open', label: t('search:filters.task_status_open').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'in_progress', label: t('search:filters.task_status_in_progress').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'stuck', label: t('search:filters.task_status_stuck').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'testing', label: t('search:filters.task_status_testing').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'reports', label: t('search:filters.task_status_reports').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'done', label: t('search:filters.task_status_done').replace('סטטוס: ', '').replace('Status: ', '') },
+                  { value: 'archived', label: t('search:filters.task_status_archived').replace('סטטוס: ', '').replace('Status: ', '') },
                 ]}
+
+
               />
             </View>
 
             <AdminTasksPickerField
-              label="קטגוריה"
+              label={t('admin:tasks.category')}
               value={formData.category}
               onChange={(v) => setFormData({ ...formData, category: v })}
               options={TASK_LIST_CATEGORY_OPTIONS}
@@ -171,11 +173,11 @@ export default function AdminTasksScreen() {
               onRemove={(id) => setFormData({ ...formData, assignees: formData.assignees.filter(u => u.id !== id) })}
             />
 
-            <TextInput style={styles.modalInput} placeholder="תגיות (מופרדות אות)" value={formData.tagsText} onChangeText={(v) => setFormData({ ...formData, tagsText: v })} />
+            <TextInput style={styles.modalInput} placeholder={t('admin:tasks.tags')} value={formData.tagsText} onChangeText={(v) => setFormData({ ...formData, tagsText: v })} />
 
             <TextInput
               style={styles.modalInput}
-              placeholder="זמן עבודה מוערך בשעות (אופציונלי)"
+              placeholder={t('admin:tasks.estimatedHours')}
               value={formData.estimated_hours}
               onChangeText={(v) => setFormData({ ...formData, estimated_hours: v })}
               keyboardType="decimal-pad"
@@ -183,10 +185,10 @@ export default function AdminTasksScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={[styles.modalBtn, styles.modalCancel]} onPress={() => { setShowForm(false); resetForm(); }}>
-                <Text style={styles.modalBtnText}>ביטול</Text>
+                <Text style={styles.modalBtnText}>{t('admin:tasks.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, styles.modalSave]} onPress={editingId ? saveEdit : createTask}>
-                <Text style={styles.modalBtnText}>{editingId ? 'שמור' : 'צור'}</Text>
+                <Text style={styles.modalBtnText}>{editingId ? t('admin:tasks.save') : t('admin:tasks.create')}</Text>
               </TouchableOpacity>
             </View>
           </View>

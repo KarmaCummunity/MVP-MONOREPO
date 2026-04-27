@@ -8,7 +8,7 @@ export const DEFAULT_TASK_FILTER_CATEGORIES: readonly TaskFilterCategoryMeta[] =
     id: 'status',
     filterType: 'multiSelect',
     field: 'status',
-    allowedValues: ['open', 'in_progress', 'done', 'archived', 'stuck', 'testing'],
+    allowedValues: ['open', 'in_progress', 'done', 'archived', 'stuck', 'testing', 'reports'],
   },
   {
     id: 'priority',
@@ -36,7 +36,7 @@ export const DEFAULT_TASK_FILTER_CATEGORIES: readonly TaskFilterCategoryMeta[] =
     id: 'category',
     filterType: 'multiSelect',
     field: 'category',
-    allowedValues: ['פיתוח', 'שיווק', 'שת״פ', 'ניהול', 'עיצוב', 'אחר'],
+    allowedValues: ['פיתוח', 'שיווק', 'שת״פ', 'ניהול', 'עיצוב', 'אחר', 'דיווח'],
   },
   {
     id: 'textSearch',

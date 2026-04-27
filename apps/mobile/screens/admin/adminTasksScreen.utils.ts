@@ -1,24 +1,19 @@
 import type { AdminCreateTaskFormFields, TaskPriority, TaskStatus } from './adminTasksScreen.types';
-import { FILTER_KEY_SHOW_COMPLETED, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+import { TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
 
 export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
   statuses: TaskStatus[];
   priorities: TaskPriority[];
   categories: string[];
-  includeDoneWhenNoStatusFilter: boolean;
 } {
   const statuses: TaskStatus[] = [];
   const priorities: TaskPriority[] = [];
   const categories: string[] = [];
   let assignee: 'all' | 'me' = 'all';
-  let includeDoneWhenNoStatusFilter = false;
   for (const key of filterKeys ?? []) {
     if (key === 'task_assign_me') {
       assignee = 'me';
-    }
-    if (key === FILTER_KEY_SHOW_COMPLETED) {
-      includeDoneWhenNoStatusFilter = true;
     }
     if (key.startsWith('task_status_')) {
       const raw = key.slice('task_status_'.length) as TaskStatus;
@@ -37,20 +32,12 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
       categories.push(raw);
     }
   }
-  // With any status chip, the API ignores "show completed"; keep state/storage consistent.
-  if (statuses.length > 0) {
-    includeDoneWhenNoStatusFilter = false;
-  }
-  return { assignee, statuses, priorities, categories, includeDoneWhenNoStatusFilter };
+  return { assignee, statuses, priorities, categories };
 }
 
-/** Drop redundant "show completed" when any status chip is selected (same as fetch semantics). */
+/** No longer needed as "show completed" is removed. */
 export function sanitizeAdminTasksHeaderFilterKeys(filterKeys: string[]): string[] {
-  const hasStatusChip = filterKeys.some((k) => k.startsWith('task_status_'));
-  if (!hasStatusChip) {
-    return [...filterKeys];
-  }
-  return filterKeys.filter((k) => k !== FILTER_KEY_SHOW_COMPLETED);
+  return [...filterKeys];
 }
 
 export function formatTaskListPriorityHebrew(priority: string): string {
@@ -85,16 +72,12 @@ export function buildPersistedAdminTaskFilterKeys(
   statuses: TaskStatus[],
   priorities: TaskPriority[],
   categories: string[],
-  includeDoneWhenNoStatusFilter: boolean,
 ): string[] {
   const keys: string[] = [];
   if (assignee === 'me') {
     keys.push('task_assign_me');
   }
   const dedupStatuses = [...new Set(statuses)];
-  if (includeDoneWhenNoStatusFilter && dedupStatuses.length === 0) {
-    keys.push(FILTER_KEY_SHOW_COMPLETED);
-  }
   for (const s of dedupStatuses) {
     keys.push(`task_status_${s}`);
   }
