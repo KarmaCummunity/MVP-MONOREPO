@@ -1,10 +1,20 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../../database/database.module";
 import { RedisCacheService } from "../../redis/redis-cache.service";
 import { PostsSchemaService } from "./posts-schema.service";
 import type { LikeBody } from "./posts.types";
 import { parseCountTotal, parseLimitOffset } from "./posts-pagination.util";
+import { safeRollback } from "./posts-pg-rollback.util";
+import {
+  fetchPostForLike,
+  fetchUserNameRow,
+  insertPostLike,
+  notifyPostAuthorOfLike,
+  postLikeExists,
+  removePostLike,
+  syncPostLikesCount,
+} from "./posts-likes.helpers";
 
 @Injectable()
 export class PostsLikesService {
@@ -15,6 +25,44 @@ export class PostsLikesService {
     private readonly redisCache: RedisCacheService,
     private readonly schema: PostsSchemaService,
   ) {}
+
+  private async runToggleLikeTx(
+    client: PoolClient,
+    postId: string,
+    userId: string,
+  ) {
+    const post = await fetchPostForLike(client, postId);
+    if (!post) {
+      await client.query("ROLLBACK");
+      return { success: false as const, error: "Post not found" };
+    }
+
+    const user = await fetchUserNameRow(client, userId);
+    if (!user) {
+      await client.query("ROLLBACK");
+      return { success: false as const, error: "User not found" };
+    }
+
+    const hadLike = await postLikeExists(client, postId, userId);
+    if (hadLike) {
+      await removePostLike(client, postId, userId);
+    } else {
+      await insertPostLike(client, postId, userId);
+      await notifyPostAuthorOfLike(client, post, user, userId, postId);
+    }
+
+    const likesCount = await syncPostLikesCount(client, postId);
+    await client.query("COMMIT");
+
+    return {
+      success: true as const,
+      data: {
+        post_id: postId,
+        is_liked: !hadLike,
+        likes_count: likesCount,
+      },
+    };
+  }
 
   async toggleLike(postId: string, body: LikeBody) {
     const client = await this.pool.connect();
@@ -27,100 +75,15 @@ export class PostsLikesService {
       }
 
       await client.query("BEGIN");
-
-      const postCheck = await client.query(
-        "SELECT id, author_id, title, post_type FROM posts WHERE id = $1",
-        [postId],
-      );
-      if (postCheck.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return { success: false, error: "Post not found" };
+      const result = await this.runToggleLikeTx(client, postId, user_id);
+      if (!result.success) {
+        return result;
       }
-
-      const userCheck = await client.query(
-        "SELECT id, name FROM user_profiles WHERE id = $1",
-        [user_id],
-      );
-      if (userCheck.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return { success: false, error: "User not found" };
-      }
-
-      const existingLike = await client.query(
-        "SELECT id FROM post_likes WHERE post_id = $1 AND user_id = $2",
-        [postId, user_id],
-      );
-
-      let isLiked: boolean;
-
-      if (existingLike.rows.length > 0) {
-        await client.query(
-          "DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2",
-          [postId, user_id],
-        );
-        isLiked = false;
-      } else {
-        await client.query(
-          "INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)",
-          [postId, user_id],
-        );
-        isLiked = true;
-
-        const post = postCheck.rows[0];
-        const user = userCheck.rows[0];
-
-        if (post.author_id !== user_id) {
-          const likerName = user.name || "משתמש";
-          const postType =
-            post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-          await client.query(
-            `
-                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT DO NOTHING
-                    `,
-            [
-              post.author_id,
-              "לייק חדש!",
-              `${likerName} אהב / ה את ה${postType} שלך: "${post.title}"`,
-              "like",
-              postId,
-              { liker_id: user_id, post_id: postId },
-            ],
-          );
-        }
-      }
-
-      const countResult = await client.query(
-        "SELECT COUNT(*)::int as count FROM post_likes WHERE post_id = $1",
-        [postId],
-      );
-      const likesCount = countResult.rows[0]?.count || 0;
-
-      await client.query(
-        "UPDATE posts SET likes = $1, updated_at = NOW() WHERE id = $2",
-        [likesCount, postId],
-      );
-
-      await client.query("COMMIT");
 
       await this.redisCache.delete(`post_likes_${postId} `);
-
-      return {
-        success: true,
-        data: {
-          post_id: postId,
-          is_liked: isLiked,
-          likes_count: likesCount,
-        },
-      };
+      return result;
     } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        this.logger.error("Rollback error:", rollbackError);
-      }
+      await safeRollback(client, this.logger);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;

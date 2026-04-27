@@ -1,9 +1,19 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../../database/database.module";
 import { RedisCacheService } from "../../redis/redis-cache.service";
 import { PostsSchemaService } from "./posts-schema.service";
 import type { CommentBody } from "./posts.types";
+import { safeRollback } from "./posts-pg-rollback.util";
+import {
+  fetchCommentUserProfile,
+  insertCommentAndReturnRow,
+  loadCommentAuthorOrFail,
+  loadPostForCommentOrFail,
+  notifyPostAuthorOfNewComment,
+  parseAddCommentInput,
+  refreshPostCommentsCount,
+} from "./posts-comments-mutations.helpers";
 
 @Injectable()
 export class PostsCommentsMutationsService {
@@ -15,139 +25,84 @@ export class PostsCommentsMutationsService {
     private readonly schema: PostsSchemaService,
   ) {}
 
+  private async addCommentTx(
+    client: PoolClient,
+    postId: string,
+    userId: string,
+    text: string,
+  ) {
+    const post = await loadPostForCommentOrFail(client, postId, this.logger);
+    if (!post) {
+      return { success: false as const, error: "Post not found" };
+    }
+
+    const user = await loadCommentAuthorOrFail(client, userId);
+    if (!user) {
+      return { success: false as const, error: "User not found" };
+    }
+
+    const comment = await insertCommentAndReturnRow(
+      client,
+      postId,
+      userId,
+      text,
+    );
+    if (!comment) {
+      return { success: false as const, error: "Failed to create comment" };
+    }
+
+    const userRow = await fetchCommentUserProfile(client, userId);
+    const commentsCount = await refreshPostCommentsCount(client, postId);
+
+    await notifyPostAuthorOfNewComment(
+      client,
+      post,
+      user,
+      userId,
+      postId,
+      text,
+      comment.id,
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      success: true as const,
+      data: {
+        ...comment,
+        user: userRow,
+        comments_count: commentsCount,
+      },
+    };
+  }
+
   async addComment(postId: string, body: CommentBody) {
     const client = await this.pool.connect();
     try {
       await this.schema.ensureLikesCommentsTable();
 
-      const { user_id, text } = body;
-
-      if (!user_id) {
-        return { success: false, error: "user_id is required" };
-      }
-
-      if (!text || text.trim().length === 0) {
-        return { success: false, error: "Comment text is required" };
-      }
-
-      if (text.length > 2000) {
-        return {
-          success: false,
-          error: "Comment text is too long (max 2000 characters)",
-        };
+      const parsed = parseAddCommentInput(body);
+      if (!parsed.ok) {
+        return { success: false, error: parsed.error };
       }
 
       await this.schema.ensurePostsTable();
 
       await client.query("BEGIN");
-
-      this.logger.log(`[addComment] Checking existence of post ${postId}`);
-
-      const postCheck = await client.query(
-        "SELECT id, author_id, title, post_type FROM posts WHERE id = $1",
-        [postId],
+      const result = await this.addCommentTx(
+        client,
+        postId,
+        parsed.user_id,
+        parsed.text,
       );
-
-      this.logger.log(
-        `[addComment] Post check result: ${postCheck.rows.length} rows found`,
-      );
-
-      if (postCheck.rows.length === 0) {
-        const debugCheck = await client.query("SELECT id FROM posts LIMIT 5");
-        this.logger.log(
-          "[addComment] Debug - First 5 posts in DB:",
-          debugCheck.rows,
-        );
-
-        await client.query("ROLLBACK");
-        return { success: false, error: "Post not found" };
+      if (!result.success) {
+        return result;
       }
-
-      const userCheck = await client.query(
-        "SELECT id, name FROM user_profiles WHERE id = $1",
-        [user_id],
-      );
-      if (userCheck.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return { success: false, error: "User not found" };
-      }
-
-      const { rows } = await client.query(
-        `
-                INSERT INTO post_comments(post_id, user_id, text)
-                VALUES($1, $2, $3)
-                RETURNING id, post_id, user_id, text, likes_count, created_at, updated_at
-                    `,
-        [postId, user_id, text.trim()],
-      );
-
-      if (!rows || rows.length === 0) {
-        await client.query("ROLLBACK");
-        return { success: false, error: "Failed to create comment" };
-      }
-
-      const comment = rows[0];
-
-      const userResult = await client.query(
-        `
-                SELECT id, name, avatar_url FROM user_profiles WHERE id = $1
-                    `,
-        [user_id],
-      );
-
-      const countResult = await client.query(
-        "SELECT COUNT(*)::int as count FROM post_comments WHERE post_id = $1",
-        [postId],
-      );
-      const commentsCount = countResult.rows[0]?.count || 0;
-
-      await client.query(
-        "UPDATE posts SET comments = $1, updated_at = NOW() WHERE id = $2",
-        [commentsCount, postId],
-      );
-
-      const post = postCheck.rows[0];
-      const user = userCheck.rows[0];
-
-      if (post.author_id !== user_id) {
-        const commenterName = user.name || "משתמש";
-        const postType =
-          post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-        await client.query(
-          `
-                    INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                `,
-          [
-            post.author_id,
-            "תגובה חדשה!",
-            `${commenterName} הגיב / ה על ה${postType} שלך: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
-            "comment",
-            postId,
-            { commenter_id: user_id, post_id: postId, comment_id: comment.id },
-          ],
-        );
-      }
-
-      await client.query("COMMIT");
 
       await this.redisCache.delete(`post_comments_${postId} `);
-
-      return {
-        success: true,
-        data: {
-          ...comment,
-          user: userResult.rows[0] || null,
-          comments_count: commentsCount,
-        },
-      };
+      return result;
     } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        this.logger.error("Rollback error:", rollbackError);
-      }
+      await safeRollback(client, this.logger);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
@@ -222,11 +177,7 @@ export class PostsCommentsMutationsService {
         },
       };
     } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        this.logger.error("Rollback error:", rollbackError);
-      }
+      await safeRollback(client, this.logger);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;

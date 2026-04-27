@@ -1,9 +1,17 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import type { Request } from "express";
 import { PG_POOL } from "../../database/database.module";
 import { RedisCacheService } from "../../redis/redis-cache.service";
-import type { SessionTokenPayload } from "../../auth/services/jwt.service";
+import { safeRollback } from "./posts-pg-rollback.util";
+import { runPostDeletionByType } from "./posts-delete.helpers";
+import { sessionUserIdString } from "./posts-session-user.util";
+
+type PostRow = Record<string, unknown>;
+
+type PermissionResult =
+  | { allowed: true; isSuperAdmin: boolean; isOwner: boolean }
+  | { allowed: false; error: string };
 
 @Injectable()
 export class PostsDeleteService {
@@ -14,29 +22,59 @@ export class PostsDeleteService {
     private readonly redisCache: RedisCacheService,
   ) {}
 
+  private async loadPostForDelete(client: PoolClient, postId: string) {
+    return client.query(
+      `SELECT p.*, u.roles 
+                 FROM posts p
+                 LEFT JOIN user_profiles u ON p.author_id = u.id
+                 WHERE p.id = $1`,
+      [postId],
+    );
+  }
+
+  private async resolvePermission(
+    client: PoolClient,
+    userId: string,
+    post: PostRow,
+  ): Promise<PermissionResult> {
+    const userResult = await client.query(
+      "SELECT roles FROM user_profiles WHERE id = $1",
+      [userId],
+    );
+
+    if (userResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return { allowed: false, error: "User not found" };
+    }
+
+    const userRoles = userResult.rows[0].roles || [];
+    const isSuperAdmin = userRoles.includes("super_admin");
+    const isOwner = post.author_id === userId;
+
+    if (!isOwner && !isSuperAdmin) {
+      await client.query("ROLLBACK");
+      return {
+        allowed: false,
+        error:
+          "Permission denied. You can only delete your own posts or be a super admin.",
+      };
+    }
+
+    return { allowed: true, isSuperAdmin, isOwner };
+  }
+
   async deletePost(postId: string, req: Request) {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
 
-      const payload = req.user as SessionTokenPayload | undefined;
-      const user_id =
-        payload?.userId ||
-        (payload as unknown as Record<string, unknown>)?.id ||
-        (payload as unknown as Record<string, unknown>)?.sub;
-
-      if (!user_id) {
+      const userId = sessionUserIdString(req.user);
+      if (!userId) {
         await client.query("ROLLBACK");
         return { success: false, error: "User not authenticated" };
       }
 
-      const postResult = await client.query(
-        `SELECT p.*, u.roles 
-                 FROM posts p
-                 LEFT JOIN user_profiles u ON p.author_id = u.id
-                 WHERE p.id = $1`,
-        [postId],
-      );
+      const postResult = await this.loadPostForDelete(client, postId);
 
       if (postResult.rows.length === 0) {
         await client.query("ROLLBACK");
@@ -45,80 +83,17 @@ export class PostsDeleteService {
 
       const post = postResult.rows[0];
 
-      const userResult = await client.query(
-        "SELECT roles FROM user_profiles WHERE id = $1",
-        [user_id],
-      );
-
-      if (userResult.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return { success: false, error: "User not found" };
-      }
-
-      const userRoles = userResult.rows[0].roles || [];
-      const isSuperAdmin = userRoles.includes("super_admin");
-      const isOwner = post.author_id === user_id;
-
-      if (!isOwner && !isSuperAdmin) {
-        await client.query("ROLLBACK");
-        return {
-          success: false,
-          error:
-            "Permission denied. You can only delete your own posts or be a super admin.",
-        };
+      const perm = await this.resolvePermission(client, userId, post);
+      if (!perm.allowed) {
+        return { success: false, error: perm.error };
       }
 
       this.logger.log(
-        `🗑️ Deleting post ${postId} (type: ${post.post_type}) by user ${user_id} (owner: ${isOwner}, admin: ${isSuperAdmin})`,
+        `🗑️ Deleting post ${postId} (type: ${post.post_type}) by user ${userId} (owner: ${perm.isOwner}, admin: ${perm.isSuperAdmin})`,
       );
 
-      let deletionStrategy = "post_only";
-      let relatedEntityDeleted = false;
-
-      switch (post.post_type) {
-        case "ride":
-          if (post.ride_id) {
-            await client.query("DELETE FROM rides WHERE id = $1", [
-              post.ride_id,
-            ]);
-            deletionStrategy = "ride_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `✅ Deleted ride ${post.ride_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          }
-          break;
-
-        case "item":
-        case "donation":
-          if (post.item_id) {
-            await client.query("DELETE FROM items WHERE id = $1", [
-              post.item_id,
-            ]);
-            deletionStrategy = "item_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `✅ Deleted item ${post.item_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          }
-          break;
-
-        case "task_completion":
-        case "task_assignment":
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          this.logger.log(
-            `✅ Deleted task post ${postId} (task ${post.task_id} preserved)`,
-          );
-          break;
-
-        default:
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          this.logger.log(`✅ Deleted general post ${postId}`);
-      }
+      const { deletionStrategy, relatedEntityDeleted } =
+        await runPostDeletionByType(client, post, postId, this.logger);
 
       await client.query(
         `
@@ -126,14 +101,14 @@ export class PostsDeleteService {
                 VALUES ($1, $2, $3)
             `,
         [
-          user_id,
+          userId,
           "post_deleted",
           JSON.stringify({
             post_id: postId,
             post_type: post.post_type,
             deletion_strategy: deletionStrategy,
             related_entity_deleted: relatedEntityDeleted,
-            is_admin_action: isSuperAdmin && !isOwner,
+            is_admin_action: perm.isSuperAdmin && !perm.isOwner,
           }),
         ],
       );
@@ -156,11 +131,7 @@ export class PostsDeleteService {
         },
       };
     } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        this.logger.error("Rollback error:", rollbackError);
-      }
+      await safeRollback(client, this.logger);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
@@ -168,9 +139,7 @@ export class PostsDeleteService {
         message: errorMessage,
         stack: errorStack,
         postId,
-        userId:
-          (req?.user as SessionTokenPayload | undefined)?.userId ||
-          (req?.user as unknown as Record<string, unknown>)?.id,
+        userId: sessionUserIdString(req.user),
       });
       return {
         success: false,
