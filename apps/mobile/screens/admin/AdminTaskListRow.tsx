@@ -195,6 +195,12 @@ export function AdminTaskListRow(p: AdminTaskListRowProps) {
                 {formatTaskListStatusHebrew(item.status)}
               </Text>
             </View>
+            
+            {item.category && (
+              <View style={[styles.badge, styles.categoryBadge]}>
+                <Text style={styles.badgeText}>{item.category}</Text>
+              </View>
+            )}
 
             {hasSubtasks && (
               <TouchableOpacity

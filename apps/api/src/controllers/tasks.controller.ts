@@ -68,6 +68,21 @@ interface LogTaskHoursDto {
   user_id: string;
 }
 
+function parseCategoryQueryParam(
+  raw: string | string[] | undefined,
+): string[] | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  return (
+    Array.isArray(raw)
+      ? raw.flatMap((s) => String(s).split(","))
+      : String(raw).split(",")
+  )
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 const TASK_STATUS_VALUES: TaskStatus[] = [
   "open",
   "in_progress",
@@ -481,6 +496,7 @@ export class TasksController {
 
       const statusList = parseStatusQueryParam(status);
       const priorityList = parsePriorityQueryParam(priority);
+      const categoryList = parseCategoryQueryParam(category);
       const sortValues: TasksListSort[] = [
         "created_desc",
         "created_asc",
@@ -542,9 +558,14 @@ export class TasksController {
         }
       }
 
-      if (category) {
-        params.push(category);
-        filters.push(`category = $${params.length}`);
+      if (categoryList && categoryList.length > 0) {
+        if (categoryList.length === 1) {
+          params.push(categoryList[0]);
+          filters.push(`category = $${params.length}`);
+        } else {
+          params.push(categoryList);
+          filters.push(`category = ANY($${params.length}::text[])`);
+        }
       }
 
       if (assignee) {

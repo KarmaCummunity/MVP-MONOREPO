@@ -215,7 +215,13 @@
       "task_status_archived": "סטטוס: בארכיון",
       "task_priority_high": "עדיפות: גבוהה",
       "task_priority_medium": "עדיפות: בינונית",
-      "task_priority_low": "עדיפות: נמוכה"
+      "task_priority_low": "עדיפות: נמוכה",
+      "task_category_פיתוח": "קטגוריה: פיתוח",
+      "task_category_שיווק": "קטגוריה: שיווק",
+      "task_category_שת״פ": "קטגוריה: שת״פ",
+      "task_category_ניהול": "קטגוריה: ניהול",
+      "task_category_עיצוב": "קטגוריה: עיצוב",
+      "task_category_אחר": "קטגוריה: אחר"
     },
     "sort": {
       "created_desc": "נוסף לאחרונה",

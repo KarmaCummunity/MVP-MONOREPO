@@ -9,6 +9,7 @@ import type { TaskPriority, TaskStatus } from './adminTasksScreen.types';
 import {
   ADMIN_TASKS_FILTER_OPTIONS,
   ADMIN_TASKS_SORT_OPTIONS,
+  TASK_LIST_CATEGORY_OPTIONS,
 } from './adminTasksScreen.constants';
 import { buildPersistedAdminTaskFilterKeys, sanitizeAdminTasksHeaderFilterKeys } from './adminTasksScreen.utils';
 import { styles, stylesWithListContent } from './adminTasksScreen.styles';
@@ -31,6 +32,7 @@ export default function AdminTasksScreen() {
     filterAssignee,
     filterStatuses,
     filterPriorities,
+    filterCategories,
     includeDoneWhenNoStatusFilter,
     listSort,
     rootTasksForList,
@@ -86,6 +88,7 @@ export default function AdminTasksScreen() {
                   filterAssignee,
                   filterStatuses,
                   filterPriorities,
+                  filterCategories,
                   includeDoneWhenNoStatusFilter,
                 ),
               )
@@ -154,6 +157,13 @@ export default function AdminTasksScreen() {
                 ]}
               />
             </View>
+
+            <AdminTasksPickerField
+              label="קטגוריה"
+              value={formData.category}
+              onChange={(v) => setFormData({ ...formData, category: v })}
+              options={TASK_LIST_CATEGORY_OPTIONS}
+            />
 
             <UserSelector
               selectedUsers={formData.assignees}

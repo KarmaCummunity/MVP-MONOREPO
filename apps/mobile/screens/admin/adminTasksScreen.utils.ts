@@ -5,10 +5,12 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
   statuses: TaskStatus[];
   priorities: TaskPriority[];
+  categories: string[];
   includeDoneWhenNoStatusFilter: boolean;
 } {
   const statuses: TaskStatus[] = [];
   const priorities: TaskPriority[] = [];
+  const categories: string[] = [];
   let assignee: 'all' | 'me' = 'all';
   let includeDoneWhenNoStatusFilter = false;
   for (const key of filterKeys ?? []) {
@@ -30,12 +32,16 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
         priorities.push(raw);
       }
     }
+    if (key.startsWith('task_category_')) {
+      const raw = key.slice('task_category_'.length);
+      categories.push(raw);
+    }
   }
   // With any status chip, the API ignores "show completed"; keep state/storage consistent.
   if (statuses.length > 0) {
     includeDoneWhenNoStatusFilter = false;
   }
-  return { assignee, statuses, priorities, includeDoneWhenNoStatusFilter };
+  return { assignee, statuses, priorities, categories, includeDoneWhenNoStatusFilter };
 }
 
 /** Drop redundant "show completed" when any status chip is selected (same as fetch semantics). */
@@ -78,6 +84,7 @@ export function buildPersistedAdminTaskFilterKeys(
   assignee: 'all' | 'me',
   statuses: TaskStatus[],
   priorities: TaskPriority[],
+  categories: string[],
   includeDoneWhenNoStatusFilter: boolean,
 ): string[] {
   const keys: string[] = [];
@@ -94,6 +101,10 @@ export function buildPersistedAdminTaskFilterKeys(
   const dedupPri = [...new Set(priorities)];
   for (const p of dedupPri) {
     keys.push(`task_priority_${p}`);
+  }
+  const dedupCat = [...new Set(categories)];
+  for (const c of dedupCat) {
+    keys.push(`task_category_${c}`);
   }
   return keys;
 }

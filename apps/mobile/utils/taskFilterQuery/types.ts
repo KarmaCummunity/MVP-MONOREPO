@@ -12,6 +12,7 @@ export type TaskFilterField =
   | 'ownership'
   | 'assigneeUserId'
   | 'dueDate'
+  | 'category'
   | 'searchText';
 
 export type TaskFilterCategoryId =
@@ -20,6 +21,7 @@ export type TaskFilterCategoryId =
   | 'ownership'
   | 'assignee'
   | 'dueDate'
+  | 'category'
   | 'textSearch';
 
 /** Selection for list-based categories (OR within the category). */

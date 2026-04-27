@@ -218,7 +218,13 @@
       "task_status_archived": "Status: Archived",
       "task_priority_high": "Priority: High",
       "task_priority_medium": "Priority: Medium",
-      "task_priority_low": "Priority: Low"
+      "task_priority_low": "Priority: Low",
+      "task_category_פיתוח": "Category: Dev",
+      "task_category_שיווק": "Category: Marketing",
+      "task_category_שת״פ": "Category: Partners",
+      "task_category_ניהול": "Category: Management",
+      "task_category_עיצוב": "Category: Design",
+      "task_category_אחר": "Category: Other"
     },
     "sort": {
       "created_desc": "Newest first",

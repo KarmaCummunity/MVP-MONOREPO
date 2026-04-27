@@ -66,6 +66,7 @@ export const styles = StyleSheet.create({
   status_testing: { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
   status_done: { backgroundColor: colors.successLight, borderColor: colors.success },
   status_archived: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+  categoryBadge: { backgroundColor: colors.backgroundSecondary, borderColor: colors.secondary },
 
   avatarsRow: { flexDirection: 'row-reverse', alignItems: 'center' },
   avatarSmall: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: colors.white },

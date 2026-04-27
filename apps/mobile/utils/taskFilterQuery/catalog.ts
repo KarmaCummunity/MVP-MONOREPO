@@ -33,6 +33,12 @@ export const DEFAULT_TASK_FILTER_CATEGORIES: readonly TaskFilterCategoryMeta[] =
     field: 'dueDate',
   },
   {
+    id: 'category',
+    filterType: 'multiSelect',
+    field: 'category',
+    allowedValues: ['פיתוח', 'שיווק', 'שת״פ', 'ניהול', 'עיצוב', 'אחר'],
+  },
+  {
     id: 'textSearch',
     filterType: 'text',
     field: 'searchText',

@@ -9,6 +9,15 @@ export const TASK_LIST_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = 
   { value: 'archived', label: 'בארכיון' },
 ];
 
+export const TASK_LIST_CATEGORY_OPTIONS = [
+  { value: 'פיתוח', label: 'פיתוח' },
+  { value: 'שיווק', label: 'שיווק' },
+  { value: 'שת״פ', label: 'שת״פ' },
+  { value: 'ניהול', label: 'ניהול' },
+  { value: 'עיצוב', label: 'עיצוב' },
+  { value: 'אחר', label: 'אחר' },
+];
+
 export const TASK_LIST_SORT_OPTIONS: { value: TasksListSort; label: string }[] = [
   { value: 'created_desc', label: 'נוסף לאחרונה' },
   { value: 'created_asc', label: 'נוסף ראשון' },
@@ -25,6 +34,7 @@ export const ADMIN_TASKS_FILTER_OPTIONS: string[] = [
   'task_assign_me',
   FILTER_KEY_SHOW_COMPLETED,
   ...TASK_LIST_STATUS_OPTIONS.map((o) => `task_status_${o.value}`),
+  ...TASK_LIST_CATEGORY_OPTIONS.map((o) => `task_category_${o.value}`),
   'task_priority_high',
   'task_priority_medium',
   'task_priority_low',

@@ -62,7 +62,7 @@ export function useAdminTasksScreen() {
     description: '',
     priority: 'medium' as TaskPriority,
     status: 'open' as TaskStatus,
-    category: 'development',
+    category: 'פיתוח',
     due_date: '',
     assignees: [] as User[],
     tagsText: '' as string,
@@ -79,6 +79,7 @@ export function useAdminTasksScreen() {
   const [filterStatuses, setFilterStatuses] = useState<TaskStatus[]>([]);
   const [listSort, setListSort] = useState<TasksListSort>('created_desc');
   const [filterPriorities, setFilterPriorities] = useState<TaskPriority[]>([]);
+  const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [filterAssignee, setFilterAssignee] = useState<'all' | 'me'>('all');
   const [includeDoneWhenNoStatusFilter, setIncludeDoneWhenNoStatusFilter] = useState(false);
   const [persistedHydrated, setPersistedHydrated] = useState(false);
@@ -113,6 +114,7 @@ export function useAdminTasksScreen() {
       setFilterAssignee(parsed.assignee);
       setFilterStatuses([...new Set(parsed.statuses)]);
       setFilterPriorities([...new Set(parsed.priorities)]);
+      setFilterCategories([...new Set(parsed.categories)]);
       setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
       const nextSort = sortKeys?.[0];
       if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
@@ -148,6 +150,7 @@ export function useAdminTasksScreen() {
         setFilterAssignee(parsed.assignee);
         setFilterStatuses([...new Set(parsed.statuses)]);
         setFilterPriorities([...new Set(parsed.priorities)]);
+        setFilterCategories([...new Set(parsed.categories)]);
         setIncludeDoneWhenNoStatusFilter(parsed.includeDoneWhenNoStatusFilter);
         if (data.sortKey && TASK_LIST_SORT_OPTIONS.some((o) => o.value === data.sortKey)) {
           setListSort(data.sortKey as TasksListSort);
@@ -177,6 +180,7 @@ export function useAdminTasksScreen() {
         filterAssignee,
         filterStatuses,
         filterPriorities,
+        filterCategories,
         includeDoneWhenNoStatusFilter,
       ),
       sortKey: listSort,
@@ -191,6 +195,7 @@ export function useAdminTasksScreen() {
     filterAssignee,
     filterStatuses,
     filterPriorities,
+    filterCategories,
     includeDoneWhenNoStatusFilter,
     listSort,
   ]);
@@ -215,6 +220,7 @@ export function useAdminTasksScreen() {
         ? { status: effectiveStatuses }
         : {}),
       ...(filterPriorities.length > 0 ? { priority: filterPriorities } : {}),
+      ...(filterCategories.length > 0 ? { category: filterCategories } : {}),
       ownership: filterAssignee === 'me' ? ['mine'] : ['all'],
     };
     const apiFilters = taskFilterStateToApiTaskFilters(filterState, {
@@ -243,7 +249,7 @@ export function useAdminTasksScreen() {
         setLoading(false);
       }
     }
-  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, includeDoneWhenNoStatusFilter, selectedUser]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, includeDoneWhenNoStatusFilter, selectedUser]);
 
   useEffect(() => {
     if (!persistedHydrated) {
@@ -256,7 +262,7 @@ export function useAdminTasksScreen() {
       fetchTasks();
     }
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [query, filterStatuses, listSort, filterPriorities, filterAssignee, includeDoneWhenNoStatusFilter, persistedHydrated, fetchTasks]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, includeDoneWhenNoStatusFilter, persistedHydrated, fetchTasks]);
 
   const resetForm = () => {
     setFormData({
@@ -264,7 +270,7 @@ export function useAdminTasksScreen() {
       description: '',
       priority: 'medium',
       status: 'open',
-      category: 'development',
+      category: 'פיתוח',
       due_date: '',
       assignees: [],
       tagsText: '',
@@ -330,7 +336,7 @@ export function useAdminTasksScreen() {
       description: '',
       priority: parentTask.priority,
       status: 'open',
-      category: parentTask.category || 'development',
+      category: parentTask.category || 'פיתוח',
       due_date: '',
       assignees: parentTask.assignees_details || [],
       tagsText: '',
@@ -467,7 +473,7 @@ export function useAdminTasksScreen() {
       description: task.description || '',
       priority: task.priority,
       status: task.status,
-      category: task.category || 'development',
+      category: task.category || 'פיתוח',
       due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 10) : '',
       assignees: task.assignees_details || [],
       tagsText: (task.tags || []).join(', '),
