@@ -44,6 +44,13 @@ const isMobile = isMobileWeb();
 const HORIZONTAL_PADDING = isMobile ? 8 : 16; // Padding from screen edges
 const FEED_NUM_COLUMNS = 1;
 
+// Virtualized list tuning: with numColumns=1, each feed row is one item. Low batch
+// sizes (meant for multi-column grids) cap visible rows ~5 until scroll — looks
+// like a "only 5 posts" bug. Align with other screens (e.g. DiscoverPeopleScreen).
+const FEED_INITIAL_NUM_TO_RENDER = 12;
+const FEED_MAX_TO_RENDER_PER_BATCH = 10;
+const FEED_WINDOW_SIZE = 10;
+
 // Props
 interface PostsReelsScreenProps {
   onScroll?: (hide: boolean) => void;
@@ -329,10 +336,10 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
             <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.primary]} />
           }
           ListEmptyComponent={renderEmptyComponent}
-          // Optimization props
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={10}
+          // Optimization props (single-column feed; must render enough rows off-screen)
+          initialNumToRender={FEED_INITIAL_NUM_TO_RENDER}
+          maxToRenderPerBatch={FEED_MAX_TO_RENDER_PER_BATCH}
+          windowSize={FEED_WINDOW_SIZE}
           removeClippedSubviews={false}
           showsVerticalScrollIndicator={false}
         />
