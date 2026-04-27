@@ -24,6 +24,7 @@ import { ItemsScreenSearchMode } from './items/ItemsScreenSearchMode';
 import { ItemsScreenOfferMode } from './items/ItemsScreenOfferMode';
 import type { ItemsScreenProps, ItemType, DonationItem } from './items/itemsScreen.types';
 import { usePostComposerStore } from '../stores/postComposerStore';
+import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 
 export type { ItemsScreenProps } from './items/itemsScreen.types';
 
@@ -275,9 +276,12 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setSelectedItem(null);
   };
 
-  const onFeedPostPress = useCallback((feedItem: FeedItem) => {
-    console.log('Post pressed:', feedItem.id);
-  }, []);
+  const onFeedPostPress = useCallback(
+    (feedItem: FeedItem) => {
+      navigateToPostDetail(navigation, { postId: feedItem.id, initialItem: feedItem });
+    },
+    [navigation],
+  );
   const onFeedCommentPress = useCallback((feedItem: FeedItem) => {
     console.log('Comment pressed:', feedItem.id);
   }, []);
@@ -384,6 +388,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           recentPosts={data.recentPosts}
           onMorePress={handleMorePress}
           onPostClosed={handlePostClosed}
+          onPostPress={onFeedPostPress}
         />
       )}
 

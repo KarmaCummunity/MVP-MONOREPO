@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
-import { NavigationProp, ParamListBase, useRoute } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import HeaderComp from '../components/HeaderComp';
@@ -28,6 +28,7 @@ import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
 import { FeedItem } from '../types/feed';
+import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 
 import { trumpScreenStyles as localStyles } from './trump/trumpScreen.styles';
 import { useTrumpScreenData } from './trump/useTrumpScreenData';
@@ -40,6 +41,7 @@ export default function TrumpScreen({
   navigation: NavigationProp<ParamListBase>;
 }) {
   const { ToastComponent } = useToast();
+  const rootNav = useNavigation();
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
@@ -145,7 +147,12 @@ export default function TrumpScreen({
     setSelectedRide(null);
   };
 
-  const noopFeedPress = useCallback((_feedItem: FeedItem) => {}, []);
+  const handleFeedPostPress = useCallback(
+    (feedItem: FeedItem) => {
+      navigateToPostDetail(rootNav as never, { postId: feedItem.id, initialItem: feedItem });
+    },
+    [rootNav],
+  );
   const noopCommentPress = useCallback((_feedItem: FeedItem) => {}, []);
 
   const renderPostItem = useCallback(
@@ -157,14 +164,14 @@ export default function TrumpScreen({
           item={item}
           cardWidth={itemWidth}
           numColumns={numColumns}
-          onPress={noopFeedPress}
+          onPress={handleFeedPostPress}
           onCommentPress={noopCommentPress}
           onMorePress={handleMorePress}
           onPostClosed={trumpData.handlePostClosed}
         />
       );
     },
-    [numColumns, screenPadding, width, handleMorePress, trumpData.handlePostClosed, noopFeedPress, noopCommentPress],
+    [numColumns, screenPadding, width, handleMorePress, trumpData.handlePostClosed, handleFeedPostPress, noopCommentPress],
   );
 
   const renderEmptyPosts = useCallback(
@@ -291,7 +298,7 @@ export default function TrumpScreen({
                       item={post}
                       cardWidth={historyCardWidth}
                       numColumns={1}
-                      onPress={() => {}}
+                      onPress={handleFeedPostPress}
                       onCommentPress={() => {}}
                       onMorePress={handleMorePress}
                       onPostClosed={trumpData.handlePostClosed}

@@ -55,6 +55,7 @@ export type ItemsScreenOfferModeProps = Readonly<{
   recentPosts: FeedItem[];
   onMorePress: (item: FeedItem, position?: { x: number; y: number }) => void;
   onPostClosed: (postId: string) => void;
+  onPostPress?: (item: FeedItem) => void;
 }>;
 
 export function ItemsScreenOfferMode({
@@ -89,6 +90,7 @@ export function ItemsScreenOfferMode({
   recentPosts,
   onMorePress,
   onPostClosed,
+  onPostPress,
 }: ItemsScreenOfferModeProps) {
   const { width } = Dimensions.get('window');
 
@@ -118,7 +120,14 @@ export function ItemsScreenOfferMode({
             ) : (
               openRequestPosts.map((post) => (
                 <View key={post.id} style={s.recentItemWrapper}>
-                  <PostReelItem item={post} cardWidth={width - 64} numColumns={1} onMorePress={onMorePress} onPostClosed={onPostClosed} />
+                  <PostReelItem
+                    item={post}
+                    cardWidth={width - 64}
+                    numColumns={1}
+                    onPress={onPostPress}
+                    onMorePress={onMorePress}
+                    onPostClosed={onPostClosed}
+                  />
                 </View>
               ))
             )}
@@ -306,11 +315,9 @@ export function ItemsScreenOfferMode({
                     item={post}
                     cardWidth={recentCardWidth}
                     numColumns={1}
-                    onPress={(item) => {
-                      console.log('Post pressed:', item.id);
-                    }}
-                    onCommentPress={(item) => {
-                      console.log('Comment pressed:', item.id);
+                    onPress={onPostPress}
+                    onCommentPress={(feedItem) => {
+                      console.log('Comment pressed:', feedItem.id);
                     }}
                     onMorePress={onMorePress}
                     onPostClosed={onPostClosed}

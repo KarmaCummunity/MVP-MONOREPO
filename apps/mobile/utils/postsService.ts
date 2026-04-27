@@ -182,6 +182,17 @@ class PostsService {
     return this.request<any[]>(url);
   }
 
+  /**
+   * Single post (same shape as feed rows). Optional viewer for is_liked.
+   */
+  async getPostById(postId: string, viewerId?: string): Promise<PostsApiResponse<any>> {
+    let url = `/api/posts/${encodeURIComponent(postId)}`;
+    if (viewerId) {
+      url += `?viewer_id=${encodeURIComponent(viewerId)}`;
+    }
+    return this.request<any>(url);
+  }
+
   // ============================================
   // LIKES
   // ============================================

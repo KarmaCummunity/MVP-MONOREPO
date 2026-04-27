@@ -177,7 +177,8 @@ export function mapApiPostToFeedItem(post: any): FeedItem {
             ? mapCommunityChallengeFeedFields(post)
             : null;
 
-    const firstImage = post.images?.length > 0 ? post.images[0] : null;
+    const postImages = Array.isArray(post.images) ? post.images : null;
+    const firstImage = postImages?.length ? postImages[0] : null;
     const thumbnail = chMapped?.thumbnail ?? firstImage;
 
     const created = post.created_at && !isNaN(new Date(post.created_at).getTime())
@@ -191,6 +192,7 @@ export function mapApiPostToFeedItem(post: any): FeedItem {
         title: post.title || 'post.noTitle',
         description: post.description || '',
         thumbnail,
+        images: postImages,
         user: {
             id: userId,
             name: userName,
