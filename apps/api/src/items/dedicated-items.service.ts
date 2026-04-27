@@ -137,6 +137,19 @@ export class DedicatedItemsService {
         // Get first image from base64 if exists
         const images = dto.image_base64 ? [dto.image_base64] : [];
 
+        const basePostMetadata: Record<string, unknown> = {
+          item_id: createdItem.id,
+          category: dto.category,
+          intent: dto.intent || "give",
+          price: dto.price || 0,
+          condition: dto.condition,
+          city: dto.city,
+        };
+        const mergedPostMetadata =
+          dto.metadata && typeof dto.metadata === "object"
+            ? { ...basePostMetadata, ...dto.metadata }
+            : basePostMetadata;
+
         await client.query(
           `
           INSERT INTO posts (author_id, item_id, title, description, images, post_type, metadata)
@@ -149,14 +162,7 @@ export class DedicatedItemsService {
             postDescription,
             images,
             postType,
-            JSON.stringify({
-              item_id: createdItem.id,
-              category: dto.category,
-              intent: dto.intent || "give",
-              price: dto.price || 0,
-              condition: dto.condition,
-              city: dto.city,
-            }),
+            JSON.stringify(mergedPostMetadata),
           ],
         );
 

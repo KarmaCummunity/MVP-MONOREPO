@@ -1,5 +1,11 @@
 // DTOs for dedicated items table with separate columns
-import { IsString, IsOptional, IsNumber, IsBoolean } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  IsObject,
+} from "class-validator";
 
 export class CreateItemDto {
   @IsOptional()
@@ -67,6 +73,11 @@ export class CreateItemDto {
   @IsOptional()
   @IsString()
   intent?: "give" | "request";
+
+  /** Merged into `posts.metadata` when auto-creating the companion post (e.g. ride request fields). */
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
 }
 
 export class UpdateItemDto {

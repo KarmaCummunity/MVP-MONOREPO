@@ -90,7 +90,8 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
                   post.rideId ||
                     t === 'ride' ||
                     t === 'ride_offered' ||
-                    post.subtype === 'ride'
+                    post.subtype === 'ride' ||
+                    post.category === 'trump'
                 );
               });
             setOpenRequestPosts(requestPosts);
