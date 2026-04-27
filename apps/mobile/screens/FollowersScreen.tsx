@@ -5,7 +5,7 @@
 // - Provides: Fetches users list and per-user follow state; navigates to 'UserProfileScreen' on item press.
 // - Reads from context: `useUser()` -> `selectedUser` to perform follow toggles.
 // - External deps/services: `followService` (get lists, follow/unfollow, stats).
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,12 +21,12 @@ import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/nativ
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { UserPreview as CharacterType } from '../globals/types';
-import { 
-  getFollowers, 
-  getFollowing, 
-  followUser, 
+import {
+  getFollowers,
+  getFollowing,
+  followUser,
   unfollowUser,
-  getFollowStats 
+  getFollowingStateForUserIds,
 } from '../utils/followService';
 import { useUser } from '../stores/userStore';
 
@@ -44,32 +44,24 @@ export default function FollowersScreen() {
   const [users, setUsers] = useState<CharacterType[]>([]);
   const [loading, setLoading] = useState(true);
   const [followStats, setFollowStats] = useState<Record<string, { isFollowing: boolean }>>({});
-  const [, setRefreshKey] = useState(0);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      let userList: CharacterType[] = [];
-      
-      if (type === 'followers') {
-        userList = await getFollowers(userId);
+      const userList: CharacterType[] =
+        type === 'followers' ? await getFollowers(userId) : await getFollowing(userId);
+
+      if (selectedUser?.id) {
+        const stats = await getFollowingStateForUserIds(
+          selectedUser.id,
+          userList.map((u) => u.id)
+        );
+        setFollowStats(stats);
       } else {
-        userList = await getFollowing(userId);
+        setFollowStats({});
       }
-      
+
       setUsers(userList);
-      
-      // Load follow stats for all users
-      const stats: Record<string, { isFollowing: boolean }> = {};
-      
-      for (const user of userList) {
-        if (selectedUser) {
-          const userStats = await getFollowStats(user.id, selectedUser.id);
-          stats[user.id] = { isFollowing: userStats.isFollowing };
-        }
-      }
-      
-      setFollowStats(stats);
     } catch (error) {
       console.error('Error loading users:', error);
       Alert.alert('שגיאה', 'שגיאה בטעינת המשתמשים');
@@ -78,20 +70,10 @@ export default function FollowersScreen() {
     }
   }, [selectedUser, type, userId]);
 
-  useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
-
-  // Refresh data when screen comes into focus
+  // Load when screen is focused (single pass — avoids duplicate mount + focus fetches)
   useFocusEffect(
     useCallback(() => {
-      const refreshUsers = async () => {
-        console.log('👥 FollowersScreen - Screen focused, refreshing data...');
-        await loadUsers();
-        // Force re-render by updating refresh key
-        setRefreshKey((prev) => prev + 1);
-      };
-      void refreshUsers();
+      void loadUsers();
     }, [loadUsers])
   );
 
