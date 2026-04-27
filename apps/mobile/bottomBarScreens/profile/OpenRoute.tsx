@@ -1,5 +1,5 @@
 // Extracted from ProfileScreen — Open tab.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,8 @@ import {
   classifyOpenProfilePost,
 } from '../../utils/profileOpenTabPostEntry';
 import PostReelItem from '../../components/Feed/PostReelItem';
+import CommentsModal from '../../components/CommentsModal';
+import type { FeedItem } from '../../types/feed';
 import { usePostMenu } from '../../hooks/usePostMenu';
 import OptionsModal from '../../components/Feed/OptionsModal';
 import ReportPostModal from '../../components/Feed/ReportPostModal';
@@ -22,7 +24,15 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const { db } = require('../../utils/databaseService');
+
+  const handleCommentPress = useCallback((item: FeedItem) => {
+    setSelectedItemForComments(item);
+    setCommentsModalVisible(true);
+  }, []);
 
   // Post menu hook
   const {
@@ -324,7 +334,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
     };
 
     loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
+  }, [targetUserId, user, selectedUser?.id, db, listRefreshKey]);
 
   if (loading) {
     return (
@@ -361,6 +371,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
             numColumns={3}
             cardWidth={cardWidth}
             onPress={() => { }}
+            onCommentPress={handleCommentPress}
             onMorePress={handleMorePress}
           />
         )}
@@ -384,6 +395,23 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
         onSubmit={handleReportSubmit}
         isLoading={false}
       />
+      {selectedItemForComments && (
+        <CommentsModal
+          visible={commentsModalVisible}
+          onClose={() => {
+            setCommentsModalVisible(false);
+            setSelectedItemForComments(null);
+          }}
+          postId={selectedItemForComments.id}
+          postUser={selectedItemForComments.user ? {
+            id: selectedItemForComments.user.id,
+            name: selectedItemForComments.user.name || null,
+            avatar: selectedItemForComments.user.avatar || 'https://picsum.photos/seed/user/100/100'
+          } : undefined}
+          postTitle={selectedItemForComments.title || ''}
+          onCommentsCountChange={() => setListRefreshKey((k) => k + 1)}
+        />
+      )}
     </View>
   );
 };
