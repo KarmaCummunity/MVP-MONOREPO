@@ -230,3 +230,28 @@ Author (Mobile)          API Server               PostgreSQL          Operator (
 
 ---
 
+
+### 7.6 Unified Give/Request Composer Flow (NEW)
+
+```
+Entry Point A (Bottom +) or Entry Point B (Receive CTA)
+      │
+      ▼
+Open unified composer modal (85% height, dim backdrop)
+      │
+      ├─ Select intent (give/request)
+      ├─ Select category
+      └─ Fill dynamic category-aware fields
+      │
+      ▼
+POST /api/dedicated-items (includes metadata intent)
+      │
+      ▼
+Backend auto-creates posts row with metadata.intent
+      │
+      ▼
+Feed mapping rules
+  - all intents => Main feed
+  - give       => Category give inventory
+  - request    => Category Open Requests inventory (shown in give context)
+```

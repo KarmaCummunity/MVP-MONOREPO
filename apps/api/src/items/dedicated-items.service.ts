@@ -152,6 +152,7 @@ export class DedicatedItemsService {
             JSON.stringify({
               item_id: createdItem.id,
               category: dto.category,
+              intent: dto.intent || "give",
               price: dto.price || 0,
               condition: dto.condition,
               city: dto.city,

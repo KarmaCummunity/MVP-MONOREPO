@@ -27,6 +27,7 @@ export function useItemsScreenData(
   const [allItems, setAllItems] = useState<DonationItem[]>([]);
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
+  const [openRequestPosts, setOpenRequestPosts] = useState<FeedItem[]>([]);
   const [, setRecentMine] = useState<DonationItem[]>([]);
   const [, setIsRefreshing] = useState(false);
   const loadItemsRef = useRef<(() => Promise<void>) | undefined>(undefined);
@@ -117,6 +118,21 @@ export function useItemsScreenData(
         setRecentPosts([]);
       }
 
+      try {
+        const openPostsResponse = await postsService.getPosts(300, 0, uid);
+        if (openPostsResponse.success && Array.isArray(openPostsResponse.data)) {
+          const requestPosts = openPostsResponse.data
+            .map(mapPostToFeedItemForItemsScreen)
+            .filter((post: FeedItem | null): post is FeedItem => Boolean(post))
+            .filter((post) => post.intent === 'request' && (itemType === 'general' || post.category === itemType));
+          setOpenRequestPosts(requestPosts);
+        } else {
+          setOpenRequestPosts([]);
+        }
+      } catch {
+        setOpenRequestPosts([]);
+      }
+
       const serverItems = await db.getDedicatedItemsByOwner(uid);
       const displayItems: DonationItem[] = (serverItems || [])
         .filter((item: Record<string, unknown>) => {
@@ -204,6 +220,7 @@ export function useItemsScreenData(
     allPosts,
     setAllPosts,
     recentPosts,
+    openRequestPosts,
     setRecentPosts,
     setRecentMine,
     loadItemsRef,

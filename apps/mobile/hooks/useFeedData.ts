@@ -94,10 +94,14 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
         // Parse metadata to get item_id if needed
         let metadataItemId: string | undefined;
+        let postIntent: 'give' | 'request' = 'give';
         try {
             if (post.metadata) {
                 const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : post.metadata;
                 metadataItemId = metadata?.item_id;
+                if (metadata?.intent === 'request') {
+                    postIntent = 'request';
+                }
             }
         } catch {
             // Ignore parse errors
@@ -167,6 +171,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             itemId: finalItemId,
             rideId: post.ride_id || post.ride_data?.id,
             taskId: post.task_id || post.task?.id,
+            intent: postIntent,
             // Add ride-specific fields if this is a ride post
             ...rideData
         };

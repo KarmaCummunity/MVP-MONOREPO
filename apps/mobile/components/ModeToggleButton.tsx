@@ -32,7 +32,7 @@ const ModeToggleButton: React.FC<ModeToggleButtonProps> = ({ mode, onToggle }) =
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {t('common:offerer')}
+            {t('common:give')}
           </Text>
         </View>
 
@@ -50,7 +50,7 @@ const ModeToggleButton: React.FC<ModeToggleButtonProps> = ({ mode, onToggle }) =
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {t('common:seeker')}
+            {t('common:receive')}
           </Text>
         </View>
       </View>

@@ -114,3 +114,23 @@ Posts support multiple types linked to other entities:
   - **Post creation flow (mobile):** The post-creation UI SHALL present the four options with clear Hebrew/English labels, a brief explanation of each level, and a visual indicator (e.g. lock icon gradient). The selected level is sent as part of the create-post DTO.
   - **API filtering:** `GET /api/posts` SHALL implement server-side filtering logic that checks `anonymity_level` against the requesting user's role and follow relationship to the author. This is a **required** behavior — there is not enough information in the code to determine whether any filtering logic exists today; the current `posts.service.ts` does not reference `anonymity_level` (see §10.1).
   - **Notifications:** When a post with Level 1 or 2 is created, a notification SHALL be dispatched to active operators (see §2.14.3). For Level 2, a separate notification MAY be sent to followers per the existing notification pattern.
+#### 2.5.8 Give / Receive terminology + Request intent
+
+- **Terminology (UI):** User-facing wording SHALL use **Give / Receive** (`לתת / לקבל`) and SHALL NOT expose legacy wording (Offerer/Seeker).
+- **Post intent model:** Every newly created donation-context post SHALL include `intent`:
+  - `intent = give`
+  - `intent = request`
+- **Creation entrypoints:**
+  1. Center `+` action in bottom navigation (global)
+  2. Receive-mode contextual CTA (“Can't find what you need? Request it →”)
+- **Distribution rules:**
+  - `give` → main feed + category give stream
+  - `request` → main feed + category open-requests stream (surfaced in give-oriented context)
+- **Visual differentiation:** Cards and list items SHALL display clear intent markers (badge/chip/icon/color) for `give` vs `request`, with localized labels in Hebrew/English.
+
+#### 2.5.9 Give-mode category augmentation
+
+- In give mode, category pages SHALL include a collapsible section above the publishing form:
+  - Header: **Open Requests List**
+  - First tap expands inline inventory of open request posts for the category
+  - Second tap collapses back

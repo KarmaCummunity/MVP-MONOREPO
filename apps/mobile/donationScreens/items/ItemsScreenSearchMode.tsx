@@ -25,6 +25,7 @@ export type ItemsScreenSearchModeProps = Readonly<{
   selectedFilters: string[];
   selectedSorts: string[];
   onClearAll: () => void;
+  onOpenRequestComposer: () => void;
 }>;
 
 export function ItemsScreenSearchMode({
@@ -40,9 +41,13 @@ export function ItemsScreenSearchMode({
   selectedFilters,
   selectedSorts,
   onClearAll,
+  onOpenRequestComposer,
 }: ItemsScreenSearchModeProps) {
   return (
     <View style={{ flex: 1 }}>
+      <TouchableOpacity style={s.offerButton} onPress={onOpenRequestComposer}>
+        <Text style={s.offerButtonText}>{t('donationScreen.search.requestCta')}</Text>
+      </TouchableOpacity>
       <VerticalGridSlider
         numColumns={numColumns}
         onNumColumnsChange={onNumColumnsChange}

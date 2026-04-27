@@ -20,7 +20,7 @@
 // TODO: Implement proper deep linking support for tab navigation
 'use strict';
 import React from "react";
-import { Animated, Easing, View, StyleSheet } from "react-native";
+import { Animated, Easing, View, StyleSheet, TouchableOpacity } from "react-native";
 import { createBottomTabNavigator, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation, CommonActions } from "@react-navigation/native";
@@ -35,10 +35,13 @@ import { LAYOUT_CONSTANTS } from "../globals/constants";
 import { useUser } from "../stores/userStore";
 import { useWebMode } from "../stores/webModeStore";
 import { logger } from "../utils/loggerService";
+import CreatePostComposerModal from "../components/CreatePostComposerModal";
+import { usePostComposerStore } from "../stores/postComposerStore";
 
 // Define the type for your bottom tab navigator's route names and their parameters.
 export type BottomTabNavigatorParamList = {
   DonationsTab: undefined;
+  CreatePostTab: undefined;
   HomeScreen: undefined;
   SearchTab: undefined;
   ProfileScreen: undefined;
@@ -149,6 +152,7 @@ export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
   const { mode } = useWebMode();
   const navigation = useNavigation();
+  const { openComposer } = usePostComposerStore();
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
@@ -173,6 +177,8 @@ export default function BottomNavigator(): React.ReactElement {
     switch (routeName) {
       case "HomeScreen":
         return focused ? "home" : "home-outline";
+      case "CreatePostTab":
+        return "add-circle";
       case "SearchTab":
         return focused ? "search" : "search-outline";
       case "DonationsTab":
@@ -233,6 +239,7 @@ export default function BottomNavigator(): React.ReactElement {
   };
 
   return (
+    <>
     <Tab.Navigator
       id={undefined}
       initialRouteName="HomeScreen"
@@ -291,6 +298,25 @@ export default function BottomNavigator(): React.ReactElement {
         })}
       />
       <Tab.Screen
+        name="CreatePostTab"
+        component={DonationsStack}
+        options={{
+          tabBarButton: () => (
+            <TouchableOpacity
+              onPress={() => openComposer({ intent: 'give' })}
+              style={{ marginTop: -12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Create give or request post"
+            >
+              <Ionicons name="add-circle" size={54} color={colors.primary} />
+            </TouchableOpacity>
+          ),
+        }}
+        listeners={{
+          tabPress: (e) => e.preventDefault(),
+        }}
+      />
+      <Tab.Screen
         name="SearchTab"
         component={SearchTabStack}
         listeners={({ navigation, route }) => ({
@@ -315,5 +341,7 @@ export default function BottomNavigator(): React.ReactElement {
       />
 
     </Tab.Navigator>
+    <CreatePostComposerModal />
+    </>
   );
 }

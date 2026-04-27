@@ -63,6 +63,10 @@ export class CreateItemDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  intent?: "give" | "request";
 }
 
 export class UpdateItemDto {
