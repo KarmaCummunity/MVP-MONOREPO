@@ -18,3 +18,12 @@ export function sortFeedByTimestampDesc(items: FeedItem[]): FeedItem[] {
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
+
+/**
+ * After a paginated fetch, whether the client should assume another page may exist.
+ * A short page means end of list. A full page means keep paginating even if every row
+ * was a duplicate client-side (offset must still advance).
+ */
+export function feedHasLikelyMorePages(rawPageLength: number, pageSize: number): boolean {
+  return rawPageLength >= pageSize;
+}
