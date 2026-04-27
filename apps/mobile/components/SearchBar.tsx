@@ -71,9 +71,6 @@ const SearchBar = ({
   const [selectedSorts, setSelectedSorts] = useState<string[]>(
     () => initialSelectedSorts ?? [],
   );
-  // New state to track if SearchBar has active filters/sorts
-  const [hasActiveConditions, setHasActiveConditions] = useState<boolean>(false);
-
   // Sync parent (chips + list) once on mount when initial props were provided (e.g. persisted admin filters).
   React.useLayoutEffect(() => {
     if (
@@ -91,29 +88,9 @@ const SearchBar = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot hydrate
   }, []);
 
-  // Determine paddingBottom based on hasActiveConditions
-  const getPaddingBottom = () => {
-    if (hasActiveConditions) {
-      // If there are filters/sorts, provide less padding to avoid excessive space
-      return Platform.select({
-        ios: 20,
-        android: 0,
-        web: 0,
-      });
-    } else {
-      // If no filters/sorts, provide more padding for the static buttons row
-      return Platform.select({
-        ios: 80,
-        android: 0,
-        web: 0, // Assuming web might handle spacing differently
-      });
-    }
-  };
-
   // Effect to inform parent about active conditions
   useEffect(() => {
     const hasActive = selectedFilters.length > 0 || selectedSorts.length > 0;
-    setHasActiveConditions(hasActive);
     onHasActiveConditionsChange?.(hasActive);
   }, [selectedFilters, selectedSorts, onHasActiveConditionsChange]);
 
@@ -279,7 +256,7 @@ const SearchBar = ({
     });
   };
 
-  const removeSort = (sortToRemove: string) => {
+  const removeSort = (_sortToRemove: string) => {
     setSelectedSorts([]); // Remove all sorts, as typically only one can be active
 
     // Notify parent of sort changes
@@ -307,7 +284,7 @@ const SearchBar = ({
 
   // Get responsive styles
   const modalStyles = getResponsiveModalStyles();
-  const { isTablet, isDesktop, isLargeDesktop, width } = getScreenInfo();
+  const { isTablet, isLargeDesktop, width } = getScreenInfo();
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const isMobileWeb = Platform.OS === 'web' && width <= BREAKPOINTS.TABLET;
   // Icon size optimized for mobile web - smaller for better proportions
@@ -319,6 +296,7 @@ const SearchBar = ({
   React.useEffect(() => {
     onRemoveFilterRequested?.(removeFilter);
     onRemoveSortRequested?.(() => removeSort(''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parent receives latest handlers; listing handlers causes redundant effect churn
   }, [selectedFilters, selectedSorts]);
 
   return (

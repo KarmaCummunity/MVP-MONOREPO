@@ -323,7 +323,7 @@ class ApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    retryOn401: boolean = true,
+    _retryOn401: boolean = true,
     timeoutMs: number = 30_000,
   ): Promise<ApiResponse<T>> {
     // TODO: Add request ID for tracing and debugging

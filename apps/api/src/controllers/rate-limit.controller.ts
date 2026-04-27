@@ -12,7 +12,10 @@ import {
   Param,
   Query,
 } from "@nestjs/common";
-import { RateLimitService, RateLimitRule } from "../auth/services/rate-limit.service";
+import {
+  RateLimitService,
+  RateLimitRule,
+} from "../auth/services/rate-limit.service";
 
 @Controller("rate-limit")
 export class RateLimitController {

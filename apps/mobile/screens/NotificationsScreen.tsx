@@ -52,7 +52,6 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [pendingDailyReports, setPendingDailyReports] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
@@ -83,7 +82,7 @@ export default function NotificationsScreen() {
       console.error('❌ Load notifications error:', error);
       Alert.alert(t('common:errorTitle'), t('notifications:loadError'));
     }
-  }, [selectedUser]);
+  }, [selectedUser, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,17 +132,6 @@ export default function NotificationsScreen() {
     setRefreshing(true);
     loadNotifications().finally(() => setRefreshing(false));
   }, [loadNotifications]);
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    if (!selectedUser) return;
-
-    try {
-      await markNotificationAsRead(notificationId, selectedUser.id);
-      await loadNotifications();
-    } catch (error) {
-      console.error('❌ Mark as read error:', error);
-    }
-  };
 
   const handleMarkAllAsRead = async () => {
     if (!selectedUser) return;

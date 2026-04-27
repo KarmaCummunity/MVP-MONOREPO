@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -29,7 +29,7 @@ interface AdminAdminsScreenProps {
 
 const LOG_SOURCE = 'AdminAdminsScreen';
 
-export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps) {
+export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdminsScreenProps) {
     const route = useRoute();
     const routeParams = (route.params as any) || {};
     const viewOnly = routeParams?.viewOnly === true;
@@ -60,11 +60,7 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
     // Store all managers for manager assignment
     const [allManagers, setAllManagers] = useState<any[]>([]);
 
-    useEffect(() => {
-        loadUsers();
-    }, [searchQuery, selectedUser?.id]);
-
-    const loadUsers = async (forceRefresh: boolean = false) => {
+    const loadUsers = useCallback(async (forceRefresh: boolean = false) => {
         if (!selectedUser?.id) {
             console.log('[AdminAdminsScreen] No selectedUser.id, skipping load');
             return;
@@ -136,7 +132,11 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [searchQuery, selectedUser?.id, selectedUser?.email]);
+
+    useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
 
     // Check if current user is super admin - based on roles, not email
     const currentUserRoles = selectedUser?.roles || [];
@@ -376,37 +376,6 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
             Alert.alert('שגיאה', 'אירעה שגיאה בהסרת שיוך מנהל');
         } finally {
             setIsRemovingManager(false);
-        }
-    };
-
-    // Remove manager with confirmation (used from outside modal)
-    const removeManager = async () => {
-        if (!selectedForManager) {
-            console.log('[AdminAdminsScreen] removeManager called but no selectedForManager');
-            return;
-        }
-
-        console.log('[AdminAdminsScreen] removeManager called for:', selectedForManager.name || selectedForManager.email);
-        console.log('[AdminAdminsScreen] selectedForManager.id:', selectedForManager.id);
-        console.log('[AdminAdminsScreen] selectedUser?.id:', selectedUser?.id);
-
-        if (Platform.OS === 'web') {
-            if (globalThis.window !== undefined && globalThis.window.confirm(`האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`)) {
-                await performRemoveManager();
-            }
-        } else {
-            Alert.alert(
-                'הסרת שיוך מנהל',
-                `האם להסיר את שיוך המנהל מ-${selectedForManager.name || selectedForManager.email}?`,
-                [
-                    { text: 'ביטול', style: 'cancel' },
-                    {
-                        text: 'הסר',
-                        style: 'destructive',
-                        onPress: performRemoveManager
-                    }
-                ]
-            );
         }
     };
 
@@ -651,7 +620,6 @@ export default function AdminAdminsScreen({ navigation }: AdminAdminsScreenProps
                     const userRoles = user.roles || [];
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
-                    const isSameUser = user.id === selectedUser?.id;
                     const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com'; // המנהל הראשי - מוגן לחלוטין
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);

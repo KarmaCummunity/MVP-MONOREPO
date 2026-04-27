@@ -19,6 +19,8 @@
   },
   "tasks": {
     "noTasks": "No tasks at the moment",
+    "noTasksMatchFilters": "No tasks match your search or filters (on desktop they are saved in the browser). Clear them below.",
+    "clearFilters": "Clear search and filters",
     "editTask": "Edit Task",
     "newTask": "New Task",
     "title": "Title",

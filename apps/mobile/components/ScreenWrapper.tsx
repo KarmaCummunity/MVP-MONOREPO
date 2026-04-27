@@ -14,9 +14,9 @@ interface ScreenWrapperProps {
 
 export default function ScreenWrapper({
   children,
-  navigation,
-  hideTopBar = false,
-  showPosts = false,
+  navigation: _navigation,
+  hideTopBar: _hideTopBar = false,
+  showPosts: _showPosts = false,
   style = {}
 }: ScreenWrapperProps) {
   if (Platform.OS === 'web') {
@@ -47,12 +47,3 @@ export default function ScreenWrapper({
     </SafeAreaView>
   );
 }
-
-const webStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    height: '100%',
-    width: '100%',
-    overflow: 'hidden', // Ensure no double scrollbars
-  }
-});

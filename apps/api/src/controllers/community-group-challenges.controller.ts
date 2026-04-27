@@ -1,11 +1,9 @@
 // Community Group Challenges Controller
 // Handles all operations for community challenges: create, list, join, track entries, statistics
-import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RequireRoles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserSession } from '../auth/interfaces/user-session.interface';
+import { UseGuards } from "@nestjs/common";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { UserSession } from "../auth/interfaces/user-session.interface";
 import {
   Body,
   Controller,
@@ -44,7 +42,10 @@ export class CommunityGroupChallengesController {
    * Also creates a post automatically in the feed
    */
   @Post()
-  async createChallenge(@Body() dto: CreateCommunityGroupChallengeDto, @CurrentUser() userSession: UserSession) {
+  async createChallenge(
+    @Body() dto: CreateCommunityGroupChallengeDto,
+    @CurrentUser() userSession: UserSession,
+  ) {
     // creator_id always comes from the authenticated session — never from the client body
     const creatorId = userSession.userId;
     this.logger.log(`Creating new community challenge: ${dto.title}`);
@@ -290,7 +291,6 @@ export class CommunityGroupChallengesController {
     @Query("start_date") startDate?: string,
     @Query("end_date") endDate?: string,
   ) {
-    
     this.logger.log(
       `Fetching daily tracker for user ${userId}, range: ${startDate} - ${endDate}`,
     );
@@ -558,7 +558,11 @@ export class CommunityGroupChallengesController {
    * Join a challenge
    */
   @Post(":id/join")
-  async joinChallenge(@Param("id") challengeId: string, @Body() dto: JoinChallengeDto, @CurrentUser() userSession: UserSession) {
+  async joinChallenge(
+    @Param("id") challengeId: string,
+    @Body() dto: JoinChallengeDto,
+    @CurrentUser() userSession: UserSession,
+  ) {
     const userId = userSession.userId;
     dto.user_id = userId;
     this.logger.log(`User ${dto.user_id} joining challenge ${challengeId}`);
@@ -645,7 +649,11 @@ export class CommunityGroupChallengesController {
    * Also calculates and updates streak
    */
   @Post(":id/entries")
-  async addChallengeEntry(@Param("id") challengeId: string, @Body() dto: CreateChallengeEntryDto, @CurrentUser() userSession: UserSession) {
+  async addChallengeEntry(
+    @Param("id") challengeId: string,
+    @Body() dto: CreateChallengeEntryDto,
+    @CurrentUser() userSession: UserSession,
+  ) {
     const userId = userSession.userId;
     dto.user_id = userId;
     this.logger.log(
@@ -795,9 +803,14 @@ export class CommunityGroupChallengesController {
    * Get entries history for a challenge and user
    */
   @Get(":id/entries")
-  async getChallengeEntries(@Param("id") challengeId: string, @CurrentUser() userSession: UserSession, @Query("limit") limit?: number, @Query("offset") offset?: number) {
+  async getChallengeEntries(
+    @Param("id") challengeId: string,
+    @CurrentUser() userSession: UserSession,
+    @Query("limit") limit?: number,
+    @Query("offset") offset?: number,
+  ) {
     const userId = userSession.userId;
-    
+
     this.logger.log(
       `Fetching entries for challenge ${challengeId}, user ${userId}`,
     );
@@ -893,9 +906,13 @@ export class CommunityGroupChallengesController {
    * Update a challenge (creator only)
    */
   @Put(":id")
-  async updateChallenge(@Param("id") challengeId: string, @Body() dto: UpdateCommunityGroupChallengeDto, @CurrentUser() userSession: UserSession) {
+  async updateChallenge(
+    @Param("id") challengeId: string,
+    @Body() dto: UpdateCommunityGroupChallengeDto,
+    @CurrentUser() userSession: UserSession,
+  ) {
     const userId = userSession.userId;
-    
+
     this.logger.log(`Updating challenge ${challengeId}`);
 
     const client = await this.pool.connect();
@@ -1024,9 +1041,12 @@ export class CommunityGroupChallengesController {
    * Delete a challenge (creator only)
    */
   @Delete(":id")
-  async deleteChallenge(@Param("id") challengeId: string, @CurrentUser() userSession: UserSession) {
+  async deleteChallenge(
+    @Param("id") challengeId: string,
+    @CurrentUser() userSession: UserSession,
+  ) {
     const userId = userSession.userId;
-    
+
     this.logger.log(`Deleting challenge ${challengeId}`);
 
     const client = await this.pool.connect();

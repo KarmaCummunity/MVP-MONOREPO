@@ -15,9 +15,9 @@ import {
   InternalServerErrorException,
   UseGuards,
 } from "@nestjs/common";
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserSession } from '../auth/interfaces/user-session.interface';
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { UserSession } from "../auth/interfaces/user-session.interface";
 import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
@@ -144,7 +144,10 @@ export class ChallengesController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   @Post()
-  async createChallenge(@Body() createDto: CreateChallengeDto, @CurrentUser() user: UserSession) {
+  async createChallenge(
+    @Body() createDto: CreateChallengeDto,
+    @CurrentUser() user: UserSession,
+  ) {
     this.logger.log(`Creating new challenge for user: ${user.userId}`);
 
     const errors = await validate(createDto);
@@ -223,7 +226,10 @@ export class ChallengesController {
   }
 
   @Get(":id")
-  async getChallenge(@Param("id") id: string, @CurrentUser() user: UserSession) {
+  async getChallenge(
+    @Param("id") id: string,
+    @CurrentUser() user: UserSession,
+  ) {
     const userId = user.userId;
     if (!userId) {
       throw new BadRequestException("userId is required");
@@ -494,7 +500,10 @@ export class ChallengesController {
   }
 
   @Post("reset-logs")
-  async createResetLog(@Body() createDto: CreateResetLogDto, @CurrentUser() user: UserSession) {
+  async createResetLog(
+    @Body() createDto: CreateResetLogDto,
+    @CurrentUser() user: UserSession,
+  ) {
     createDto.userId = user.userId;
     this.logger.log(
       `Creating reset log for challenge: ${createDto.challengeId}`,
@@ -573,7 +582,10 @@ export class ChallengesController {
   }
 
   @Post("record-breaks")
-  async createRecordBreak(@Body() createDto: CreateRecordBreakDto, @CurrentUser() user: UserSession) {
+  async createRecordBreak(
+    @Body() createDto: CreateRecordBreakDto,
+    @CurrentUser() user: UserSession,
+  ) {
     createDto.userId = user.userId;
     this.logger.log(
       `Creating record break for challenge: ${createDto.challengeId}`,

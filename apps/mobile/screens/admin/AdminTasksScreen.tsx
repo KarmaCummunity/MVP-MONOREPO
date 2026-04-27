@@ -29,6 +29,8 @@ export default function AdminTasksScreen() {
     searchBarRemountKey,
     query,
     hasPersistedSnapshot,
+    hasActiveListFilters,
+    clearListFilters,
     filterAssignee,
     filterStatuses,
     filterPriorities,
@@ -112,7 +114,25 @@ export default function AdminTasksScreen() {
           ]}
           ListHeaderComponent={listHeaderBelowSearch}
           ListEmptyComponent={
-            listLoading ? null : <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
+            listLoading ? null : (
+              <View>
+                {hasActiveListFilters ? (
+                  <>
+                    <Text style={styles.emptyText}>{t('admin:tasks.noTasksMatchFilters')}</Text>
+                    <TouchableOpacity
+                      onPress={clearListFilters}
+                      style={{ marginTop: 16, alignItems: 'center' }}
+                    >
+                      <Text style={[styles.emptyText, { color: colors.primary, fontWeight: '600' }]}>
+                        {t('admin:tasks.clearFilters')}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
+                )}
+              </View>
+            )
           }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}

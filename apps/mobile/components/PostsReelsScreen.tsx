@@ -54,7 +54,7 @@ interface PostsReelsScreenProps {
 const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   onScroll,
   hideTopBar = false,
-  showTopBar = false
+  showTopBar: _showTopBar = false
 }) => {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
@@ -65,7 +65,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
   const [numColumns, setNumColumns] = useState(1); // Default to list view
-  const [sliderValue, setSliderValue] = useState(0); // 0 = 1 col, 1 = 2 cols, 2 = 3 cols
+  const [, setSliderValue] = useState(0); // 0 = 1 col, 1 = 2 cols, 2 = 3 cols
 
   // Report State
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -88,7 +88,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     selectedPostForReport,
     setSelectedPostForReport
   } = usePostMenu({
-    onDelete: (postId) => {
+    onDelete: (_postId) => {
       refresh(); // Refresh feed on success
     },
     onReport: (item) => {
@@ -224,16 +224,6 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
       setIsSubmittingReport(false);
     }
   };
-
-
-  const handleSliderChange = useCallback((value: number) => {
-    // Round to nearest integer standardizing step behavior
-    const step = Math.round(value);
-    setSliderValue(step);
-
-    // Map slider value (0-2) to columns (1-3)
-    setNumColumns(step + 1);
-  }, []);
 
   const renderItem = useCallback(({ item }: { item: FeedItem }) => {
     // Calculate available width: screen width minus horizontal padding on both sides
@@ -383,7 +373,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
               avatar: selectedItemForComments.user.avatar || 'https://picsum.photos/seed/user/100/100'
             } : undefined}
             postTitle={selectedItemForComments.title || ''}
-            onCommentsCountChange={(count) => {
+            onCommentsCountChange={() => {
               // Update the comments count in the feed
               refresh();
             }}

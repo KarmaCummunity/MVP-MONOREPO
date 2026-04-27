@@ -110,6 +110,8 @@ export default function ChatDetailScreen() {
     } finally {
       setIsLoadingProfile(false);
     }
+    // isLoadingProfile is read for a guard only; omitting from deps avoids re-running load after each completion
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard is synchronous; listing isLoadingProfile retriggers fetch
   }, [otherUserId, initialUserName, initialUserAvatar, t]);
 
   const loadMessages = useCallback(async () => {
@@ -179,31 +181,6 @@ export default function ChatDetailScreen() {
       }
     };
   }, [conversationId, selectedUser, loadMessages]);
-
-  const generateFakeResponse = async () => {
-    const responses = [
-      'תודה על המידע! מתי אפשר לבוא לקחת?',
-      'האם אפשר לקבל תמונה של הספה?',
-      'מה המידות של הספה?',
-      'האם יש אפשרות למשלוח?',
-    ];
-
-    const responseText = responses[Math.floor(Math.random() * responses.length)];
-
-    try {
-      await sendMessage({
-        conversationId,
-        senderId: otherUserId,
-        text: responseText,
-        timestamp: new Date().toISOString(),
-        read: false,
-        type: 'text',
-        status: 'sent',
-      });
-    } catch (error) {
-      console.error('❌ Send fake response error:', error);
-    }
-  };
 
   const handleSendMessage = async () => {
     if (inputText.trim() === '' || !selectedUser || isSending) return;
@@ -526,13 +503,13 @@ export default function ChatDetailScreen() {
                 return { paddingBottom };
               })()
             ]}
-            onContentSizeChange={(contentWidth, contentHeight) => {
+            onContentSizeChange={() => {
               // Use setTimeout to ensure scroll happens after layout
               setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
               }, 100);
             }}
-            onLayout={(event) => {
+            onLayout={() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }}
             showsVerticalScrollIndicator={false}

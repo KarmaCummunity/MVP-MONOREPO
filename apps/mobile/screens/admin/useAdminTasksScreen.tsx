@@ -22,6 +22,7 @@ import {
   buildCreateTaskRequestBody,
   buildPersistedAdminTaskFilterKeys,
   canonicalTaskCategory,
+  hasActiveAdminTaskListFilters,
   mapCreateTaskApiErrorMessage,
   normalizeAdminTaskFromApi,
   parseAdminTaskHeaderFilters,
@@ -34,7 +35,7 @@ import { AdminTaskListRow } from './AdminTaskListRow';
 export function useAdminTasksScreen() {
   const route = useRoute();
   const navigation = useNavigation<any>();
-  const { t } = useTranslation(['common', 'search']);
+  const { t } = useTranslation(['common', 'search', 'admin']);
   const routeParams = (route.params as any) || {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
@@ -95,9 +96,12 @@ export function useAdminTasksScreen() {
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [headerHeight, setHeaderHeight] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
-  const maxListHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0
-    ? screenHeight - tabBarHeight - headerHeight
-    : undefined;
+  const maxListHeightRaw =
+    Platform.OS === 'web' && screenHeight && headerHeight > 0
+      ? screenHeight - tabBarHeight - headerHeight
+      : 0;
+  // Negative/zero breaks RN-web layout; only apply a cap when the calculation is valid.
+  const maxListHeight = maxListHeightRaw > 0 ? maxListHeightRaw : undefined;
   const [loadingSubtasks, setLoadingSubtasks] = useState<string | null>(null);
   const fetchTasksSeqRef = useRef(0);
   const prevFilterStorageKeyRef = useRef<string | null>(null);
@@ -111,6 +115,27 @@ export function useAdminTasksScreen() {
     () => tasks.filter((t) => !t.parent_task_id),
     [tasks],
   );
+
+  const hasActiveListFilters = useMemo(
+    () => hasActiveAdminTaskListFilters(
+      query,
+      filterAssignee,
+      filterStatuses,
+      filterPriorities,
+      filterCategories,
+    ),
+    [query, filterAssignee, filterStatuses, filterPriorities, filterCategories],
+  );
+
+  const clearListFilters = useCallback(() => {
+    setQuery('');
+    setFilterAssignee('all');
+    setFilterStatuses([]);
+    setFilterPriorities([]);
+    setFilterCategories([]);
+    setListSort('priority_status');
+    setSearchBarRemountKey((k) => k + 1);
+  }, []);
 
   const listLoading = !persistedHydrated || loading;
 
@@ -318,7 +343,7 @@ export function useAdminTasksScreen() {
     setEditingId(null);
   };
 
-  const checkAndUpdateParentStatus = async (taskId: string) => {
+  const checkAndUpdateParentStatus = useCallback(async (taskId: string) => {
     // Check if task has incomplete subtasks, if so, set to 'stuck'
     try {
       const res = await apiService.getSubtasks(taskId);
@@ -335,9 +360,9 @@ export function useAdminTasksScreen() {
       console.error('Failed to check parent status:', err);
     }
     return false;
-  };
+  }, []);
 
-  const toggleSubtasks = async (taskId: string) => {
+  const toggleSubtasks = useCallback(async (taskId: string) => {
     if (expandedTasks.has(taskId)) {
       // Collapse
       const newExpanded = new Set(expandedTasks);
@@ -369,9 +394,9 @@ export function useAdminTasksScreen() {
         setLoadingSubtasks(null);
       }
     }
-  };
+  }, [expandedTasks, checkAndUpdateParentStatus, fetchTasks]);
 
-  const createSubtask = (parentTask: AdminTask) => {
+  const createSubtask = useCallback((parentTask: AdminTask) => {
     const parent = normalizeAdminTaskFromApi(parentTask);
     setFormData({
       title: '',
@@ -387,7 +412,7 @@ export function useAdminTasksScreen() {
     });
     setEditingId(null);
     setShowForm(true);
-  };
+  }, []);
 
   const createTask = async () => {
     if (!formData.title.trim()) {
@@ -443,7 +468,7 @@ export function useAdminTasksScreen() {
     }
   };
 
-  const toggleDone = async (task: AdminTask) => {
+  const toggleDone = useCallback(async (task: AdminTask) => {
     // If trying to mark as done, check if hours are logged first
     if (task.status !== 'done') {
       // Open hours modal first
@@ -474,7 +499,7 @@ export function useAdminTasksScreen() {
     } finally {
       setUpdating(null);
     }
-  };
+  }, [fetchTasks]);
 
   const handleSaveHours = async (hours: number) => {
     if (!pendingTaskId || !selectedUser?.id) {
@@ -509,7 +534,7 @@ export function useAdminTasksScreen() {
     toastService.showSuccess('המשימה סומנה כבוצעה והשעות נרשמו');
   };
 
-  const openEdit = (task: AdminTask) => {
+  const openEdit = useCallback((task: AdminTask) => {
     const normalized = normalizeAdminTaskFromApi(task);
     setFormData({
       title: normalized.title || '',
@@ -525,7 +550,7 @@ export function useAdminTasksScreen() {
     });
     setEditingId(task.id);
     setShowForm(true);
-  };
+  }, []);
 
   const saveEdit = async () => {
     if (!editingId) return;
@@ -592,7 +617,7 @@ export function useAdminTasksScreen() {
     }
   };
 
-  const deleteTask = async (taskId: string) => {
+  const deleteTask = useCallback(async (taskId: string) => {
     setDeleting(taskId);
     setError(null);
     try {
@@ -613,7 +638,7 @@ export function useAdminTasksScreen() {
     } finally {
       setDeleting(null);
     }
-  };
+  }, [fetchTasks]);
 
   const renderItem = useCallback(
     ({ item }: { item: AdminTask }) => (
@@ -680,6 +705,8 @@ export function useAdminTasksScreen() {
     searchBarRemountKey,
     query,
     hasPersistedSnapshot,
+    hasActiveListFilters,
+    clearListFilters,
     filterAssignee,
     filterStatuses,
     filterPriorities,

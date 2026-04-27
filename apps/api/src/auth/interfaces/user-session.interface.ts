@@ -5,5 +5,5 @@ export interface UserSession {
   roles: string[];
   iat: number;
   exp: number;
-  type: 'access' | 'refresh';
+  type: "access" | "refresh";
 }

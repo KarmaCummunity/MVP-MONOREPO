@@ -1,4 +1,21 @@
 import type { AdminCreateTaskFormFields, AdminTask, TaskPriority, TaskStatus } from './adminTasksScreen.types';
+
+/** True when list query is narrowed by search text or header filters (not default "all tasks" view). */
+export function hasActiveAdminTaskListFilters(
+  query: string,
+  filterAssignee: 'all' | 'me',
+  filterStatuses: TaskStatus[],
+  filterPriorities: TaskPriority[],
+  filterCategories: string[],
+): boolean {
+  return (
+    query.trim().length > 0
+    || filterAssignee === 'me'
+    || filterStatuses.length > 0
+    || filterPriorities.length > 0
+    || filterCategories.length > 0
+  );
+}
 import { TASK_LIST_CATEGORY_OPTIONS, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
 
 const CANONICAL_CATEGORY_VALUES = new Set(TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value));

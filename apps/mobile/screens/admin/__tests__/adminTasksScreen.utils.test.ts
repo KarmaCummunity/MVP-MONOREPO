@@ -2,6 +2,7 @@ import {
   buildPersistedAdminTaskFilterKeys,
   canonicalTaskCategory,
   formatTaskListStatusHebrew,
+  hasActiveAdminTaskListFilters,
   normalizeAdminTaskFromApi,
   parseAdminTaskHeaderFilters,
   sanitizeAdminTasksHeaderFilterKeys,
@@ -78,6 +79,21 @@ describe('parseAdminTaskHeaderFilters legacy status chip', () => {
     const parsed = parseAdminTaskHeaderFilters(['task_status_reports']);
     expect(parsed.statuses).toEqual([]);
     expect(parsed.categories).toEqual(['דיווח']);
+  });
+});
+
+describe('hasActiveAdminTaskListFilters', () => {
+  it('is false for default (all, no text, no chips)', () => {
+    expect(hasActiveAdminTaskListFilters('', 'all', [], [], [])).toBe(false);
+  });
+
+  it('is true for non-empty search', () => {
+    expect(hasActiveAdminTaskListFilters('x', 'all', [], [], [])).toBe(true);
+  });
+
+  it('is true for assignee me or any chip arrays', () => {
+    expect(hasActiveAdminTaskListFilters('', 'me', [], [], [])).toBe(true);
+    expect(hasActiveAdminTaskListFilters('', 'all', ['open'], [], [])).toBe(true);
   });
 });
 

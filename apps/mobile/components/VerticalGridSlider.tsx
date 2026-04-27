@@ -14,8 +14,6 @@ export default function VerticalGridSlider({
     style
 }: VerticalGridSliderProps) {
     const sliderHeight = 160;
-    const stepCount = 5;
-    const stepHeight = sliderHeight / (stepCount - 1); // Height of one interval (40px)
 
     // Calculate thumb position based on current columns (0-4 index)
     // 0 -> 0%, 4 -> 100%
@@ -25,7 +23,7 @@ export default function VerticalGridSlider({
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => true,
-            onPanResponderGrant: (evt, gestureState) => {
+            onPanResponderGrant: (evt, _gestureState) => {
                 // When touch starts, we could snap to the touch position immediately
                 const locationY = evt.nativeEvent.locationY;
                 // Adjust for padding (the interaction container starts at top: 10)
@@ -33,13 +31,13 @@ export default function VerticalGridSlider({
                 // Let's simplify: Put responder on a wrapper view that exactly matches the track + padding.
                 handleTouch(locationY - 10);
             },
-            onPanResponderMove: (evt, gestureState) => {
+            onPanResponderMove: (evt, _gestureState) => {
                 // We use locationY from native event which is relative to the view
                 // This updates as we drag
                 const locationY = evt.nativeEvent.locationY;
                 handleTouch(locationY - 10);
             },
-            onPanResponderRelease: (evt, gestureState) => {
+            onPanResponderRelease: (_evt, _gestureState) => {
                 // Already handled in Move
             }
         })

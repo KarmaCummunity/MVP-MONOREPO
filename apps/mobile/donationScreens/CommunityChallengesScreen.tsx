@@ -82,8 +82,8 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   // Search and filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<ChallengeType | ''>('');
-  const [selectedFrequencyFilter, setSelectedFrequencyFilter] = useState<ChallengeFrequency | ''>('');
-  const [selectedDifficultyFilter, setSelectedDifficultyFilter] = useState<ChallengeDifficulty | ''>('');
+  const [selectedFrequencyFilter] = useState<ChallengeFrequency | ''>('');
+  const [selectedDifficultyFilter] = useState<ChallengeDifficulty | ''>('');
   const [showMyCreatedOnly, setShowMyCreatedOnly] = useState(false);
   
   // Form state for creating challenge
@@ -112,32 +112,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
     [navigation],
   );
 
-  const handleToggleHeaderMode = useCallback(() => {
-    const nextSearchMode = !mode;
-    setMode(nextSearchMode);
-    if (Platform.OS === 'web') {
-      syncModeToUrl(nextSearchMode);
-    }
-  }, [mode, navigation, syncModeToUrl]);
-
-  // Load challenges when screen focuses
-  useFocusEffect(
-    useCallback(() => {
-      // Reset filters when coming back to the screen
-      setShowMyCreatedOnly(false);
-      
-      if (mode) {
-        loadChallenges();
-      }
-    }, [mode])
-  );
-
-  // Apply filters when search or filters change
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, selectedTypeFilter, selectedFrequencyFilter, selectedDifficultyFilter, showMyCreatedOnly, allChallenges]);
-
-  const loadChallenges = async () => {
+  const loadChallenges = useCallback(async () => {
     try {
       setLoading(true);
       const filters: any = {
@@ -146,9 +121,9 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         sort_order: 'DESC' as const,
         limit: 100,
       };
-      
+
       const response = await db.getCommunityChallenges(filters);
-      
+
       if (response.success && response.data) {
         setAllChallenges(response.data);
       } else {
@@ -161,15 +136,9 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast, t]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadChallenges();
-    setRefreshing(false);
-  };
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...allChallenges];
 
     // My created filter
@@ -204,6 +173,45 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
     }
 
     setFilteredChallenges(filtered);
+  }, [
+    allChallenges,
+    searchQuery,
+    selectedTypeFilter,
+    selectedFrequencyFilter,
+    selectedDifficultyFilter,
+    showMyCreatedOnly,
+    user?.id,
+  ]);
+
+  const handleToggleHeaderMode = useCallback(() => {
+    const nextSearchMode = !mode;
+    setMode(nextSearchMode);
+    if (Platform.OS === 'web') {
+      syncModeToUrl(nextSearchMode);
+    }
+  }, [mode, syncModeToUrl]);
+
+  // Load challenges when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      // Reset filters when coming back to the screen
+      setShowMyCreatedOnly(false);
+
+      if (mode) {
+        loadChallenges();
+      }
+    }, [mode, loadChallenges])
+  );
+
+  // Apply filters when search or filters change
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadChallenges();
+    setRefreshing(false);
   };
 
   const pickImage = async () => {
