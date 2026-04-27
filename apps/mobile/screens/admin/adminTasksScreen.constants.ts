@@ -1,4 +1,4 @@
-import type { TaskStatus, TasksListSort } from './adminTasksScreen.types';
+import type { TaskPriority, TaskStatus, TasksListSort } from './adminTasksScreen.types';
 
 export const TASK_LIST_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'open', label: 'פתוחה' },
@@ -26,6 +26,16 @@ export const TASK_LIST_CATEGORY_OPTIONS = [
 /** Category strings stored on tasks — keep in sync with {@link TASK_LIST_CATEGORY_OPTIONS}. */
 export const TASK_LIST_CATEGORY_VALUES: string[] = TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value);
 
+/** Priority values for API, filters, and form — order is display order (least to most pressing). */
+export const TASK_LIST_PRIORITY_VALUES: TaskPriority[] = [
+  'none',
+  'low',
+  'medium',
+  'high',
+  'critical',
+  'urgent',
+];
+
 export const TASK_LIST_SORT_OPTIONS: { value: TasksListSort; label: string }[] = [
   { value: 'created_desc', label: 'נוסף לאחרונה' },
   { value: 'created_asc', label: 'נוסף ראשון' },
@@ -39,9 +49,7 @@ export const ADMIN_TASKS_FILTER_OPTIONS: string[] = [
   'task_assign_me',
   ...TASK_LIST_STATUS_OPTIONS.map((o) => `task_status_${o.value}`),
   ...TASK_LIST_CATEGORY_OPTIONS.map((o) => `task_category_${o.value}`),
-  'task_priority_high',
-  'task_priority_medium',
-  'task_priority_low',
+  ...TASK_LIST_PRIORITY_VALUES.map((p) => `task_priority_${p}`),
 ];
 
 

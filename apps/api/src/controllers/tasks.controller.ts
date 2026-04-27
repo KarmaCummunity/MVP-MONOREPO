@@ -30,7 +30,7 @@ type TaskStatus =
   | "archived"
   | "stuck"
   | "testing";
-type TaskPriority = "low" | "medium" | "high";
+type TaskPriority = "none" | "low" | "medium" | "high" | "critical" | "urgent";
 
 interface CreateTaskDto {
   title: string;
@@ -120,7 +120,19 @@ function parseStatusQueryParam(
   return parsed.length ? parsed : undefined;
 }
 
-const TASK_PRIORITY_VALUES: TaskPriority[] = ["low", "medium", "high"];
+const TASK_PRIORITY_VALUES: TaskPriority[] = [
+  "none",
+  "low",
+  "medium",
+  "high",
+  "critical",
+  "urgent",
+];
+
+/** Ascending sort key: lower = more urgent (listed first). */
+const SQL_PRIORITY_ORDER_ASC = `CASE priority WHEN 'urgent' THEN 0 WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 WHEN 'none' THEN 5 ELSE 6 END`;
+
+const SQL_PRIORITY_ORDER_ASC_T = `CASE t.priority WHEN 'urgent' THEN 0 WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 WHEN 'none' THEN 5 ELSE 6 END`;
 
 function parsePriorityQueryParam(
   raw: string | string[] | undefined,
@@ -149,7 +161,7 @@ function orderByClause(sort: TasksListSort | undefined): string {
       return "ORDER BY t.created_at ASC NULLS LAST, t.id ASC";
     case "priority_status":
       return `ORDER BY 
-          CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
+          ${SQL_PRIORITY_ORDER_ASC_T} ASC,
           CASE t.status 
             WHEN 'in_progress' THEN 0 
             WHEN 'stuck' THEN 1 
@@ -301,7 +313,7 @@ export class TasksController {
           title VARCHAR(255) NOT NULL,
           description TEXT,
           status VARCHAR(20) NOT NULL DEFAULT 'open',
-          priority VARCHAR(10) NOT NULL DEFAULT 'medium',
+          priority VARCHAR(20) NOT NULL DEFAULT 'medium',
           category VARCHAR(50),
           due_date TIMESTAMPTZ,
           assignees UUID[] DEFAULT ARRAY[]::UUID[],
@@ -349,6 +361,24 @@ export class TasksController {
         } catch {
           /* ignore */
         }
+      }
+
+      // Widen priority column for values like critical, urgent (legacy VARCHAR(10))
+      try {
+        await this.pool.query(`
+          DO $$
+          BEGIN
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'priority'
+                AND character_maximum_length IS NOT NULL AND character_maximum_length < 20
+            ) THEN
+              ALTER TABLE tasks ALTER COLUMN priority TYPE VARCHAR(20);
+            END IF;
+          END $$;
+        `);
+      } catch (e) {
+        this.logger.warn("⚠️ Could not widen tasks.priority column:", e);
       }
 
       // 4. Ensure task_time_logs table exists
@@ -822,7 +852,7 @@ export class TasksController {
         FROM tasks t
         WHERE t.parent_task_id = $1
         ORDER BY 
-          CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
+          ${SQL_PRIORITY_ORDER_ASC} ASC,
           created_at DESC
       `,
         [parentId],
@@ -948,7 +978,7 @@ export class TasksController {
       }
 
       // Validate priority
-      if (priority && !["low", "medium", "high"].includes(priority)) {
+      if (priority && !TASK_PRIORITY_VALUES.includes(priority)) {
         return { success: false, error: "Invalid priority value" };
       }
 
@@ -1437,7 +1467,7 @@ export class TasksController {
       }
 
       // Validate priority if provided
-      if (body.priority && !["low", "medium", "high"].includes(body.priority)) {
+      if (body.priority && !TASK_PRIORITY_VALUES.includes(body.priority)) {
         return { success: false, error: "Invalid priority value" };
       }
 

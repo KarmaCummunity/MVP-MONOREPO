@@ -16,9 +16,14 @@ export function hasActiveAdminTaskListFilters(
     || filterCategories.length > 0
   );
 }
-import { TASK_LIST_CATEGORY_OPTIONS, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+import {
+  TASK_LIST_CATEGORY_OPTIONS,
+  TASK_LIST_PRIORITY_VALUES,
+  TASK_LIST_STATUS_OPTIONS,
+} from './adminTasksScreen.constants';
 
 const CANONICAL_CATEGORY_VALUES = new Set(TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value));
+const ALLOWED_TASK_PRIORITIES = new Set<string>(TASK_LIST_PRIORITY_VALUES);
 
 /** Legacy English/slug categories from older clients → Hebrew values used in admin form & list. */
 const LEGACY_CATEGORY_TO_CANONICAL: Record<string, string> = {
@@ -54,7 +59,11 @@ export function normalizeAdminTaskFromApi(task: AdminTask): AdminTask {
   }
 
   const canonCat = canonicalTaskCategory(category);
-  return { ...task, status: nextStatus, category: canonCat || null };
+  const rawPri = String(task.priority ?? 'medium').trim();
+  const nextPriority: TaskPriority = ALLOWED_TASK_PRIORITIES.has(rawPri)
+    ? (rawPri as TaskPriority)
+    : 'medium';
+  return { ...task, status: nextStatus, category: canonCat || null, priority: nextPriority };
 }
 
 export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
@@ -83,9 +92,9 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
       }
     }
     if (key.startsWith('task_priority_')) {
-      const raw = key.slice('task_priority_'.length) as TaskPriority;
-      if (raw === 'high' || raw === 'medium' || raw === 'low') {
-        priorities.push(raw);
+      const raw = key.slice('task_priority_'.length);
+      if (ALLOWED_TASK_PRIORITIES.has(raw)) {
+        priorities.push(raw as TaskPriority);
       }
     }
     if (key.startsWith('task_category_')) {
@@ -102,9 +111,22 @@ export function sanitizeAdminTasksHeaderFilterKeys(filterKeys: string[]): string
 }
 
 export function formatTaskListPriorityHebrew(priority: string): string {
-  if (priority === 'high') return 'גבוהה';
-  if (priority === 'medium') return 'בינונית';
-  return 'נמוכה';
+  switch (priority) {
+    case 'none':
+      return 'לא רלוונטי';
+    case 'low':
+      return 'נמוך';
+    case 'medium':
+      return 'בינוני';
+    case 'high':
+      return 'גבוה';
+    case 'critical':
+      return 'קריטי';
+    case 'urgent':
+      return 'דחוף';
+    default:
+      return priority || 'לא ידוע';
+  }
 }
 
 export function formatTaskListStatusHebrew(status: string): string {

@@ -170,7 +170,7 @@ export class DonationsController {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'open',
-        priority VARCHAR(10) NOT NULL DEFAULT 'medium',
+        priority VARCHAR(20) NOT NULL DEFAULT 'medium',
         category VARCHAR(50),
         due_date TIMESTAMPTZ,
         assignees UUID[] DEFAULT ARRAY[]::UUID[],
