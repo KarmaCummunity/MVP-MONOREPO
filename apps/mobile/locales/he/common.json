@@ -166,6 +166,12 @@
     "publish": "פרסום",
     "titleRequired": "נא להזין כותרת",
     "requestPublished": "הבקשה פורסמה בהצלחה",
-    "givePublished": "הפוסט פורסם בהצלחה"
+    "givePublished": "הפוסט פורסם בהצלחה",
+    "rideFromPlaceholder": "נקודת מוצא",
+    "rideToPlaceholder": "כתובת יעד",
+    "rideDepartureLabel": "מתי",
+    "titleOptional": "כותרת קצרה (אופציונלי)",
+    "rideRequestFromToRequired": "נא למלא נקודת מוצא ויעד.",
+    "rideRequestTitleTemplate": "בקשת טרמפ: מ-{{from}} ל-{{to}}"
   }
 }

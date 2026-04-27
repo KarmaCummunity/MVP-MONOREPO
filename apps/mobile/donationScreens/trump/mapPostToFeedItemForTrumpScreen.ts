@@ -89,8 +89,12 @@ function buildRideData(post: {
   if (post.ride_data) {
     return rideDataFromRideDataBlock(post.ride_data);
   }
-  if ((post.post_type === 'ride' || post.post_type === 'ride_offered') && post.metadata) {
-    return rideDataFromMetadata(post);
+  // Dedicated-item ride requests use post_type `donation` with structured `metadata.ride`
+  if (post.metadata) {
+    const fromMeta = rideDataFromMetadata(post);
+    if (fromMeta.from || fromMeta.to || fromMeta.time || fromMeta.date) {
+      return fromMeta;
+    }
   }
   return { from: '', to: '', seats: 0, price: 0, time: '', date: '' };
 }

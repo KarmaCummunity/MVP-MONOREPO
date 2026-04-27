@@ -7,6 +7,7 @@ import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { usePostComposerStore, PostIntent } from '../stores/postComposerStore';
 import ComposerTaskForm, { type ComposerTaskFormHandle } from './ComposerTaskForm';
+import TimeInput from './TimeInput';
 
 const POST_CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'time', 'challenges'] as const;
 const TASK_CATEGORY_SLUG = 'tasks' as const;
@@ -21,6 +22,10 @@ export default function CreatePostComposerModal(): React.ReactElement {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
+  /** Ride request (trump + request): origin / destination text; departure defaults to "now". */
+  const [rideFrom, setRideFrom] = useState('');
+  const [rideTo, setRideTo] = useState('');
+  const [rideDeparture, setRideDeparture] = useState<Date>(() => new Date());
   const [quantity, setQuantity] = useState('1');
   const [amount, setAmount] = useState('');
   const [taskSubmitting, setTaskSubmitting] = useState(false);
@@ -40,6 +45,9 @@ export default function CreatePostComposerModal(): React.ReactElement {
     setTitle('');
     setDescription('');
     setCity('');
+    setRideFrom('');
+    setRideTo('');
+    setRideDeparture(new Date());
     setQuantity('1');
     setAmount('');
     setTaskSubmitting(false);
@@ -47,31 +55,64 @@ export default function CreatePostComposerModal(): React.ReactElement {
 
   const showAmountField = !contentIsTask && category === 'money';
   const showQuantityField = !contentIsTask && category === 'items';
+  const showTrumpRideRequestFields = !contentIsTask && category === 'trump' && intent === 'request';
 
-  const canPublishPost = title.trim().length > 0;
+  const canPublishPost = showTrumpRideRequestFields
+    ? rideFrom.trim().length > 0 && rideTo.trim().length > 0
+    : title.trim().length > 0;
 
   const submitPost = async () => {
     if (!selectedUser?.id) {
       Alert.alert(t('common:error'), t('common:guestLoginHint'));
       return;
     }
-    if (!title.trim()) {
+    const fromTrim = rideFrom.trim();
+    const toTrim = rideTo.trim();
+    let resolvedTitle = title.trim();
+    if (showTrumpRideRequestFields) {
+      if (!fromTrim || !toTrim) {
+        Alert.alert(t('common:error'), t('common:postComposer.rideRequestFromToRequired'));
+        return;
+      }
+      if (!resolvedTitle) {
+        resolvedTitle = t('common:postComposer.rideRequestTitleTemplate', { from: fromTrim, to: toTrim });
+      }
+    } else if (!resolvedTitle) {
       Alert.alert(t('common:error'), t('common:postComposer.titleRequired'));
       return;
     }
 
+    const departureIso =
+      showTrumpRideRequestFields && rideDeparture instanceof Date && !Number.isNaN(rideDeparture.getTime())
+        ? rideDeparture.toISOString()
+        : new Date().toISOString();
+
+    const trumpRequestMetadata = showTrumpRideRequestFields
+      ? {
+          ride: {
+            from_location: fromTrim,
+            to_location: toTrim,
+            departure_time: departureIso,
+            category: 'trump',
+          },
+          category: 'trump',
+        }
+      : undefined;
+
     try {
       await db.createDedicatedItem({
         owner_id: selectedUser.id,
-        title: title.trim(),
+        title: resolvedTitle,
         description: description.trim() || undefined,
         category,
-        city: city.trim() || undefined,
+        city: showTrumpRideRequestFields ? fromTrim : city.trim() || undefined,
+        address: showTrumpRideRequestFields ? toTrim : undefined,
         quantity: showQuantityField ? Math.max(1, Number(quantity) || 1) : 1,
         price: showAmountField ? Math.max(0, Number(amount) || 0) : 0,
         condition: 'used',
         status: 'available',
         intent,
+        ...(trumpRequestMetadata ? { metadata: trumpRequestMetadata } : {}),
       });
 
       Alert.alert(
@@ -154,9 +195,53 @@ export default function CreatePostComposerModal(): React.ReactElement {
             <Text style={styles.hintText}>{t('common:guestLoginHint')}</Text>
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-              <TextInput style={styles.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={setTitle} />
-              <TextInput style={[styles.input, styles.multiline]} placeholder={t('common:postComposer.description')} value={description} onChangeText={setDescription} multiline />
-              <TextInput style={styles.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={setCity} />
+              {showTrumpRideRequestFields ? (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('common:postComposer.rideFromPlaceholder')}
+                    value={rideFrom}
+                    onChangeText={setRideFrom}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('common:postComposer.rideToPlaceholder')}
+                    value={rideTo}
+                    onChangeText={setRideTo}
+                  />
+                  <TimeInput
+                    value={rideDeparture}
+                    onChange={(d) => setRideDeparture(d ?? new Date())}
+                    label={t('common:postComposer.rideDepartureLabel')}
+                    placeholder={t('common:time.now')}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('common:postComposer.titleOptional')}
+                    value={title}
+                    onChangeText={setTitle}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.multiline]}
+                    placeholder={t('common:postComposer.description')}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                  />
+                </>
+              ) : (
+                <>
+                  <TextInput style={styles.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={setTitle} />
+                  <TextInput
+                    style={[styles.input, styles.multiline]}
+                    placeholder={t('common:postComposer.description')}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                  />
+                  <TextInput style={styles.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={setCity} />
+                </>
+              )}
               {showQuantityField ? (
                 <TextInput style={styles.input} placeholder={t('common:postComposer.quantity')} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
               ) : null}
