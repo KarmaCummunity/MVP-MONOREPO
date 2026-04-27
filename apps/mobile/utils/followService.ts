@@ -3,6 +3,34 @@ import { db, DatabaseService } from './databaseService';
 import { apiService } from './apiService';
 import { USE_BACKEND } from './dbConfig';
 
+/** Max concurrent profile fetches when hydrating follower/following lists (backend). */
+const USER_FETCH_CONCURRENCY = 8;
+
+/**
+ * Normalize follow relation documents from REST/local storage (camelCase vs snake_case, nested data).
+ */
+export function followerIdFromRelation(rel: any): string | undefined {
+  if (!rel || typeof rel !== 'object') return undefined;
+  const nested = rel.data && typeof rel.data === 'object' ? rel.data : rel;
+  const v =
+    nested.followerId ??
+    nested.follower_id ??
+    rel.followerId ??
+    rel.follower_id;
+  return v != null && v !== '' ? String(v).trim() : undefined;
+}
+
+export function followingIdFromRelation(rel: any): string | undefined {
+  if (!rel || typeof rel !== 'object') return undefined;
+  const nested = rel.data && typeof rel.data === 'object' ? rel.data : rel;
+  const v =
+    nested.followingId ??
+    nested.following_id ??
+    rel.followingId ??
+    rel.following_id;
+  return v != null && v !== '' ? String(v).trim() : undefined;
+}
+
 export interface FollowRelationship {
   followerId: string;
   followingId: string;
@@ -35,10 +63,14 @@ export const getUpdatedFollowCounts = async (userId: string): Promise<{ follower
 
 export const getFollowStats = async (userId: string, currentUserId: string): Promise<FollowStats> => {
   try {
-    const followers = await db.getFollowers(userId);
-    const following = await db.getFollowing(userId);
+    const targetId = String(userId).trim();
+    const viewerId = String(currentUserId).trim();
 
-    const isFollowing = following.some((rel: any) => rel.followerId === currentUserId);
+    const followers = await db.getFollowers(targetId);
+    const following = await db.getFollowing(targetId);
+
+    // "Viewer follows target" means viewer appears among target's followers (not "in target's following list").
+    const isFollowing = followers.some((rel: any) => followerIdFromRelation(rel) === viewerId);
 
     return {
       followersCount: followers.length,
@@ -55,38 +87,86 @@ export const getFollowStats = async (userId: string, currentUserId: string): Pro
   }
 };
 
+/**
+ * For a list of user IDs, returns whether the viewer follows each user (single following-list read).
+ */
+export const getFollowingStateForUserIds = async (
+  viewerId: string,
+  candidateIds: string[]
+): Promise<Record<string, { isFollowing: boolean }>> => {
+  const out: Record<string, { isFollowing: boolean }> = {};
+  const viewer = String(viewerId || '').trim();
+  if (!viewer) {
+    for (const id of candidateIds) {
+      out[String(id).trim()] = { isFollowing: false };
+    }
+    return out;
+  }
+  try {
+    const relations = await db.getFollowing(viewer);
+    const followingSet = new Set(
+      (relations as any[])
+        .map((rel) => followingIdFromRelation(rel))
+        .filter((id): id is string => !!id)
+    );
+    for (const raw of candidateIds) {
+      const id = String(raw).trim();
+      out[id] = { isFollowing: followingSet.has(id) };
+    }
+    return out;
+  } catch (error) {
+    console.error('❌ getFollowingStateForUserIds error:', error);
+    for (const raw of candidateIds) {
+      out[String(raw).trim()] = { isFollowing: false };
+    }
+    return out;
+  }
+};
+
 export const followUser = async (followerId: string, followingId: string): Promise<boolean> => {
   try {
-    if (followerId === followingId) {
+    const fid = String(followerId).trim();
+    const tid = String(followingId).trim();
+    if (fid === tid) {
       return false;
     }
 
-    const existingFollowers = await db.getFollowers(followingId);
-    const isAlreadyFollowing = existingFollowers.some((rel: any) => rel.followerId === followerId);
+    if (USE_BACKEND) {
+      const res = await apiService.followUser(tid, fid);
+      if (!res.success) {
+        return false;
+      }
+      try {
+        await sendFollowNotification(fid, tid);
+      } catch { /* optional */ }
+      await updateFollowCounts(fid);
+      await updateFollowCounts(tid);
+      return true;
+    }
+
+    const existingFollowers = await db.getFollowers(tid);
+    const isAlreadyFollowing = existingFollowers.some((rel: any) => followerIdFromRelation(rel) === fid);
 
     if (isAlreadyFollowing) {
       return false;
     }
 
     const newFollow: FollowRelationship = {
-      followerId,
-      followingId,
+      followerId: fid,
+      followingId: tid,
       followDate: new Date().toISOString()
     };
 
-    await db.addFollower(followingId, followerId, newFollow);
+    await db.addFollower(tid, fid, newFollow);
 
-    await db.addFollowing(followerId, followingId, newFollow);
+    await db.addFollowing(fid, tid, newFollow);
 
-    // Optional: fetch follower name from backend; fallback to ID
     try {
-      const followerName = followerId;
-      await sendFollowNotification(followerName, followingId);
+      await sendFollowNotification(fid, tid);
     } catch { }
 
-    // Update follow counts for both users
-    await updateFollowCounts(followerId);
-    await updateFollowCounts(followingId);
+    await updateFollowCounts(fid);
+    await updateFollowCounts(tid);
 
     return true;
   } catch (error) {
@@ -97,13 +177,25 @@ export const followUser = async (followerId: string, followingId: string): Promi
 
 export const unfollowUser = async (followerId: string, followingId: string): Promise<boolean> => {
   try {
-    await db.removeFollower(followingId, followerId);
+    const fid = String(followerId).trim();
+    const tid = String(followingId).trim();
 
-    await db.removeFollowing(followerId, followingId);
+    if (USE_BACKEND) {
+      const res = await apiService.unfollowUser(tid, fid);
+      if (!res.success) {
+        return false;
+      }
+      await updateFollowCounts(fid);
+      await updateFollowCounts(tid);
+      return true;
+    }
 
-    // Update follow counts for both users
-    await updateFollowCounts(followerId);
-    await updateFollowCounts(followingId);
+    await db.removeFollower(tid, fid);
+
+    await db.removeFollowing(fid, tid);
+
+    await updateFollowCounts(fid);
+    await updateFollowCounts(tid);
 
     return true;
   } catch (error) {
@@ -112,10 +204,62 @@ export const unfollowUser = async (followerId: string, followingId: string): Pro
   }
 };
 
+function mapUserPreviewFromApi(user: any, id: string) {
+  return {
+    id: user.id || id,
+    name: user.name || 'ללא שם',
+    avatar: user.avatar_url || user.avatar || 'https://i.pravatar.cc/150?img=1',
+    bio: user.bio || '',
+    karmaPoints: user.karma_points || 0,
+    followersCount: user.followers_count || 0,
+    completedTasks: 0,
+    roles: user.roles || ['user'],
+    isVerified: false,
+    isActive: user.is_active !== false,
+  };
+}
+
+function minimalUserPreview(id: string) {
+  return {
+    id,
+    name: 'ללא שם',
+    avatar: 'https://i.pravatar.cc/150?img=1',
+    bio: '',
+    karmaPoints: 0,
+    followersCount: 0,
+    completedTasks: 0,
+    roles: ['user'],
+    isVerified: false,
+    isActive: false,
+  };
+}
+
+async function mapPoolConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await mapper(items[i]);
+    }
+  }
+
+  const n = Math.min(Math.max(1, concurrency), Math.max(1, items.length));
+  await Promise.all(Array.from({ length: n }, () => worker()));
+  return results;
+}
+
 export const getFollowers = async (userId: string): Promise<any[]> => {
   try {
     const followers = await db.getFollowers(userId);
-    const followerIds = (followers as any[]).map((rel: any) => rel.followerId);
+    const followerIds = (followers as any[])
+      .map((rel: any) => followerIdFromRelation(rel))
+      .filter((id): id is string => !!id);
 
     if (followerIds.length === 0) {
       return [];
@@ -124,43 +268,18 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
     // Fetch full user data from backend for each follower
     if (USE_BACKEND) {
       try {
-        const userPromises = followerIds.map(async (id: string) => {
+        const users = await mapPoolConcurrency(followerIds, USER_FETCH_CONCURRENCY, async (id: string) => {
           try {
             const response = await apiService.getUserById(id);
             if (response.success && response.data) {
-              const user = response.data;
-              return {
-                id: user.id || id,
-                name: user.name || 'ללא שם',
-                avatar: user.avatar_url || user.avatar || 'https://i.pravatar.cc/150?img=1',
-                bio: user.bio || '',
-                karmaPoints: user.karma_points || 0,
-                followersCount: user.followers_count || 0,
-                completedTasks: 0, // TODO: Get from backend if available
-                roles: user.roles || ['user'],
-                isVerified: false, // TODO: Get from backend if available
-                isActive: user.is_active !== false,
-              };
+              return mapUserPreviewFromApi(response.data, id);
             }
           } catch (error) {
             console.warn(`Failed to fetch follower ${id}:`, error);
           }
-          // Fallback to minimal data if fetch fails
-          return {
-            id,
-            name: 'ללא שם',
-            avatar: 'https://i.pravatar.cc/150?img=1',
-            bio: '',
-            karmaPoints: 0,
-            followersCount: 0,
-            completedTasks: 0,
-            roles: ['user'],
-            isVerified: false,
-            isActive: false,
-          };
+          return minimalUserPreview(id);
         });
 
-        const users = await Promise.all(userPromises);
         return users.filter(user => user !== null);
       } catch (error) {
         console.error('❌ Get followers from backend error:', error);
@@ -189,7 +308,9 @@ export const getFollowers = async (userId: string): Promise<any[]> => {
 export const getFollowing = async (userId: string): Promise<any[]> => {
   try {
     const following = await db.getFollowing(userId);
-    const followingIds = (following as any[]).map((rel: any) => rel.followingId);
+    const followingIds = (following as any[])
+      .map((rel: any) => followingIdFromRelation(rel))
+      .filter((id): id is string => !!id);
 
     if (followingIds.length === 0) {
       return [];
@@ -198,43 +319,18 @@ export const getFollowing = async (userId: string): Promise<any[]> => {
     // Fetch full user data from backend for each following user
     if (USE_BACKEND) {
       try {
-        const userPromises = followingIds.map(async (id: string) => {
+        const users = await mapPoolConcurrency(followingIds, USER_FETCH_CONCURRENCY, async (id: string) => {
           try {
             const response = await apiService.getUserById(id);
             if (response.success && response.data) {
-              const user = response.data;
-              return {
-                id: user.id || id,
-                name: user.name || 'ללא שם',
-                avatar: user.avatar_url || user.avatar || 'https://i.pravatar.cc/150?img=1',
-                bio: user.bio || '',
-                karmaPoints: user.karma_points || 0,
-                followersCount: user.followers_count || 0,
-                completedTasks: 0, // TODO: Get from backend if available
-                roles: user.roles || ['user'],
-                isVerified: false, // TODO: Get from backend if available
-                isActive: user.is_active !== false,
-              };
+              return mapUserPreviewFromApi(response.data, id);
             }
           } catch (error) {
             console.warn(`Failed to fetch following user ${id}:`, error);
           }
-          // Fallback to minimal data if fetch fails
-          return {
-            id,
-            name: 'ללא שם',
-            avatar: 'https://i.pravatar.cc/150?img=1',
-            bio: '',
-            karmaPoints: 0,
-            followersCount: 0,
-            completedTasks: 0,
-            roles: ['user'],
-            isVerified: false,
-            isActive: false,
-          };
+          return minimalUserPreview(id);
         });
 
-        const users = await Promise.all(userPromises);
         return users.filter(user => user !== null);
       } catch (error) {
         console.error('❌ Get following from backend error:', error);

@@ -262,8 +262,10 @@ export function ProfileScreenContent({
 
       try {
         console.log('👤 ProfileScreen - Loading follow stats for user:', viewingUser.name);
-        const stats = await getFollowStats(viewingUser.id, selectedUser.id);
-        const counts = await getUpdatedFollowCounts(viewingUser.id);
+        const [stats, counts] = await Promise.all([
+          getFollowStats(viewingUser.id, selectedUser.id),
+          getUpdatedFollowCounts(viewingUser.id),
+        ]);
         setFollowStats(stats);
         setUpdatedCounts(counts);
         setIsFollowing(stats.isFollowing);
@@ -584,8 +586,10 @@ export function ProfileScreenContent({
         } else if (viewingUser && selectedUser) {
           // Refresh follow stats for other user's profile
           try {
-            const stats = await getFollowStats(viewingUser.id, selectedUser.id);
-            const counts = await getUpdatedFollowCounts(viewingUser.id);
+            const [stats, counts] = await Promise.all([
+              getFollowStats(viewingUser.id, selectedUser.id),
+              getUpdatedFollowCounts(viewingUser.id),
+            ]);
             setFollowStats(stats);
             setUpdatedCounts(counts);
             setIsFollowing(stats.isFollowing);
