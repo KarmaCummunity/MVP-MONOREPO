@@ -574,7 +574,8 @@ export class StatsController {
       FROM tasks
     `);
 
-    // Posts: total in DB, "open" = visible (not hidden) — aligns with default feed filters
+    // Posts: counts aligned with profile Open/Closed tabs (task/ride/item workflow),
+    // not merely posts.status (which is mostly active/hidden for soft-delete).
     let postsStats: { rows: MetricsRow[] };
     try {
       const postsTableExists = await this.pool.query(`
@@ -586,22 +587,70 @@ export class StatsController {
       `);
       if (postsTableExists.rows[0].exists) {
         postsStats = await this.pool.query(`
-          SELECT 
+          WITH base AS (
+            SELECT
+              p.id,
+              p.post_type,
+              p.task_id,
+              p.ride_id,
+              p.item_id,
+              t.status AS task_status,
+              r.status AS ride_status,
+              i.status AS item_status
+            FROM posts p
+            LEFT JOIN tasks t ON t.id = p.task_id
+            LEFT JOIN rides r ON r.id = p.ride_id
+            LEFT JOIN items i ON i.id = p.item_id
+            WHERE (p.status IS NULL OR p.status <> 'hidden')
+          )
+          SELECT
             COUNT(*)::bigint AS posts_total,
             COUNT(*) FILTER (
-              WHERE (status IS NULL OR status <> 'hidden')
-            )::bigint AS posts_open
-          FROM posts
+              WHERE
+                (post_type IN ('task_assignment', 'task_completion')
+                  AND task_status IN ('open', 'in_progress'))
+                OR (
+                  (ride_id IS NOT NULL OR post_type = 'ride')
+                  AND COALESCE(ride_status, 'active') IN ('active', 'full')
+                )
+                OR (
+                  (item_id IS NOT NULL OR post_type IN ('item', 'donation'))
+                  AND COALESCE(item_status, 'available') IN (
+                    'available', 'reserved', 'active'
+                  )
+                )
+                OR (
+                  post_type NOT IN ('task_assignment', 'task_completion')
+                  AND ride_id IS NULL
+                  AND post_type <> 'ride'
+                  AND item_id IS NULL
+                  AND post_type NOT IN ('item', 'donation')
+                )
+            )::bigint AS posts_open,
+            COUNT(*) FILTER (
+              WHERE
+                (post_type IN ('task_assignment', 'task_completion')
+                  AND task_status IN ('done', 'archived'))
+                OR (
+                  (ride_id IS NOT NULL OR post_type = 'ride')
+                  AND ride_status IN ('completed', 'cancelled')
+                )
+                OR (
+                  (item_id IS NOT NULL OR post_type IN ('item', 'donation'))
+                  AND item_status IN ('delivered', 'completed', 'expired')
+                )
+            )::bigint AS posts_closed
+          FROM base
         `);
       } else {
         postsStats = {
-          rows: [{ posts_total: "0", posts_open: "0" }],
+          rows: [{ posts_total: "0", posts_open: "0", posts_closed: "0" }],
         };
       }
     } catch (error) {
       this.logger.warn("Posts stats query failed, using zero values:", error);
       postsStats = {
-        rows: [{ posts_total: "0", posts_open: "0" }],
+        rows: [{ posts_total: "0", posts_open: "0", posts_closed: "0" }],
       };
     }
 
@@ -685,6 +734,7 @@ export class StatsController {
     const totalUsers = Number(usersStats.rows[0]?.total_users ?? 0);
     const postsTotal = Number(postsStats.rows[0]?.posts_total ?? 0);
     const postsOpen = Number(postsStats.rows[0]?.posts_open ?? 0);
+    const postsClosed = Number(postsStats.rows[0]?.posts_closed ?? 0);
     const avgPostsPerUser =
       totalUsers > 0 ? Math.round((postsTotal / totalUsers) * 100) / 100 : 0;
     const avgHoursPerUser = totalUsers > 0 ? totalHours / totalUsers : 0;
@@ -700,9 +750,10 @@ export class StatsController {
       tasks_done: Number(tasksStats.rows[0]?.tasks_done ?? 0),
       tasks_total: Number(tasksStats.rows[0]?.tasks_total ?? 0),
 
-      // Posts stats (dashboard)
+      // Posts stats (dashboard) — open/closed match profile tabs + feed workflow
       posts_total: postsTotal,
       posts_open: postsOpen,
+      posts_closed: postsClosed,
       avg_posts_per_user: avgPostsPerUser,
 
       // Users stats

@@ -80,9 +80,10 @@ interface CommunityStats {
     avg_hours_per_user: number;
     current_month_hours: number;
 
-    // Dashboard stats (posts)
+    // Dashboard stats (posts) — open/closed from API match profile tabs
     posts_total: number;
     posts_open: number;
+    posts_closed: number;
     avg_posts_per_user: number;
     
     // Legacy stats
@@ -126,6 +127,7 @@ export default function CommunityStatsScreen() {
 
         posts_total: 0,
         posts_open: 0,
+        posts_closed: 0,
         avg_posts_per_user: 0,
         
         // Legacy stats
@@ -137,11 +139,6 @@ export default function CommunityStatsScreen() {
     });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [headerHeight, setHeaderHeight] = useState(0);
-    const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
-    const maxListHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0
-        ? screenHeight - tabBarHeight - headerHeight
-        : undefined;
 
     const loadStats = useCallback(async (forceRefresh = false) => {
         try {
@@ -217,6 +214,7 @@ export default function CommunityStatsScreen() {
 
                 posts_total: dashboardStats?.metrics?.posts_total != null ? Number(dashboardStats.metrics.posts_total) : 0,
                 posts_open: dashboardStats?.metrics?.posts_open != null ? Number(dashboardStats.metrics.posts_open) : 0,
+                posts_closed: dashboardStats?.metrics?.posts_closed != null ? Number(dashboardStats.metrics.posts_closed) : 0,
                 avg_posts_per_user: dashboardStats?.metrics?.avg_posts_per_user != null ? Number(dashboardStats.metrics.avg_posts_per_user) : 0,
                 
                 // Legacy stats
@@ -265,13 +263,7 @@ export default function CommunityStatsScreen() {
     return (
         <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
             <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
-            {/* List container - limited height on web to ensure scrolling works */}
-            <View style={[
-                styles.listWrapper,
-                Platform.OS === 'web' && maxListHeight ? {
-                    maxHeight: maxListHeight,
-                } : undefined
-            ]}>
+            <View style={styles.listWrapper}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -284,44 +276,48 @@ export default function CommunityStatsScreen() {
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
                     }
                 >
-                    <View 
-                        style={styles.header}
-                        onLayout={(event) => {
-                            if (Platform.OS === 'web') {
-                                const { height } = event.nativeEvent.layout;
-                                setHeaderHeight(height);
-                            }
-                        }}
-                    >
+                    <View style={styles.header}>
                     <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
                     <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
-                    <View style={styles.headerPostsRow}>
-                        <View style={styles.headerPostStat}>
-                            <Text style={styles.headerPostValue}>
-                                {stats.posts_total.toLocaleString('he-IL')}
-                            </Text>
-                            <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                {'סה"כ פוסטים'}
-                            </Text>
+                    <View style={styles.headerPostsGrid}>
+                        <View style={styles.headerPostsRow}>
+                            <View style={styles.headerPostStat}>
+                                <Text style={styles.headerPostValue}>
+                                    {stats.posts_total.toLocaleString('he-IL')}
+                                </Text>
+                                <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                    {'סה"כ פוסטים'}
+                                </Text>
+                            </View>
+                            <View style={styles.headerPostStat}>
+                                <Text style={styles.headerPostValue}>
+                                    {stats.posts_closed.toLocaleString('he-IL')}
+                                </Text>
+                                <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                    פוסטים סגורים
+                                </Text>
+                            </View>
                         </View>
-                        <View style={styles.headerPostStat}>
-                            <Text style={styles.headerPostValue}>
-                                {stats.posts_open.toLocaleString('he-IL')}
-                            </Text>
-                            <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                פוסטים פתוחים
-                            </Text>
-                        </View>
-                        <View style={styles.headerPostStat}>
-                            <Text style={styles.headerPostValue}>
-                                {stats.avg_posts_per_user.toLocaleString('he-IL', {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 2,
-                                })}
-                            </Text>
-                            <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                ממוצע פוסטים למשתמש
-                            </Text>
+                        <View style={styles.headerPostsRow}>
+                            <View style={styles.headerPostStat}>
+                                <Text style={styles.headerPostValue}>
+                                    {stats.posts_open.toLocaleString('he-IL')}
+                                </Text>
+                                <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                    פוסטים פתוחים
+                                </Text>
+                            </View>
+                            <View style={styles.headerPostStat}>
+                                <Text style={styles.headerPostValue}>
+                                    {stats.avg_posts_per_user.toLocaleString('he-IL', {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                </Text>
+                                <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                    ממוצע פוסטים למשתמש
+                                </Text>
+                            </View>
                         </View>
                     </View>
                 </View>
@@ -499,8 +495,17 @@ export default function CommunityStatsScreen() {
                     </View>
                 </View>
 
-                {/* Bottom padding for safe area */}
-                <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
+                {/* Bottom padding: tab bar (absolute) + safe area */}
+                <View
+                    style={{
+                        height:
+                            Platform.OS === 'ios'
+                                ? 24 + tabBarHeight + 40
+                                : Platform.OS === 'web'
+                                  ? 24 + tabBarHeight + 24
+                                  : 16 + tabBarHeight + 24,
+                    }}
+                />
                 </ScrollView>
             </View>
         </SafeAreaView>
@@ -558,11 +563,14 @@ const styles = StyleSheet.create({
         marginTop: 4,
         textAlign: 'right',
     },
+    headerPostsGrid: {
+        marginTop: 16,
+        gap: 8,
+    },
     headerPostsRow: {
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
         alignItems: 'stretch',
-        marginTop: 16,
         gap: 8,
     },
     headerPostStat: {
