@@ -6,6 +6,7 @@ import {
   FlatList,
   Dimensions,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { NavigationProp, ParamListBase, useRoute } from '@react-navigation/native';
@@ -31,6 +32,7 @@ import { FeedItem } from '../types/feed';
 import { trumpScreenStyles as localStyles } from './trump/trumpScreen.styles';
 import { useTrumpScreenData } from './trump/useTrumpScreenData';
 import { useTrumpOfferRideFlow } from './trump/useTrumpOfferRideFlow';
+import { usePostComposerStore } from '../stores/postComposerStore';
 
 export default function TrumpScreen({
   navigation,
@@ -44,6 +46,8 @@ export default function TrumpScreen({
   const [mode, setMode] = useState(initialMode);
   const { t } = useTranslation(['donations', 'common', 'trump', 'search']);
   const { selectedUser } = useUser();
+  const { openComposer } = usePostComposerStore();
+  const [openRequestsExpanded, setOpenRequestsExpanded] = useState(false);
 
   const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
@@ -199,6 +203,39 @@ export default function TrumpScreen({
           contentStyle={localStyles.scrollContent}
           keyboardShouldPersistTaps="always"
         >
+          <TouchableOpacity
+            style={localStyles.openRequestsToggle}
+            onPress={() => setOpenRequestsExpanded((prev) => !prev)}
+            activeOpacity={0.7}
+          >
+            <Text style={localStyles.sectionTitle}>{t('trump:ui.openRequestsList')}</Text>
+            <Text style={localStyles.emptyStateText}>{openRequestsExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {openRequestsExpanded && (
+            <View style={localStyles.section}>
+              {trumpData.openRequestPosts.length === 0 ? (
+                <Text style={localStyles.emptyStateText}>{t('trump:ui.noOpenRequests')}</Text>
+              ) : (
+                trumpData.openRequestPosts.map((post) => {
+                  const containerPadding = 16;
+                  const cardWidth = width - containerPadding * 2;
+                  return (
+                    <View key={post.id} style={localStyles.recentItemWrapper}>
+                      <PostReelItem
+                        item={post}
+                        cardWidth={cardWidth}
+                        numColumns={1}
+                        onPress={() => {}}
+                        onCommentPress={() => {}}
+                        onMorePress={handleMorePress}
+                        onPostClosed={trumpData.handlePostClosed}
+                      />
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          )}
           <RideOfferForm
             destination={offer.toLocation}
             onDestinationChange={offer.setToLocation}
@@ -299,12 +336,21 @@ export default function TrumpScreen({
               { paddingHorizontal: screenPadding },
             ]}
             ListHeaderComponent={
-              <View style={localStyles.resultsHeader}>
-                <Text style={localStyles.resultsTitle}>
-                  {trumpData.searchQuery
-                    ? `${t('trump:ui.searchResultsPrefix')} "${trumpData.searchQuery}"`
-                    : `${t('trump:ui.availableRides')} (${trumpData.filteredPosts.length})`}
-                </Text>
+              <View>
+                <TouchableOpacity
+                  style={localStyles.offerButton}
+                  onPress={() => openComposer({ intent: 'request', category: 'trump' })}
+                  activeOpacity={0.85}
+                >
+                  <Text style={localStyles.offerButtonText}>{t('trump:ui.requestCta')}</Text>
+                </TouchableOpacity>
+                <View style={localStyles.resultsHeader}>
+                  <Text style={localStyles.resultsTitle}>
+                    {trumpData.searchQuery
+                      ? `${t('trump:ui.searchResultsPrefix')} "${trumpData.searchQuery}"`
+                      : `${t('trump:ui.availableRides')} (${trumpData.filteredPosts.length})`}
+                  </Text>
+                </View>
               </View>
             }
             ListEmptyComponent={renderEmptyPosts}

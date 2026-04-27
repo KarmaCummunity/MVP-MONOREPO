@@ -22,6 +22,7 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<FeedItem[]>([]);
   const [recentPosts, setRecentPosts] = useState<FeedItem[]>([]);
+  const [openRequestPosts, setOpenRequestPosts] = useState<FeedItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
@@ -73,6 +74,33 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
           setRecentPosts([]);
         }
 
+        try {
+          const openPostsResponse = await postsService.getPosts(300, 0, uid);
+          if (openPostsResponse.success && Array.isArray(openPostsResponse.data)) {
+            const requestPosts = openPostsResponse.data
+              .map(mapPostToFeedItemForTrumpScreen)
+              .filter(
+                (post: FeedItem | null): post is FeedItem =>
+                  post != null && Boolean(post.user?.id && post.user?.name)
+              )
+              .filter((post) => {
+                if (post.intent !== 'request') return false;
+                const t = post.type as string;
+                return Boolean(
+                  post.rideId ||
+                    t === 'ride' ||
+                    t === 'ride_offered' ||
+                    post.subtype === 'ride'
+                );
+              });
+            setOpenRequestPosts(requestPosts);
+          } else {
+            setOpenRequestPosts([]);
+          }
+        } catch {
+          setOpenRequestPosts([]);
+        }
+
         const shouldIncludePast = includePastOverride ?? selectedFilters.includes('includePast');
 
         const activeRides = await db.listRides(uid, { includePast: shouldIncludePast });
@@ -113,6 +141,7 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
     setAllPosts((prev) => prev.filter((p) => p.id !== postId));
     setFilteredPosts((prev) => prev.filter((p) => p.id !== postId));
     setRecentPosts((prev) => prev.filter((p) => p.id !== postId));
+    setOpenRequestPosts((prev) => prev.filter((p) => p.id !== postId));
     setTimeout(() => {
       const runner = loadRidesRef.current;
       if (runner) {
@@ -192,6 +221,7 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
     allPosts,
     filteredPosts,
     recentPosts,
+    openRequestPosts,
     searchQuery,
     setSearchQuery,
     selectedFilters,
