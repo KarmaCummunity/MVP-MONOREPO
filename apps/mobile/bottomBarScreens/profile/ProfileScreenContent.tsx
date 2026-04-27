@@ -1278,6 +1278,7 @@ export function ProfileScreenContent({
                 onIndexChange={setIndex}
                 initialLayout={{ width: Dimensions.get('window').width }}
                 renderTabBar={renderTabBar}
+                swipeEnabled={false}
               />
             </View>
           </View>
@@ -1764,6 +1765,7 @@ export function ProfileScreenContent({
               onIndexChange={setIndex}
               initialLayout={{ width: Dimensions.get('window').width }}
               renderTabBar={renderTabBar}
+              swipeEnabled={false}
             />
           </View>
         </ScrollContainer>

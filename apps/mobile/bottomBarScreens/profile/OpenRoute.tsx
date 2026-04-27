@@ -1,6 +1,6 @@
 // Extracted from ProfileScreen — Open tab.
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Dimensions } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -12,7 +12,7 @@ import {
   buildOpenTabEntryFromPost,
   classifyOpenProfilePost,
 } from '../../utils/profileOpenTabPostEntry';
-import PostReelItem from '../../components/Feed/PostReelItem';
+import { ProfilePostsGrid } from './ProfilePostsGrid';
 import type { FeedItem } from '../../types/feed';
 import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
 import { usePostMenu } from '../../hooks/usePostMenu';
@@ -355,33 +355,14 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
     );
   }
 
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth / 3;
-
   return (
-    <View style={styles.tabContentContainer}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        key={3}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <PostReelItem
-            item={item}
-            numColumns={3}
-            cardWidth={cardWidth}
-            onPress={handlePostPress}
-            onMorePress={handleMorePress}
-          />
-        )}
-        onContentSizeChange={(w, h) => {
-          if (onHeightChange) onHeightChange(h);
-        }}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
+    <>
+      <ProfilePostsGrid
+        posts={posts}
+        onHeightChange={onHeightChange}
+        onPostPress={handlePostPress}
+        onMorePress={handleMorePress}
       />
-      {/* Modals */}
       <OptionsModal
         visible={optionsModalVisible}
         onClose={() => setOptionsModalVisible(false)}
@@ -395,6 +376,6 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
         onSubmit={handleReportSubmit}
         isLoading={false}
       />
-    </View>
+    </>
   );
 };
