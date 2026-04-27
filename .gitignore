@@ -26,3 +26,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 .scannerwork
+
+# Snyk Code (SARIF) exports embed example secrets in tool rule metadata; committing them
+# triggers secret scanners and shows as a single "line 1" blob. Regenerate locally if needed.
+tools/quality/snyk/snyk-code-*.json

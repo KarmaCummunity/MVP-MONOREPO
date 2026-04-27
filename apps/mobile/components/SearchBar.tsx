@@ -24,6 +24,10 @@ interface SearchBarProps {
   filterOptions?: string[];
   sortOptions?: string[];
   searchData?: any[];
+  /** When provided after mount, restores search text and selections once (e.g. persisted admin filters). */
+  initialSearchText?: string;
+  initialSelectedFilters?: string[];
+  initialSelectedSorts?: string[];
   // Props to expose selected filters/sorts to parent
   onFiltersChange?: (filters: string[]) => void;
   onSortsChange?: (sorts: string[]) => void;
@@ -34,6 +38,8 @@ interface SearchBarProps {
   renderSelectedRow?: boolean;
   // Whether to hide the sort button explicitly
   hideSortButton?: boolean;
+  /** Optional post-process for filter keys (e.g. admin tasks: drop show-completed when status chips are on). */
+  sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
 
 const SearchBar = ({
@@ -43,27 +49,47 @@ const SearchBar = ({
   filterOptions = defaultFilterOptions,
   sortOptions = defaultSortOptions,
   searchData = [],
+  initialSearchText,
+  initialSelectedFilters,
+  initialSelectedSorts,
   onFiltersChange,
   onSortsChange,
   onRemoveFilterRequested,
   onRemoveSortRequested,
   renderSelectedRow = true,
   hideSortButton = false,
+  sanitizeSelectedFilters,
 }: SearchBarProps) => {
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
   const { t } = useTranslation(['search', 'common', 'trump']);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(() => {
+    const raw = initialSelectedFilters ?? [];
+    return sanitizeSelectedFilters ? sanitizeSelectedFilters(raw) : raw;
+  });
+  const [selectedSorts, setSelectedSorts] = useState<string[]>(
+    () => initialSelectedSorts ?? [],
+  );
   // New state to track if SearchBar has active filters/sorts
   const [hasActiveConditions, setHasActiveConditions] = useState<boolean>(false);
 
-  // Callback function to be passed to SearchBar
-  const handleHasActiveConditionsChange = (isActive: boolean) => {
-    setHasActiveConditions(isActive);
-    onHasActiveConditionsChange?.(isActive);
-  };
+  // Sync parent (chips + list) once on mount when initial props were provided (e.g. persisted admin filters).
+  React.useLayoutEffect(() => {
+    if (
+      initialSearchText === undefined
+      && initialSelectedFilters === undefined
+      && initialSelectedSorts === undefined
+    ) {
+      return;
+    }
+    onFiltersChange?.(selectedFilters);
+    onSortsChange?.(selectedSorts);
+    if (searchData.length === 0) {
+      onSearch?.(searchText, selectedFilters, selectedSorts, []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot hydrate
+  }, []);
 
   // Determine paddingBottom based on hasActiveConditions
   const getPaddingBottom = () => {
@@ -87,8 +113,9 @@ const SearchBar = ({
   // Effect to inform parent about active conditions
   useEffect(() => {
     const hasActive = selectedFilters.length > 0 || selectedSorts.length > 0;
-    handleHasActiveConditionsChange(hasActive);
-  }, [selectedFilters, selectedSorts]); // Add onHasActiveConditionsChange to dependencies
+    setHasActiveConditions(hasActive);
+    onHasActiveConditionsChange?.(hasActive);
+  }, [selectedFilters, selectedSorts, onHasActiveConditionsChange]);
 
   // Function to perform search with given parameters
   const performSearch = (query: string, filters: string[], sorts: string[]) => {
@@ -209,9 +236,10 @@ const SearchBar = ({
 
   const handleFilterSelection = (option: string) => {
     setSelectedFilters((prevFilters) => {
-      const newFilters = prevFilters.includes(option)
+      const toggled = prevFilters.includes(option)
         ? prevFilters.filter((item) => item !== option)
         : [...prevFilters, option];
+      const newFilters = sanitizeSelectedFilters ? sanitizeSelectedFilters(toggled) : toggled;
 
       // Notify parent of filter changes
       onFiltersChange?.(newFilters);

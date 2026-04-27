@@ -59,6 +59,40 @@
     "favorites": "Favorites",
     "posts": "Posts",
     "inactive": "Inactive",
+    "feed": {
+      "tabs": {
+        "friends": "Friends",
+        "discovery": "Discovery"
+      },
+      "filterAccessibility": "Filter and sort posts",
+      "empty_title": "No posts yet",
+      "empty_friends": "Add friends to see their posts!",
+      "empty_discovery": "Be the first to post!",
+      "empty_filtered": "No results for the current filters",
+      "empty_filtered_hint": "Change options or tap Reset in the filter panel",
+      "filterSheet": {
+        "title": "Filter and sort",
+        "reset": "Reset",
+        "done": "Done",
+        "sortSection": "Sort",
+        "sortDate": "By date",
+        "sortDateHint": "Newest first",
+        "sortEngagement": "By engagement",
+        "sortEngagementHint": "Likes and comments",
+        "sortRelevance": "By relevance",
+        "sortRelevanceHint": "Blend of engagement and freshness",
+        "filterSection": "Filters",
+        "onlyOpen": "Open posts only",
+        "onlyOpenHint": "Tasks, rides, and items still available",
+        "verifiedOnly": "Verified authors only",
+        "verifiedOnlyHint": "Users with verified email",
+        "contentSection": "Content types",
+        "contentSectionHint": "When a category is off, plain text/photo posts are hidden too",
+        "includeTasks": "Show tasks",
+        "includeRides": "Show rides",
+        "includeItems": "Show items and donations"
+      }
+    },
     "rides": {
       "offered": "Ride",
       "completed": "Ride Completed",
@@ -82,6 +116,8 @@
       "noTitle": "Post without title",
       "closedSuccess": "Post closed successfully",
       "closeError": "Error closing post",
+      "reopenSuccess": "Post reopened successfully",
+      "reopenError": "Error reopening post",
       "hideSuccess": "Post hidden successfully",
       "hideError": "Error hiding post"
     },
@@ -157,6 +193,7 @@
       "immigrants": "Immigrants",
       "community": "Community",
       "task_assign_me": "Only my tasks",
+      "task_show_completed": "Show completed tasks",
       "task_status_open": "Status: Open",
       "task_status_in_progress": "Status: In progress",
       "task_status_stuck": "Status: Stuck",
@@ -883,7 +920,13 @@
       "subtitle": "When you receive new notifications, they will appear here"
     },
     "unreadBadge": "{{count}} new notifications",
-    "welcomeSystem": "Welcome to Karma Community!"
+    "welcomeSystem": "Welcome to Karma Community!",
+    "dailyChallengeReminder": {
+      "title": "Daily challenge check-ins ({{count}})",
+      "body": "You have {{count}} challenge(s) not reported for today. Tap to report quickly in the daily tracker.",
+      "pushTitle": "Daily challenge check-ins",
+      "pushBody": "{{count}} challenge(s) still need today's report."
+    }
   },
   "auth": {
     "login": "Login",
@@ -918,7 +961,12 @@
       "verifyTitle": "Email verification",
       "verifySent": "We've sent you a verification link. After confirming, return and sign in to complete registration.",
       "verificationRequired": "We sent a verification link to your email. Please verify your email to complete registration.",
-      "signupFailed": "Sign up failed. Please try again."
+      "signupFailed": "Sign up failed. Please try again.",
+      "googleOnlyNative": "This email is registered with Google. Use \"Sign in with Google\" here, or open the web app to add an email password to the same account.",
+      "googleEmailMismatch": "The Google account you picked does not match the email you typed. Use the same Google account as that email.",
+      "linkPasswordFailed": "Could not add a password to this account. Try again or sign in with Google.",
+      "invalidCredentialTryGoogle": "That did not work. If you originally signed up with Google, use \"Sign in with Google\" below, or try again and complete the Google window to link this password to your account.",
+      "popupClosed": "Sign-in was cancelled. Try again or use \"Sign in with Google\"."
     },
     "googleCta": "Sign in / Sign up with Google",
     "google": {
@@ -1425,7 +1473,129 @@
   },
   "items": {
     "title": "Item",
-    "forSale": "For Sale"
+    "forSale": "For Sale",
+    "donationScreen": {
+      "alerts": {
+        "loadErrorTitle": "Error",
+        "loadErrorMessage": "We could not load the items",
+        "imageLargeTitle": "Large image",
+        "imageLargeMessage": "The image you selected is very large. Consider using a smaller image.",
+        "imageLargeContinue": "Continue anyway",
+        "convertErrorTitle": "Error",
+        "convertErrorMessage": "We could not convert the image",
+        "permissionTitle": "Permission required",
+        "permissionMessage": "Gallery access is required",
+        "pickImageErrorTitle": "Error",
+        "pickImageErrorMessage": "We could not load the image",
+        "titleRequiredTitle": "Error",
+        "titleRequiredMessage": "Please enter a title",
+        "loginRequiredTitle": "Error",
+        "loginRequiredMessage": "Please sign in to create an item",
+        "saveSuccessTitle": "Saved successfully!",
+        "saveSuccessMessage": "Item \"{{title}}\" was saved",
+        "saveErrorTitle": "Error",
+        "deleteSuccessTitle": "Success",
+        "deleteSuccessMessage": "The item was deleted",
+        "deleteErrorTitle": "Error",
+        "deleteConfirmTitle": "Delete item",
+        "deleteConfirmMessage": "Are you sure you want to delete:\n\"{{title}}\"?",
+        "deleteAction": "Delete",
+        "menuAlertTitle": "Menu",
+        "menuAlertSelected": "Selected: {{option}}"
+      },
+      "categories": {
+        "clothes": "Clothes",
+        "books": "Books",
+        "furniture": "Furniture",
+        "dry_food": "Dry food",
+        "games": "Games",
+        "electronics": "Electronics",
+        "toys": "Toys",
+        "sports": "Sports",
+        "art": "Art",
+        "kitchen": "Kitchen",
+        "bathroom": "Bathroom",
+        "garden": "Garden",
+        "tools": "Tools",
+        "baby": "Baby",
+        "pet": "Pets",
+        "other": "Other"
+      },
+      "filters": {
+        "free": "Free",
+        "likeNew": "Like new",
+        "used": "Used",
+        "forParts": "For parts",
+        "pickup": "Self pickup",
+        "paidDelivery": "Paid delivery",
+        "accessibility": "Accessibility"
+      },
+      "sorts": {
+        "alphabetical": "Alphabetical",
+        "byLocation": "By location",
+        "byDate": "By date",
+        "byRating": "By rating",
+        "byRelevance": "By relevance"
+      },
+      "tags": {
+        "sofas": "Sofas",
+        "wardrobes": "Wardrobes",
+        "beds": "Beds",
+        "men": "Men",
+        "women": "Women",
+        "kids": "Kids",
+        "kitchen": "Kitchen",
+        "electronics": "Electronics",
+        "toys": "Toys"
+      },
+      "search": {
+        "emptyTitle": "No posts found",
+        "emptySubtitle": "Try changing filters or search",
+        "clearAll": "Clear all",
+        "sectionFiltered": "Available items",
+        "sectionRecommended": "Recommended items",
+        "statsPosts": "Published posts",
+        "statsLikes": "Likes",
+        "statsComments": "Comments",
+        "usefulLinks": "Useful links",
+        "headerPlaceholder": "Search available items"
+      },
+      "offer": {
+        "headerPlaceholder": "Item name",
+        "titleLabel": "Item title",
+        "titlePlaceholder": "e.g. 3-seat sofa",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Condition, dimensions, notes",
+        "categoryLabel": "Category",
+        "selectCategory": "Select category",
+        "categoryModalTitle": "Select category",
+        "cityLabel": "City",
+        "cityPlaceholder": "Tel Aviv",
+        "addressLabel": "Address",
+        "addressPlaceholder": "123 Street",
+        "qtyLabel": "Quantity",
+        "conditionLabel": "Condition",
+        "conditionNew": "New",
+        "conditionLikeNew": "Like new",
+        "conditionUsed": "Used",
+        "conditionForParts": "For parts",
+        "imageOptional": "Image (optional)",
+        "imagePick": "Pick image from gallery",
+        "imageSelected": "Image selected",
+        "imageReady": "Image ready",
+        "imageSizeHint": "80×80 pixels",
+        "publishButton": "Publish item",
+        "recentSectionTitle": "Recently published items",
+        "noRecentPosts": "No posts published yet",
+        "usefulLinks": "Useful links"
+      },
+      "menu": {
+        "history": "Item history",
+        "settings": "Settings",
+        "help": "Help",
+        "contact": "Contact"
+      }
+    }
   },
   "challenges": {
     "title": "Community Challenges",

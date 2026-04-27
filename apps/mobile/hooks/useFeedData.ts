@@ -80,6 +80,9 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         const userId = author.id || post.author_id || 'unknown';
         const userName = author.name || 'common.unknownUser';
         const userAvatar = author.avatar_url || undefined;
+        const emailVerified =
+            author.email_verified === true ||
+            author.emailVerified === true;
 
         // Get status from item_data or ride_data or default
         let itemStatus: string | undefined;
@@ -96,7 +99,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 const metadata = typeof post.metadata === 'string' ? JSON.parse(post.metadata) : post.metadata;
                 metadataItemId = metadata?.item_id;
             }
-        } catch (e) {
+        } catch {
             // Ignore parse errors
         }
 
@@ -145,6 +148,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 id: userId,
                 name: userName,
                 avatar: userAvatar,
+                emailVerified,
             },
             likes: parseInt(post.likes || '0'),
             comments: parseInt(post.comments || '0'),
@@ -221,6 +225,10 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                     if (!existingIds.has(task.id)) {
                         const creator = task.creator_details || {};
 
+                        const creatorVerified =
+                            creator.email_verified === true ||
+                            creator.emailVerified === true;
+
                         const taskItem: FeedItem = {
                             id: task.id, // Use actual task ID
                             type: 'post', // Show as post
@@ -231,7 +239,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                             user: {
                                 id: creator.id || task.created_by || 'unknown',
                                 name: creator.name || 'Unknown User',
-                                avatar: creator.avatar_url || undefined
+                                avatar: creator.avatar_url || undefined,
+                                emailVerified: creatorVerified,
                             },
                             likes: 0,
                             comments: 0,

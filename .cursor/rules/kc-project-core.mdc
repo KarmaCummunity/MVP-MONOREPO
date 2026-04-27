@@ -1,0 +1,51 @@
+---
+description: KC monorepo — SSOT, behavioral contract, clean architecture, testing, comms
+alwaysApply: true
+---
+
+# KC monorepo — system specification for the AI (project rules)
+
+## 0. Two sources of truth (ingest before architecture / new deps / multi-file refactors)
+
+1. **SRS (the “What”):** `docs/SSOT/SRS/` — start at [`docs/SSOT/SRS/README.md`](../../docs/SSOT/SRS/README.md). Requirements are split by file; do **not** use legacy single-file names like `docs/SSOT/SRS.md` as the authority.
+2. **CODE QUALITY (the “How”):** `docs/SSOT/CODE_QUALITY/` — e.g. [`README.md`](../../docs/SSOT/CODE_QUALITY/README.md), `layers-and-boundaries.md`, `constraints.md`, `testing.md`, `tech-debt-log.md`. Do **not** assume a single file `docs/SSOT/CODE QUALITY.md` (space) exists.
+
+**Conflict rule:** Reconcile with both. If they conflict, **prefer SRS** and log the gap in `docs/SSOT/SRS/10-gaps-and-assumptions.md` and/or `docs/SSOT/CODE_QUALITY/tech-debt-log.md` as appropriate.
+
+## 1. Execution and scope (strict)
+
+- **No SRS, no feature code:** No *feature* work without mapping to a concrete SRS area (`docs/SSOT/SRS/functional/*` or the relevant section doc such as `05-backend-architecture.md` / `04-frontend-architecture.md`).
+- **Propose and proceed (out-of-scope refactors / debt):** (1) Append a line: `[PENDING REFACTOR]: <brief_desc>` in `docs/SSOT/CODE_QUALITY/tech-debt-log.md`. (2) Finish the **current** task. Do not expand the PR into opportunistic refactors.
+- **Minimal footprint:** Local, atomic edits. YAGNI: no extra abstractions or new `docs/*` files unless the user asked.
+
+## 2. Clean architecture and boundaries
+
+Target in `docs/SSOT/CODE_QUALITY/layers-and-boundaries.md`. Summary:
+
+- **Domain (`/domain` where present):** Pure business logic. No imports from `node_modules`, DB, UI, or `infrastructure` into domain. Prefer immutable entities.
+- **Application:** Use cases / orchestration only. External systems via ports/interfaces (dependency inversion).
+- **Infrastructure:** DB, HTTP, frameworks, UI details.
+- **Direction:** Inward only — **Infrastructure → Application → Domain** (per that doc; legacy code may not match yet—do not “fix the world” outside scope; log in tech-debt if needed).
+
+## 3. Quality and error handling (see `constraints.md`)
+
+- Prefer short files and shallow nesting. **Aim** for at most **~200 lines per file** and **3 levels of indentation**; split when a change would bloat a file. Keep functions cohesive and low cyclomatic complexity.
+- **Error bubbling:** Domain uses domain error types; map to HTTP or UI in outer layers. **Never** send raw stack traces to end users/clients.
+
+## 4. Testing (authoritative detail: `docs/SSOT/CODE_QUALITY/testing.md`)
+
+- **Required:** New or materially changed **Domain** or **Application** logic → add or update **unit tests** (colocated or `__tests__`), including **errors and boundaries**, not only happy path. Judge by architectural role, not only by path (legacy `apps/*` may still hold domain rules).
+- **Not required by this rule:** Pure UI/styling, docs-only, or trivial wiring; still run affected package tests when the change touches executable code paths.
+- **Integration/E2E:** Use where the repo already has patterns; they do not replace unit tests for extractable domain/application behavior.
+
+## 5. Communication and draft mode
+
+- **Verification gate:** Before any response that contains a **fenced code block** (markdown code fence) — including *new* code, diffs, or long snippets of proposed code — prefix the reply (first line) **exactly** with:  
+  `Mapped to SRS: [Requirement ID or file ref]. Refactor logged: [Yes/No/NA].`  
+  For chore-only or pure-infra with no SRS mapping, use `NA` for the requirement and explain briefly in the next line if needed.
+- **DRAFT / POC:** If the user prompt includes **`DRAFT`** or **`POC`**, skip strict SRS *mapping* for *that* work, but **keep** clean-architecture, boundaries, and quality rules fully enforced.
+- For **citations of existing** code, use the project citation format (path + line range, opening fence on its own line) for references. The verification prefix is still good practice when those blocks are central to the answer.
+
+## 6. Language of repository documentation
+
+- New or updated SSOT / project docs: **English only** (as per project convention). User chat may be any language; rules above still apply.

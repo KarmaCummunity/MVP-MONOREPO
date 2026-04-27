@@ -1,13 +1,13 @@
 // File overview:
 // - Purpose: Root application entry point for iOS/Android/Web with web mode support.
 // - Reached from: App registry (Expo) bootstraps this component.
-// - Provides: React Navigation container with `MainNavigator`, global `UserProvider`, gesture and safe-area roots, StatusBar.
+// - Provides: React Navigation container with `MainNavigator`, Zustand-backed session/web-mode/loading state, gesture and safe-area roots, StatusBar.
 // - Reads: AsyncStorage 'app_language' for i18n + RTL, Expo fonts, SplashScreen control, optional notificationService, WebBrowser auth completion.
 // - Listens: Push/in-app notification responses and deep links; when clicked, navigates to 'ChatDetailScreen' (with conversationId) or 'NotificationsScreen'.
 // - Downstream flow: App -> MainNavigator -> (LandingSiteScreen | LoginScreen | HomeStack/BottomNavigator) -> Tab stacks -> Screens.
 // - Side effects: Initializes i18n + RTL, loads fonts, hides splash, installs notification listener, holds a navigationRef for programmatic navigation.
 // - Route params: None (this is the top-level container).
-// - External deps/services: react-navigation, expo modules, i18n, UserContext, WebModeContext.
+// - External deps/services: react-navigation, expo modules, i18n, `stores/userStore`, `stores/webModeStore`, `stores/appLoadingStore`.
 //
 // IMPORTANT WEB MODE CHANGES:
 // - Container padding adjusts for web toggle button in app mode (48px top padding)
@@ -22,7 +22,7 @@
 // TODO: Remove magic numbers for padding (48px) - use constants file
 // TODO: Add proper accessibility support throughout the app
 import React, { useCallback, useEffect, useRef, useMemo, memo } from 'react';
-import { View, Text, ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, Platform, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import * as Font from 'expo-font';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -233,9 +233,9 @@ function AppContent() {
     const subscription = notificationService.setupNotificationResponseListener((response) => {
       try {
         logger.info('App', 'Notification clicked', { response });
-        const data = response?.notification?.request?.content?.data || {};
-        const type = data?.type;
-        const conversationId = data?.conversationId;
+        const data = (response?.notification?.request?.content?.data || {}) as Record<string, unknown>;
+        const type = data?.type as string | undefined;
+        const conversationId = data?.conversationId as string | undefined;
 
         if (navigationRef.current?.isReady()) {
           // Use navigation queue for deep link navigation to ensure proper sequencing
@@ -244,9 +244,27 @@ function AppContent() {
             // For notifications, we'll need userName, userAvatar, and otherUserId
             // For now, we'll navigate to NotificationsScreen if we don't have full params
           }
-          navigationQueue.navigate('NotificationsScreen', undefined, 1).catch((error) => {
-            logger.warn('App', 'Failed to navigate to NotificationsScreen from notification', { error });
-          });
+          if (type === 'daily_challenge_reminder' || data?.navigateTo === 'MyChallengesScreen') {
+            navigationQueue
+              .navigate(
+                'HomeStack',
+                {
+                  screen: 'DonationsTab',
+                  params: {
+                    screen: 'MyChallengesScreen',
+                    params: { scrollToDailyTracker: data?.scrollToDailyTracker !== false },
+                  },
+                } as any,
+                1
+              )
+              .catch((error) => {
+                logger.warn('App', 'Failed to navigate to MyChallenges from notification', { error });
+              });
+          } else {
+            navigationQueue.navigate('NotificationsScreen', undefined, 1).catch((error) => {
+              logger.warn('App', 'Failed to navigate to NotificationsScreen from notification', { error });
+            });
+          }
         }
       } catch (err) {
         logger.warn('App', 'Failed to handle notification response', { error: err });
@@ -277,6 +295,20 @@ function AppContent() {
     // I will use `require` here to be safe and consistent with the conditional logic at the top of App.tsx
 
     let cleanupListener: (() => void) | undefined;
+    let dailyReminderInterval: ReturnType<typeof setInterval> | undefined;
+    let appStateSub: { remove?: () => void } | undefined;
+
+    const runDailyChallengePushCheck = async () => {
+      if (Platform.OS === 'web') return;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getPendingDailyReportCount, maybeEmitDailyChallengeLocalPushOnceToday } = require('./utils/dailyChallengeReminder');
+        const pending = await getPendingDailyReportCount(selectedUser.id);
+        await maybeEmitDailyChallengeLocalPushOnceToday(selectedUser.id, pending);
+      } catch (e) {
+        logger.warn('App', 'Daily challenge reminder check failed', { error: e });
+      }
+    };
 
     if (Platform.OS !== 'web') {
       try {
@@ -286,10 +318,19 @@ function AppContent() {
       } catch (e) {
         logger.warn('App', 'Failed to start notification listener', { error: e });
       }
+
+      void runDailyChallengePushCheck();
+      dailyReminderInterval = setInterval(runDailyChallengePushCheck, 60 * 60 * 1000);
+      const sub = AppState.addEventListener('change', (next) => {
+        if (next === 'active') void runDailyChallengePushCheck();
+      });
+      appStateSub = sub;
     }
 
     return () => {
       if (cleanupListener) cleanupListener();
+      if (dailyReminderInterval) clearInterval(dailyReminderInterval);
+      if (appStateSub && typeof appStateSub.remove === 'function') appStateSub.remove();
     };
   }, [selectedUser]); // React to user changes
 

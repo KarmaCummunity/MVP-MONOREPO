@@ -27,6 +27,10 @@ import {
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  linkWithCredential,
+  signInWithPopup,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
 
@@ -59,6 +63,64 @@ export async function getSignInMethods(email: string): Promise<string[]> {
   // TODO: Implement caching mechanism for frequently checked emails
   const auth = getAuthInstance();
   return fetchSignInMethodsForEmail(auth, email);
+}
+
+export type EmailAuthSituation = {
+  methods: string[];
+  canPasswordLogin: boolean;
+  hasGoogle: boolean;
+  hasAnyAccount: boolean;
+};
+
+export async function getEmailAuthSituation(normalizedEmail: string): Promise<EmailAuthSituation> {
+  const email = normalizedEmail.trim().toLowerCase();
+  const methods = await getSignInMethods(email);
+  return {
+    methods,
+    canPasswordLogin: methods.includes('password'),
+    hasGoogle: methods.includes('google.com'),
+    hasAnyAccount: methods.length > 0,
+  };
+}
+
+/**
+ * For accounts that exist with Google only: sign in via Google popup, then link
+ * email/password so the same Firebase UID can use either method.
+ * Web only (signInWithPopup). Caller must verify email matches the signed-in Google user.
+ */
+export async function signInWithGoogleThenLinkPassword(
+  email: string,
+  password: string
+): Promise<User> {
+  if (Platform.OS !== 'web') {
+    throw new Error('GOOGLE_LINK_WEB_ONLY');
+  }
+  const auth = getAuthInstance();
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    login_hint: email.trim(),
+    prompt: 'select_account',
+  });
+  const result = await signInWithPopup(auth, provider);
+  const signedEmail = result.user.email?.trim().toLowerCase();
+  const target = email.trim().toLowerCase();
+  if (signedEmail !== target) {
+    await signOut(auth);
+    const err = new Error('GOOGLE_EMAIL_MISMATCH');
+    (err as { code?: string }).code = 'auth/google-email-mismatch';
+    throw err;
+  }
+  const emailCred = EmailAuthProvider.credential(target, password);
+  try {
+    await linkWithCredential(result.user, emailCred);
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    if (code === 'auth/provider-already-linked') {
+      return result.user;
+    }
+    throw e;
+  }
+  return result.user;
 }
 
 export async function signUpWithEmail(email: string, password: string): Promise<User> {

@@ -42,6 +42,16 @@ export const getDBKey = (collection: string, userId: string, itemId?: string) =>
   return `${collection}_${userId}`;
 };
 
+const DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX = 'daily_challenge_reminder_last_emitted_date_';
+
+export async function getDailyChallengeReminderLastEmittedDate(userId: string): Promise<string | null> {
+  return AsyncStorage.getItem(`${DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX}${userId}`);
+}
+
+export async function setDailyChallengeReminderLastEmittedDate(userId: string, date: string): Promise<void> {
+  await AsyncStorage.setItem(`${DAILY_CHALLENGE_REMINDER_DATE_KEY_PREFIX}${userId}`, date);
+}
+
 // Generic Database Service
 // TODO: Convert to proper class instance instead of static methods
 // TODO: Add proper dependency injection for different adapters
@@ -1057,21 +1067,12 @@ export const db = {
     entry_date?: string;
     notes?: string;
   }) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'databaseService.ts:1060',message:'addChallengeEntry called',data:{challengeId,entry_date:entryData.entry_date,value:entryData.value,notes:entryData.notes,user_id:entryData.user_id},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-    // #endregion
     const body = { challenge_id: challengeId, ...entryData };
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'databaseService.ts:1061',message:'body constructed for API',data:{bodyEntryDate:body.entry_date,bodyChallengeId:body.challenge_id,bodyValue:body.value},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-    // #endregion
     console.log('📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
     const response = await axios.post(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`,
       body
     );
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'databaseService.ts:1066',message:'API response received',data:{responseEntryDate:response.data?.data?.entry_date,responseCurrentStreak:response.data?.data?.current_streak},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-    // #endregion
     console.log('✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
     return response.data;
   },
@@ -1151,9 +1152,6 @@ export const db = {
     if (payload?.entries_by_date && typeof __DEV__ !== 'undefined' && __DEV__) {
       const dates = Object.keys(payload.entries_by_date);
       console.log('   Dates with entries:', dates.join(', '));
-      // #region agent log
-      fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'databaseService.ts:1154',message:'getDailyTrackerData response',data:{datesInResponse:dates,startDate,endDate,entriesByDate:payload.entries_by_date},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-      // #endregion
     }
     return response.data;
   },

@@ -197,6 +197,12 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
         // Reload details
         await loadChallengeDetails();
+        try {
+          const { emitDailyChallengeTrackerRefresh } = await import('../utils/dailyChallengeReminder');
+          emitDailyChallengeTrackerRefresh();
+        } catch {
+          /* optional */
+        }
       }
     } catch (error: any) {
       console.error('Error adding entry:', error);

@@ -28,6 +28,7 @@ jobs:
           JWT_SECRET: ci-test-jwt-secret-32-chars-minimum!
           GOOGLE_CLIENT_ID: test-google-client-id
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: test-web-client-id
+          TEST_DATABASE_URL: postgresql://test@127.0.0.1:5432/postgres
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:

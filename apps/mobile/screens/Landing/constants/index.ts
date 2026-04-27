@@ -50,9 +50,24 @@ export const WHATSAPP_CONTACT = '972528616878';
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_CONTACT}`;
 
 /**
- * Instagram profile URL
+ * Instagram handle (no @). Override at build time: EXPO_PUBLIC_INSTAGRAM_USERNAME
  */
-export const INSTAGRAM_URL = 'https://www.instagram.com/karmacommunity.il';
+function resolveInstagramUsername(): string {
+  const raw =
+    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_INSTAGRAM_USERNAME) ||
+    'karma_community_';
+  return raw.trim().replace(/^@/, '').replace(/\/+$/, '');
+}
+
+export const INSTAGRAM_USERNAME = resolveInstagramUsername();
+
+/** Public profile URL (native + web CTA) */
+export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/`;
+
+/**
+ * iframe src for web embed (Meta). Not used on iOS/Android — use INSTAGRAM_URL + Linking.
+ */
+export const INSTAGRAM_EMBED_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/embed`;
 
 /**
  * Default statistics fallback values

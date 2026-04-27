@@ -110,7 +110,7 @@ export default function TimeScreen({
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
   
-  const { selectedUser, isRealAuth } = useUser();
+  const { isRealAuth } = useUser();
   
   // Get initial mode from URL (deep link) or default to search mode (מחפש)
   // mode: true = offerer (wants to volunteer), false = seeker (needs volunteers)
@@ -120,12 +120,12 @@ export default function TimeScreen({
   const [mode, setMode] = useState(initialMode);
   
   const [selectedCategory, setSelectedCategory] = useState<string>('כל הקטגוריות');
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("");
-  const [selectedSort, setSelectedSort] = useState("");
+  const [_searchQuery, setSearchQuery] = useState("");
+  const [_selectedFilter, setSelectedFilter] = useState("");
+  const [_selectedSort, setSelectedSort] = useState("");
   const [filteredOpportunities, setFilteredOpportunities] = useState(volunteerOpportunities);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [_selectedTask, setSelectedTask] = useState<any>(null);
+  const [_refreshKey, setRefreshKey] = useState(0);
 
   // Update mode when route params change (e.g., from deep link)
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function TimeScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -420,7 +420,7 @@ export default function TimeScreen({
         </View>
 
         {/* Add Links Section */}
-        <View style={styles.section}>
+        <View style={styles.sectionLinks}>
           <Text style={styles.sectionTitle}>קישורים שימושיים</Text>
           <AddLinkComponent category="time" />
         </View>
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   opportunityCategoryText: {
-    color: colors.pinkDeep,
+    color: colors.pinkLight,
     fontSize: FontSizes.small,
     fontWeight: '600',
   },
@@ -627,6 +627,9 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     marginBottom: 30,
+  },
+  sectionLinks: {
+    marginBottom: 40,
   },
   statsContainer: {
     flexDirection: 'row',

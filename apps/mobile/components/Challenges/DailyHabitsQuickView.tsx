@@ -159,21 +159,12 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   };
 
   const handleCellPress = (challenge: DailyTrackerChallenge, date: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:158',message:'handleCellPress called',data:{clickedDate:date,todayStr,dateRange,challengeId:challenge.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const value = getCellValue(challenge.id, date);
     const notes = data?.entries_by_date[date]?.[challenge.id]?.notes;
     const currentStatus = getCellStatus(challenge.id, date);
     editingRef.current = { date, value, notes };
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:163',message:'editingRef.current set',data:{editingRefDate:editingRef.current.date,editingRefValue:editingRef.current.value,editingRefNotes:editingRef.current.notes},timestamp:Date.now(),hypothesisId:'A,B'})}).catch(()=>{});
-    // #endregion
     setSelectedChallenge(challenge);
     setSelectedDate(date);
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:166',message:'selectedDate state set',data:{selectedDateArg:date},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     setModalVisible(true);
     if (__DEV__) {
       console.log('[DailyHabitsQuickView] ===== CELL PRESSED =====');
@@ -188,9 +179,6 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   const handleSaveEntry = async (value: number, notes: string) => {
     const challengeId = selectedChallenge?.id;
     const dateToSave = editingRef.current?.date || selectedDate;
-    // #region agent log
-    fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:179',message:'handleSaveEntry called',data:{challengeId,dateToSave,editingRefDate:editingRef.current?.date,selectedDate,value,notes,todayStr},timestamp:Date.now(),hypothesisId:'B,E'})}).catch(()=>{});
-    // #endregion
     if (!challengeId || !user?.id || !dateToSave) {
       if (__DEV__) console.warn('[DailyHabitsQuickView] Save cancelled: missing challenge/user/date', { challengeId, userId: user?.id, dateToSave });
       return;
@@ -203,24 +191,24 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       console.log('[DailyHabitsQuickView] Saving entry:', { challengeId, date: dateToSave, value, notes });
     }
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:191',message:'Before addChallengeEntry API call',data:{challengeId,entry_date:dateToSave,value,notes,user_id:user.id},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-      // #endregion
       await db.addChallengeEntry(challengeId, {
         user_id: user.id,
         value,
         notes,
         entry_date: dateToSave,
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:197',message:'After addChallengeEntry API call success',data:{},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-      // #endregion
       if (__DEV__) console.log('[DailyHabitsQuickView] Save succeeded');
       editingRef.current = null;
       setModalVisible(false);
       if (__DEV__) console.log('[DailyHabitsQuickView] Modal closed, refreshing data');
       await loadTodayData();
       if (__DEV__) console.log('[DailyHabitsQuickView] Data refreshed successfully');
+      try {
+        const { emitDailyChallengeTrackerRefresh } = await import('../../utils/dailyChallengeReminder');
+        emitDailyChallengeTrackerRefresh();
+      } catch {
+        /* optional */
+      }
     } catch (err) {
       if (__DEV__) console.error('[DailyHabitsQuickView] Save error:', err);
       throw err;
@@ -351,12 +339,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                           { backgroundColor: iconColor === '#E0E0E0' ? '#F5F5F5' : `${iconColor}18` },
                           date === todayStr && styles.cellToday,
                         ]}
-                        onPress={() => {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7511/ingest/db767e00-c052-4683-b444-f8807d9fc7e9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'09c079'},body:JSON.stringify({sessionId:'09c079',location:'DailyHabitsQuickView.tsx:330',message:'Cell TouchableOpacity onPress',data:{dateFromMap:date,challengeId:challenge.id,todayStr,dateRange},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-                          // #endregion
-                          handleCellPress(challenge, date);
-                        }}
+                        onPress={() => handleCellPress(challenge, date)}
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.cellText, { color: iconColor }]} numberOfLines={1}>
