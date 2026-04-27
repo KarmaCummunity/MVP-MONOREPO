@@ -3,7 +3,7 @@
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
 // - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press.
-// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack`, `ProfileTabStack`.
+// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants.
 // BottomNavigator.tsx
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
  */
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
+  const adminTabBarButton = React.useCallback(() => null, []);
   const { mode } = useWebMode();
   const navigation = useNavigation();
   const { openComposer } = usePostComposerStore();
@@ -327,6 +328,7 @@ export default function BottomNavigator(): React.ReactElement {
         <Tab.Screen
           name="AdminTab"
           component={AdminStack}
+          options={{ tabBarButton: adminTabBarButton }}
           listeners={({ navigation, route }) => ({
             tabPress: (e) => handleTabPress(e, navigation, route.name),
           })}

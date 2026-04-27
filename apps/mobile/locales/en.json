@@ -1072,6 +1072,7 @@
   "buttons": {},
   "labels": {},
   "admin": {
+    "topBarAdmin": "Administrator",
     "hierarchy": {
       "loadError": "Error loading manager tree",
       "connectionError": "Error connecting to server",
