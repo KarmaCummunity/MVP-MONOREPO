@@ -95,7 +95,10 @@
     "searchPlaceholder": {
       "offer": "לאן? יעד...",
       "seek": "מצא טרמפ: יעד..."
-    }
+    },
+    "requestCta": "לא מצאת מה שצריך? פרסם/י בקשה ←",
+    "openRequestsList": "רשימת בקשות פתוחות",
+    "noOpenRequests": "אין בקשות פתוחות כרגע."
   },
   "menu": {
     "history": "היסטוריה",

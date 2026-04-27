@@ -63,4 +63,29 @@ export const trumpScreenStyles = StyleSheet.create({
   columnWrapper: {
     justifyContent: 'space-between',
   },
+  offerButton: {
+    backgroundColor: colors.accent,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  offerButtonText: {
+    color: colors.background,
+    fontSize: FontSizes.medium,
+    fontWeight: 'bold',
+  },
+  openRequestsToggle: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  recentItemWrapper: {
+    marginBottom: 8,
+    width: '100%',
+  },
 });

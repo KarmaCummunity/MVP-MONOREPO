@@ -108,9 +108,33 @@ function timestampFromCreatedAt(createdAt: unknown): string {
   return new Date().toISOString();
 }
 
+function intentAndCategoryFromPost(post: Record<string, unknown>): {
+  intent: 'give' | 'request';
+  category?: string;
+} {
+  let metadata: Record<string, unknown> = {};
+  try {
+    metadata =
+      typeof post.metadata === 'string'
+        ? (JSON.parse(post.metadata) as Record<string, unknown>)
+        : ((post.metadata as Record<string, unknown>) ?? {});
+  } catch {
+    metadata = {};
+  }
+  const intentRaw = (metadata as { intent?: string }).intent;
+  const intent: 'give' | 'request' = intentRaw === 'request' ? 'request' : 'give';
+  const rideMeta = (metadata.ride as Record<string, unknown>) ?? {};
+  const category =
+    (rideMeta.category as string | undefined) ||
+    (metadata.category as string | undefined) ||
+    (metadata.donation_category as string | undefined);
+  return { intent, category };
+}
+
 /** Maps API post rows to FeedItem for Trump (rides) screen — ride_data / metadata / author. */
 export function mapPostToFeedItemForTrumpScreen(post: Record<string, unknown>): FeedItem {
   const rideData = buildRideData(post);
+  const { intent, category } = intentAndCategoryFromPost(post);
 
   const author = (post.author as Record<string, unknown>) || {};
   const userId = String(author.id ?? post.author_id ?? 'unknown');
@@ -142,6 +166,8 @@ export function mapPostToFeedItemForTrumpScreen(post: Record<string, unknown>): 
     timestamp: timestampFromCreatedAt(post.created_at),
     rideId,
     status: rideStatus,
+    intent,
+    category,
     ...rideData,
   } as FeedItem;
 }

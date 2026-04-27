@@ -95,7 +95,10 @@
     "searchPlaceholder": {
       "offer": "Where to? Destination...",
       "seek": "Find a ride: destination..."
-    }
+    },
+    "requestCta": "Didn't find what you need? Post a request →",
+    "openRequestsList": "Open requests list",
+    "noOpenRequests": "No open requests right now."
   },
   "menu": {
     "history": "History",
