@@ -574,6 +574,37 @@ export class StatsController {
       FROM tasks
     `);
 
+    // Posts: total in DB, "open" = visible (not hidden) — aligns with default feed filters
+    let postsStats: { rows: MetricsRow[] };
+    try {
+      const postsTableExists = await this.pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'posts'
+        )
+      `);
+      if (postsTableExists.rows[0].exists) {
+        postsStats = await this.pool.query(`
+          SELECT 
+            COUNT(*)::bigint AS posts_total,
+            COUNT(*) FILTER (
+              WHERE (status IS NULL OR status <> 'hidden')
+            )::bigint AS posts_open
+          FROM posts
+        `);
+      } else {
+        postsStats = {
+          rows: [{ posts_total: "0", posts_open: "0" }],
+        };
+      }
+    } catch (error) {
+      this.logger.warn("Posts stats query failed, using zero values:", error);
+      postsStats = {
+        rows: [{ posts_total: "0", posts_open: "0" }],
+      };
+    }
+
     // Users and admins statistics
     const usersStats = await this.pool.query(`
       SELECT 
@@ -652,6 +683,10 @@ export class StatsController {
     );
     const usersWithHours = Number(hoursStats.rows[0]?.users_with_hours ?? 0);
     const totalUsers = Number(usersStats.rows[0]?.total_users ?? 0);
+    const postsTotal = Number(postsStats.rows[0]?.posts_total ?? 0);
+    const postsOpen = Number(postsStats.rows[0]?.posts_open ?? 0);
+    const avgPostsPerUser =
+      totalUsers > 0 ? Math.round((postsTotal / totalUsers) * 100) / 100 : 0;
     const avgHoursPerUser = totalUsers > 0 ? totalHours / totalUsers : 0;
     const currentMonthHours = parseFloat(
       String(hoursStats.rows[0]?.current_month_hours ?? "0"),
@@ -664,6 +699,11 @@ export class StatsController {
       tasks_in_progress: Number(tasksStats.rows[0]?.tasks_in_progress ?? 0),
       tasks_done: Number(tasksStats.rows[0]?.tasks_done ?? 0),
       tasks_total: Number(tasksStats.rows[0]?.tasks_total ?? 0),
+
+      // Posts stats (dashboard)
+      posts_total: postsTotal,
+      posts_open: postsOpen,
+      avg_posts_per_user: avgPostsPerUser,
 
       // Users stats
       total_users: totalUsers,
