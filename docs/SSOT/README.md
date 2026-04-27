@@ -12,7 +12,7 @@ This folder holds **all** operational and quality-related Markdown for the monor
 | | [runbooks/mobile/](runbooks/mobile/) | Mobile: OAuth, E2E, Landing, and related. |
 | **Migration history** | [migrations/api/](migrations/api/) | One-off / historical API migration notes (not live requirements). |
 | **Technical reference** | [reference/api/](reference/api/) | Deeper technical detail (e.g. collections) — not a substitute for SRS. |
-| **Internal (non-SRS)** | [internal/](internal/) | Internal reports (Sonar, progress, mobile audit) — not product authority. |
+| **Internal (non-SRS)** | [internal/](internal/) | Internal reports (Sonar, progress, mobile audit), [ssot-tightening-phased-plan.md](internal/ssot-tightening-phased-plan.md) — not product authority. |
 
 Runbooks, migration notes, and internal reports are **not** software requirements. Do not treat them as the SRS; use [SRS](SRS/README.md) and [CODE_QUALITY](CODE_QUALITY/README.md) for feature and architecture work.
 

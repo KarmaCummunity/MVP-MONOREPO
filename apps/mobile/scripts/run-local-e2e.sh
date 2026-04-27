@@ -4,8 +4,8 @@
 # - Works with the new kc-monorepo structure where server is in apps/api and mobile is in apps/mobile.
 # - Steps: Free ports, docker compose up, build server, ensure DB schema via ts-node, start server, smoke-test APIs, start Expo.
 # - Inputs: PORT (server), EXPO_PORT (Expo dev server). Exports EXPO_PUBLIC_API_BASE_URL and flags.
-# - Code quality: lint, Snyk, and (if SONAR_TOKEN is set) Sonar run by default. Set SKIP_CHECKS=1
-#   only to bypass them temporarily when you must bring the stack up without that preflight.
+# - Code quality: lint and Snyk always run. Client audit:all and Sonar (if SONAR_TOKEN) run by default.
+#   Set SKIP_CHECKS=1 to skip only Sonar and client audit — not lint or Snyk.
 set -euo pipefail
 
 THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -142,59 +142,62 @@ fi
 log_success "Docker is available and running"
 
 # ============================================================================
-# Code Quality & Security Checks (Sonar, Snyk, Lint)
+# Code Quality & Security Checks (Lint, Snyk always; audit + Sonar unless SKIP_CHECKS=1)
 # ============================================================================
 
+log_info "Running Code Quality & Security Checks (Lint, Snyk, audit, Sonar if token)..."
+
+# --- Linting (always; stops on failure) ---
+log_info "Running server linting..."
+(cd "$SERVER_DIR" && npm run lint)
+
+log_info "Running client linting..."
+(cd "$CLIENT_DIR" && npm run lint)
+log_success "Lint checks passed."
+
+# --- Client audit (skip when SKIP_CHECKS=1) ---
 if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
-  log_warning "Skipping Code Quality & Security checks as requested (SKIP_CHECKS=1)"
+  log_warning "Skipping client audit:all (SKIP_CHECKS=1; lint and Snyk still run)."
 else
-  log_info "Running Code Quality & Security Checks (Lint, Snyk, Sonar)..."
+  log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
+  (cd "$CLIENT_DIR" && npm run audit:all)
+  log_success "Audit checks passed."
+fi
 
-  # --- Linting (required, stops on failure) ---
-  log_info "Running server linting..."
-  (cd "$SERVER_DIR" && npm run lint)
+# --- Snyk (always; stops on failure) ---
+if command -v snyk >/dev/null 2>&1; then
+  SNYK_CMD=("snyk")
+else
+  log_info "Snyk CLI not found. Running via npx..."
+  SNYK_CMD=("npx" "snyk")
+fi
 
-  log_info "Running client linting..."
-  (cd "$CLIENT_DIR" && npm run lint)
-  log_success "Lint checks passed."
+log_info "Running Snyk security checks on server..."
+(cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
 
-  # log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
-  # (cd "$CLIENT_DIR" && npm run audit:all)
-  # log_success "Audit checks passed."
+log_info "Running Snyk security checks on client..."
+(cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
+log_success "Snyk checks passed."
 
-  # --- Snyk (required, stops on failure) ---
-  if command -v snyk >/dev/null 2>&1; then
-    SNYK_CMD=("snyk")
+# --- SonarQube (when SONAR_TOKEN set; skip entirely when SKIP_CHECKS=1) ---
+if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
+  log_warning "Skipping SonarQube (SKIP_CHECKS=1)."
+elif [[ -z "${SONAR_TOKEN:-}" ]]; then
+  log_warning "SONAR_TOKEN not set. Skipping SonarQube checks (set SONAR_TOKEN to enable)."
+else
+  if command -v sonar-scanner >/dev/null 2>&1; then
+    SONAR_CMD=("sonar-scanner")
   else
-    log_info "Snyk CLI not found. Running via npx..."
-    SNYK_CMD=("npx" "snyk")
+    log_info "sonar-scanner CLI not found. Running via npx..."
+    SONAR_CMD=("npx" "sonar-scanner")
   fi
 
-  log_info "Running Snyk security checks on server..."
-  (cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
+  log_info "Running SonarQube checks on server..."
+  (cd "$SERVER_DIR" && "${SONAR_CMD[@]}")
 
-  log_info "Running Snyk security checks on client..."
-  (cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
-  log_success "Snyk checks passed."
-
-  # --- SonarQube (required when SONAR_TOKEN is set, stops on failure) ---
-  if [[ -z "${SONAR_TOKEN:-}" ]]; then
-    log_warning "SONAR_TOKEN not set. Skipping SonarQube checks (set SONAR_TOKEN to enable)."
-  else
-    if command -v sonar-scanner >/dev/null 2>&1; then
-      SONAR_CMD=("sonar-scanner")
-    else
-      log_info "sonar-scanner CLI not found. Running via npx..."
-      SONAR_CMD=("npx" "sonar-scanner")
-    fi
-
-    log_info "Running SonarQube checks on server..."
-    (cd "$SERVER_DIR" && "${SONAR_CMD[@]}")
-
-    log_info "Running SonarQube checks on client..."
-    (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}")
-    log_success "SonarQube checks passed."
-  fi
+  log_info "Running SonarQube checks on client..."
+  (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}")
+  log_success "SonarQube checks passed."
 fi
 
 # ============================================================================
