@@ -22,9 +22,7 @@ export const logError = (action: string, error: unknown, context?: Record<string
 export const buildMessageListenerKey = (conversationId: string, userId: string): string =>
   `${conversationId}_${userId}`;
 
-export const generateId = (prefix: string): string => {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-};
+export { generateId } from './id';
 
 export const toMessagePreviewText = (message: Pick<Message, 'type' | 'text'>): string => {
   if (message.type === 'image') return '📷 תמונה';
