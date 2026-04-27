@@ -24,10 +24,10 @@
     "audit:responsive": "ts-node scripts/audit-responsive.ts",
     "audit:unused": "ts-node scripts/find-unused-files.ts",
     "audit:all": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' node ./node_modules/ts-node/dist/bin.js scripts/audit-all.ts",
-    "test": "jest",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:cov": "jest --coverage --forceExit",
+    "test:ci": "jest --ci --coverage --maxWorkers=2 --forceExit",
     "_TODO_ADD_SCRIPTS": "// TODO: Add missing scripts: lint, type-check, format, security-audit, bundle-analyze",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx --max-warnings 1000"
   },
