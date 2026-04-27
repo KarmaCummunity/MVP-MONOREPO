@@ -6,6 +6,7 @@ import {
   POST_LIST_FROM_JOINS,
   POST_LIST_SELECT_COLUMNS,
 } from "./posts-feed.query";
+import { parseLimit, parseLimitOffset } from "./posts-pagination.util";
 
 @Injectable()
 export class PostsFeedService {
@@ -15,6 +16,132 @@ export class PostsFeedService {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly schema: PostsSchemaService,
   ) {}
+
+  private async tableExists(tableName: string): Promise<boolean> {
+    try {
+      const res = await this.pool.query(
+        `
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = $1 AND table_schema = 'public'
+                    ) AS exists;
+                `,
+        [tableName],
+      );
+      return Boolean(res.rows[0]?.exists);
+    } catch {
+      return false;
+    }
+  }
+
+  private buildListQueryParts(
+    userId: string | undefined,
+    postLikesExists: boolean,
+    postType: string | undefined,
+    itemId: string | undefined,
+    rideId: string | undefined,
+  ): { query: string; params: unknown[] } {
+    let query = POST_LIST_SELECT_COLUMNS;
+    const whereConditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    whereConditions.push(`(p.status IS NULL OR p.status != 'hidden')`);
+
+    if (postType) {
+      whereConditions.push(`p.post_type = $${paramIndex}`);
+      params.push(postType);
+      paramIndex++;
+    }
+
+    if (itemId) {
+      whereConditions.push(`p.item_id = $${paramIndex}`);
+      params.push(itemId);
+      paramIndex++;
+    }
+
+    if (rideId) {
+      whereConditions.push(`p.ride_id = $${paramIndex}`);
+      params.push(rideId);
+      paramIndex++;
+    }
+
+    const userIdParamIndex = paramIndex;
+
+    if (userId && postLikesExists) {
+      query += `,
+                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdParamIndex}) as is_liked
+                `;
+      params.push(userId);
+    } else {
+      query += `,
+                    false as is_liked
+                `;
+    }
+
+    query += POST_LIST_FROM_JOINS;
+
+    if (whereConditions.length > 0) {
+      query += ` WHERE ${whereConditions.join(" AND ")}`;
+    }
+
+    return { query, params };
+  }
+
+  private logPostsSample(rows: unknown[]): void {
+    if (rows.length === 0) {
+      this.logger.warn("⚠️ getPosts returned 0 posts!");
+      return;
+    }
+    const samplePosts = rows.slice(0, 3).map((row) => {
+      const p = row as Record<string, unknown>;
+      return {
+        id: (p.id as string)?.substring(0, 8),
+        title: (p.title as string)?.substring(0, 30),
+        post_type: p.post_type,
+        author_id: (p.author_id as string)?.substring(0, 8),
+        has_author: !!p.author,
+        author_id_in_author: (p.author as { id?: string })?.id?.substring(0, 8),
+      };
+    });
+    this.logger.log("📋 Sample posts:", samplePosts);
+  }
+
+  private async executePostsListQuery(
+    query: string,
+    params: unknown[],
+    limit: number,
+    offset: number,
+  ) {
+    const fullParams = [limit, offset, ...params];
+    return this.pool.query(query, fullParams);
+  }
+
+  private async fallbackPostsQuery(limit: number, offset: number) {
+    const fallbackQuery = `
+                        SELECT 
+                            id, author_id, title, description, images, likes, comments, created_at,
+                            post_type, metadata, ride_id, item_id
+                        FROM posts
+                        ORDER BY created_at DESC
+                        LIMIT $1 OFFSET $2
+                    `;
+    const fallbackRes = await this.pool.query(fallbackQuery, [limit, offset]);
+
+    return fallbackRes.rows.map((row: Record<string, unknown>) => ({
+      ...row,
+      author: {
+        id: row.author_id,
+        name: "משתמש",
+        avatar_url: "",
+        email_verified: false,
+      },
+      task: null,
+      is_liked: false,
+      ride_data: null,
+      item_data: null,
+    }));
+  }
 
   async getPosts(
     limitArg: string,
@@ -28,68 +155,24 @@ export class PostsFeedService {
       await this.schema.ensurePostsTable();
       await this.schema.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 20;
-      const offset = parseInt(offsetArg) || 0;
+      const { limit, offset } = parseLimitOffset(limitArg, offsetArg, {
+        limit: 20,
+        offset: 0,
+      });
 
-      let query = POST_LIST_SELECT_COLUMNS;
+      const postLikesExists = await this.tableExists("post_likes");
+      const { query: baseQuery, params: filterParams } =
+        this.buildListQueryParts(
+          userId,
+          postLikesExists,
+          postType,
+          itemId,
+          rideId,
+        );
 
-      let postLikesExists = false;
-      try {
-        const res = await this.pool.query(`
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = 'post_likes' AND table_schema = 'public'
-                    ) AS exists;
-                `);
-        postLikesExists = res.rows[0]?.exists;
-      } catch {
-        // Ignore
-      }
-
-      const whereConditions: string[] = [];
-      const params: unknown[] = [limit, offset];
-      let paramIndex = 3;
-
-      whereConditions.push(`(p.status IS NULL OR p.status != 'hidden')`);
-
-      if (postType) {
-        whereConditions.push(`p.post_type = $${paramIndex}`);
-        params.push(postType);
-        paramIndex++;
-      }
-
-      if (itemId) {
-        whereConditions.push(`p.item_id = $${paramIndex}`);
-        params.push(itemId);
-        paramIndex++;
-      }
-
-      if (rideId) {
-        whereConditions.push(`p.ride_id = $${paramIndex}`);
-        params.push(rideId);
-        paramIndex++;
-      }
-
-      const userIdParamIndex = paramIndex;
-
-      if (userId && postLikesExists) {
-        query += `,
-                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdParamIndex}) as is_liked
-                `;
-        params.push(userId);
-      } else {
-        query += `,
-                    false as is_liked
-                `;
-      }
-
-      query += POST_LIST_FROM_JOINS;
-
-      if (whereConditions.length > 0) {
-        query += ` WHERE ${whereConditions.join(" AND ")}`;
-      }
-
-      query += `
+      const query =
+        baseQuery +
+        `
                 ORDER BY p.created_at DESC
                 LIMIT $1 OFFSET $2
             `;
@@ -102,7 +185,12 @@ export class PostsFeedService {
       });
 
       try {
-        const { rows } = await this.pool.query(query, params);
+        const { rows } = await this.executePostsListQuery(
+          query,
+          filterParams,
+          limit,
+          offset,
+        );
         this.logger.log(
           `✅ [getPosts] Query returned ${rows.length} posts (limit: ${limit}, offset: ${offset})`,
         );
@@ -116,19 +204,7 @@ export class PostsFeedService {
           `📊 Task-related posts in results: ${taskPostsInResults}/${rows.length}`,
         );
 
-        if (rows.length > 0) {
-          const samplePosts = rows.slice(0, 3).map((p) => ({
-            id: p.id?.substring(0, 8),
-            title: p.title?.substring(0, 30),
-            post_type: p.post_type,
-            author_id: p.author_id?.substring(0, 8),
-            has_author: !!p.author,
-            author_id_in_author: p.author?.id?.substring(0, 8),
-          }));
-          this.logger.log("📋 Sample posts:", samplePosts);
-        } else {
-          this.logger.warn("⚠️ getPosts returned 0 posts!");
-        }
+        this.logPostsSample(rows);
 
         return { success: true, data: rows };
       } catch (queryError) {
@@ -137,36 +213,7 @@ export class PostsFeedService {
         this.logger.log("⚠️ [getPosts] Attempting fallback query...");
 
         try {
-          const fallbackQuery = `
-                        SELECT 
-                            id, author_id, title, description, images, likes, comments, created_at,
-                            post_type, metadata, ride_id, item_id
-                        FROM posts
-                        ORDER BY created_at DESC
-                        LIMIT $1 OFFSET $2
-                    `;
-          const fallbackParams = [limit, offset];
-          const fallbackRes = await this.pool.query(
-            fallbackQuery,
-            fallbackParams,
-          );
-
-          const mappedRows = fallbackRes.rows.map(
-            (row: Record<string, unknown>) => ({
-              ...row,
-              author: {
-                id: row.author_id,
-                name: "משתמש",
-                avatar_url: "",
-                email_verified: false,
-              },
-              task: null,
-              is_liked: false,
-              ride_data: null,
-              item_data: null,
-            }),
-          );
-
+          const mappedRows = await this.fallbackPostsQuery(limit, offset);
           this.logger.log(
             `✅[getPosts] Fallback query returned ${mappedRows.length} posts`,
           );
@@ -192,18 +239,13 @@ export class PostsFeedService {
       await this.schema.ensurePostsTable();
       await this.schema.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 20;
+      const limit = parseLimit(limitArg, 20);
 
       let query = POST_LIST_SELECT_COLUMNS;
 
-      const postLikesExists = await this.pool.query(`
-                SELECT EXISTS(
-                    SELECT 1 FROM information_schema.tables 
-                    WHERE table_name = 'post_likes' AND table_schema = 'public'
-                ) AS exists;
-                `);
+      const postLikesExists = await this.tableExists("post_likes");
 
-      if (viewerId && postLikesExists.rows[0]?.exists) {
+      if (viewerId && postLikesExists) {
         query += `,
                     EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $3) as is_liked
                 `;

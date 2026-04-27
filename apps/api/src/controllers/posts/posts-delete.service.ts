@@ -88,7 +88,6 @@ export class PostsDeleteService {
             );
           } else {
             await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-            deletionStrategy = "post_only";
           }
           break;
 
@@ -105,14 +104,12 @@ export class PostsDeleteService {
             );
           } else {
             await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-            deletionStrategy = "post_only";
           }
           break;
 
         case "task_completion":
         case "task_assignment":
           await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          deletionStrategy = "post_only";
           this.logger.log(
             `✅ Deleted task post ${postId} (task ${post.task_id} preserved)`,
           );
@@ -120,7 +117,6 @@ export class PostsDeleteService {
 
         default:
           await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          deletionStrategy = "post_only";
           this.logger.log(`✅ Deleted general post ${postId}`);
       }
 

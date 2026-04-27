@@ -4,6 +4,7 @@ import { PG_POOL } from "../../database/database.module";
 import { RedisCacheService } from "../../redis/redis-cache.service";
 import { PostsSchemaService } from "./posts-schema.service";
 import type { LikeBody } from "./posts.types";
+import { parseCountTotal, parseLimitOffset } from "./posts-pagination.util";
 
 @Injectable()
 export class PostsLikesService {
@@ -142,8 +143,10 @@ export class PostsLikesService {
     try {
       await this.schema.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 50;
-      const offset = parseInt(offsetArg) || 0;
+      const { limit, offset } = parseLimitOffset(limitArg, offsetArg, {
+        limit: 50,
+        offset: 0,
+      });
 
       const { rows } = await this.pool.query(
         `
@@ -172,7 +175,7 @@ export class PostsLikesService {
       return {
         success: true,
         data: rows,
-        total: parseInt(countResult.rows[0]?.total || "0"),
+        total: parseCountTotal(countResult.rows[0]?.total),
       };
     } catch (error) {
       const errorMessage =
