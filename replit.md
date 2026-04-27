@@ -28,6 +28,14 @@ To fix it, both of these are pinned in `apps/mobile/package.json`:
 
 The override is required to defeat a peer-dep resolution that would otherwise nest `react-dom@19.0.0` under `apps/mobile/node_modules/react-dom`. After changing this you must rebuild: `rm -rf apps/mobile/dist && cd apps/mobile && npx expo export --platform web`.
 
+## Running on a real device (Expo Go)
+
+A second workflow, **`Expo dev server (tunnel)`**, runs `npx expo start --tunnel --port 8080` so a phone on any network can connect to the dev bundler through an ngrok tunnel. The tunnel URL changes each restart and is printed in the workflow logs as `https://<random>-anonymous-8080.exp.direct`. To open the project in Expo Go, scan a QR code that points to `exp://<random>-anonymous-8080.exp.direct` (note `exp://`, not `https://`).
+
+The `--go` flag of `expo start` currently crashes on this setup with `Cannot read properties of undefined (reading 'body')` from inside ngrok, so the workflow starts in dev-build mode. That is fine because `expo-dev-client` is in the dependencies but is **not** registered as an Expo plugin and is not imported anywhere in the source, so Expo Go can still load the bundle from the same tunnel.
+
+`@expo/ngrok` is a devDependency of `apps/mobile`; reinstall after wiping `node_modules`.
+
 ## Why only mobile web?
 
 `apps/api` requires `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_ID`, and a 32+ char `JWT_SECRET` (it exits at startup if any are missing). Those external services aren't provisioned here, so the API isn't started by default. To enable it locally, provide those env vars and add a workflow such as `npm run dev:api` on a backend port (e.g. 3001).
