@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
+/** Avoid loading expo-crypto / native modules when chat modules import generateId. */
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => '00000000-0000-4000-8000-000000000001'),
+}));
+
 const mockConfig = {
   USE_BACKEND: false,
   USE_FIRESTORE: false,
