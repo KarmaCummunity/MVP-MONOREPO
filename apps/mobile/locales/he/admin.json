@@ -38,6 +38,8 @@
     "estimatedHours": "זמן עבודה מוערך בשעות (אופציונלי)",
     "cancel": "ביטול",
     "save": "שמור",
-    "create": "צור"
+    "create": "צור",
+    "dueDatePlaceholder": "תאריך יעד (YYYY-MM-DD, אופציונלי)",
+    "createSuccessComposer": "המשימה נוצרה בהצלחה"
   }
 }

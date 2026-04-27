@@ -1,18 +1,20 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { usePostComposerStore, PostIntent } from '../stores/postComposerStore';
+import ComposerTaskForm, { type ComposerTaskFormHandle } from './ComposerTaskForm';
 
-const CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'time', 'challenges'] as const;
+const POST_CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'time', 'challenges'] as const;
+const TASK_CATEGORY_SLUG = 'tasks' as const;
 
 export default function CreatePostComposerModal(): React.ReactElement {
-  const { t } = useTranslation(['common', 'donations']);
-  const { selectedUser } = useUser();
-  const { visible, initialCategory, initialIntent, closeComposer } = usePostComposerStore();
+  const { t } = useTranslation(['common', 'donations', 'admin']);
+  const { selectedUser, isAdmin } = useUser();
+  const { visible, initialCategory, initialIntent, composerMode, closeComposer } = usePostComposerStore();
 
   const [intent, setIntent] = useState<PostIntent>('give');
   const [category, setCategory] = useState<string>('items');
@@ -21,25 +23,34 @@ export default function CreatePostComposerModal(): React.ReactElement {
   const [city, setCity] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [amount, setAmount] = useState('');
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const taskFormRef = useRef<ComposerTaskFormHandle>(null);
+
+  const categoryChips = useMemo(
+    () => (isAdmin ? [...POST_CATEGORIES, TASK_CATEGORY_SLUG] : [...POST_CATEGORIES]),
+    [isAdmin],
+  );
+
+  const contentIsTask = isAdmin && category === TASK_CATEGORY_SLUG;
 
   useEffect(() => {
     if (!visible) return;
     setIntent(initialIntent);
-    setCategory(initialCategory);
+    setCategory(composerMode === 'task' ? TASK_CATEGORY_SLUG : initialCategory);
     setTitle('');
     setDescription('');
     setCity('');
     setQuantity('1');
     setAmount('');
-  }, [visible, initialCategory, initialIntent]);
+    setTaskSubmitting(false);
+  }, [visible, initialCategory, initialIntent, composerMode]);
 
-  const showAmountField = category === 'money';
-  const showQuantityField = category === 'items';
+  const showAmountField = !contentIsTask && category === 'money';
+  const showQuantityField = !contentIsTask && category === 'items';
 
-  /** Title is required; guest/login errors stay in submit() when title is present */
-  const canPublish = title.trim().length > 0;
+  const canPublishPost = title.trim().length > 0;
 
-  const submit = async () => {
+  const submitPost = async () => {
     if (!selectedUser?.id) {
       Alert.alert(t('common:error'), t('common:guestLoginHint'));
       return;
@@ -73,16 +84,35 @@ export default function CreatePostComposerModal(): React.ReactElement {
     }
   };
 
-  const titleText = useMemo(
-    () => (intent === 'request' ? t('common:postComposer.requestTitle') : t('common:postComposer.giveTitle')),
-    [intent, t],
-  );
+  const onPressPublish = () => {
+    if (contentIsTask) {
+      void taskFormRef.current?.submit();
+      return;
+    }
+    void submitPost();
+  };
+
+  const titleText = useMemo(() => {
+    if (contentIsTask) {
+      return t('admin:tasks.newTask');
+    }
+    return intent === 'request' ? t('common:postComposer.requestTitle') : t('common:postComposer.giveTitle');
+  }, [contentIsTask, intent, t]);
+
+  const publishDisabled = contentIsTask ? taskSubmitting : !canPublishPost;
+  const publishLabel = contentIsTask ? t('admin:tasks.create') : t('common:postComposer.publish');
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={closeComposer}>
       <View style={[styles.backdrop, Platform.OS === 'web' && styles.backdropWeb]}>
         <TouchableOpacity style={styles.backdropTouch} onPress={closeComposer} accessibilityRole="button" />
-        <View style={[styles.sheet, Platform.OS === 'web' && styles.sheetWeb]}>
+        <View
+          style={[
+            styles.sheet,
+            Platform.OS === 'web' && styles.sheetWeb,
+            contentIsTask && styles.sheetTask,
+          ]}
+        >
           <View style={styles.handle} />
           <View style={styles.headerRow}>
             <Text style={styles.title}>{titleText}</Text>
@@ -91,44 +121,66 @@ export default function CreatePostComposerModal(): React.ReactElement {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.toggleRow}>
-            <TouchableOpacity style={[styles.toggleBtn, intent === 'give' && styles.toggleBtnActive]} onPress={() => setIntent('give')}>
-              <Text style={styles.toggleText}>{t('common:give')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toggleBtn, intent === 'request' && styles.requestBtnActive]} onPress={() => setIntent('request')}>
-              <Text style={styles.toggleText}>{t('common:request')}</Text>
-            </TouchableOpacity>
-          </View>
+          {!contentIsTask ? (
+            <View style={styles.toggleRow}>
+              <TouchableOpacity style={[styles.toggleBtn, intent === 'give' && styles.toggleBtnActive]} onPress={() => setIntent('give')}>
+                <Text style={styles.toggleText}>{t('common:give')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toggleBtn, intent === 'request' && styles.requestBtnActive]} onPress={() => setIntent('request')}>
+                <Text style={styles.toggleText}>{t('common:request')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           <View style={styles.categoriesRow}>
-            {CATEGORIES.map((c) => (
+            {categoryChips.map((c) => (
               <TouchableOpacity key={c} style={[styles.categoryChip, category === c && styles.categoryChipActive]} onPress={() => setCategory(c)}>
                 <Text style={styles.categoryText}>{t(`donations:categories.${c}.title`, { defaultValue: c })}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <TextInput style={styles.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={setTitle} />
-          <TextInput style={[styles.input, styles.multiline]} placeholder={t('common:postComposer.description')} value={description} onChangeText={setDescription} multiline />
-          <TextInput style={styles.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={setCity} />
-          {showQuantityField ? (
-            <TextInput style={styles.input} placeholder={t('common:postComposer.quantity')} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
-          ) : null}
-          {showAmountField ? (
-            <TextInput style={styles.input} placeholder={t('common:postComposer.amount')} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
-          ) : null}
+          {contentIsTask && selectedUser?.id ? (
+            <View style={styles.taskFormWrap}>
+              <ComposerTaskForm
+                ref={taskFormRef}
+                visible={visible}
+                userId={selectedUser.id}
+                onCreated={closeComposer}
+                onSubmittingChange={setTaskSubmitting}
+              />
+            </View>
+          ) : contentIsTask && !selectedUser?.id ? (
+            <Text style={styles.hintText}>{t('common:guestLoginHint')}</Text>
+          ) : (
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+              <TextInput style={styles.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={setTitle} />
+              <TextInput style={[styles.input, styles.multiline]} placeholder={t('common:postComposer.description')} value={description} onChangeText={setDescription} multiline />
+              <TextInput style={styles.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={setCity} />
+              {showQuantityField ? (
+                <TextInput style={styles.input} placeholder={t('common:postComposer.quantity')} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
+              ) : null}
+              {showAmountField ? (
+                <TextInput style={styles.input} placeholder={t('common:postComposer.amount')} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
+              ) : null}
+            </ScrollView>
+          )}
 
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              intent === 'request' && styles.submitRequest,
-              !canPublish && styles.submitBtnDisabled,
+              !contentIsTask && intent === 'request' && styles.submitRequest,
+              publishDisabled && styles.submitBtnDisabled,
             ]}
-            onPress={submit}
-            disabled={!canPublish}
-            accessibilityState={{ disabled: !canPublish }}
+            onPress={onPressPublish}
+            disabled={publishDisabled}
+            accessibilityState={{ disabled: publishDisabled }}
           >
-            <Text style={styles.submitText}>{t('common:postComposer.publish')}</Text>
+            {contentIsTask && taskSubmitting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.submitText}>{publishLabel}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -138,7 +190,6 @@ export default function CreatePostComposerModal(): React.ReactElement {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
-  // Full-viewport layer on web so the sheet stays above app chrome and wide-layout scrollers (F12 vs normal width)
   backdropWeb: {
     position: 'fixed',
     top: 0,
@@ -150,7 +201,9 @@ const styles = StyleSheet.create({
     zIndex: 2147483000,
   } as const,
   backdropTouch: { flex: 1 },
-  sheet: { height: '85%', backgroundColor: colors.white, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
+  sheet: { maxHeight: '85%', backgroundColor: colors.white, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
+  sheetTask: { height: '85%', maxHeight: '85%' },
+  taskFormWrap: { flex: 1, minHeight: 200, marginBottom: 4 },
   sheetWeb: { zIndex: 2147483001 },
   handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 12, backgroundColor: colors.border, marginBottom: 8 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
@@ -166,7 +219,8 @@ const styles = StyleSheet.create({
   categoryText: { color: colors.textPrimary, fontSize: 12 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10, color: colors.textPrimary },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  submitBtn: { marginTop: 'auto', backgroundColor: colors.success, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  hintText: { color: colors.textSecondary, marginBottom: 12, textAlign: 'center' },
+  submitBtn: { marginTop: 8, backgroundColor: colors.success, paddingVertical: 12, borderRadius: 12, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
   submitRequest: { backgroundColor: colors.warning },
   submitBtnDisabled: { opacity: 0.45 },
   submitText: { color: colors.white, fontWeight: '700' },

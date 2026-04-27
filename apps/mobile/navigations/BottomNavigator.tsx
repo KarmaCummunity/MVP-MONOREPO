@@ -324,11 +324,17 @@ export default function BottomNavigator(): React.ReactElement {
             return (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Create give or request post"
+                accessibilityLabel={isAdmin ? 'Create post or admin task' : 'Create give or request post'}
                 accessibilityState={accessibilityState}
                 testID={testID}
                 delayLongPress={delayLongPress}
-                onPress={() => openComposer({ intent: 'give', category: composerCategory })}
+                onPress={() =>
+                  openComposer(
+                    isAdmin
+                      ? { intent: 'give', category: composerCategory, mode: 'task' }
+                      : { intent: 'give', category: composerCategory },
+                  )
+                }
                 hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                 style={({ pressed }) => [
                   tabStyle,
