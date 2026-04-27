@@ -605,6 +605,7 @@ export class PostsController {
                     p.task_id,
                     p.ride_id,
                     p.item_id,
+                    p.community_challenge_id,
                     p.title,
                     p.description,
                     p.images,
@@ -664,7 +665,20 @@ export class PostsController {
                             'status', i.status
                         )
                         ELSE NULL
-                    END as item_data
+                    END as item_data,
+                    CASE 
+                        WHEN cgc.id IS NOT NULL THEN json_build_object(
+                            'id', cgc.id,
+                            'type', cgc.type,
+                            'frequency', cgc.frequency,
+                            'difficulty', cgc.difficulty,
+                            'category', cgc.category,
+                            'goal_value', cgc.goal_value,
+                            'deadline', cgc.deadline,
+                            'image_url', cgc.image_url
+                        )
+                        ELSE NULL
+                    END as community_challenge
             `;
 
       // Check if post_likes table exists before using it
@@ -727,6 +741,7 @@ export class PostsController {
                 LEFT JOIN tasks t ON p.task_id = t.id
                 LEFT JOIN rides r ON p.ride_id = r.id
                 LEFT JOIN items i ON p.item_id = i.id
+                LEFT JOIN community_group_challenges cgc ON p.community_challenge_id = cgc.id
             `;
 
       if (whereConditions.length > 0) {
@@ -856,6 +871,7 @@ export class PostsController {
                     p.task_id,
                     p.ride_id,
                     p.item_id,
+                    p.community_challenge_id,
                     p.title,
                     p.description,
                     p.images,
@@ -915,7 +931,20 @@ export class PostsController {
                             'status', i.status
                         )
                         ELSE NULL
-                    END as item_data
+                    END as item_data,
+                    CASE 
+                        WHEN cgc.id IS NOT NULL THEN json_build_object(
+                            'id', cgc.id,
+                            'type', cgc.type,
+                            'frequency', cgc.frequency,
+                            'difficulty', cgc.difficulty,
+                            'category', cgc.category,
+                            'goal_value', cgc.goal_value,
+                            'deadline', cgc.deadline,
+                            'image_url', cgc.image_url
+                        )
+                        ELSE NULL
+                    END as community_challenge
                 `;
 
       // Check if post_likes table exists before using it
@@ -942,6 +971,7 @@ export class PostsController {
                 LEFT JOIN tasks t ON p.task_id = t.id
                 LEFT JOIN rides r ON p.ride_id = r.id
                 LEFT JOIN items i ON p.item_id = i.id
+                LEFT JOIN community_group_challenges cgc ON p.community_challenge_id = cgc.id
                 WHERE p.author_id = $1
                 ORDER BY p.created_at DESC
                 LIMIT $2

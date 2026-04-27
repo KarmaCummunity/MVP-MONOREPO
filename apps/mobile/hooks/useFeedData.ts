@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { postsService } from '../utils/postsService';
 import { logger } from '../utils/loggerService';
 import { FeedItem } from '../types/feed';
+import { mapCommunityChallengeFeedFields } from '../utils/mapCommunityChallengeFeedFields';
 import { useUser } from '../stores/userStore';
 
 const NUM_ITEMS = 50; // Per page/batch
@@ -141,13 +142,23 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             }
         }
 
+        const chMapped =
+            post.post_type === 'community_challenge'
+                ? mapCommunityChallengeFeedFields(post)
+                : null;
+
         return {
             id: post.id,
             type: post.post_type || 'post',
             subtype: post.post_type, // e.g. 'task_assignment', 'ride'
             title: post.title || 'post.noTitle', // Use key or default in UI
             description: post.description || '',
-            thumbnail: post.images && post.images.length > 0 ? post.images[0] : null,
+            thumbnail:
+                chMapped?.thumbnail != null
+                    ? chMapped.thumbnail
+                    : post.images && post.images.length > 0
+                      ? post.images[0]
+                      : null,
             user: {
                 id: userId,
                 name: userName,
@@ -171,6 +182,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             itemId: finalItemId,
             rideId: post.ride_id || post.ride_data?.id,
             taskId: post.task_id || post.task?.id,
+            challengeId: chMapped?.challengeId,
+            challengeData: chMapped?.challengeData,
             intent: postIntent,
             // Add ride-specific fields if this is a ride post
             ...rideData

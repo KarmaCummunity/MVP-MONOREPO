@@ -1628,6 +1628,11 @@
     "viewStatistics": "View Statistics",
     "searchChallenges": "Search Challenges",
     "createNewChallenge": "Create a New Community Challenge",
+    "feedCard": {
+      "badge": "Community challenge",
+      "headline": "New community challenge",
+      "tapToJoin": "Tap for details and to join"
+    },
     "visibility": {
       "label": "Who can see this challenge?",
       "community": "Community (public)",

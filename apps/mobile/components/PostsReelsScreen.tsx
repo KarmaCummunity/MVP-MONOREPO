@@ -12,7 +12,7 @@ import {
   Alert
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 
 import colors from '../globals/colors';
 import { FeedItem } from '../types/feed';
@@ -156,8 +156,34 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
   const handlePostPress = useCallback((item: FeedItem) => {
     logger.debug('PostsReelsScreen', 'Post pressed', { itemId: item.id });
-    // TODO: Implement navigation to individual post screen if exists
-  }, []);
+    if (item.subtype !== 'community_challenge' || !item.challengeId) {
+      return;
+    }
+    const challengeId = item.challengeId;
+    const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
+    const tabState = tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
+      ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
+      : undefined;
+    if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
+      tabNav.navigate('DonationsTab', {
+        screen: 'ChallengeDetailsScreen',
+        params: { challengeId },
+      });
+      return;
+    }
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'HomeStack',
+        params: {
+          screen: 'DonationsTab',
+          params: {
+            screen: 'ChallengeDetailsScreen',
+            params: { challengeId },
+          },
+        },
+      } as never),
+    );
+  }, [navigation]);
 
   const handleCommentPress = useCallback((item: FeedItem) => {
     setSelectedItemForComments(item);

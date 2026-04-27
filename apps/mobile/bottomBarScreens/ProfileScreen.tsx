@@ -40,6 +40,7 @@ import { getFollowStats, followUser, unfollowUser, createSampleFollowData, getUp
 import { createSampleChatData, createConversation, conversationExists } from '../utils/chatService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
 import { apiService } from '../utils/apiService';
+import { mapCommunityChallengeFeedFields } from '../utils/mapCommunityChallengeFeedFields';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { UserPreview as CharacterType } from '../globals/types';
 import { useToast } from '../utils/toastService';
@@ -192,6 +193,10 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
                 status = rideStatus;
                 type = 'ride';
                 if (shouldInclude && p.ride_data?.id) existingRideIds.add(p.ride_data.id);
+              } else if (p.post_type === 'community_challenge') {
+                shouldInclude = true;
+                status = 'active';
+                type = 'post';
               } else if ((p.item_data || p.post_type === 'item') || p.post_type === 'donation') {
                 const itemStatus = p.item_data?.status || 'available';
                 shouldInclude = itemStatus === 'available' || itemStatus === 'reserved' || itemStatus === 'active';
@@ -229,10 +234,20 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
                   }
                 }
 
+                const chMappedOpen =
+                  p.post_type === 'community_challenge'
+                    ? mapCommunityChallengeFeedFields(p)
+                    : null;
+
                 allContent.push({
                   id: p.id,
                   title: p.title || '',
-                  thumbnail: (p.images && p.images.length > 0) ? p.images[0] : null,
+                  thumbnail:
+                    chMappedOpen?.thumbnail != null
+                      ? chMappedOpen.thumbnail
+                      : (p.images && p.images.length > 0)
+                        ? p.images[0]
+                        : null,
                   likes: p.likes || 0,
                   comments: p.comments || 0,
                   isLiked: p.is_liked || false,
@@ -260,7 +275,9 @@ const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: a
                   // Add IDs for updating posts (critical for delete/close functionality)
                   rideId: p.ride_id || p.ride_data?.id,
                   itemId: p.item_data?.id || (p.item_id && !/^\d{10,13}$/.test(p.item_id) ? p.item_id : undefined),
-                  taskId: p.task_id || p.task?.id
+                  taskId: p.task_id || p.task?.id,
+                  challengeId: chMappedOpen?.challengeId,
+                  challengeData: chMappedOpen?.challengeData,
                 });
               }
             });
