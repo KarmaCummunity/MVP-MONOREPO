@@ -15,33 +15,8 @@ import TimeScreen from "../donationScreens/TimeScreen";
 import KnowledgeScreen from "../donationScreens/KnowledgeScreen";
 import TrumpScreen from "../donationScreens/TrumpScreen";
 import FoodScreen from "../donationScreens/FoodScreen";
-import ClothesScreen from "../donationScreens/ClothesScreen";
-import BooksScreen from "../donationScreens/BooksScreen";
-import FurnitureScreen from "../donationScreens/FurnitureScreen";
-import MedicalScreen from "../donationScreens/MedicalScreen";
-import AnimalsScreen from "../donationScreens/AnimalsScreen";
 import HousingScreen from "../donationScreens/HousingScreen";
-import SupportScreen from "../donationScreens/SupportScreen";
-import EducationScreen from "../donationScreens/EducationScreen";
-import EnvironmentScreen from "../donationScreens/EnvironmentScreen";
-import TechnologyScreen from "../donationScreens/TechnologyScreen";
-import MusicScreen from "../donationScreens/MusicScreen";
-import GamesScreen from "../donationScreens/GamesScreen";
-import RiddlesScreen from "../donationScreens/RiddlesScreen";
-import RecipesScreen from "../donationScreens/RecipesScreen";
-import PlantsScreen from "../donationScreens/PlantsScreen";
-import WasteScreen from "../donationScreens/WasteScreen";
-import ArtScreen from "../donationScreens/ArtScreen";
-import SportsScreen from "../donationScreens/SportsScreen";
 import ItemsScreen from "../donationScreens/ItemsScreen";
-import CategoryScreen from "../donationScreens/CategoryScreen";
-import DreamsScreen from "../donationScreens/DreamsScreen";
-import FertilityScreen from "../donationScreens/FertilityScreen";
-import JobsScreen from "../donationScreens/JobsScreen";
-import MatchmakingScreen from "../donationScreens/MatchmakingScreen";
-import MentalHealthScreen from "../donationScreens/MentalHealthScreen";
-import GoldenAgeScreen from "../donationScreens/GoldenAgeScreen";
-import LanguagesScreen from "../donationScreens/LanguagesScreen";
 import CommunityChallengesScreen from "../donationScreens/CommunityChallengesScreen";
 import ChallengeDetailsScreen from "../screens/ChallengeDetailsScreen";
 import ChallengeStatisticsScreen from "../screens/ChallengeStatisticsScreen";
@@ -97,34 +72,8 @@ export default function DonationsStack() {
       <Stack.Screen name="TimeScreen" component={TimeScreen} />
       <Stack.Screen name="KnowledgeScreen" component={KnowledgeScreen} />
       <Stack.Screen name="TrumpScreen" component={TrumpScreen} />
-      <Stack.Screen name="CategoryScreen" component={CategoryScreen} />
-      <Stack.Screen name="DreamsScreen" component={DreamsScreen} />
-      <Stack.Screen name="FertilityScreen" component={FertilityScreen} />
-      <Stack.Screen name="JobsScreen" component={JobsScreen} />
-      <Stack.Screen name="MatchmakingScreen" component={MatchmakingScreen} />
-      <Stack.Screen name="MentalHealthScreen" component={MentalHealthScreen} />
-      <Stack.Screen name="GoldenAgeScreen" component={GoldenAgeScreen} />
-      <Stack.Screen name="LanguagesScreen" component={LanguagesScreen} />
-      {/* Category screens */}
       <Stack.Screen name="FoodScreen" component={FoodScreen} />
-      <Stack.Screen name="ClothesScreen" component={ClothesScreen} />
-      <Stack.Screen name="BooksScreen" component={BooksScreen} />
-      <Stack.Screen name="FurnitureScreen" component={FurnitureScreen} />
-      <Stack.Screen name="MedicalScreen" component={MedicalScreen} />
-      <Stack.Screen name="AnimalsScreen" component={AnimalsScreen} />
       <Stack.Screen name="HousingScreen" component={HousingScreen} />
-      <Stack.Screen name="SupportScreen" component={SupportScreen} />
-      <Stack.Screen name="EducationScreen" component={EducationScreen} />
-      <Stack.Screen name="EnvironmentScreen" component={EnvironmentScreen} />
-      <Stack.Screen name="TechnologyScreen" component={TechnologyScreen} />
-      <Stack.Screen name="MusicScreen" component={MusicScreen} />
-      <Stack.Screen name="GamesScreen" component={GamesScreen} />
-      <Stack.Screen name="RiddlesScreen" component={RiddlesScreen} />
-      <Stack.Screen name="RecipesScreen" component={RecipesScreen} />
-      <Stack.Screen name="PlantsScreen" component={PlantsScreen} />
-      <Stack.Screen name="WasteScreen" component={WasteScreen} />
-      <Stack.Screen name="ArtScreen" component={ArtScreen} />
-      <Stack.Screen name="SportsScreen" component={SportsScreen} />
       <Stack.Screen name="CommunityChallengesScreen" component={CommunityChallengesScreen} />
       <Stack.Screen name="ChallengeDetailsScreen" component={ChallengeDetailsScreen} />
       <Stack.Screen name="ChallengeStatisticsScreen" component={ChallengeStatisticsScreen} />

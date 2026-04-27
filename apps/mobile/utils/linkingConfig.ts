@@ -163,171 +163,22 @@ export const linking: LinkingOptions<RootStackParamList> = {
                   },
                 },
               },
-              
-              // Item categories with mode support
               FoodScreen: {
                 path: 'donations/food/:mode?',
                 parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              ClothesScreen: {
-                path: 'donations/clothes/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              BooksScreen: {
-                path: 'donations/books/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              FurnitureScreen: {
-                path: 'donations/furniture/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              MedicalScreen: {
-                path: 'donations/medical/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              AnimalsScreen: {
-                path: 'donations/animals/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
+                  mode: (mode: string) => {
+                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
+                    return mode === 'offer' ? 'offer' : 'search';
+                  },
                 },
               },
               HousingScreen: {
                 path: 'donations/housing/:mode?',
                 parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              SupportScreen: {
-                path: 'donations/support/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              EducationScreen: {
-                path: 'donations/education/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              EnvironmentScreen: {
-                path: 'donations/environment/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              TechnologyScreen: {
-                path: 'donations/technology/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              MusicScreen: {
-                path: 'donations/music/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              GamesScreen: {
-                path: 'donations/games/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              RiddlesScreen: {
-                path: 'donations/riddles/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              RecipesScreen: {
-                path: 'donations/recipes/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              PlantsScreen: {
-                path: 'donations/plants/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              WasteScreen: {
-                path: 'donations/waste/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              ArtScreen: {
-                path: 'donations/art/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              SportsScreen: {
-                path: 'donations/sports/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              
-              // Special categories with mode support
-              DreamsScreen: {
-                path: 'donations/dreams/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              FertilityScreen: {
-                path: 'donations/fertility/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              JobsScreen: {
-                path: 'donations/jobs/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              MatchmakingScreen: {
-                path: 'donations/matchmaking/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              MentalHealthScreen: {
-                path: 'donations/mental-health/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              GoldenAgeScreen: {
-                path: 'donations/golden-age/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              LanguagesScreen: {
-                path: 'donations/languages/:mode?',
-                parse: {
-                  mode: (mode: string) => mode || 'offer',
-                },
-              },
-              CategoryScreen: {
-                path: 'donations/category/:categoryId/:mode?',
-                parse: {
-                  categoryId: (categoryId: string) => categoryId,
-                  mode: (mode: string) => mode || 'offer',
+                  mode: (mode: string) => {
+                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
+                    return mode === 'offer' ? 'offer' : 'search';
+                  },
                 },
               },
             },
