@@ -9,7 +9,8 @@ import {
   NativeScrollEvent,
   RefreshControl,
   Text,
-  Alert
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -43,6 +44,14 @@ const { width } = Dimensions.get('window');
 const isMobile = isMobileWeb();
 const HORIZONTAL_PADDING = isMobile ? 8 : 16; // Padding from screen edges
 const FEED_NUM_COLUMNS = 1;
+
+// Virtualized list tuning: with numColumns=1, each feed row is one item. Low batch
+// sizes (meant for multi-column grids) cap visible rows ~5 until scroll — looks
+// like a "only 5 posts" bug. Align with other screens (e.g. DiscoverPeopleScreen).
+const FEED_INITIAL_NUM_TO_RENDER = 10;
+const FEED_MAX_TO_RENDER_PER_BATCH = 8;
+const FEED_WINDOW_SIZE = 10;
+const FEED_ON_END_REACHED_THRESHOLD = 0.35;
 
 // Props
 interface PostsReelsScreenProps {
@@ -115,7 +124,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   });
 
   // Custom Hook for Data
-  const { feed, loading, refreshing, refresh } = useFeedData(feedMode);
+  const { feed, loading, refreshing, loadingMore, hasMorePosts, refresh, loadMore } =
+    useFeedData(feedMode);
 
   const filteredFeed = useMemo(
     () => applyFeedFilters(feed, feedFilterState),
@@ -273,6 +283,22 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     );
   }, [handlePostPress, handleCommentPress, handleMorePress]);
 
+  const renderListFooter = useCallback(() => {
+    if (!loadingMore || !hasMorePosts) {
+      return null;
+    }
+    return (
+      <View style={styles.footerLoader} accessibilityRole="progressbar">
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }, [loadingMore, hasMorePosts]);
+
+  const handleEndReached = useCallback(() => {
+    if (filteredFeed.length === 0) return;
+    loadMore();
+  }, [loadMore, filteredFeed.length]);
+
   const renderEmptyComponent = () => {
     const filteredOut = !loading && feed.length > 0 && filteredFeed.length === 0;
     return (
@@ -329,10 +355,13 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
             <RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.primary]} />
           }
           ListEmptyComponent={renderEmptyComponent}
-          // Optimization props
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={10}
+          ListFooterComponent={renderListFooter}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={FEED_ON_END_REACHED_THRESHOLD}
+          // Optimization props (single-column feed; must render enough rows off-screen)
+          initialNumToRender={FEED_INITIAL_NUM_TO_RENDER}
+          maxToRenderPerBatch={FEED_MAX_TO_RENDER_PER_BATCH}
+          windowSize={FEED_WINDOW_SIZE}
           removeClippedSubviews={false}
           showsVerticalScrollIndicator={false}
         />
@@ -426,6 +455,11 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 16,
     color: colors.textSecondary,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
