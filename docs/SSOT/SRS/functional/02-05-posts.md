@@ -1,4 +1,6 @@
 > **SRS shard:** `SRS/functional/02-05-posts.md` — part of [SRS index](../README.md). References § refer to the full document.
+>
+> **Engineering reference (as-built):** [Posts: visibility, workflow, anonymity, and statistics](../../reference/posts-visibility-workflow-and-stats.md) — how `posts.status` (hide), linked entity lifecycle (open/closed), and `anonymity_level` relate in code and in `GET /api/stats/dashboard`.
 
 ### 2.5 Posts Module (`modules/posts`)
 

@@ -1,4 +1,6 @@
 > **SRS shard:** `SRS/functional/02-10-statistics.md` — part of [SRS index](../README.md). References § refer to the full document.
+>
+> **Dashboard post counts (as-built):** see [Posts: visibility, workflow, anonymity, and statistics](../../reference/posts-visibility-workflow-and-stats.md) §5 for definitions of `posts_total`, `posts_open`, and `posts_closed` on `GET /api/stats/dashboard`.
 
 ### 2.10 Statistics Module (`modules/stats`)
 
