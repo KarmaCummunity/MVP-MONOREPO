@@ -1,6 +1,7 @@
 import {
   buildPersistedAdminTaskFilterKeys,
   canonicalTaskCategory,
+  formatTaskListPriorityHebrew,
   formatTaskListStatusHebrew,
   hasActiveAdminTaskListFilters,
   normalizeAdminTaskFromApi,
@@ -34,6 +35,22 @@ describe('parseAdminTaskHeaderFilters', () => {
     ]);
     expect(parsed.priorities).toEqual(['high']);
     expect(parsed.categories).toEqual(['פיתוח']);
+  });
+
+  it('parses extended priority chips', () => {
+    const parsed = parseAdminTaskHeaderFilters(['task_priority_urgent', 'task_priority_none']);
+    expect(parsed.priorities).toEqual(['urgent', 'none']);
+  });
+});
+
+describe('formatTaskListPriorityHebrew', () => {
+  it('maps all admin priority values', () => {
+    expect(formatTaskListPriorityHebrew('none')).toBe('לא רלוונטי');
+    expect(formatTaskListPriorityHebrew('low')).toBe('נמוך');
+    expect(formatTaskListPriorityHebrew('medium')).toBe('בינוני');
+    expect(formatTaskListPriorityHebrew('high')).toBe('גבוה');
+    expect(formatTaskListPriorityHebrew('critical')).toBe('קריטי');
+    expect(formatTaskListPriorityHebrew('urgent')).toBe('דחוף');
   });
 });
 
@@ -71,6 +88,22 @@ describe('normalizeAdminTaskFromApi', () => {
     } as AdminTask);
     expect(out.status).toBe('open');
     expect(out.category).toBe('דיווח');
+  });
+
+  it('falls back to medium for unknown priority from API', () => {
+    const base: AdminTask = {
+      id: 'a',
+      title: 't',
+      status: 'open',
+      priority: 'medium',
+      assignees: [],
+      tags: [],
+    };
+    const out = normalizeAdminTaskFromApi({
+      ...base,
+      priority: 'legacy_unknown' as AdminTask['priority'],
+    } as AdminTask);
+    expect(out.priority).toBe('medium');
   });
 });
 

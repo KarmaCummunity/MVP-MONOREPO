@@ -426,7 +426,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'open', -- open, in_progress, stuck, testing, done, archived
-    priority VARCHAR(10) NOT NULL DEFAULT 'medium', -- low, medium, high
+    priority VARCHAR(20) NOT NULL DEFAULT 'medium', -- none, low, medium, high, critical, urgent
     category VARCHAR(50), -- development, marketing, operations, etc.
     due_date TIMESTAMPTZ,
     assignees UUID[] DEFAULT ARRAY[]::UUID[], -- UUID[] to match user_profiles.id type

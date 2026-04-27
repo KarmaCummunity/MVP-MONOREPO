@@ -56,9 +56,12 @@ export const styles = StyleSheet.create({
   metaRow: { alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border },
   badgeText: { fontSize: 12, color: colors.textSecondary },
+  priority_urgent: { backgroundColor: colors.errorLight, borderColor: colors.error },
+  priority_critical: { backgroundColor: colors.surfaceRedPale, borderColor: colors.destructiveAction },
   priority_high: { backgroundColor: colors.pinkLight, borderColor: colors.pinkLight },
   priority_medium: { backgroundColor: colors.warningLight, borderColor: colors.warningLight },
   priority_low: { backgroundColor: colors.successLight, borderColor: colors.successLight },
+  priority_none: { backgroundColor: colors.surfaceGrayBlue, borderColor: colors.border },
 
   status_open: { backgroundColor: colors.infoLight, borderColor: colors.info },
   status_in_progress: { backgroundColor: colors.warningLight, borderColor: colors.warning },

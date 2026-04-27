@@ -2,7 +2,13 @@ import { buildFilterQuery } from './buildFilterQuery';
 import type { TaskFilterState } from './types';
 
 type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
-type TaskPriority = 'low' | 'medium' | 'high';
+type TaskPriority =
+  | 'none'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'critical'
+  | 'urgent';
 
 export type ApiListTasksFilters = Readonly<{
   q?: string;

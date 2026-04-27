@@ -10,6 +10,7 @@ import {
   ADMIN_TASKS_FILTER_OPTIONS,
   ADMIN_TASKS_SORT_OPTIONS,
   TASK_LIST_CATEGORY_OPTIONS,
+  TASK_LIST_PRIORITY_VALUES,
 } from './adminTasksScreen.constants';
 import { buildPersistedAdminTaskFilterKeys, sanitizeAdminTasksHeaderFilterKeys } from './adminTasksScreen.utils';
 import { styles, stylesWithListContent } from './adminTasksScreen.styles';
@@ -156,11 +157,10 @@ export default function AdminTasksScreen() {
                 label={t('admin:tasks.priority')}
                 value={formData.priority}
                 onChange={(v) => setFormData({ ...formData, priority: v as TaskPriority })}
-                options={[
-                  { value: 'high', label: t('search:filters.task_priority_high').replace('עדיפות: ', '').replace('Priority: ', '') },
-                  { value: 'medium', label: t('search:filters.task_priority_medium').replace('עדיפות: ', '').replace('Priority: ', '') },
-                  { value: 'low', label: t('search:filters.task_priority_low').replace('עדיפות: ', '').replace('Priority: ', '') },
-                ]}
+                options={TASK_LIST_PRIORITY_VALUES.map((p) => ({
+                  value: p,
+                  label: t(`admin:tasks.priority_label_${p}`),
+                }))}
               />
               <AdminTasksPickerField
                 label={t('admin:tasks.status')}

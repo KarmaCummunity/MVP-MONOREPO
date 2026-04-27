@@ -1,6 +1,6 @@
 export type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
 
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskPriority = 'none' | 'low' | 'medium' | 'high' | 'critical' | 'urgent';
 
 export type TasksListSort =
   | 'created_desc'
