@@ -23,8 +23,8 @@
       "hoursAgo": "{{count}} hours ago",
       "daysAgo": "{{count}} days ago"
     },
-    "offerer": "Offerer",
-    "seeker": "Seeker",
+    "offerer": "Give",
+    "seeker": "Receive",
     "close": "Close",
     "guestLoginHint": "You're in guest mode, please log in",
     "unknownUser": "User",
@@ -140,6 +140,22 @@
       "unsaved_changes_title": "Unsaved Changes",
       "unsaved_changes_message": "Are you sure you want to close without saving?",
       "discard": "Discard"
+    },
+    "give": "Give",
+    "receive": "Receive",
+    "request": "Request",
+    "postComposer": {
+      "giveTitle": "Create a Give post",
+      "requestTitle": "Create a Request post",
+      "title": "Title",
+      "description": "Description",
+      "city": "City",
+      "quantity": "Quantity",
+      "amount": "Amount",
+      "publish": "Publish",
+      "titleRequired": "Please enter a title",
+      "requestPublished": "Your request was published",
+      "givePublished": "Your give post was published"
     }
   },
   "search": {
@@ -1351,8 +1367,6 @@
       }
     },
     "testimonials": {
-      "title": "Community stories",
-      "subtitle": "What our users say",
       "1": {
         "text": "I found a volunteer who fixed my door in a day! Amazing to have a community that helps so fast.",
         "user": "— Dana, Tel Aviv"
@@ -1364,7 +1378,9 @@
       "3": {
         "text": "I found free math tutoring for an elderly neighbor. A wonderful connection formed.",
         "user": "— Rotem, Jerusalem"
-      }
+      },
+      "title": "Community stories",
+      "subtitle": "What our users say"
     },
     "gallery": {
       "title": "Gallery",
@@ -1558,7 +1574,8 @@
         "statsLikes": "Likes",
         "statsComments": "Comments",
         "usefulLinks": "Useful links",
-        "headerPlaceholder": "Search available items"
+        "headerPlaceholder": "Search available items",
+        "requestCta": "Can't find what you need? Request it →"
       },
       "offer": {
         "headerPlaceholder": "Item name",
@@ -1587,7 +1604,9 @@
         "publishButton": "Publish item",
         "recentSectionTitle": "Recently published items",
         "noRecentPosts": "No posts published yet",
-        "usefulLinks": "Useful links"
+        "usefulLinks": "Useful links",
+        "openRequestsList": "Open Requests List",
+        "noOpenRequests": "No open requests yet."
       },
       "menu": {
         "history": "Item history",

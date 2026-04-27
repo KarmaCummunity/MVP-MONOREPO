@@ -63,4 +63,5 @@ export interface FeedItem {
 
     // Item specific (optional)
     category?: string;
+    intent?: 'give' | 'request';
 }

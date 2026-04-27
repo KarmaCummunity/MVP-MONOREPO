@@ -49,6 +49,9 @@ export type ItemsScreenOfferModeProps = Readonly<{
   onRemoveImage: () => void;
   onPublish: () => void;
   canPublish: boolean;
+  openRequestsExpanded: boolean;
+  onToggleOpenRequests: () => void;
+  openRequestPosts: FeedItem[];
   recentPosts: FeedItem[];
   onMorePress: (item: FeedItem, position?: { x: number; y: number }) => void;
   onPostClosed: (postId: string) => void;
@@ -80,6 +83,9 @@ export function ItemsScreenOfferMode({
   onRemoveImage,
   onPublish,
   canPublish,
+  openRequestsExpanded,
+  onToggleOpenRequests,
+  openRequestPosts,
   recentPosts,
   onMorePress,
   onPostClosed,
@@ -101,6 +107,23 @@ export function ItemsScreenOfferMode({
       showsVerticalScrollIndicator={false}
     >
       <View style={s.formContainer}>
+        <TouchableOpacity style={s.section} onPress={onToggleOpenRequests}>
+          <Text style={s.sectionTitle}>{t('donationScreen.offer.openRequestsList')}</Text>
+          <Text style={s.emptyStateText}>{openRequestsExpanded ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {openRequestsExpanded && (
+          <View style={s.section}>
+            {openRequestPosts.length === 0 ? (
+              <Text style={s.emptyStateText}>{t('donationScreen.offer.noOpenRequests')}</Text>
+            ) : (
+              openRequestPosts.map((post) => (
+                <View key={post.id} style={s.recentItemWrapper}>
+                  <PostReelItem item={post} cardWidth={width - 64} numColumns={1} onMorePress={onMorePress} onPostClosed={onPostClosed} />
+                </View>
+              ))
+            )}
+          </View>
+        )}
         <View style={s.row}>
           <View style={s.field}>
             <Text style={s.label}>{t('donationScreen.offer.titleLabel')}</Text>

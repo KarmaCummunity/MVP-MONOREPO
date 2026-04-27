@@ -75,6 +75,7 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
     // Safe access to user.name with fallback
     const userName = item.user?.name || 'common.unknownUser';
     const displayName = userName === 'common.unknownUser' ? t('common.unknownUser') : userName;
+    const isRequest = item.intent === 'request';
 
     return (
         <View style={[
@@ -107,9 +108,9 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
 
                 <View style={[styles.headerRight, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     {/* Item Badge - Shows "Available" for open items */}
-                    <View style={styles.itemBadge}>
-                        <Ionicons name="cube" size={16} color={colors.white} />
-                        <Text style={styles.itemBadgeText}>{t('items.available')}</Text>
+                    <View style={[styles.itemBadge, isRequest && styles.requestBadge]}>
+                        <Ionicons name={isRequest ? 'help-circle' : 'cube'} size={16} color={colors.white} />
+                        <Text style={styles.itemBadgeText}>{isRequest ? t('common:request') : t('common:give')}</Text>
                     </View>
 
                     {/* More Options Button */}
@@ -320,6 +321,9 @@ const styles = StyleSheet.create({
         paddingVertical: isMobile ? 3 : 4,
         borderRadius: isMobile ? 16 : 20,
         gap: isMobile ? 3 : 4,
+    },
+    requestBadge: {
+        backgroundColor: colors.warning,
     },
     itemBadgeText: {
         fontSize: isMobile ? 10 : FontSizes.small,

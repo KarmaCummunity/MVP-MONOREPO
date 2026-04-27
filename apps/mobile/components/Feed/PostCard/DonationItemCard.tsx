@@ -74,6 +74,7 @@ const DonationItemCard: React.FC<BaseCardProps> = ({
     // Safe access to user.name with fallback
     const userName = item.user?.name || 'common.unknownUser';
     const displayName = userName === 'common.unknownUser' ? t('common.unknownUser') : userName;
+    const isRequest = item.intent === 'request';
 
     return (
         <View style={[
@@ -105,12 +106,10 @@ const DonationItemCard: React.FC<BaseCardProps> = ({
                 </TouchableOpacity>
 
                 <View style={[styles.headerRight, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                    <View style={styles.donationBadge}>
-                        <Ionicons name="gift" size={16} color={colors.white} />
+                    <View style={[styles.donationBadge, isRequest && styles.requestBadge]}>
+                        <Ionicons name={isRequest ? 'help-circle' : 'gift'} size={16} color={colors.white} />
                         <Text style={styles.donationBadgeText}>
-                            {item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status)
-                                ? t('items.delivered')
-                                : t('items.available')}
+                            {isRequest ? t('common:request') : t('common:give')}
                         </Text>
                     </View>
 
@@ -313,6 +312,9 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
         gap: 6,
+    },
+    requestBadge: {
+        backgroundColor: colors.warning,
     },
     donationBadgeText: {
         fontSize: FontSizes.small,

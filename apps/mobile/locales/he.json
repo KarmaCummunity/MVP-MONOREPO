@@ -23,8 +23,8 @@
       "hoursAgo": "לפני {{count}} שעות",
       "daysAgo": "לפני {{count}} ימים"
     },
-    "offerer": "מציע",
-    "seeker": "מחפש",
+    "offerer": "לתת",
+    "seeker": "לקבל",
     "close": "סגור",
     "guestLoginHint": "אתה במצב אורח, מומלץ להתחבר",
     "unknownUser": "משתמש",
@@ -152,6 +152,22 @@
       },
       "view_details": "הצג פרטים",
       "task_completed": "משימה בוצעה!"
+    },
+    "give": "לתת",
+    "receive": "לקבל",
+    "request": "בקשה",
+    "postComposer": {
+      "giveTitle": "יצירת פוסט לתת",
+      "requestTitle": "יצירת בקשה",
+      "title": "כותרת",
+      "description": "תיאור",
+      "city": "עיר",
+      "quantity": "כמות",
+      "amount": "סכום",
+      "publish": "פרסום",
+      "titleRequired": "נא להזין כותרת",
+      "requestPublished": "הבקשה פורסמה בהצלחה",
+      "givePublished": "הפוסט פורסם בהצלחה"
     }
   },
   "search": {
@@ -1396,8 +1412,6 @@
       }
     },
     "testimonials": {
-      "title": "סיפורי קהילה",
-      "subtitle": "מה אומרים המשתמשים שלנו",
       "1": {
         "text": "מצאתי מתנדב שתיקן לי את הדלת תוך יום! מדהים שיש קהילה שעוזרת כל כך מהר.",
         "user": "— דנה, תל אביב"
@@ -1409,7 +1423,9 @@
       "3": {
         "text": "מצאתי שיעורי עזר במתמטיקה בחינם לשכנה המבוגרת. יצא קשר מדהים בינינו.",
         "user": "— רותם, ירושלים"
-      }
+      },
+      "title": "סיפורי קהילה",
+      "subtitle": "מה אומרים המשתמשים שלנו"
     },
     "gallery": {
       "title": "גלריה",
@@ -1603,7 +1619,8 @@
         "statsLikes": "לייקים",
         "statsComments": "תגובות",
         "usefulLinks": "קישורים שימושיים",
-        "headerPlaceholder": "חפש פריטים זמינים"
+        "headerPlaceholder": "חפש פריטים זמינים",
+        "requestCta": "לא מצאת מה שצריך? פרסם/י בקשה ←"
       },
       "offer": {
         "headerPlaceholder": "שם הפריט",
@@ -1632,7 +1649,9 @@
         "publishButton": "פרסם פריט",
         "recentSectionTitle": "פריטים שפרסמת לאחרונה",
         "noRecentPosts": "אין פוסטים שפורסמו עדיין",
-        "usefulLinks": "קישורים שימושיים"
+        "usefulLinks": "קישורים שימושיים",
+        "openRequestsList": "רשימת בקשות פתוחות",
+        "noOpenRequests": "אין בקשות פתוחות כרגע."
       },
       "menu": {
         "history": "היסטוריית פריטים",

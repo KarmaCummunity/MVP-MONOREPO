@@ -201,3 +201,18 @@ MainNavigator (Stack)
 
 ---
 
+
+### 4.9 Unified composer infrastructure (Give / Request)
+
+- `BottomNavigator` now hosts a centered create action in the tab bar and mounts a shared composer modal.
+- `postComposerStore` (Zustand) provides a single entrypoint for opening the modal from multiple surfaces.
+- Current integrated entrypoints:
+  - Bottom centered `+`
+  - Receive/search-mode CTA in item category flow
+- Composer capabilities:
+  - Intent toggle: `give` / `request`
+  - Category selection
+  - Dynamic field rendering by category (shared fields + category-specific fields)
+- Feed UI contract:
+  - `FeedItem.intent` is mapped from backend `posts.metadata.intent`
+  - Post cards render intent badges/chips for clear request-vs-give differentiation.

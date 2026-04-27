@@ -23,6 +23,7 @@ import { useItemsScreenFilters } from './items/useItemsScreenFilters';
 import { ItemsScreenSearchMode } from './items/ItemsScreenSearchMode';
 import { ItemsScreenOfferMode } from './items/ItemsScreenOfferMode';
 import type { ItemsScreenProps, ItemType, DonationItem } from './items/itemsScreen.types';
+import { usePostComposerStore } from '../stores/postComposerStore';
 
 export type { ItemsScreenProps } from './items/itemsScreen.types';
 
@@ -54,7 +55,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
 
   const itemType: ItemType = ((route?.params as { itemType?: ItemType } | undefined)?.itemType as ItemType) || 'general';
   const data = useItemsScreenData(navigation, route, itemType);
+  const { openComposer } = usePostComposerStore();
   const filters = useItemsScreenFilters(data.filterDataSlice, itemType, ti);
+  const [openRequestsExpanded, setOpenRequestsExpanded] = useState(false);
 
   const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
@@ -194,6 +197,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         owner_id: uid,
         title: title.trim(),
         category: selectedCategory || itemType,
+        intent: 'give',
       };
 
       if (description.trim()) itemData.description = description.trim();
@@ -345,6 +349,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           selectedFilters={selectedFilters}
           selectedSorts={selectedSorts}
           onClearAll={handleClearAll}
+          onOpenRequestComposer={() => openComposer({ intent: 'request', category: itemType })}
         />
       ) : (
         <ItemsScreenOfferMode
@@ -373,6 +378,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
           onRemoveImage={() => setImageUri('')}
           onPublish={handleCreateItem}
           canPublish={!!title.trim()}
+          openRequestsExpanded={openRequestsExpanded}
+          onToggleOpenRequests={() => setOpenRequestsExpanded((prev) => !prev)}
+          openRequestPosts={data.openRequestPosts}
           recentPosts={data.recentPosts}
           onMorePress={handleMorePress}
           onPostClosed={handlePostClosed}

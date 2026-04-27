@@ -84,6 +84,7 @@ export function mapPostToFeedItemForItemsScreen(post: unknown): FeedItem | null 
     isLiked: Boolean(p.is_liked),
     timestamp: ts,
     category: (itemData?.category as string) || (metadata as { category?: string }).category,
+    intent: ((metadata as { intent?: 'give' | 'request' }).intent || 'give'),
     status: itemStatus,
     itemId,
     rideId: (p.ride_id as string) || ((p.ride_data as { id?: string })?.id),
