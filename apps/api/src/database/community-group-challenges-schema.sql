@@ -38,10 +38,12 @@ END $$;
 
 -- Add goal_direction column if it doesn't exist (for success/failure calculation)
 DO $$ 
+DECLARE
+    challenges_table CONSTANT TEXT := 'community_group_challenges';
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'community_group_challenges' AND column_name = 'goal_direction'
+        WHERE table_name = challenges_table AND column_name = 'goal_direction'
     ) THEN
         -- Step 1: Add column without default
         ALTER TABLE community_group_challenges 

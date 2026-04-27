@@ -136,10 +136,12 @@ END $$;
 
 -- Add foreign key constraint for parent_manager_id if it doesn't exist
 DO $$ 
+DECLARE
+    profiles_table CONSTANT TEXT := 'user_profiles';
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints 
                    WHERE constraint_name='user_profiles_parent_manager_id_fkey' 
-                   AND table_name='user_profiles') THEN
+                   AND table_name=profiles_table) THEN
         ALTER TABLE user_profiles 
         ADD CONSTRAINT user_profiles_parent_manager_id_fkey 
         FOREIGN KEY (parent_manager_id) REFERENCES user_profiles(id) ON DELETE SET NULL;
