@@ -5,7 +5,6 @@ import {
   SafeAreaView,
   FlatList,
   Dimensions,
-  Platform,
   TouchableOpacity,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
@@ -19,10 +18,9 @@ import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { useToast } from '../utils/toastService';
-import { getScreenInfo, BREAKPOINTS, isMobileWeb } from '../globals/responsive';
+import { isMobileWeb } from '../globals/responsive';
 
 import RideOfferForm from '../components/rides/RideOfferForm';
-import VerticalGridSlider from '../components/VerticalGridSlider';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { usePostMenu } from '../hooks/usePostMenu';
 import OptionsModal from '../components/Feed/OptionsModal';
@@ -132,12 +130,8 @@ export default function TrumpScreen({
   const handleToggleMode = () => setMode(!mode);
 
   const { width } = Dimensions.get('window');
-  const { isTablet, isDesktop } = getScreenInfo();
-  const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const isMobile = isMobileWeb();
-  const [numColumns, setNumColumns] = useState(() =>
-    isTablet || isDesktop || isDesktopWeb ? 3 : 2
-  );
+  const SEARCH_GRID_COLUMNS = 2;
 
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
@@ -158,12 +152,13 @@ export default function TrumpScreen({
   const renderPostItem = useCallback(
     ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
-      const itemWidth = numColumns > 1 ? availableWidth / numColumns : availableWidth;
+      const totalGaps = SEARCH_GRID_COLUMNS - 1;
+      const itemWidth = (availableWidth - totalGaps * 8) / SEARCH_GRID_COLUMNS;
       return (
         <PostReelItem
           item={item}
           cardWidth={itemWidth}
-          numColumns={numColumns}
+          numColumns={SEARCH_GRID_COLUMNS}
           onPress={handleFeedPostPress}
           onCommentPress={noopCommentPress}
           onMorePress={handleMorePress}
@@ -171,7 +166,7 @@ export default function TrumpScreen({
         />
       );
     },
-    [numColumns, screenPadding, width, handleMorePress, trumpData.handlePostClosed, handleFeedPostPress, noopCommentPress],
+    [screenPadding, width, handleMorePress, trumpData.handlePostClosed, handleFeedPostPress, noopCommentPress],
   );
 
   const renderEmptyPosts = useCallback(
@@ -325,19 +320,13 @@ export default function TrumpScreen({
         </ScrollContainer>
       ) : (
         <View style={localStyles.searchContainer}>
-          <VerticalGridSlider
-            numColumns={numColumns}
-            onNumColumnsChange={setNumColumns}
-            style={{ top: 10, left: 4, height: 160 }}
-          />
           <FlatList
             style={{ flex: 1 }}
             data={trumpData.filteredPosts}
             renderItem={renderPostItem}
             keyExtractor={(item) => item.id || String(item.timestamp)}
-            key={numColumns}
-            numColumns={numColumns}
-            columnWrapperStyle={numColumns > 1 ? localStyles.columnWrapper : undefined}
+            numColumns={SEARCH_GRID_COLUMNS}
+            columnWrapperStyle={localStyles.columnWrapper}
             contentContainerStyle={[
               localStyles.resultsList,
               { paddingHorizontal: screenPadding },

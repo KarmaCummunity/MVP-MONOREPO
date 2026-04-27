@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import type { ListRenderItem } from 'react-native';
 import type { ItemsScreenTranslate } from './itemsScreenFiltering';
 import { isLandscape } from '../../globals/responsive';
-import VerticalGridSlider from '../../components/VerticalGridSlider';
 import DonationStatsFooter from '../../components/DonationStatsFooter';
 import AddLinkComponent from '../../components/AddLinkComponent';
 import type { FeedItem } from '../../types/feed';
@@ -14,8 +13,6 @@ type Styles = typeof itemsScreenStyles;
 export type ItemsScreenSearchModeProps = Readonly<{
   styles: Styles;
   t: ItemsScreenTranslate;
-  numColumns: number;
-  onNumColumnsChange: (n: number) => void;
   filteredPosts: FeedItem[];
   renderItem: ListRenderItem<FeedItem>;
   renderEmpty: () => React.ReactElement;
@@ -30,8 +27,6 @@ export type ItemsScreenSearchModeProps = Readonly<{
 export function ItemsScreenSearchMode({
   styles: s,
   t,
-  numColumns,
-  onNumColumnsChange,
   filteredPosts,
   renderItem,
   renderEmpty,
@@ -91,22 +86,13 @@ export function ItemsScreenSearchMode({
 
   return (
     <View style={{ flex: 1 }}>
-      <VerticalGridSlider
-        numColumns={numColumns}
-        onNumColumnsChange={onNumColumnsChange}
-        style={{
-          top: 10,
-          left: 4,
-        }}
-      />
       <FlatList
         style={s.container}
         data={filteredPosts}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        key={numColumns}
-        numColumns={numColumns}
-        columnWrapperStyle={numColumns > 1 ? s.columnWrapper : undefined}
+        numColumns={2}
+        columnWrapperStyle={s.columnWrapper}
         contentContainerStyle={[
           s.scrollContent,
           isLandscape() && { paddingHorizontal: 32 },

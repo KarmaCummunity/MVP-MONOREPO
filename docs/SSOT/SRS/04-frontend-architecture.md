@@ -110,7 +110,6 @@ MainNavigator (Stack)
 │   │   └── AdminDashboard (AdminStack) [admin only]
 │   │       ├── AdminMoney, AdminPeople, AdminReview
 │   │       ├── AdminTasks, AdminCRM, AdminFiles
-│   │       ├── AdminTables, AdminTableRows
 │   │       └── AdminTimeManagement
 │   ├── NewChatScreen, ChatDetailScreen
 │   ├── BookmarksScreen, FollowersScreen, DiscoverPeopleScreen

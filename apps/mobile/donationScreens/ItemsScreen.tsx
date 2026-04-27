@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Alert, Dimensions, Platform } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Alert, Dimensions } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,7 +10,7 @@ import ItemDetailsModal from '../components/ItemDetailsModal';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { db } from '../utils/databaseService';
 import { useToast } from '../utils/toastService';
-import { isMobileWeb, getScreenInfo, BREAKPOINTS } from '../globals/responsive';
+import { isMobileWeb } from '../globals/responsive';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';
@@ -144,10 +144,8 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   };
 
   const { width } = Dimensions.get('window');
-  const { isTablet, isDesktop } = getScreenInfo();
-  const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const isMobile = isMobileWeb();
-  const [numColumns, setNumColumns] = useState(() => (isTablet || isDesktop || isDesktopWeb ? 3 : 2));
+  const SEARCH_GRID_COLUMNS = 2;
 
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
@@ -289,13 +287,15 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const renderPostItem = useCallback(
     ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
-      const itemWidth = numColumns > 1 ? availableWidth / numColumns : availableWidth;
+      const columnGap = 8;
+      const totalGaps = SEARCH_GRID_COLUMNS - 1;
+      const itemWidth = (availableWidth - totalGaps * columnGap) / SEARCH_GRID_COLUMNS;
 
       return (
         <PostReelItem
           item={item}
           cardWidth={itemWidth}
-          numColumns={numColumns}
+          numColumns={SEARCH_GRID_COLUMNS}
           onPress={onFeedPostPress}
           onCommentPress={onFeedCommentPress}
           onMorePress={handleMorePress}
@@ -303,7 +303,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         />
       );
     },
-    [numColumns, screenPadding, width, handleMorePress, handlePostClosed, onFeedPostPress, onFeedCommentPress],
+    [screenPadding, width, handleMorePress, handlePostClosed, onFeedPostPress, onFeedCommentPress],
   );
 
   const renderEmptyPosts = useCallback(
@@ -343,8 +343,6 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         <ItemsScreenSearchMode
           styles={itemsScreenStyles}
           t={ti}
-          numColumns={numColumns}
-          onNumColumnsChange={setNumColumns}
           filteredPosts={filteredPosts}
           renderItem={renderPostItem}
           renderEmpty={renderEmptyPosts}

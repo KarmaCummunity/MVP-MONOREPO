@@ -36,7 +36,6 @@ import { getRoleDisplayName } from './profileScreenHelpers';
 import { styles, SCREEN_HEIGHT } from './profileScreen.styles';
 import { OpenRoute } from './OpenRoute';
 import { ClosedRoute } from './ClosedRoute';
-import { TaggedRoute } from './TaggedRoute';
 import type { CharacterType, TabRoute, ProfileScreenRouteParams } from './profileScreenTypes';
 export function ProfileScreenContent({
   tabBarHeight,
@@ -564,7 +563,6 @@ export function ProfileScreenContent({
   const [routes] = useState<TabRoute[]>([
     { key: 'open', title: 'פתוח' },
     { key: 'closed', title: 'סגור' },
-    { key: 'tagged', title: 'תיוגים' },
   ]);
 
   // Update stats when user changes
@@ -620,8 +618,6 @@ export function ProfileScreenContent({
         return <OpenRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('open', h)} />;
       case 'closed':
         return <ClosedRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('closed', h)} />;
-      case 'tagged':
-        return <TaggedRoute onHeightChange={(h) => handleTabHeightChange('tagged', h)} />;
       default:
         return null;
     }

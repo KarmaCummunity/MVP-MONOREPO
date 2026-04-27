@@ -84,14 +84,6 @@ const adminButtons: AdminButton[] = [
     bgColor: '#E8F5E9',
     route: 'AdminTimeManagement',
   },
-  {
-    id: 'tables',
-    title: 'טבלאות',
-    icon: 'grid-outline',
-    color: colors.info,
-    bgColor: colors.infoLight,
-    route: 'AdminTables',
-  }
 ];
 
 import { useAdminProtection } from '../../hooks/useAdminProtection';
