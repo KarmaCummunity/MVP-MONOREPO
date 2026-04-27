@@ -51,7 +51,10 @@ const FEED_NUM_COLUMNS = 1;
 const FEED_INITIAL_NUM_TO_RENDER = 10;
 const FEED_MAX_TO_RENDER_PER_BATCH = 8;
 const FEED_WINDOW_SIZE = 10;
-const FEED_ON_END_REACHED_THRESHOLD = 0.35;
+/** Fraction of visible list height from bottom; lower = trigger earlier (helps short feeds / web). */
+const FEED_ON_END_REACHED_THRESHOLD = 0.12;
+/** Backup trigger when onEndReached does not fire (e.g. content height ≈ viewport). */
+const FEED_NEAR_END_PX = 400;
 
 // Props
 interface PostsReelsScreenProps {
@@ -134,10 +137,18 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
   const filtersActive = useMemo(() => feedFiltersActive(feedFilterState), [feedFilterState]);
 
+  const hasMorePostsRef = useRef(hasMorePosts);
+  const loadingMoreRef = useRef(loadingMore);
+  const loadMoreRef = useRef(loadMore);
+  hasMorePostsRef.current = hasMorePosts;
+  loadingMoreRef.current = loadingMore;
+  loadMoreRef.current = loadMore;
+
   // Scroll Handling
   const lastScrollY = useRef(0);
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    const currentScrollY = contentOffset.y;
     const isScrollingDown = currentScrollY > lastScrollY.current;
 
     if (onScroll) {
@@ -149,6 +160,18 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
       }
     }
     lastScrollY.current = currentScrollY;
+
+    // Backup infinite scroll: onEndReached sometimes does not fire when content is short or on web.
+    const distanceFromEnd =
+      contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (
+      distanceFromEnd < FEED_NEAR_END_PX &&
+      hasMorePostsRef.current &&
+      !loadingMoreRef.current &&
+      contentSize.height > layoutMeasurement.height
+    ) {
+      loadMoreRef.current();
+    }
   }, [onScroll]);
 
   // Handlers

@@ -76,10 +76,13 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
     const postsOffsetRef = useRef(0);
     const loadMoreInFlightRef = useRef(false);
+    /** Until the first page finishes, ignore loadMore (avoids duplicate page-0). After that, never block on `loading` — onEndReached can fire early and would be dropped forever. */
+    const initialLoadCompleteRef = useRef(false);
 
     const loadInitialOrRefresh = useCallback(
         async (isRefresh: boolean) => {
             const viewerId = feedMode === 'friends' ? currentUser?.id : undefined;
+            initialLoadCompleteRef.current = false;
             if (isRefresh) {
                 setRefreshing(true);
             } else {
@@ -97,7 +100,15 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 });
 
                 const postsResponse = await postsService.getPosts(POSTS_PAGE_SIZE, 0, viewerId);
-                const rawPosts = postsResponse.success ? postsResponse.data || [] : [];
+                if (!postsResponse.success) {
+                    logger.warn('useFeedData', 'First page posts request failed', {
+                        error: postsResponse.error,
+                    });
+                    setFeed([]);
+                    setHasMorePosts(false);
+                    return;
+                }
+                const rawPosts = postsResponse.data || [];
                 const mappedPosts = rawPosts.map(mapApiPostToFeedItem);
 
                 const postedTaskIds = new Set(
@@ -116,6 +127,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             } catch (error) {
                 logger.error('useFeedData', 'Error loading feed', { error });
             } finally {
+                initialLoadCompleteRef.current = true;
                 setLoading(false);
                 setRefreshing(false);
             }
@@ -124,13 +136,10 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
     );
 
     const loadMore = useCallback(async () => {
-        if (
-            loading ||
-            refreshing ||
-            loadingMore ||
-            !hasMorePosts ||
-            loadMoreInFlightRef.current
-        ) {
+        if (!initialLoadCompleteRef.current) {
+            return;
+        }
+        if (refreshing || !hasMorePosts || loadMoreInFlightRef.current) {
             return;
         }
 
@@ -143,7 +152,15 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             logger.debug('useFeedData', 'Loading more posts', { offset, pageSize: POSTS_PAGE_SIZE });
 
             const postsResponse = await postsService.getPosts(POSTS_PAGE_SIZE, offset, viewerId);
-            const rawPosts = postsResponse.success ? postsResponse.data || [] : [];
+            if (!postsResponse.success) {
+                logger.warn('useFeedData', 'Load more posts request failed', {
+                    offset,
+                    error: postsResponse.error,
+                });
+                return;
+            }
+
+            const rawPosts = postsResponse.data || [];
 
             if (rawPosts.length === 0) {
                 setHasMorePosts(false);
@@ -152,20 +169,28 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
             const mappedPosts = rawPosts.map(mapApiPostToFeedItem);
 
+            let appendedCount = 0;
             setFeed((prev) => {
+                const before = prev.length;
                 const merged = appendUniqueFeedItems(prev, mappedPosts);
+                appendedCount = merged.length - before;
                 return sortFeedByTimestampDesc(merged);
             });
 
             postsOffsetRef.current = offset + rawPosts.length;
-            setHasMorePosts(rawPosts.length === POSTS_PAGE_SIZE);
+            // Stop if server returned a short page, or every row was a duplicate (bad offset / cache bug)
+            if (rawPosts.length < POSTS_PAGE_SIZE || appendedCount === 0) {
+                setHasMorePosts(false);
+            } else {
+                setHasMorePosts(true);
+            }
         } catch (error) {
             logger.error('useFeedData', 'Error loading more feed posts', { error });
         } finally {
             setLoadingMore(false);
             loadMoreInFlightRef.current = false;
         }
-    }, [loading, refreshing, loadingMore, hasMorePosts, feedMode, currentUser?.id]);
+    }, [refreshing, hasMorePosts, feedMode, currentUser?.id]);
 
     useEffect(() => {
         loadInitialOrRefresh(false);
