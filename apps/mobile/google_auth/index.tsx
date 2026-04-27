@@ -233,7 +233,7 @@ export const checkAuthHealth = async (): Promise<{
   try {
     // Import services dynamically to avoid circular dependencies
     const { validateAuthConfiguration } = await import('./AuthConfiguration');
-    const { googleAuthService } = await import('./GoogleAuthService');
+    await import('./GoogleAuthService');
     const { secureApiService } = await import('./SecureApiService');
 
     // Check configuration
@@ -269,7 +269,7 @@ export const checkAuthHealth = async (): Promise<{
       }
     };
 
-  } catch (error) {
+  } catch (_error) {
     return {
       overall: 'unhealthy',
       components: {

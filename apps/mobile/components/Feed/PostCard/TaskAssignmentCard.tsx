@@ -16,7 +16,7 @@ const TaskAssignmentCard: React.FC<BaseCardProps> = ({
     onLike,
     onComment,
     onBookmark,
-    onShare,
+    onShare: _onShare,
     onMorePress,
     onQuickMessage,
     onClosePost,

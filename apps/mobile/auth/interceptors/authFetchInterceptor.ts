@@ -1,6 +1,5 @@
 import { tokenManager } from '../services/tokenManager';
 import { useAuthStore } from '../store/authStore';
-import Constants from 'expo-constants';
 import { getAuth } from 'firebase/auth';
 
 import { API_BASE_URL as CONFIG_API_URL } from '../../utils/config.constants';
@@ -42,7 +41,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
   
   headers.set('Content-Type', headers.get('Content-Type') || 'application/json');
 
-  let response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
     if (!isRefreshing) {

@@ -109,7 +109,7 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
         };
 
         handleResponse();
-    }, [response]);
+    }, [onError, onSuccess, response]);
 
     const handlePress = async () => {
         if (disabled || isAuthenticating || !request) return;

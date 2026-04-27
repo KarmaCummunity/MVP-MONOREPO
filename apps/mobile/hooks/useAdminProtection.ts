@@ -72,7 +72,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             if (!isLoading && isAdmin && selectedUser) {
                 verifyAdminStatus();
             }
-        }, [isAdmin, isLoading, selectedUser, verifyAdminStatus, handleUnauthorized, allowViewOnly, isViewOnly, isAuthenticated, isGuestMode])
+        }, [isAdmin, isLoading, selectedUser, verifyAdminStatus, handleUnauthorized, allowViewOnly, isViewOnly])
     );
 
     return { isAuthorized: isAdmin || (allowViewOnly && isViewOnly && (isAuthenticated || isGuestMode)) };

@@ -3,19 +3,10 @@
 // - Reached from: Home screen on Web to render an animated background behind content.
 // - Inputs: None; fetches stats via `EnhancedStatsService` and renders to <canvas>.
 // - Behavior: Creates many bubbles with depth, wobble and shimmer; assigns labels from stats and updates periodically.
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { EnhancedStatsService, formatShortNumber } from '../utils/statsService';
 import type { CommunityStats } from '../utils/statsService';
 import colors from '../globals/colors';
-
-// Fallback label by size before stats are loaded
-const getSizeLabel = (radius: number): string => {
-  if (radius < 18) return 'XS';
-  if (radius < 35) return 'S';
-  if (radius < 60) return 'M';
-  if (radius < 90) return 'L';
-  return 'XL';
-};
 
 interface Bubble {
   id: string;
@@ -71,7 +62,7 @@ const FloatingBubbles = () => {
   const bubblesRef = useRef<Bubble[]>([]);
   const mouseRef = useRef<MouseState>({ x: 0, y: 0, isPressed: false });
   const rippleRef = useRef<Ripple[]>([]);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [, setDimensions] = useState({ width: 0, height: 0 });
   const statsRef = useRef<CommunityStats | null>(null);
   const BOTTOM_SAFE_ZONE_PX = 96; // שמירת אזור הכפתור בתחתית
   const MIN_LABEL_RADIUS_FOR_STATS = 36; // מציגים סטטיסטיקה רק בבועות גדולות יחסית
@@ -79,7 +70,7 @@ const FloatingBubbles = () => {
   const REFRESH_MS = 60000; // רענון נתונים כל 60 שניות - סטטיסטיקות לא משתנות בתדירות גבוהה
 
   // Order and labels for mapping stats to bubbles - all 40+ stats
-  const statKeys: Array<keyof CommunityStats> = [
+  const statKeys = useMemo((): Array<keyof CommunityStats> => [
     // Core high-priority stats
     'moneyDonations', 'volunteerHours', 'rides', 'events', 'activeMembers', 'totalUsers',
 
@@ -112,9 +103,9 @@ const FloatingBubbles = () => {
     'foodKg', 'clothingKg', 'bloodLiters', 'treesPlanted', 'animalsAdopted', 'recyclingBags',
     'booksDonated', 'appActiveUsers', 'appDownloads', 'activeVolunteers', 'kmCarpooled',
     'fundsRaised', 'mealsServed', 'courses', 'culturalEvents'
-  ];
+  ], []);
 
-  const STAT_LABELS: Partial<Record<keyof CommunityStats, string>> = {
+  const STAT_LABELS = useMemo((): Partial<Record<keyof CommunityStats, string>> => ({
     // Core stats
     moneyDonations: 'כסף נתרם',
     volunteerHours: 'שעות התנדבות',
@@ -195,7 +186,7 @@ const FloatingBubbles = () => {
     mealsServed: 'ארוחות הוגשו',
     courses: 'קורסים',
     culturalEvents: 'אירועי תרבות',
-  };
+  }), []);
 
   const createBubble = useCallback((canvas: HTMLCanvasElement): Bubble => {
     const depth = Math.random();
@@ -291,7 +282,7 @@ const FloatingBubbles = () => {
       bubble.labelValue = formatShortNumber(value);
       bubble.labelText = STAT_LABELS[key] || 'Stat';
     }
-  }, [statKeys]);
+  }, [statKeys, STAT_LABELS]);
 
   useEffect(() => {
     let mounted = true;
@@ -699,7 +690,7 @@ const FloatingBubbles = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [animate, initializeBubbles, handleMouseMove, handleMouseDown, handleMouseUp,
+  }, [animate, initializeBubbles, assignStatsToBubbles, handleMouseMove, handleMouseDown, handleMouseUp,
     handleTouchMove, handleTouchStart, handleTouchEnd]);
 
   return (

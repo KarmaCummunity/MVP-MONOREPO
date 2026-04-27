@@ -79,7 +79,7 @@ export default function AdminOrgApprovalsScreen() {
         status === 'approved' ? 'הבקשה אושרה' : 'הבקשה נדחתה'
       );
       load();
-    } catch (e) {
+    } catch (_e) {
       Alert.alert('שגיאה', 'עדכון הסטטוס נכשל');
     }
   };

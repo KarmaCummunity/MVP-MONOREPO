@@ -15,7 +15,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, ScrollView, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebMode } from '../stores/webModeStore';
 import { useUser } from '../stores/userStore';
@@ -41,7 +40,6 @@ const WebModeToggleOverlay: React.FC = () => {
   const { t } = useTranslation('webOverlay'); // Use specific namespace
   const { mode, setMode } = useWebMode();
   const { isAuthenticated, isGuestMode, selectedUser, isAdmin } = useUser();
-  const navigation: any = useNavigation<NavigationProp<ParamListBase>>();
 
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

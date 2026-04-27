@@ -188,14 +188,7 @@ export default function KnowledgeScreen({
     } finally {
       setKnowledgeOfferSending(false);
     }
-  }, [
-    isAuthenticated,
-    isGuestMode,
-    knowledgeOfferMessage,
-    selectedUser?.id,
-    selectedUser?.name,
-    selectedUser?.email,
-  ]);
+  }, [isAuthenticated, isGuestMode, knowledgeOfferMessage, selectedUser?.id]);
 
   const openCommunityLink = async (url: string) => {
     try {

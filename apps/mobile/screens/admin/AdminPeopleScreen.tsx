@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -54,12 +54,12 @@ const LOG_SOURCE = 'AdminPeopleScreen';
 
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
-export default function AdminPeopleScreen({ navigation }: AdminPeopleScreenProps) {
+export default function AdminPeopleScreen({ navigation: _navigation }: AdminPeopleScreenProps) {
   const route = useRoute();
   const routeParams = (route.params as any) || {};
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
-  const { selectedUser, isAdmin } = useUser();
+  const { selectedUser } = useUser();
   const [membersList, setMembersList] = useState<CommunityMember[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -77,12 +77,7 @@ export default function AdminPeopleScreen({ navigation }: AdminPeopleScreenProps
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  useEffect(() => {
-    logger.info(LOG_SOURCE, 'Initializing admin people screen');
-    loadMembers();
-  }, [statusFilter, searchQuery]);
-
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     logger.info(LOG_SOURCE, 'Loading community members list');
     try {
       setIsLoading(true);
@@ -114,7 +109,12 @@ export default function AdminPeopleScreen({ navigation }: AdminPeopleScreenProps
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    logger.info(LOG_SOURCE, 'Initializing admin people screen');
+    void loadMembers();
+  }, [loadMembers]);
 
   const handleAddMember = () => {
     logger.info(LOG_SOURCE, 'Opening add member modal');

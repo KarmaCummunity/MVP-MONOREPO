@@ -25,7 +25,7 @@ import {
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { getFollowing, getFollowers, getFollowSuggestions } from '../utils/followService';
 import { createConversation, getAllConversations, conversationExists, sendMessage } from '../utils/chatService';
@@ -37,12 +37,9 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 type FilterType = 'all' | 'online' | 'highKarma' | 'recentFollowers';
 type SortType = 'name' | 'karma' | 'followers' | 'recent';
 
-type NewChatRouteParams = Record<string, never>;
-
 export default function NewChatScreen() {
   const { t } = useTranslation(['newChatScreen']);
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<Record<string, NewChatRouteParams>, string>>();
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,7 +127,7 @@ export default function NewChatScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [selectedUser]);
+  }, [selectedUser, t]);
 
   const applyFilters = useCallback((friendsList: CharacterType[]) => {
     if (!selectedUser) return friendsList;

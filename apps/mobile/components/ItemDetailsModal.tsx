@@ -192,10 +192,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       // Navigate to other user's profile via HomeTabStack to keep bottom bar and top bar visible
       // Try to navigate through HomeScreen first (which is part of BottomNavigator)
       try {
-        // Check if we're already in HomeTabStack context
-        const currentState = (navigation as any).getState?.();
-        const currentRouteName = currentState?.routes?.[currentState?.index]?.name;
-        
         // Try to find BottomNavigator
         let bottomNavigator = null;
         let currentNav = navigation as any;
@@ -244,7 +240,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               }
             });
             return;
-          } catch (e) {
+          } catch (_e) {
             // If that fails, try UserProfileScreen directly as fallback
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,

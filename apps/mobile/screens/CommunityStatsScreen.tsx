@@ -1,5 +1,5 @@
 // screens/CommunityStatsScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, Dimensions, ActivityIndicator, Platform, RefreshControl, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -12,7 +12,7 @@ import { db } from '../utils/databaseService';
 import { EnhancedStatsService } from '../utils/statsService';
 import { apiService } from '../utils/apiService';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 // Responsive breakpoints
 const isSmallScreen = width < 375;
@@ -134,12 +134,7 @@ export default function CommunityStatsScreen() {
         ? screenHeight - tabBarHeight - headerHeight
         : undefined;
 
-    useEffect(() => {
-        logger.debug('CommunityStatsScreen', 'Screen viewed', { userId: selectedUser?.id });
-        loadStats();
-    }, []);
-
-    const loadStats = async (forceRefresh = false) => {
+    const loadStats = useCallback(async (forceRefresh = false) => {
         try {
             if (!forceRefresh) {
                 setLoading(true);
@@ -231,11 +226,16 @@ export default function CommunityStatsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [selectedUser?.id]);
+
+    useEffect(() => {
+        logger.debug('CommunityStatsScreen', 'Screen viewed', { userId: selectedUser?.id });
+        void loadStats();
+    }, [loadStats, selectedUser?.id]);
 
     const onRefresh = React.useCallback(async () => {
         await loadStats(true);
-    }, []);
+    }, [loadStats]);
 
     if (loading) {
         return (

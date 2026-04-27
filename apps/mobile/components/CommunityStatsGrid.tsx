@@ -47,7 +47,7 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
   const { t } = useTranslation(['home']);
   const { isRealAuth } = useUser();
   const [statsState, setStatsState] = useState<CommunityStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;

@@ -304,7 +304,9 @@ function RideOfferForm({
     recurrenceUnit, onRecurrenceUnitChange,
     seats, onSeatsChange,
     price, onPriceChange,
-    selectedTags, onToggleTag, availableTags,
+    selectedTags: _selectedTags,
+    onToggleTag: _onToggleTag,
+    availableTags: _availableTags,
     onSubmit, isValid, hideDestinationInput, isSubmitting = false
 }: RideOfferFormProps) {
     const { t } = useTranslation();

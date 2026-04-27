@@ -10,7 +10,7 @@ import ItemDetailsModal from '../components/ItemDetailsModal';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { db } from '../utils/databaseService';
 import { useToast } from '../utils/toastService';
-import { isLandscape, isMobileWeb, getScreenInfo, BREAKPOINTS } from '../globals/responsive';
+import { isMobileWeb, getScreenInfo, BREAKPOINTS } from '../globals/responsive';
 import PostReelItem from '../components/Feed/PostReelItem';
 import { FeedItem } from '../types/feed';
 import { usePostMenu } from '../hooks/usePostMenu';

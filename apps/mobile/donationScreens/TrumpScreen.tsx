@@ -3,7 +3,6 @@ import {
   View,
   Text,
   SafeAreaView,
-  Alert,
   FlatList,
   Dimensions,
   Platform,

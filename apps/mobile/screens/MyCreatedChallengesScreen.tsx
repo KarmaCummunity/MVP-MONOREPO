@@ -44,7 +44,7 @@ const CHALLENGE_DIFFICULTY_OPTIONS = [
   { id: 'expert', icon: 'trophy-outline', color: colors.primary },
 ];
 
-export default function MyCreatedChallengesScreen({ navigation, route }: MyCreatedChallengesScreenProps) {
+export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChallengesScreenProps) {
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
@@ -57,11 +57,42 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<CommunityChallenge | null>(null);
 
+  const loadChallenges = useCallback(async () => {
+    if (!user?.id) {
+      showToast(t('messages.loginRequired'), 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filters = {
+        creator_id: user.id,
+        sort_by: 'created_at',
+        sort_order: 'DESC' as const,
+        limit: 100,
+      };
+
+      const response = await db.getCommunityChallenges(filters);
+
+      if (response.success && response.data) {
+        setChallenges(response.data);
+      } else {
+        setChallenges([]);
+      }
+    } catch (error) {
+      console.error('Error loading challenges:', error);
+      showToast(t('messages.errorLoading'), 'error');
+      setChallenges([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast, t, user?.id]);
+
   // Load challenges when screen focuses
   useFocusEffect(
     useCallback(() => {
-      loadChallenges();
-    }, [])
+      void loadChallenges();
+    }, [loadChallenges])
   );
 
   // Apply search filter
@@ -80,37 +111,6 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
       setFilteredChallenges(challenges);
     }
   }, [searchQuery, challenges]);
-
-  const loadChallenges = async () => {
-    if (!user?.id) {
-      showToast(t('messages.loginRequired'), 'error');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const filters = {
-        creator_id: user.id,
-        sort_by: 'created_at',
-        sort_order: 'DESC' as const,
-        limit: 100,
-      };
-      
-      const response = await db.getCommunityChallenges(filters);
-      
-      if (response.success && response.data) {
-        setChallenges(response.data);
-      } else {
-        setChallenges([]);
-      }
-    } catch (error) {
-      console.error('Error loading challenges:', error);
-      showToast(t('messages.errorLoading'), 'error');
-      setChallenges([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);

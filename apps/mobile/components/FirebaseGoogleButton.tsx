@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
 import { useUser } from '../stores/userStore';
@@ -21,8 +20,7 @@ import { logger } from '../utils/loggerService';
 
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
-  const { setSelectedUserWithMode, isAuthenticated, isGuestMode } = useUser();
-  const navigation = useNavigation<any>();
+  const { setSelectedUserWithMode } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

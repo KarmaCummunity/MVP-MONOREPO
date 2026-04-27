@@ -3,11 +3,8 @@ import { Alert, Platform } from 'react-native';
 import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
-import { useTranslation } from 'react-i18next';
-
 export const usePostDeletion = () => {
     const { selectedUser } = useUser();
-    const { t } = useTranslation();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const canDelete = (postAuthorId: string): boolean => {

@@ -20,10 +20,10 @@
 // TODO: Implement proper deep linking support for tab navigation
 'use strict';
 import React from "react";
-import { Animated, Easing, View, StyleSheet, TouchableOpacity, Platform, Pressable } from "react-native";
+import { Animated, Easing, View, StyleSheet, Platform, Pressable } from "react-native";
 import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation, CommonActions, useNavigationState } from "@react-navigation/native";
+import { useFocusEffect, CommonActions, useNavigationState } from "@react-navigation/native";
 import type { NavigationState } from "@react-navigation/native";
 import HomeTabStack from "./HomeTabStack";
 import SearchTabStack from "./SearchTabStack";
@@ -160,9 +160,7 @@ const styles = StyleSheet.create({
  */
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
-  const adminTabBarButton = React.useCallback(() => null, []);
   const { mode } = useWebMode();
-  const navigation = useNavigation();
   const { openComposer } = usePostComposerStore();
   const composerCategory = useNavigationState((rootState) =>
     mapDonationScreenRouteToComposerCategory(

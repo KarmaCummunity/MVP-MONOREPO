@@ -29,7 +29,6 @@ const RideOfferedCard: React.FC<BaseCardProps> = ({
     const { t, i18n } = useTranslation();
     const isRTL = i18n.language === 'he';
 
-    const displayTitle = item.title === 'post.noTitle' ? t('post.noTitle') : item.title;
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
 
     // Use locations from item or fallback

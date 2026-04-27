@@ -38,7 +38,7 @@ interface ChallengeDetailsScreenProps {
 
 export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsScreenProps) {
   const route = useRoute<ChallengeDetailsScreenRouteProp>();
-  const { challengeId = '', openEntryForm } = route.params || {};
+  const { challengeId = '', openEntryForm: _openEntryForm } = route.params || {};
   const { selectedUser: user } = useUser();
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
@@ -46,7 +46,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [loading, setLoading] = useState(true);
   const [challenge, setChallenge] = useState<CommunityChallenge | null>(null);
   const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
-  const [userParticipation, setUserParticipation] = useState<ChallengeParticipant | null>(null);
+  const [, setUserParticipation] = useState<ChallengeParticipant | null>(null);
   const [recentEntries, setRecentEntries] = useState<ChallengeEntry[]>([]);
   const [isJoined, setIsJoined] = useState(false);
 
@@ -61,13 +61,19 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [challengePostId, setChallengePostId] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadChallengeDetails();
-    }, [challengeId])
-  );
+  const loadUserEntries = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await db.getChallengeEntries(challengeId, user.id, 10, 0);
+      if (response.success && response.data) {
+        setRecentEntries(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading entries:', error);
+    }
+  }, [challengeId, user?.id]);
 
-  const loadChallengeDetails = async () => {
+  const loadChallengeDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await db.getChallengeDetails(challengeId);
@@ -104,19 +110,13 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
     } finally {
       setLoading(false);
     }
-  };
+  }, [challengeId, loadUserEntries, showToast, t, user?.id]);
 
-  const loadUserEntries = async () => {
-    if (!user?.id) return;
-    try {
-      const response = await db.getChallengeEntries(challengeId, user.id, 10, 0);
-      if (response.success && response.data) {
-        setRecentEntries(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading entries:', error);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      void loadChallengeDetails();
+    }, [loadChallengeDetails])
+  );
 
   const handleJoinChallenge = async () => {
     if (!user?.id) {

@@ -135,8 +135,6 @@ export const useScrollPosition = (
 
     // For ScrollView - attach scroll event handler
     if ('scrollTo' in scrollRef.current) {
-      const scrollView = scrollRef.current as ScrollView;
-      
       // Note: ScrollView's onScroll event needs to be passed as a prop
       // We'll need to handle this differently - see usage example
       // For now, we'll save on blur/focus change
@@ -145,7 +143,7 @@ export const useScrollPosition = (
     return () => {
       // Cleanup if needed
     };
-  }, [enabled, scrollRef.current]);
+  }, [enabled]);
 
   // Save position when screen loses focus
   useFocusEffect(
@@ -203,7 +201,7 @@ export const useScrollPosition = (
 
         savePosition();
       };
-    }, [screenKey, selectedUser?.id, enabled, debounceDelay])
+    }, [screenKey, selectedUser?.id, enabled, debounce, debounceDelay])
   );
 
   return scrollRef;

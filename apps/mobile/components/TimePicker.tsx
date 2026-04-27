@@ -23,7 +23,7 @@ export default function TimePicker({
   value, 
   onTimeChange, 
   placeholder,
-  label,
+  label: _label,
 }: TimePickerProps) {
   const { t } = useTranslation(['common']);
   const [isVisible, setIsVisible] = useState(false);

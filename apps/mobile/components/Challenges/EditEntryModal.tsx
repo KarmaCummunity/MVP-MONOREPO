@@ -82,7 +82,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
               try {
                 await onDelete();
                 onClose();
-              } catch (error) {
+              } catch (_error) {
                 Alert.alert(t('editEntry.deleteErrorTitle'), t('editEntry.deleteErrorMessage'));
               } finally {
                 setSaving(false);

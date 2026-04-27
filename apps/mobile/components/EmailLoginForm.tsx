@@ -459,7 +459,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
           }
           const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
           await finalizeLoginWithFirebaseUser(fbUser, email, nowIso);
-        } catch (signinError) {
+        } catch (_signinError) {
           setFormState(prev => ({
             ...prev,
             statusMessage: t('auth:email.invalidPassword') as string,

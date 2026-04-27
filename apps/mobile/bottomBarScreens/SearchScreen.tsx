@@ -237,7 +237,7 @@ const SearchScreen = () => {
         } finally {
             setIsSearching(false);
         }
-    }, []);
+    }, [t]);
 
     // Debounce the search
     const debouncedSearch = useMemo(

@@ -20,7 +20,6 @@ import DatePicker from '../../components/DatePicker';
 import colors from '../../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../../globals/constants';
 import { AdminStackParamList } from '../../globals/types';
-import { useUser } from '../../stores/userStore';
 import { apiService, ApiResponse } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
@@ -54,7 +53,6 @@ interface AdminTable {
 
 export default function AdminTableRowsScreen({ route }: AdminTableRowsScreenProps) {
   useAdminProtection();
-  const { selectedUser } = useUser();
   const { tableId, tableName } = route.params;
 
   const [table, setTable] = useState<AdminTable | null>(null);

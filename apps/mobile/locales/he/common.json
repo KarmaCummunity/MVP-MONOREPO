@@ -154,9 +154,9 @@
   },
   "give": "לתת",
   "receive": "לקבל",
-  "request": "בקשה",
+  "request": "לבקש",
   "postComposer": {
-    "giveTitle": "יצירת פוסט לתת",
+    "giveTitle": "יצירת פוסט נתינה",
     "requestTitle": "יצירת בקשה",
     "title": "כותרת",
     "description": "תיאור",

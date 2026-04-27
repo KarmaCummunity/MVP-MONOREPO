@@ -19,7 +19,6 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../../globals/constants';
 import { AdminStackParamList } from '../../globals/types';
-import { useUser } from '../../stores/userStore';
 import { apiService, ApiResponse } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
@@ -53,7 +52,6 @@ interface ColumnForm {
 
 export default function AdminTablesScreen({ navigation }: AdminTablesScreenProps) {
   useAdminProtection();
-  const { selectedUser } = useUser();
   const [tables, setTables] = useState<AdminTable[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);

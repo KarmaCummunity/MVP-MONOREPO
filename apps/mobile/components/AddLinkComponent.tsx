@@ -89,7 +89,7 @@ export default function AddLinkComponent({
     } finally {
       setIsLoading(false);
     }
-  }, [category, hideLinksList, isKnowledge]);
+  }, [hideLinksList, isKnowledge]);
 
   // Load all links when component mounts or screen is focused
   useFocusEffect(
@@ -252,7 +252,7 @@ export default function AddLinkComponent({
           t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string
         );
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert(
         t('common:error', { defaultValue: 'שגיאה' }) as string,
         t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string

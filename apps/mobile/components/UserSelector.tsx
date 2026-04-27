@@ -36,10 +36,6 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
                 const res = await apiService.getUsers({ limit: 50 });
                 if (res.success && res.data) {
                     setDefaultUsers(res.data);
-                    // If no query, show defaults immediately
-                    if (!query) {
-                        setResults(res.data);
-                    }
                 }
             } catch (err) {
                 console.error('Failed to fetch default users', err);

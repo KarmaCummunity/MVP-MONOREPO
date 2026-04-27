@@ -131,7 +131,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
   React.useEffect(() => {
     translateY.value = withTiming(shouldHideTopBar ? -measuredHeight : 0, { duration: 200 });
-  }, [shouldHideTopBar, measuredHeight]);
+  }, [measuredHeight, shouldHideTopBar, translateY]);
 
 
 

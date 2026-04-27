@@ -50,13 +50,14 @@ export const LazySection: React.FC<LazySectionProps> = ({
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current as any);
+    const node = ref.current;
+    if (node) {
+      observer.observe(node as any);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current as any);
+      if (node) {
+        observer.unobserve(node as any);
       }
     };
   }, []);

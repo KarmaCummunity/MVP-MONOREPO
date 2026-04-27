@@ -407,7 +407,7 @@ class SecureStorageClass {
           await SecureStore.deleteItemAsync(prefixedKey, {
             keychainService: 'karma_community',
           });
-        } catch (secureError) {
+        } catch (_secureError) {
           // Also try fallback storage
           if (opts.allowFallback) {
             await AsyncStorage.removeItem(prefixedKey);

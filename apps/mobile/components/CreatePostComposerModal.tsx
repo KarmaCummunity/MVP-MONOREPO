@@ -68,7 +68,7 @@ export default function CreatePostComposerModal(): React.ReactElement {
         intent === 'request' ? t('common:postComposer.requestPublished') : t('common:postComposer.givePublished'),
       );
       closeComposer();
-    } catch (e) {
+    } catch (_e) {
       Alert.alert(t('common:error'), t('common:genericTryAgain'));
     }
   };

@@ -68,8 +68,6 @@ export function useOperatorProtection(allowViewOnly?: boolean) {
       handleUnauthorized,
       allowViewOnly,
       isViewOnly,
-      isAuthenticated,
-      isGuestMode,
     ]),
   );
 

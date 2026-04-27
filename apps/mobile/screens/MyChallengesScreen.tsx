@@ -63,40 +63,7 @@ export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [habitsReloadTick, setHabitsReloadTick] = useState(0);
 
-  // Load challenges when screen focuses
-  useFocusEffect(
-    useCallback(() => {
-      loadChallenges();
-    }, [])
-  );
-
-  useEffect(() => {
-    if (route.params?.scrollToDailyTracker !== true) return;
-    const id = requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      navigation.setParams({ scrollToDailyTracker: undefined });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [route.params?.scrollToDailyTracker, navigation]);
-
-  // Apply search filter
-  React.useEffect(() => {
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      setFilteredChallenges(
-        challenges.filter(
-          (c) =>
-            c.title.toLowerCase().includes(query) ||
-            c.description?.toLowerCase().includes(query) ||
-            c.category?.toLowerCase().includes(query)
-        )
-      );
-    } else {
-      setFilteredChallenges(challenges);
-    }
-  }, [searchQuery, challenges]);
-
-  const loadChallenges = async () => {
+  const loadChallenges = useCallback(async () => {
     if (!user?.id) {
       showToast(t('messages.loginRequired'), 'error');
       return;
@@ -104,13 +71,13 @@ export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
 
     try {
       setLoading(true);
-      
+
       // Get user statistics which includes participations
       const statsResponse = await db.getChallengeStatistics(user.id);
-      
+
       if (statsResponse.success && statsResponse.data && statsResponse.data.challenges) {
         const participations = statsResponse.data.challenges;
-        
+
         // Map to our format
         const challengesWithParticipation = participations.map((item: any) => ({
           id: item.challenge_id,
@@ -138,7 +105,7 @@ export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
             last_entry_date: item.last_entry_date,
           },
         }));
-        
+
         setChallenges(challengesWithParticipation);
       } else {
         setChallenges([]);
@@ -150,7 +117,40 @@ export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast, t, user?.id]);
+
+  // Load challenges when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      void loadChallenges();
+    }, [loadChallenges])
+  );
+
+  useEffect(() => {
+    if (route.params?.scrollToDailyTracker !== true) return;
+    const id = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      navigation.setParams({ scrollToDailyTracker: undefined });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [route.params?.scrollToDailyTracker, navigation]);
+
+  // Apply search filter
+  React.useEffect(() => {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      setFilteredChallenges(
+        challenges.filter(
+          (c) =>
+            c.title.toLowerCase().includes(query) ||
+            c.description?.toLowerCase().includes(query) ||
+            c.category?.toLowerCase().includes(query)
+        )
+      );
+    } else {
+      setFilteredChallenges(challenges);
+    }
+  }, [searchQuery, challenges]);
 
   const onRefresh = async () => {
     setRefreshing(true);

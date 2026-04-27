@@ -107,7 +107,7 @@ const BASE_CATEGORIES = [
 
 type CategoryId = typeof BASE_CATEGORIES[number]['id'];
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   // TODO: Extract state management to custom hooks (useDonationsState, useCategoryAnalytics)
@@ -126,7 +126,6 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   
   // Simplified responsive sizing for mobile web
   const availableHeight = SCREEN_HEIGHT - (insets?.top ?? 0) - (insets?.bottom ?? 0) - (tabBarHeight ?? 0) - (headerHeight ?? 0);
-  const isMobileWebView = Platform.OS === 'web' && SCREEN_WIDTH <= 768;
   const isCompact = availableHeight < 600;
 
   useFocusEffect(
@@ -201,7 +200,6 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   });
 
   // חישוב מידות responsive לכרטיסים
-  const cardPadding = responsiveSpacing(12, 16, 20);
   const iconSize = responsiveSpacing(48, 56, 64);
   const iconInnerSize = responsiveSpacing(32, 40, 48);
   const cardGap = responsiveSpacing(12, 16, 24);

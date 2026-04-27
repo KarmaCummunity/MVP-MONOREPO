@@ -99,7 +99,11 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
   );
 
   const overall = statistics?.overall;
-  const challenges = statistics?.challenges || [];
+  const challengesFromStats = statistics?.challenges;
+  const challenges = useMemo(
+    () => challengesFromStats ?? [],
+    [challengesFromStats],
+  );
 
   // Chart configuration
   const chartConfig = {
@@ -183,7 +187,7 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
         legendFontSize: 12,
       },
     ].filter((item) => item.population > 0);
-  }, [challenges, colors]);
+  }, [challenges]);
 
   const progressData = useMemo(() => {
     const avgProgress = challenges.length > 0

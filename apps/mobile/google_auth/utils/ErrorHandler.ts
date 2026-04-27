@@ -649,7 +649,7 @@ class AuthErrorHandlerClass {
   /**
    * Generate recovery strategy suggestions
    */
-  private static generateRecoveryStrategy(category: AuthErrorCategory, error: any): AuthError['recovery'] {
+  private static generateRecoveryStrategy(category: AuthErrorCategory, _error: any): AuthError['recovery'] {
     switch (category) {
       case AuthErrorCategory.OAUTH:
         return {

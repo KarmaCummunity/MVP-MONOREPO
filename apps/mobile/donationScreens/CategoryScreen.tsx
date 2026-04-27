@@ -148,7 +148,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
                         const supported = await Linking.canOpenURL(res.url);
                         if (supported) await Linking.openURL(res.url);
                         else Alert.alert(t('common:error'), t('common:cannotOpenLink'));
-                      } catch (e) {
+                      } catch (_e) {
                         Alert.alert(t('common:error'), t('common:cannotOpenLink'));
                       }
                     }}

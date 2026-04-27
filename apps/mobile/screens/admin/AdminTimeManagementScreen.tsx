@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -59,11 +59,7 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  useEffect(() => {
-    loadReport();
-  }, [selectedUser?.id]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     if (!selectedUser?.id) return;
 
     try {
@@ -81,7 +77,11 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedUser?.id]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   const onRefresh = async () => {
     setRefreshing(true);

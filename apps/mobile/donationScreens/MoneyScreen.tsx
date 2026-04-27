@@ -120,7 +120,7 @@ export default function MoneyScreen({
         setMode(newMode);
       }
     }
-  }, [routeParams?.mode]);
+  }, [routeParams?.mode, mode]);
 
   // Update URL when mode changes (toggle button pressed) or when screen loads without mode
   useEffect(() => {
@@ -203,7 +203,7 @@ export default function MoneyScreen({
     }));
     const dummies = isRealAuth ? [] : dummyCharitiesBase;
     return [...mapFromStore, ...dummies, ...externalCharities];
-  }, [externalCharities]);
+  }, [externalCharities, isRealAuth]);
 
   const [filteredCharities, setFilteredCharities] = useState(combinedCharities); // Search results
 
