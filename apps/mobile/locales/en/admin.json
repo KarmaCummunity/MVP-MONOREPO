@@ -38,6 +38,8 @@
     "estimatedHours": "Estimated hours (optional)",
     "cancel": "Cancel",
     "save": "Save",
-    "create": "Create"
+    "create": "Create",
+    "dueDatePlaceholder": "Due date (YYYY-MM-DD, optional)",
+    "createSuccessComposer": "Task created successfully"
   }
 }

@@ -202,6 +202,11 @@
       "title": "Community Challenges",
       "subtitle": "Challenges and progress tracking",
       "description": "Join community challenges, track your progress and achieve goals together with the community"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "subtitle": "Task management",
+      "description": "Create team tasks (managers)"
     }
   }
 }
