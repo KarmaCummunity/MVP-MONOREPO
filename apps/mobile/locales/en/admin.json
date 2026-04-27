@@ -1,0 +1,35 @@
+{
+  "topBarAdmin": "Admin",
+  "topBarAdminTasks": "Task management",
+  "hierarchy": {
+    "loadError": "Error loading manager tree",
+    "connectionError": "Error connecting to server",
+    "loading": "Loading management structure...",
+    "retry": "Try again",
+    "noManagers": "No managers to display",
+    "managersCount": "{{count}} managers",
+    "roleSuperAdmin": "Super Admin",
+    "roleAdmin": "Admin",
+    "roleVolunteer": "Volunteer",
+    "roleUser": "User",
+    "expandHint": "Tap to expand",
+    "salary": "Salary",
+    "seniority": "Seniority",
+    "level": "Level"
+  },
+  "tasks": {
+    "noTasks": "No tasks at the moment",
+    "editTask": "Edit Task",
+    "newTask": "New Task",
+    "title": "Title",
+    "description": "Description",
+    "priority": "Priority",
+    "status": "Status",
+    "category": "Category",
+    "tags": "Tags (comma separated)",
+    "estimatedHours": "Estimated hours (optional)",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create"
+  }
+}

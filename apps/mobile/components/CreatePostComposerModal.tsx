@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
@@ -35,6 +35,9 @@ export default function CreatePostComposerModal(): React.ReactElement {
 
   const showAmountField = category === 'money';
   const showQuantityField = category === 'items';
+
+  /** Title is required; guest/login errors stay in submit() when title is present */
+  const canPublish = title.trim().length > 0;
 
   const submit = async () => {
     if (!selectedUser?.id) {
@@ -77,9 +80,9 @@ export default function CreatePostComposerModal(): React.ReactElement {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={closeComposer}>
-      <View style={styles.backdrop}>
-        <TouchableOpacity style={styles.backdropTouch} onPress={closeComposer} />
-        <View style={styles.sheet}>
+      <View style={[styles.backdrop, Platform.OS === 'web' && styles.backdropWeb]}>
+        <TouchableOpacity style={styles.backdropTouch} onPress={closeComposer} accessibilityRole="button" />
+        <View style={[styles.sheet, Platform.OS === 'web' && styles.sheetWeb]}>
           <View style={styles.handle} />
           <View style={styles.headerRow}>
             <Text style={styles.title}>{titleText}</Text>
@@ -115,7 +118,16 @@ export default function CreatePostComposerModal(): React.ReactElement {
             <TextInput style={styles.input} placeholder={t('common:postComposer.amount')} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
           ) : null}
 
-          <TouchableOpacity style={[styles.submitBtn, intent === 'request' && styles.submitRequest]} onPress={submit}>
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              intent === 'request' && styles.submitRequest,
+              !canPublish && styles.submitBtnDisabled,
+            ]}
+            onPress={submit}
+            disabled={!canPublish}
+            accessibilityState={{ disabled: !canPublish }}
+          >
             <Text style={styles.submitText}>{t('common:postComposer.publish')}</Text>
           </TouchableOpacity>
         </View>
@@ -126,8 +138,20 @@ export default function CreatePostComposerModal(): React.ReactElement {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
+  // Full-viewport layer on web so the sheet stays above app chrome and wide-layout scrollers (F12 vs normal width)
+  backdropWeb: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 2147483000,
+  } as const,
   backdropTouch: { flex: 1 },
   sheet: { height: '85%', backgroundColor: colors.white, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
+  sheetWeb: { zIndex: 2147483001 },
   handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 12, backgroundColor: colors.border, marginBottom: 8 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   title: { fontWeight: '700', color: colors.textPrimary, fontSize: 18 },
@@ -144,5 +168,6 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   submitBtn: { marginTop: 'auto', backgroundColor: colors.success, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   submitRequest: { backgroundColor: colors.warning },
+  submitBtnDisabled: { opacity: 0.45 },
   submitText: { color: colors.white, fontWeight: '700' },
 });

@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
@@ -127,40 +128,50 @@ export default function MyCreatedChallengesScreen({ navigation, route }: MyCreat
   };
 
   const handleDeleteChallenge = (challenge: CommunityChallenge) => {
-    Alert.alert(
-      t('deleteChallenge'),
-      t('deleteChallengeConfirm', { title: challenge.title }),
-      [
-        {
-          text: t('common:cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('common:delete'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!user?.id) return;
-            
-            try {
-              setLoading(true);
-              const response = await db.deleteCommunityChallenge(challenge.id, user.id);
-              
-              if (response.success) {
-                showToast(t('challengeDeleted'), 'success');
-                await loadChallenges();
-              } else {
-                showToast(t('messages.errorDeleting'), 'error');
-              }
-            } catch (error) {
-              console.error('Error deleting challenge:', error);
-              showToast(t('messages.errorDeleting'), 'error');
-            } finally {
-              setLoading(false);
-            }
+    const doDelete = async () => {
+      if (!user?.id) return;
+      try {
+        setLoading(true);
+        const response = await db.deleteCommunityChallenge(challenge.id, user.id);
+        if (response.success) {
+          showToast(t('challengeDeleted'), 'success');
+          await loadChallenges();
+        } else {
+          showToast(t('messages.errorDeleting'), 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting challenge:', error);
+        showToast(t('messages.errorDeleting'), 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    console.log('🗑️ Attempting to delete challenge:', challenge.title, 'ID:', challenge.id);
+
+    // Alert.alert is a no-op on Web — use window.confirm instead
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `${t('deleteChallenge')}\n${t('deleteChallengeConfirm', { title: challenge.title })}`
+      );
+      if (confirmed) {
+        console.log('✅ Delete confirmed on web');
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        t('deleteChallenge'),
+        t('deleteChallengeConfirm', { title: challenge.title }),
+        [
+          { text: t('common:cancel'), style: 'cancel', onPress: () => console.log('❌ Delete cancelled') },
+          { text: t('common:delete'), style: 'destructive', onPress: () => {
+              console.log('✅ Delete confirmed on native');
+              doDelete();
+            } 
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const renderChallengeCard = ({ item }: { item: CommunityChallenge }) => {

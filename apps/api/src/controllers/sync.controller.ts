@@ -16,8 +16,8 @@ import {
 import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
-import { AdminAuthGuard } from "../auth/jwt-auth.guard";
-import { FirebaseAdminService } from "../auth/firebase-admin.service";
+import { AdminAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FirebaseAdminService } from "../auth/services/firebase-admin.service";
 import type { UserRecord } from "firebase-admin/auth";
 
 @Controller("api/sync")

@@ -1,27 +1,68 @@
-import type { AdminCreateTaskFormFields, TaskPriority, TaskStatus } from './adminTasksScreen.types';
-import { FILTER_KEY_SHOW_COMPLETED, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+import type { AdminCreateTaskFormFields, AdminTask, TaskPriority, TaskStatus } from './adminTasksScreen.types';
+import { TASK_LIST_CATEGORY_OPTIONS, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+
+const CANONICAL_CATEGORY_VALUES = new Set(TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value));
+
+/** Legacy English/slug categories from older clients → Hebrew values used in admin form & list. */
+const LEGACY_CATEGORY_TO_CANONICAL: Record<string, string> = {
+  knowledge_offer: 'תרומת מידע',
+  report: 'דיווח',
+  moderation: 'דיווח',
+};
+
+/** Single label for category badge and form — matches {@link TASK_LIST_CATEGORY_OPTIONS} where possible. */
+export function canonicalTaskCategory(category: string | null | undefined): string {
+  const c = category?.trim() || '';
+  if (!c) return '';
+  if (CANONICAL_CATEGORY_VALUES.has(c)) return c;
+  return LEGACY_CATEGORY_TO_CANONICAL[c] ?? c;
+}
+
+/** Normalize API payloads: legacy `reports` status and slug categories. */
+export function normalizeAdminTaskFromApi(task: AdminTask): AdminTask {
+  const rawStatus = String(task.status);
+  let nextStatus: TaskStatus;
+  let category = task.category ?? undefined;
+
+  if (rawStatus === 'reports') {
+    nextStatus = 'open';
+    const cat = String(category ?? '').trim();
+    if (!cat || cat === 'report' || cat === 'moderation') {
+      category = 'דיווח';
+    }
+  } else if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === rawStatus)) {
+    nextStatus = rawStatus as TaskStatus;
+  } else {
+    nextStatus = 'open';
+  }
+
+  const canonCat = canonicalTaskCategory(category);
+  return { ...task, status: nextStatus, category: canonCat || null };
+}
 
 export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
   statuses: TaskStatus[];
   priorities: TaskPriority[];
-  includeDoneWhenNoStatusFilter: boolean;
+  categories: string[];
 } {
   const statuses: TaskStatus[] = [];
   const priorities: TaskPriority[] = [];
+  const categories: string[] = [];
   let assignee: 'all' | 'me' = 'all';
-  let includeDoneWhenNoStatusFilter = false;
   for (const key of filterKeys ?? []) {
     if (key === 'task_assign_me') {
       assignee = 'me';
     }
-    if (key === FILTER_KEY_SHOW_COMPLETED) {
-      includeDoneWhenNoStatusFilter = true;
-    }
     if (key.startsWith('task_status_')) {
-      const raw = key.slice('task_status_'.length) as TaskStatus;
-      if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === raw)) {
-        statuses.push(raw);
+      const raw = key.slice('task_status_'.length);
+      if (raw === 'reports') {
+        categories.push('דיווח');
+      } else {
+        const statusRaw = raw as TaskStatus;
+        if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === statusRaw)) {
+          statuses.push(statusRaw);
+        }
       }
     }
     if (key.startsWith('task_priority_')) {
@@ -30,21 +71,17 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
         priorities.push(raw);
       }
     }
+    if (key.startsWith('task_category_')) {
+      const raw = key.slice('task_category_'.length);
+      categories.push(raw);
+    }
   }
-  // With any status chip, the API ignores "show completed"; keep state/storage consistent.
-  if (statuses.length > 0) {
-    includeDoneWhenNoStatusFilter = false;
-  }
-  return { assignee, statuses, priorities, includeDoneWhenNoStatusFilter };
+  return { assignee, statuses, priorities, categories };
 }
 
-/** Drop redundant "show completed" when any status chip is selected (same as fetch semantics). */
+/** No longer needed as "show completed" is removed. */
 export function sanitizeAdminTasksHeaderFilterKeys(filterKeys: string[]): string[] {
-  const hasStatusChip = filterKeys.some((k) => k.startsWith('task_status_'));
-  if (!hasStatusChip) {
-    return [...filterKeys];
-  }
-  return filterKeys.filter((k) => k !== FILTER_KEY_SHOW_COMPLETED);
+  return [...filterKeys];
 }
 
 export function formatTaskListPriorityHebrew(priority: string): string {
@@ -65,8 +102,10 @@ export function formatTaskListStatusHebrew(status: string): string {
       return 'בבדיקה';
     case 'done':
       return 'בוצעה';
-    default:
+    case 'archived':
       return 'בארכיון';
+    default:
+      return status || 'לא ידוע';
   }
 }
 
@@ -78,22 +117,23 @@ export function buildPersistedAdminTaskFilterKeys(
   assignee: 'all' | 'me',
   statuses: TaskStatus[],
   priorities: TaskPriority[],
-  includeDoneWhenNoStatusFilter: boolean,
+  categories: string[],
 ): string[] {
   const keys: string[] = [];
   if (assignee === 'me') {
     keys.push('task_assign_me');
   }
   const dedupStatuses = [...new Set(statuses)];
-  if (includeDoneWhenNoStatusFilter && dedupStatuses.length === 0) {
-    keys.push(FILTER_KEY_SHOW_COMPLETED);
-  }
   for (const s of dedupStatuses) {
     keys.push(`task_status_${s}`);
   }
   const dedupPri = [...new Set(priorities)];
   for (const p of dedupPri) {
     keys.push(`task_priority_${p}`);
+  }
+  const dedupCat = [...new Set(categories)];
+  for (const c of dedupCat) {
+    keys.push(`task_category_${c}`);
   }
   return keys;
 }

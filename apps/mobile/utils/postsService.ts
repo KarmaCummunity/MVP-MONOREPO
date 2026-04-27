@@ -4,7 +4,6 @@
 // - Communicates with: /api/posts/* endpoints on the backend
 
 import { API_BASE_URL } from './config.constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface PostsApiResponse<T = any> {
   success: boolean;
@@ -56,16 +55,10 @@ class PostsService {
 
   private async getAuthToken(): Promise<string | null> {
     try {
-      // Try to get JWT access token from AsyncStorage
-      const jwtToken = await AsyncStorage.getItem('jwt_access_token');
-
-      if (jwtToken) {
-        // Check if token is expired
-        const expiresAt = await AsyncStorage.getItem('jwt_token_expires_at');
-        if (expiresAt && parseInt(expiresAt) > Date.now()) {
-          return jwtToken;
-        }
-      }
+      // Use tokenManager as the SSOT for all token access
+      const { tokenManager } = await import('../auth/services/tokenManager');
+      const token = await tokenManager.getAccessToken();
+      if (token) return token;
 
       // Fallback: Try to get Firebase ID token
       try {
@@ -74,18 +67,13 @@ class PostsService {
         const { app } = getFirebase();
         const auth = getAuth(app);
         const user = auth.currentUser;
-
-        if (user) {
-          const token = await user.getIdToken();
-          return token;
-        }
+        if (user) return await user.getIdToken();
       } catch (firebaseError) {
         console.warn('Firebase auth not available:', firebaseError);
       }
     } catch (error) {
       console.warn('Failed to get auth token:', error);
     }
-
     return null;
   }
 

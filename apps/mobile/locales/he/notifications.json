@@ -1,0 +1,24 @@
+{
+  "title": "התראות",
+  "loadError": "שגיאה בטעינת ההתראות",
+  "markAllDoneTitle": "הושלם",
+  "markAllDoneBody": "כל ההתראות סומנו כנקראו",
+  "markAllError": "שגיאה בסימון ההתראות",
+  "clearAllTitle": "מחיקת כל ההתראות",
+  "clearAllMessage": "האם אתה בטוח שברצונך למחוק את כל ההתראות?",
+  "clearAllDoneTitle": "הושלם",
+  "clearAllDoneBody": "כל ההתראות נמחקו",
+  "clearAllError": "שגיאה במחיקת ההתראות",
+  "empty": {
+    "title": "אין התראות",
+    "subtitle": "כאשר תקבל התראות חדשות, הן יופיעו כאן"
+  },
+  "unreadBadge": "{{count}} התראות חדשות",
+  "welcomeSystem": "ברוך הבא לקרמה קומיוניטי!",
+  "dailyChallengeReminder": {
+    "title": "דיווח יומי באתגרים ({{count}})",
+    "body": "יש לך {{count}} אתגרים שעדיין לא דווחו היום. הקש לדיווח מהיר במעקב היומי.",
+    "pushTitle": "דיווח יומי באתגרים",
+    "pushBody": "נותרו {{count}} אתגרים לדיווח היום."
+  }
+}

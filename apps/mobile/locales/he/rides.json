@@ -1,0 +1,14 @@
+{
+  "offered": "טרמפ מוצע",
+  "completed": "הנסיעה הושלמה",
+  "seats": "מושבים",
+  "fuelShare": "השתתפות בדלק",
+  "free": "חינם",
+  "noCharge": "ללא עלות",
+  "departure": "יציאה",
+  "from": "מ",
+  "to": "ל",
+  "origin": "מוצא",
+  "destination": "יעד",
+  "thanks_message": "הנסיעה הושלמה בהצלחה! תודה רבה על העזרה."
+}

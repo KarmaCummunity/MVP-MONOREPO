@@ -1,0 +1,24 @@
+{
+  "title": "Notifications",
+  "loadError": "Failed to load notifications",
+  "markAllDoneTitle": "Done",
+  "markAllDoneBody": "All notifications marked as read",
+  "markAllError": "Failed to mark notifications",
+  "clearAllTitle": "Delete all notifications",
+  "clearAllMessage": "Are you sure you want to delete all notifications?",
+  "clearAllDoneTitle": "Done",
+  "clearAllDoneBody": "All notifications deleted",
+  "clearAllError": "Failed to delete notifications",
+  "empty": {
+    "title": "No notifications",
+    "subtitle": "When you receive new notifications, they will appear here"
+  },
+  "unreadBadge": "{{count}} new notifications",
+  "welcomeSystem": "Welcome to Karma Community!",
+  "dailyChallengeReminder": {
+    "title": "Daily challenge check-ins ({{count}})",
+    "body": "You have {{count}} challenge(s) not reported for today. Tap to report quickly in the daily tracker.",
+    "pushTitle": "Daily challenge check-ins",
+    "pushBody": "{{count}} challenge(s) still need today's report."
+  }
+}

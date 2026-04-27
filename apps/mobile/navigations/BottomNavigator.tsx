@@ -3,7 +3,7 @@
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
 // - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press.
-// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack`, `ProfileTabStack`.
+// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants.
 // BottomNavigator.tsx
@@ -20,10 +20,11 @@
 // TODO: Implement proper deep linking support for tab navigation
 'use strict';
 import React from "react";
-import { Animated, Easing, View, StyleSheet, TouchableOpacity } from "react-native";
-import { createBottomTabNavigator, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+import { Animated, Easing, View, StyleSheet, TouchableOpacity, Platform, Pressable } from "react-native";
+import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation, CommonActions } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, CommonActions, useNavigationState } from "@react-navigation/native";
+import type { NavigationState } from "@react-navigation/native";
 import HomeTabStack from "./HomeTabStack";
 import SearchTabStack from "./SearchTabStack";
 import ProfileTabStack from "./ProfileTabStack";
@@ -37,6 +38,10 @@ import { useWebMode } from "../stores/webModeStore";
 import { logger } from "../utils/loggerService";
 import CreatePostComposerModal from "../components/CreatePostComposerModal";
 import { usePostComposerStore } from "../stores/postComposerStore";
+import {
+  getDonationsStackLeafScreenName,
+  mapDonationScreenRouteToComposerCategory,
+} from "./mapDonationScreenToComposerCategory";
 
 // Define the type for your bottom tab navigator's route names and their parameters.
 export type BottomTabNavigatorParamList = {
@@ -127,6 +132,11 @@ const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, 
   );
 };
 
+/** Middle tab never renders a scene (composer opens from tab bar); avoids a second DonationsStack instance. */
+function CreatePostTabPlaceholder(): null {
+  return null;
+}
+
 const styles = StyleSheet.create({
   pulseContainer: {
     alignItems: "center",
@@ -150,9 +160,15 @@ const styles = StyleSheet.create({
  */
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
+  const adminTabBarButton = React.useCallback(() => null, []);
   const { mode } = useWebMode();
   const navigation = useNavigation();
   const { openComposer } = usePostComposerStore();
+  const composerCategory = useNavigationState((rootState) =>
+    mapDonationScreenRouteToComposerCategory(
+      getDonationsStackLeafScreenName(rootState as unknown as NavigationState | undefined),
+    ),
+  );
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
@@ -277,6 +293,8 @@ export default function BottomNavigator(): React.ReactElement {
             height: barHeight,
             backgroundColor: colors.cardBackground,
             display: shouldHideTabBar ? 'none' as const : 'flex' as const,
+            // Web: desktop layouts + full-bleed scrollers need a high stacking order so the + tab receives clicks
+            ...(!shouldHideTabBar ? { zIndex: Platform.OS === 'web' ? 20000 : 20 } : {}),
           },
         });
       }}
@@ -299,18 +317,38 @@ export default function BottomNavigator(): React.ReactElement {
       />
       <Tab.Screen
         name="CreatePostTab"
-        component={DonationsStack}
+        component={CreatePostTabPlaceholder}
         options={{
-          tabBarButton: () => (
-            <TouchableOpacity
-              onPress={() => openComposer({ intent: 'give' })}
-              style={{ marginTop: -12 }}
-              accessibilityRole="button"
-              accessibilityLabel="Create give or request post"
-            >
-              <Ionicons name="add-circle" size={54} color={colors.primary} />
-            </TouchableOpacity>
-          ),
+          tabBarButton: (props: BottomTabBarButtonProps) => {
+            const p = props as Record<string, unknown>;
+            const delayLongPress = p.delayLongPress as number | undefined;
+            const { style: tabStyle, accessibilityState, testID } = p as BottomTabBarButtonProps;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create give or request post"
+                accessibilityState={accessibilityState}
+                testID={testID}
+                delayLongPress={delayLongPress}
+                onPress={() => openComposer({ intent: 'give', category: composerCategory })}
+                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                style={({ pressed }) => [
+                  tabStyle,
+                  {
+                    marginTop: -12,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minWidth: 56,
+                    minHeight: 56,
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer' } as const),
+                  Platform.OS === 'web' && pressed ? { opacity: 0.88 } : null,
+                ]}
+              >
+                <Ionicons name="add-circle" size={54} color={colors.primary} />
+              </Pressable>
+            );
+          },
         }}
         listeners={{
           tabPress: (e) => e.preventDefault(),
@@ -323,15 +361,6 @@ export default function BottomNavigator(): React.ReactElement {
           tabPress: (e) => handleTabPress(e, navigation, route.name),
         })}
       />
-      {isAdmin && (
-        <Tab.Screen
-          name="AdminTab"
-          component={AdminStack}
-          listeners={({ navigation, route }) => ({
-            tabPress: (e) => handleTabPress(e, navigation, route.name),
-          })}
-        />
-      )}
       <Tab.Screen
         name="HomeScreen"
         component={HomeTabStack}
@@ -339,6 +368,19 @@ export default function BottomNavigator(): React.ReactElement {
           tabPress: (e) => handleTabPress(e, navigation, route.name),
         })}
       />
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminTab"
+          component={AdminStack}
+          options={{ 
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' }
+          }}
+          listeners={({ navigation, route }) => ({
+            tabPress: (e) => handleTabPress(e, navigation, route.name),
+          })}
+        />
+      )}
 
     </Tab.Navigator>
     <CreatePostComposerModal />

@@ -1,0 +1,35 @@
+{
+  "topBarAdmin": "מנהלים",
+  "topBarAdminTasks": "ניהול משימות",
+  "hierarchy": {
+    "loadError": "שגיאה בטעינת עץ המנהלים",
+    "connectionError": "שגיאה בחיבור לשרת",
+    "loading": "טוען את מבנה הניהול...",
+    "retry": "נסה שוב",
+    "noManagers": "אין מנהלים להצגה",
+    "managersCount": "{{count}} מנהלים",
+    "roleSuperAdmin": "מנהל ראשי",
+    "roleAdmin": "מנהל",
+    "roleVolunteer": "מתנדב",
+    "roleUser": "משתמש",
+    "expandHint": "לחץ להרחבה",
+    "salary": "משכורת",
+    "seniority": "ותק",
+    "level": "דרגה"
+  },
+  "tasks": {
+    "noTasks": "אין משימות כרגע",
+    "editTask": "עריכת משימה",
+    "newTask": "משימה חדשה",
+    "title": "כותרת",
+    "description": "תיאור",
+    "priority": "עדיפות",
+    "status": "סטטוס",
+    "category": "קטגוריה",
+    "tags": "תגיות (מופרדות אות)",
+    "estimatedHours": "זמן עבודה מוערך בשעות (אופציונלי)",
+    "cancel": "ביטול",
+    "save": "שמור",
+    "create": "צור"
+  }
+}

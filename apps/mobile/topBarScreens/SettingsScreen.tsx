@@ -356,10 +356,10 @@ export default function SettingsScreen() {
       const taskData = {
         title: `Report from ${selectedUser?.name || 'User'}`,
         description: `User Email: ${selectedUser?.email}\nUser ID: ${currentUserId}\n\nReport Content:\n${reportText}`,
-        status: 'reports',
+        status: 'open',
         priority: 'high',
-        category: 'report',
-        assignee_id: adminId,
+        category: 'דיווח',
+        assignees: [adminId],
         created_by: currentUserId,
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Due in 1 week
       };

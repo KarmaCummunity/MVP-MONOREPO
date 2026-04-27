@@ -219,10 +219,10 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
         const taskData = {
           title: `Report on Post: ${selectedPostForReport.title || selectedPostForReport.id}`,
           description: `Reporter: ${selectedUser.name} (${selectedUser.email})\nPost ID: ${selectedPostForReport.id}\nReason: ${reason}\n\nLink: /post/${selectedPostForReport.id}`, // Deep-linking to be implemented
-          status: 'reports',
+          status: 'open',
           priority: 'high',
-          category: 'moderation',
-          assignee_id: adminId,
+          category: 'דיווח',
+          assignees: [adminId],
           created_by: selectedUser.id,
           due_date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48h SLA
           metadata: {

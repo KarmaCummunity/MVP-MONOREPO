@@ -17,6 +17,7 @@
 // TODO: Add comprehensive logging and monitoring
 import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
+import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
 
 /** Admin tasks endpoints can run heavier SQL; allow longer than default fetch abort */
 const TASKS_HTTP_TIMEOUT_MS = 90_000;
@@ -84,7 +85,7 @@ class ApiService {
       | 'testing'
       | Array<'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing'>;
     priority?: 'low' | 'medium' | 'high' | Array<'low' | 'medium' | 'high'>;
-    category?: string;
+    category?: string | string[];
     assignee?: string;
     q?: string;
     sort?: string;
@@ -259,75 +260,18 @@ class ApiService {
    * Validate token and refresh if expired
    * @returns Valid access token or null if refresh failed
    */
+  /**
+   * Delegates token retrieval to tokenManager — the single source of truth.
+   * tokenManager stores under 'auth_access_token' (SecureStore on native, AsyncStorage on web).
+   */
   private async validateAndRefreshToken(): Promise<string | null> {
     try {
-      const AsyncStorage = await import('@react-native-async-storage/async-storage');
-      const jwtToken = await AsyncStorage.default.getItem('jwt_access_token');
-      const expiresAt = await AsyncStorage.default.getItem('jwt_token_expires_at');
-      const refreshToken = await AsyncStorage.default.getItem('jwt_refresh_token');
-
-      // If no access token, try Firebase fallback
-      if (!jwtToken) {
-        return null;
-      }
-
-      // Check if token is still valid (with 1 minute buffer)
-      if (expiresAt && parseInt(expiresAt) > Date.now() + 60000) {
-        return jwtToken;
-      }
-
-      // Token is expired or about to expire, try to refresh
-      if (!refreshToken) {
-        console.warn('JWT token expired and no refresh token available');
-        await AsyncStorage.default.multiRemove(['jwt_access_token', 'jwt_token_expires_at']);
-        return null;
-      }
-
-      console.log('🔄 Attempting to refresh expired JWT token');
-
-      // Call refresh endpoint
-      const refreshUrl = this.buildUrl('/auth/refresh');
-      const response = await fetch(refreshUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.warn('❌ Token refresh failed:', data.error || 'Unknown error');
-        // Clear all tokens if refresh failed
-        await AsyncStorage.default.multiRemove([
-          'jwt_access_token',
-          'jwt_token_expires_at',
-          'jwt_refresh_token',
-        ]);
-        return null;
-      }
-
-      // Save new access token
-      const newAccessToken = data.accessToken;
-      const newExpiresAt = Date.now() + (data.expiresIn * 1000);
-      await AsyncStorage.default.setItem('jwt_access_token', newAccessToken);
-      await AsyncStorage.default.setItem('jwt_token_expires_at', String(newExpiresAt));
-
-      console.log('✅ Token refreshed successfully');
-      return newAccessToken;
+      const { tokenManager } = await import('../auth/services/tokenManager');
+      const token = await tokenManager.getAccessToken();
+      if (token) return token;
+      return null;
     } catch (error) {
-      console.warn('❌ Error during token validation/refresh:', error);
-      try {
-        const AsyncStorage = await import('@react-native-async-storage/async-storage');
-        await AsyncStorage.default.multiRemove([
-          'jwt_access_token',
-          'jwt_token_expires_at',
-          'jwt_refresh_token',
-        ]);
-      } catch (cleanupError) {
-        console.warn('Failed to cleanup tokens:', cleanupError);
-      }
+      console.warn('❌ Error reading token from tokenManager:', error);
       return null;
     }
   }
@@ -353,14 +297,10 @@ class ApiService {
 
   private async clearStoredJwt(): Promise<void> {
     try {
-      const AsyncStorage = await import('@react-native-async-storage/async-storage');
-      await AsyncStorage.default.multiRemove([
-        'jwt_access_token',
-        'jwt_token_expires_at',
-        'jwt_refresh_token',
-      ]);
+      const { tokenManager } = await import('../auth/services/tokenManager');
+      await tokenManager.clearTokens();
     } catch (e) {
-      console.warn('Failed to clear JWT from storage:', e);
+      console.warn('Failed to clear JWT from tokenManager:', e);
     }
   }
 
@@ -410,7 +350,7 @@ class ApiService {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetch(url, {
+        const response = await fetchWithAuth(url, {
           ...config,
           signal: controller.signal,
         });
@@ -419,41 +359,6 @@ class ApiService {
         const data = await response.json();
 
         // Handle 401 Unauthorized - try JWT refresh, then Firebase (Google) token
-        if (response.status === 401 && retryOn401 && authToken) {
-          logger.warn('API', 'Received 401, attempting token refresh and retry', { endpoint });
-
-          let tokenToRetry: string | null = await this.validateAndRefreshToken();
-
-          // JWT refresh may return the same token the server already rejected — try Firebase
-          if (!tokenToRetry || tokenToRetry === authToken) {
-            await this.clearStoredJwt();
-            tokenToRetry = await this.getFirebaseIdToken(true);
-          }
-
-          if (tokenToRetry) {
-            logger.info('API', 'Retrying request with refreshed token', { endpoint });
-            return this.request<T>(endpoint, options, false, timeoutMs);
-          }
-
-          logger.error('API', '401: no valid token after refresh attempts', { endpoint });
-          const serverMsg =
-            typeof data?.message === 'string'
-              ? data.message
-              : typeof data?.error === 'string'
-                ? data.error
-                : '';
-          const isAuthLike =
-            /session|expired|unauthor|invalid token|authentication|log in/i.test(serverMsg);
-
-          return {
-            success: false,
-            error:
-              serverMsg && !isAuthLike
-                ? serverMsg
-                : 'Session expired. Please log in again.',
-          };
-        }
-
         if (!response.ok) {
           logger.error('API', `API Error ${response.status}`, { endpoint, status: response.status, data });
           return {

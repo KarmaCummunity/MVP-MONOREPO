@@ -1,0 +1,207 @@
+{
+  "title": "Community in action",
+  "searchCharitiesForHelp": "Search charities",
+  "searchCharitiesForDonation": "Search charities",
+  "forYou": "Just for you",
+  "popular": "Popular",
+  "all": "All",
+  "statistics": "Statistics",
+  "others": "Other categories",
+  "allWays": "All ways to take action",
+  "comingSoonTitle": "Soon",
+  "comingSoonMessage": "This category will be available soon!",
+  "activeDonors": "Active donors",
+  "weeklyDonations": "Donations this week",
+  "activeCharities": "Active charities",
+  "categoriesTitle": "Donation categories",
+  "share": "Share",
+  "searchWithin": "Search within",
+  "filter": {
+    "nearMe": "Near me",
+    "popular": "Popular",
+    "new": "New"
+  },
+  "sort": {
+    "name": "Name",
+    "date": "Date",
+    "rating": "Rating"
+  },
+  "section": {
+    "content": "Content",
+    "contentBody": "This area will contain content tailored to the \"{{title}}\" category. We can show lists, forms, community projects and relevant info. This is initial content that can be expanded.",
+    "relatedStats": "Related statistics"
+  },
+  "stats": {
+    "newPosts": "New posts",
+    "activeRequests": "Active requests",
+    "activePartners": "Active partners"
+  },
+  "statsSummary": "Statistics summary for this screen",
+  "statsScreen": {
+    "title": "Donation statistics",
+    "subtitle": "The community in numbers this week",
+    "noQuotes": "No motivational quotes available"
+  },
+  "categories": {
+    "money": {
+      "title": "Money",
+      "subtitle": "Financial donation",
+      "description": "Financial donation to organizations and projects"
+    },
+    "trump": {
+      "title": "Rides",
+      "subtitle": "Transport and rides",
+      "description": "Transporting people and rides for the community"
+    },
+    "knowledge": {
+      "title": "Knowledge",
+      "subtitle": "Mentoring and learning",
+      "description": "Mentoring, training and sharing knowledge"
+    },
+    "time": {
+      "title": "Time",
+      "subtitle": "Volunteering",
+      "description": "Volunteering and helping with time"
+    },
+    "food": {
+      "title": "Food",
+      "subtitle": "Food donation",
+      "description": "Donating food to those in need"
+    },
+    "clothes": {
+      "title": "Clothes",
+      "subtitle": "Clothes donation",
+      "description": "Donating clothes to those in need"
+    },
+    "books": {
+      "title": "Books",
+      "subtitle": "Books donation",
+      "description": "Donating books to libraries"
+    },
+    "furniture": {
+      "title": "Furniture",
+      "subtitle": "Furniture donation",
+      "description": "Donating furniture"
+    },
+    "medical": {
+      "title": "Medical",
+      "subtitle": "Medical help",
+      "description": "Medical help and treatments"
+    },
+    "animals": {
+      "title": "Animals",
+      "subtitle": "Animal help",
+      "description": "Adoption and support for stray animals"
+    },
+    "housing": {
+      "title": "Housing",
+      "subtitle": "Housing help",
+      "description": "Housing assistance"
+    },
+    "support": {
+      "title": "Support",
+      "subtitle": "Emotional support",
+      "description": "Emotional and mental support"
+    },
+    "education": {
+      "title": "Education",
+      "subtitle": "Study help",
+      "description": "Help with studies and courses"
+    },
+    "environment": {
+      "title": "Environment",
+      "subtitle": "Green projects",
+      "description": "Environmental projects, planting and cleaning"
+    },
+    "technology": {
+      "title": "Technology",
+      "subtitle": "Technical help",
+      "description": "Technical help and digital guidance"
+    },
+    "music": {
+      "title": "Music",
+      "subtitle": "Music sharing",
+      "description": "Playing, collaborations and performances"
+    },
+    "games": {
+      "title": "Games",
+      "subtitle": "Activities and games",
+      "description": "Community activities and games"
+    },
+    "riddles": {
+      "title": "Riddles",
+      "subtitle": "Thinking and challenge",
+      "description": "Riddles and challenges"
+    },
+    "recipes": {
+      "title": "Recipes",
+      "subtitle": "Cooking and sharing",
+      "description": "Sharing recipes and meals"
+    },
+    "plants": {
+      "title": "Plants",
+      "subtitle": "Gardening and planting",
+      "description": "Community gardening and plants"
+    },
+    "waste": {
+      "title": "Waste",
+      "subtitle": "Recycling and separation",
+      "description": "Cleaning and recycling projects"
+    },
+    "art": {
+      "title": "Art",
+      "subtitle": "Creation and sharing",
+      "description": "Artistic creation and workshops"
+    },
+    "sports": {
+      "title": "Sports",
+      "subtitle": "Active lifestyle",
+      "description": "Sports and activity"
+    },
+    "items": {
+      "title": "Item",
+      "subtitle": "Objects",
+      "description": "Donations of items"
+    },
+    "dreams": {
+      "title": "Make-A-Wish",
+      "subtitle": "Create magical moments",
+      "description": "Fulfilling wishes for children, teens and adults – experiences, meetings and surprises"
+    },
+    "fertility": {
+      "title": "Fertility",
+      "subtitle": "Support on the path to parenthood",
+      "description": "Support and assistance in the fertility journey: guidance, treatment funding, community and emotional support"
+    },
+    "jobs": {
+      "title": "Jobs",
+      "subtitle": "Employment for the community",
+      "description": "Help finding work, matching positions and partnerships with employers for the community"
+    },
+    "matchmaking": {
+      "title": "Matchmaking",
+      "subtitle": "Meet good people for a meaningful relationship",
+      "description": "Connections for quality relationships within the community: introductions, events, guidance and updates"
+    },
+    "mentalHealth": {
+      "title": "Mental health",
+      "subtitle": "Emotional and mental support",
+      "description": "Resources, community and emotional guidance: hotlines, support groups and accessible care"
+    },
+    "goldenAge": {
+      "title": "Golden age",
+      "subtitle": "Active community for seniors",
+      "description": "Activities, volunteering, guidance and assistance tailored for seniors and Holocaust survivors"
+    },
+    "languages": {
+      "title": "Languages",
+      "subtitle": "Language learning and sharing",
+      "description": "Community and support for learning languages: meetups, mentoring and practice together"
+    },
+    "challenges": {
+      "title": "Community Challenges",
+      "subtitle": "Challenges and progress tracking",
+      "description": "Join community challenges, track your progress and achieve goals together with the community"
+    }
+  }
+}

@@ -43,8 +43,9 @@ export enum GoalDirection {
 
 // DTO for creating a new community challenge
 export class CreateCommunityGroupChallengeDto {
-  @IsUUID()
-  creator_id = "";
+  @IsOptional()
+  @IsString()
+  creator_id?: string;
 
   @IsString()
   @MinLength(3, { message: "כותרת האתגר חייבת להכיל לפחות 3 תווים" })
@@ -108,6 +109,10 @@ export class CreateCommunityGroupChallengeDto {
 
 // DTO for updating a community challenge
 export class UpdateCommunityGroupChallengeDto {
+  @IsOptional()
+  @IsString()
+  creator_id?: string;
+
   @IsOptional()
   @IsString()
   @MinLength(3)

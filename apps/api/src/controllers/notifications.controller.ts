@@ -17,7 +17,7 @@ import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { ThrottlerGuard } from "@nestjs/throttler";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request } from "express";
 
 @Controller("api/notifications")

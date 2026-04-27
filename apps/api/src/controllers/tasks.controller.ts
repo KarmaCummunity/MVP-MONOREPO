@@ -20,7 +20,7 @@ import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { UserResolutionService } from "../services/user-resolution.service";
 import { ItemsService } from "../items/items.service";
-import { JwtAuthGuard, AdminAuthGuard } from "../auth/jwt-auth.guard";
+import { JwtAuthGuard, AdminAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { randomUUID } from "crypto";
 
 type TaskStatus =
@@ -29,8 +29,7 @@ type TaskStatus =
   | "done"
   | "archived"
   | "stuck"
-  | "testing"
-  | "reports";
+  | "testing";
 type TaskPriority = "low" | "medium" | "high";
 
 interface CreateTaskDto {
@@ -68,6 +67,21 @@ interface LogTaskHoursDto {
   user_id: string;
 }
 
+function parseCategoryQueryParam(
+  raw: string | string[] | undefined,
+): string[] | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  return (
+    Array.isArray(raw)
+      ? raw.flatMap((s) => String(s).split(","))
+      : String(raw).split(",")
+  )
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 const TASK_STATUS_VALUES: TaskStatus[] = [
   "open",
   "in_progress",
@@ -75,7 +89,6 @@ const TASK_STATUS_VALUES: TaskStatus[] = [
   "archived",
   "stuck",
   "testing",
-  "reports",
 ];
 
 type TasksListSort =
@@ -137,8 +150,19 @@ function orderByClause(sort: TasksListSort | undefined): string {
     case "priority_status":
       return `ORDER BY 
           CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
-          t.status ASC,
+          CASE t.status 
+            WHEN 'in_progress' THEN 0 
+            WHEN 'stuck' THEN 1 
+            WHEN 'open' THEN 2 
+            WHEN 'testing' THEN 3 
+            WHEN 'done' THEN 4 
+            WHEN 'archived' THEN 5 
+            ELSE 6 
+          END ASC,
+
+
           t.created_at DESC`;
+
     case "due_asc":
       return "ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC, t.id ASC";
     case "due_desc":
@@ -481,6 +505,7 @@ export class TasksController {
 
       const statusList = parseStatusQueryParam(status);
       const priorityList = parsePriorityQueryParam(priority);
+      const categoryList = parseCategoryQueryParam(category);
       const sortValues: TasksListSort[] = [
         "created_desc",
         "created_asc",
@@ -542,9 +567,14 @@ export class TasksController {
         }
       }
 
-      if (category) {
-        params.push(category);
-        filters.push(`category = $${params.length}`);
+      if (categoryList && categoryList.length > 0) {
+        if (categoryList.length === 1) {
+          params.push(categoryList[0]);
+          filters.push(`category = $${params.length}`);
+        } else {
+          params.push(categoryList);
+          filters.push(`category = ANY($${params.length}::text[])`);
+        }
       }
 
       if (assignee) {
@@ -913,18 +943,7 @@ export class TasksController {
 
       // Validate status
       // Validate status
-      if (
-        status &&
-        ![
-          "open",
-          "in_progress",
-          "done",
-          "archived",
-          "stuck",
-          "testing",
-          "reports",
-        ].includes(status)
-      ) {
+      if (status && !TASK_STATUS_VALUES.includes(status)) {
         return { success: false, error: "Invalid status value" };
       }
 
@@ -1382,18 +1401,8 @@ export class TasksController {
       const oldAssignees: string[] = oldTaskRes.rows[0]?.assignees || [];
       const oldStatus: string = oldTaskRes.rows[0]?.status || "open";
 
-      // Validate status if provided
-      if (
-        body.status &&
-        ![
-          "open",
-          "in_progress",
-          "done",
-          "archived",
-          "stuck",
-          "testing",
-        ].includes(body.status)
-      ) {
+      // Validate status if provided (keep in sync with TASK_STATUS_VALUES)
+      if (body.status && !TASK_STATUS_VALUES.includes(body.status)) {
         return { success: false, error: "Invalid status value" };
       }
 

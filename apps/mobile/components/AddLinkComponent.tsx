@@ -17,7 +17,7 @@ import { scaleSize } from '../globals/responsive';
 import { useUser } from '../stores/userStore';
 import { Linking } from 'react-native';
 import { apiService } from '../utils/apiService';
-import { mapKnowledgeCommunityLinkApiError } from '../utils/knowledgeDonationApiMessages';
+import { mapKnowledgeCommunityLinkApiError } from './knowledgeDonationApiMessages';
 import { toastService } from '../utils/toastService';
 import { useFocusEffect } from '@react-navigation/native';
 

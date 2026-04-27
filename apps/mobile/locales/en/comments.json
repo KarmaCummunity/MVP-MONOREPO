@@ -1,0 +1,9 @@
+{
+  "title": "Comments",
+  "reply": "Reply",
+  "placeholder": "Add a comment...",
+  "loadError": "Failed to load comments",
+  "sendError": "Failed to send comment",
+  "empty": "No comments yet",
+  "beFirst": "Be the first to comment!"
+}

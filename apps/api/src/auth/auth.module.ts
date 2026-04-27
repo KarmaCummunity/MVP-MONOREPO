@@ -3,16 +3,16 @@
 // - Reached from: Imported by `AppModule`.
 // - Provides: `SessionService`, `RateLimitService`, `JwtService`, auth guards; exports all for controllers.
 import { Module } from "@nestjs/common";
-import { SessionService } from "./session.service";
-import { RateLimitService } from "./rate-limit.service";
-import { JwtService } from "./jwt.service";
-import { FirebaseAdminService } from "./firebase-admin.service";
+import { SessionService } from "./services/session.service";
+import { RateLimitService } from "./services/rate-limit.service";
+import { JwtService } from "./services/jwt.service";
+import { FirebaseAdminService } from "./services/firebase-admin.service";
 import {
   JwtAuthGuard,
   AdminAuthGuard,
   OperatorAuthGuard,
   OptionalAuthGuard,
-} from "./jwt-auth.guard";
+} from "./guards/jwt-auth.guard";
 import { RedisCacheModule } from "../redis/redis-cache.module";
 import { DatabaseModule } from "../database/database.module";
 

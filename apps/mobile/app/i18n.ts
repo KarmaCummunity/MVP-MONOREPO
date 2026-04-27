@@ -10,12 +10,12 @@ try {
 import { I18nManager } from 'react-native';
 
 // Load unified resources per language
-import he_all from '../locales/he.json';
-import en_all from '../locales/en.json';
+import he from '../locales/he';
+import en from '../locales/en';
 
 const resources = {
-  he: he_all as any,
-  en: en_all as any,
+  he: he as any,
+  en: en as any,
 };
 
 const initialLang = 'he';
@@ -31,7 +31,7 @@ i18n
     resources,
     lng: initialLang,
     fallbackLng: 'en',
-    ns: ['common', 'home', 'profile', 'donations', 'notifications', 'auth', 'errors', 'buttons', 'labels', 'settings', 'comments', 'search', 'bookmarks', 'trump', 'chat', 'landing', 'quickMessage'],
+    ns: ['common', 'home', 'profile', 'donations', 'notifications', 'auth', 'errors', 'buttons', 'labels', 'settings', 'comments', 'search', 'bookmarks', 'trump', 'chat', 'landing', 'quickMessage', 'challenges'],
     defaultNS: 'common',
     compatibilityJSON: 'v4',
     interpolation: {

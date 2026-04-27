@@ -1,0 +1,16 @@
+{
+  "title": "Bookmarks",
+  "selectUserFirst": "Please select a user first",
+  "loadError": "Failed to load bookmarks",
+  "removeTitle": "Remove bookmark",
+  "removeMessage": "Do you want to remove this post from bookmarks?",
+  "removeConfirm": "Remove",
+  "removeError": "Failed to remove bookmark",
+  "clearTitle": "Clear bookmarks",
+  "clearMessage": "Do you want to clear all bookmarks?",
+  "clearConfirm": "Clear all",
+  "selectUserTitle": "Select a user",
+  "selectUserSubtitle": "Choose a user to view their bookmarks",
+  "emptyTitle": "No bookmarks",
+  "emptySubtitle": "Posts you save will appear here"
+}

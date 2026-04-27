@@ -5,6 +5,7 @@ import colors from '../../globals/colors';
 import { rowDirection } from '../../globals/responsive';
 import type { AdminTask, AdminTaskListRowProps } from './adminTasksScreen.types';
 import {
+  canonicalTaskCategory,
   formatTaskListPriorityHebrew,
   formatTaskListStatusHebrew,
   taskHoursToNumber,
@@ -195,6 +196,12 @@ export function AdminTaskListRow(p: AdminTaskListRowProps) {
                 {formatTaskListStatusHebrew(item.status)}
               </Text>
             </View>
+            
+            {item.category ? (
+              <View style={[styles.badge, styles.categoryBadge]}>
+                <Text style={styles.badgeText}>{canonicalTaskCategory(item.category)}</Text>
+              </View>
+            ) : null}
 
             {hasSubtasks && (
               <TouchableOpacity

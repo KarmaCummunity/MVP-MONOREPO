@@ -13,7 +13,7 @@ import {
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
-import { OptionalAuthGuard } from "../auth/jwt-auth.guard";
+import { OptionalAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UserResolutionService } from "../services/user-resolution.service";
 
 interface CreateConversationDto {

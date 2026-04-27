@@ -25,7 +25,7 @@ import {
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
-import { JwtAuthGuard, AdminAuthGuard } from "../auth/jwt-auth.guard";
+import { JwtAuthGuard, AdminAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 interface StatMetric {
   value: number;

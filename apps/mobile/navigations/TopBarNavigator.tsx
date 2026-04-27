@@ -2,14 +2,14 @@
 // - Purpose: Shared top navigation bar component for stacks; shows title and quick actions (Settings, Notifications, Chat/About).
 // - Reached from: `HomeTabStack`, `SearchTabStack`, `ProfileTabStack`, `DonationsStack` as a custom header.
 // - Inputs: Props `hideTopBar` and `showPosts`; also reads `route.params.hideTopBar`. Title resolves by current route with i18n.
-// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon.
+// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon; `isAdmin` for shield + tasks shortcuts to Admin tab.
 // - Side effects: Logs focus and state changes via `logger`; animates show/hide with Reanimated.
 import React from 'react';
 import styles from '../globals/styles'; // your styles file
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NavigationProp, ParamListBase, StackActions } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, StackActions, CommonActions } from '@react-navigation/native';
 import { useRoute, useFocusEffect, useNavigationState } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import colors from '../globals/colors';
@@ -27,10 +27,10 @@ interface TopBarNavigatorProps {
 }
 
 function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: TopBarNavigatorProps) {
-  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile']);
+  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile', 'admin']);
 
   const route = useRoute();
-  const { isGuestMode } = useUser();
+  const { isGuestMode, isAdmin } = useUser();
   const unreadCount = useUnreadNotificationsCount();
   const translateY = useSharedValue(0);
   const [measuredHeight, setMeasuredHeight] = React.useState(56);
@@ -56,6 +56,32 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
   // Handler for toggling screens (open if closed, close if open)
   // Only one top bar screen can be open at a time
+  const navigateToAdminTab = React.useCallback(() => {
+    const tabNav = navigation.getParent?.();
+    if (!tabNav) return;
+    tabNav.dispatch(
+      CommonActions.navigate({
+        name: 'AdminTab',
+        params: {
+          state: { routes: [{ name: 'AdminDashboard' }], index: 0 },
+        },
+      } as never)
+    );
+  }, [navigation]);
+
+  const navigateToAdminTasksTab = React.useCallback(() => {
+    const tabNav = navigation.getParent?.();
+    if (!tabNav) return;
+    tabNav.dispatch(
+      CommonActions.navigate({
+        name: 'AdminTab',
+        params: {
+          state: { routes: [{ name: 'AdminTasks' }], index: 0 },
+        },
+      } as never)
+    );
+  }, [navigation]);
+
   const handleScreenToggle = (screenName: string) => {
     // Get current route name for comparison
     const currentRoute = activeRouteName || route.name;
@@ -174,6 +200,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     InactiveScreen: t('common:inactive'),
     WebViewScreen: t('common:web'),
     LoginScreen: t('auth:login'),
+    AdminTasks: t('admin:topBarAdminTasks'),
   };
 
   // Get current route name
@@ -210,6 +237,26 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
       >
 
         <View style={styles.topBarIconsRow as StyleProp<ViewStyle>}>
+          {isAdmin && (
+            <>
+              <TouchableOpacity
+                onPress={navigateToAdminTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdmin')}
+              >
+                <Icon name="shield-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={navigateToAdminTasksTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdminTasks')}
+              >
+                <Icon name="checkmark-done-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity onPress={() => handleScreenToggle('SettingsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
             <Icon name="settings-outline" size={24} color={colors.black} />
           </TouchableOpacity>

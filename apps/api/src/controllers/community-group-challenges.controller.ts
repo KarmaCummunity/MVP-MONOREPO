@@ -1,5 +1,9 @@
 // Community Group Challenges Controller
 // Handles all operations for community challenges: create, list, join, track entries, statistics
+import { UseGuards } from "@nestjs/common";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { UserSession } from "../auth/interfaces/user-session.interface";
 import {
   Body,
   Controller,
@@ -18,7 +22,6 @@ import {
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { format } from "../database/query-builder";
-import { validate } from "class-validator";
 import {
   CreateCommunityGroupChallengeDto,
   UpdateCommunityGroupChallengeDto,
@@ -28,6 +31,7 @@ import {
 } from "./dto/community-challenge.dto";
 
 @Controller("api/community-challenges")
+@UseGuards(JwtAuthGuard)
 export class CommunityGroupChallengesController {
   private readonly logger = new Logger(CommunityGroupChallengesController.name);
 
@@ -38,14 +42,13 @@ export class CommunityGroupChallengesController {
    * Also creates a post automatically in the feed
    */
   @Post()
-  async createChallenge(@Body() dto: CreateCommunityGroupChallengeDto) {
+  async createChallenge(
+    @Body() dto: CreateCommunityGroupChallengeDto,
+    @CurrentUser() userSession: UserSession,
+  ) {
+    // creator_id always comes from the authenticated session — never from the client body
+    const creatorId = userSession.userId;
     this.logger.log(`Creating new community challenge: ${dto.title}`);
-
-    const errors = await validate(dto);
-    if (errors.length > 0) {
-      this.logger.warn("Validation failed", errors);
-      throw new BadRequestException("Validation failed");
-    }
 
     const client = await this.pool.connect();
     try {
@@ -56,7 +59,7 @@ export class CommunityGroupChallengesController {
       this.logger.log(`🔍 Creating challenge: ${dto.title}`);
       this.logger.log(
         `📊 Challenge data: ${JSON.stringify({
-          creator_id: dto.creator_id,
+          creator_id: creatorId,
           title: dto.title,
           type: dto.type,
           frequency: dto.frequency,
@@ -75,7 +78,7 @@ export class CommunityGroupChallengesController {
         RETURNING *
       `,
         [
-          dto.creator_id,
+          creatorId,
           dto.title,
           dto.description || null,
           dto.type,
@@ -106,7 +109,7 @@ export class CommunityGroupChallengesController {
           VALUES ($1, $2, $3, $4, $5, $6)
         `,
             [
-              dto.creator_id,
+              creatorId,
               challenge.id,
               postTitle,
               postDescription,
@@ -145,7 +148,7 @@ export class CommunityGroupChallengesController {
         (challenge_id, user_id, joined_at)
         VALUES ($1, $2, NOW())
       `,
-        [challenge.id, dto.creator_id],
+        [challenge.id, creatorId],
       );
 
       // Update participants count
@@ -288,10 +291,6 @@ export class CommunityGroupChallengesController {
     @Query("start_date") startDate?: string,
     @Query("end_date") endDate?: string,
   ) {
-    if (!userId) {
-      throw new BadRequestException("user_id is required");
-    }
-
     this.logger.log(
       `Fetching daily tracker for user ${userId}, range: ${startDate} - ${endDate}`,
     );
@@ -562,7 +561,10 @@ export class CommunityGroupChallengesController {
   async joinChallenge(
     @Param("id") challengeId: string,
     @Body() dto: JoinChallengeDto,
+    @CurrentUser() userSession: UserSession,
   ) {
+    const userId = userSession.userId;
+    dto.user_id = userId;
     this.logger.log(`User ${dto.user_id} joining challenge ${challengeId}`);
 
     const client = await this.pool.connect();
@@ -650,7 +652,10 @@ export class CommunityGroupChallengesController {
   async addChallengeEntry(
     @Param("id") challengeId: string,
     @Body() dto: CreateChallengeEntryDto,
+    @CurrentUser() userSession: UserSession,
   ) {
+    const userId = userSession.userId;
+    dto.user_id = userId;
     this.logger.log(
       `Adding entry for challenge ${challengeId}, user ${dto.user_id}, date=${dto.entry_date ?? "today"}, value=${dto.value}`,
     );
@@ -800,13 +805,11 @@ export class CommunityGroupChallengesController {
   @Get(":id/entries")
   async getChallengeEntries(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @CurrentUser() userSession: UserSession,
     @Query("limit") limit?: number,
     @Query("offset") offset?: number,
   ) {
-    if (!userId) {
-      throw new BadRequestException("user_id is required");
-    }
+    const userId = userSession.userId;
 
     this.logger.log(
       `Fetching entries for challenge ${challengeId}, user ${userId}`,
@@ -841,7 +844,8 @@ export class CommunityGroupChallengesController {
    * Get user statistics across all challenges
    */
   @Get("user/:userId/stats")
-  async getUserStatistics(@Param("userId") userId: string) {
+  async getUserStatistics(@CurrentUser() userSession: UserSession) {
+    const userId = userSession.userId;
     this.logger.log(`Fetching statistics for user ${userId}`);
 
     const client = await this.pool.connect();
@@ -905,11 +909,9 @@ export class CommunityGroupChallengesController {
   async updateChallenge(
     @Param("id") challengeId: string,
     @Body() dto: UpdateCommunityGroupChallengeDto,
-    @Query("user_id") userId: string,
+    @CurrentUser() userSession: UserSession,
   ) {
-    if (!userId) {
-      throw new BadRequestException("user_id is required");
-    }
+    const userId = userSession.userId;
 
     this.logger.log(`Updating challenge ${challengeId}`);
 
@@ -1041,11 +1043,9 @@ export class CommunityGroupChallengesController {
   @Delete(":id")
   async deleteChallenge(
     @Param("id") challengeId: string,
-    @Query("user_id") userId: string,
+    @CurrentUser() userSession: UserSession,
   ) {
-    if (!userId) {
-      throw new BadRequestException("user_id is required");
-    }
+    const userId = userSession.userId;
 
     this.logger.log(`Deleting challenge ${challengeId}`);
 
