@@ -79,6 +79,11 @@ interface CommunityStats {
     total_volunteer_hours: number;
     avg_hours_per_user: number;
     current_month_hours: number;
+
+    // Dashboard stats (posts)
+    posts_total: number;
+    posts_open: number;
+    avg_posts_per_user: number;
     
     // Legacy stats
     totalRides: number;
@@ -118,6 +123,10 @@ export default function CommunityStatsScreen() {
         total_volunteer_hours: 0,
         avg_hours_per_user: 0,
         current_month_hours: 0,
+
+        posts_total: 0,
+        posts_open: 0,
+        avg_posts_per_user: 0,
         
         // Legacy stats
         totalRides: 0,
@@ -205,6 +214,10 @@ export default function CommunityStatsScreen() {
                 total_volunteer_hours: dashboardStats?.metrics?.total_volunteer_hours ? Number(dashboardStats.metrics.total_volunteer_hours) : 0,
                 avg_hours_per_user: dashboardStats?.metrics?.avg_hours_per_user ? Number(dashboardStats.metrics.avg_hours_per_user) : 0,
                 current_month_hours: dashboardStats?.metrics?.current_month_hours ? Number(dashboardStats.metrics.current_month_hours) : 0,
+
+                posts_total: dashboardStats?.metrics?.posts_total != null ? Number(dashboardStats.metrics.posts_total) : 0,
+                posts_open: dashboardStats?.metrics?.posts_open != null ? Number(dashboardStats.metrics.posts_open) : 0,
+                avg_posts_per_user: dashboardStats?.metrics?.avg_posts_per_user != null ? Number(dashboardStats.metrics.avg_posts_per_user) : 0,
                 
                 // Legacy stats
                 totalRides,
@@ -282,6 +295,35 @@ export default function CommunityStatsScreen() {
                     >
                     <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
                     <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
+                    <View style={styles.headerPostsRow}>
+                        <View style={styles.headerPostStat}>
+                            <Text style={styles.headerPostValue}>
+                                {stats.posts_total.toLocaleString('he-IL')}
+                            </Text>
+                            <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                {'סה"כ פוסטים'}
+                            </Text>
+                        </View>
+                        <View style={styles.headerPostStat}>
+                            <Text style={styles.headerPostValue}>
+                                {stats.posts_open.toLocaleString('he-IL')}
+                            </Text>
+                            <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                פוסטים פתוחים
+                            </Text>
+                        </View>
+                        <View style={styles.headerPostStat}>
+                            <Text style={styles.headerPostValue}>
+                                {stats.avg_posts_per_user.toLocaleString('he-IL', {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 2,
+                                })}
+                            </Text>
+                            <Text style={styles.headerPostLabel} numberOfLines={2}>
+                                ממוצע פוסטים למשתמש
+                            </Text>
+                        </View>
+                    </View>
                 </View>
 
                 {/* סטטיסטיקות קהילה כלליות */}
@@ -515,6 +557,35 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginTop: 4,
         textAlign: 'right',
+    },
+    headerPostsRow: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'stretch',
+        marginTop: 16,
+        gap: 8,
+    },
+    headerPostStat: {
+        flex: 1,
+        backgroundColor: colors.white,
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+    },
+    headerPostValue: {
+        fontSize: getResponsiveFontSize(FontSizes.heading3),
+        fontWeight: '700',
+        color: colors.textPrimary,
+        textAlign: 'center',
+    },
+    headerPostLabel: {
+        fontSize: getResponsiveFontSize(FontSizes.small),
+        color: colors.textSecondary,
+        marginTop: 4,
+        textAlign: 'center',
     },
     section: {
         marginBottom: 24,
