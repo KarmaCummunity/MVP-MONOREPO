@@ -32,7 +32,6 @@ import ReportPostModal from './Feed/ReportPostModal';
 import EditPostModal from './Feed/EditPostModal';
 import { apiService } from '../utils/apiService';
 import { postsService } from '../utils/postsService';
-import VerticalGridSlider from './VerticalGridSlider';
 import { logger } from '../utils/loggerService';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 import { usePostMenu } from '../hooks/usePostMenu';
@@ -43,7 +42,7 @@ import { isMobileWeb } from '../globals/responsive';
 const { width } = Dimensions.get('window');
 const isMobile = isMobileWeb();
 const HORIZONTAL_PADDING = isMobile ? 8 : 16; // Padding from screen edges
-const COLUMN_GAP = isMobile ? 8 : 16; // Gap between columns in grid view
+const FEED_NUM_COLUMNS = 1;
 
 // Props
 interface PostsReelsScreenProps {
@@ -65,9 +64,6 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const [feedMode, setFeedMode] = useState<'friends' | 'discovery'>('friends');
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
-  const [numColumns, setNumColumns] = useState(1); // Default to list view
-  const [, setSliderValue] = useState(0); // 0 = 1 col, 1 = 2 cols, 2 = 3 cols
-
   // Report State
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
@@ -263,20 +259,19 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
     // For grid view: calculate width with gaps between columns
     // Using space-between in columnWrapper, so we need to account for gaps
-    const totalGaps = (numColumns - 1) * COLUMN_GAP;
-    const itemWidth = (availableWidth - totalGaps) / numColumns;
+    const itemWidth = availableWidth / FEED_NUM_COLUMNS;
 
     return (
       <PostReelItem
         item={item}
         cardWidth={itemWidth}
-        numColumns={numColumns}
+        numColumns={FEED_NUM_COLUMNS}
         onPress={handlePostPress}
         onCommentPress={handleCommentPress}
         onMorePress={handleMorePress}
       />
     );
-  }, [handlePostPress, handleCommentPress, handleMorePress, numColumns]);
+  }, [handlePostPress, handleCommentPress, handleMorePress]);
 
   const renderEmptyComponent = () => {
     const filteredOut = !loading && feed.length > 0 && filteredFeed.length === 0;
@@ -317,25 +312,12 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           />
         )}
 
-        {/* Floating Slider Control - Rendered independently to respect its absolute positioning */}
-        {!loading && filteredFeed.length > 0 && !hideTopBar && (
-          <VerticalGridSlider
-            numColumns={numColumns}
-            onNumColumnsChange={(cols) => {
-              setSliderValue(cols - 1);
-              setNumColumns(cols);
-            }}
-          />
-        )}
-
         {/* Feed List */}
         <FlatList
           data={filteredFeed}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          key={numColumns} // Force re-render on column change
-          numColumns={numColumns}
-          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          numColumns={FEED_NUM_COLUMNS}
           contentContainerStyle={[
             styles.listContent,
             // Add padding top to account for floating header
@@ -429,9 +411,6 @@ const styles = StyleSheet.create({
     paddingBottom: 80, // Space for bottom bar
     paddingHorizontal: HORIZONTAL_PADDING, // Padding from screen edges
   },
-  columnWrapper: {
-    // Gap will be handled by marginHorizontal on individual items
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -447,7 +426,7 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 16,
     color: colors.textSecondary,
-  }
+  },
 });
 
 export default React.memo(PostsReelsScreen);
