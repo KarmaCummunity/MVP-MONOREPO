@@ -22,6 +22,10 @@ export function getFeedContentBucket(item: FeedItem): FeedContentBucket {
     return 'ride';
   }
 
+  if (st === 'community_challenge' || !!item.challengeId) {
+    return 'general_post';
+  }
+
   if (
     st === 'item' ||
     st === 'donation' ||

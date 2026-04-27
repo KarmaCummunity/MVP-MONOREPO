@@ -14,6 +14,7 @@ import RideOfferedCard from './PostCard/RideOfferedCard';
 import RideCompletedCard from './PostCard/RideCompletedCard';
 import TaskAssignmentCard from './PostCard/TaskAssignmentCard';
 import TaskCompletionCard from './PostCard/TaskCompletionCard';
+import CommunityChallengeFeedCard from './PostCard/CommunityChallengeFeedCard';
 import QuickMessageModal from './QuickMessageModal';
 
 const { width } = Dimensions.get('window');
@@ -105,6 +106,11 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
             // If no status, assume it's active (new rides are usually active)
             if (!rideStatus) return true;
             return rideStatus === 'active' || rideStatus === 'full';
+        }
+
+        // Community challenge posts: not item/ride/task quick-message flows
+        if (item.subtype === 'community_challenge') {
+            return false;
         }
 
         // Items: always open unless explicitly closed by owner
@@ -358,7 +364,17 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 4. Ride
+    // 4. Community challenge (distinct from items — metadata may include category)
+    if (item.subtype === 'community_challenge') {
+        return (
+            <>
+                <CommunityChallengeFeedCard {...commonProps} />
+                {renderModal()}
+            </>
+        );
+    }
+
+    // 5. Ride
     if (item.subtype === 'ride') {
         // Distinguish completed vs offered
         if (item.status === 'completed') {
@@ -377,7 +393,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 5. Item (Regular) - Distinguish available vs delivered
+    // 6. Item (Regular) - Distinguish available vs delivered
     // Check both subtype === 'item' OR if item has a price OR itemId or category (matching isPostOpen logic)
     if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
         // Check if item is delivered/completed/expired/cancelled
@@ -400,7 +416,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 6. Generic/Unknown Post Type
+    // 7. Generic/Unknown Post Type
     return (
         <>
             <RegularItemCard {...commonProps} />

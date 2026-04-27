@@ -10,6 +10,11 @@
   "viewStatistics": "צפה בסטטיסטיקות",
   "searchChallenges": "חפש אתגרים",
   "createNewChallenge": "צור אתגר קהילתי חדש",
+  "feedCard": {
+    "badge": "אתגר קהילתי",
+    "headline": "אתגר חדש בקהילה",
+    "tapToJoin": "הקש לפרטים והצטרפות"
+  },
   "visibility": {
     "label": "מי יכול לראות את האתגר?",
     "community": "קהילה (ציבורי)",

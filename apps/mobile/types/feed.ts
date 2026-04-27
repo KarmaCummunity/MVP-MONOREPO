@@ -26,6 +26,18 @@ export interface TaskData {
     assignees?: TaskAssignee[];
 }
 
+/** Snapshot for community challenge feed posts (from API join or post metadata). */
+export interface ChallengeFeedData {
+    id?: string;
+    type?: string;
+    frequency?: string;
+    difficulty?: string;
+    category?: string | null;
+    goal_value?: number | string | null;
+    deadline?: string | null;
+    image_url?: string | null;
+}
+
 export interface FeedItem {
     id: string;
     type: PostType;
@@ -42,10 +54,13 @@ export interface FeedItem {
     // Association
     user: FeedUser;
     taskData?: TaskData;
+    /** Community group challenge linked to this post (post_type `community_challenge`). */
+    challengeData?: ChallengeFeedData;
     // IDs for updating posts
     itemId?: string;
     rideId?: string;
     taskId?: string;
+    challengeId?: string;
 
     // Stats & State
     likes: number;
