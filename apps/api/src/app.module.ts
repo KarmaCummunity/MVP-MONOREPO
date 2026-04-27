@@ -57,7 +57,7 @@ import { SyncController } from "./controllers/sync.controller";
 import { CrmController } from "./controllers/crm.controller";
 import { AdminFilesController } from "./controllers/admin-files.controller";
 import { AdminTablesController } from "./controllers/admin-tables.controller";
-import { PostsController } from "./controllers/posts.controller";
+import { PostsModule } from "./controllers/posts/posts.module";
 import { NotificationsController } from "./controllers/notifications.controller";
 import { AdminTablesService } from "./services/admin-tables.service";
 
@@ -85,6 +85,7 @@ import { AdminTablesService } from "./services/admin-tables.service";
     AuthModule,
     ItemsModule,
     ServicesModule, // User resolution and other shared services
+    PostsModule,
   ],
   controllers: [
     // Core functionality
@@ -103,7 +104,6 @@ import { AdminTablesService } from "./services/admin-tables.service";
     RidesController, // Ride sharing functionality
     ItemsDeliveryController, // Items delivery and search
     UsersController, // User profile management
-    PostsController, // Posts management
     NotificationsController, // Notifications management
 
     // Analytics and monitoring
