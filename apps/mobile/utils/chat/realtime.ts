@@ -12,6 +12,22 @@ import {
 import { Conversation, Message } from './types';
 import { buildMessageListenerKey, logError, sortConversationsByLastMessage, sortMessagesByTimestamp } from './utils';
 
+const stopMessagePolling = (key: string): void => {
+  const interval = messagePollingIntervals.get(key);
+  if (interval) {
+    clearInterval(interval);
+    messagePollingIntervals.delete(key);
+  }
+};
+
+const stopConversationPolling = (userId: string): void => {
+  const interval = conversationPollingIntervals.get(userId);
+  if (interval) {
+    clearInterval(interval);
+    conversationPollingIntervals.delete(userId);
+  }
+};
+
 export const subscribeToMessages = (
   conversationId: string,
   userId: string,
@@ -45,15 +61,13 @@ export const subscribeToMessages = (
     };
   }
 
-  if (!messagePollingIntervals.has(key)) {
+  if (messagePollingIntervals.has(key)) {
+    void getMessages(conversationId, userId).then((messages) => callback(messages));
+  } else {
     const poll = async () => {
       const listeners = messageListeners.get(key);
       if (!listeners || listeners.size === 0) {
-        const interval = messagePollingIntervals.get(key);
-        if (interval) {
-          clearInterval(interval);
-          messagePollingIntervals.delete(key);
-        }
+        stopMessagePolling(key);
         return;
       }
 
@@ -68,8 +82,6 @@ export const subscribeToMessages = (
     void poll();
     const interval = setInterval(poll, MESSAGE_POLL_INTERVAL_MS);
     messagePollingIntervals.set(key, interval);
-  } else {
-    void getMessages(conversationId, userId).then((messages) => callback(messages));
   }
 
   return () => {
@@ -80,11 +92,7 @@ export const subscribeToMessages = (
     listeners.delete(callback);
     if (listeners.size === 0) {
       messageListeners.delete(key);
-      const interval = messagePollingIntervals.get(key);
-      if (interval) {
-        clearInterval(interval);
-        messagePollingIntervals.delete(key);
-      }
+      stopMessagePolling(key);
     }
   };
 };
@@ -122,15 +130,13 @@ export const subscribeToConversations = (
     };
   }
 
-  if (!conversationPollingIntervals.has(userId)) {
+  if (conversationPollingIntervals.has(userId)) {
+    void getConversations(userId).then((conversations) => callback(conversations));
+  } else {
     const poll = async () => {
       const listeners = conversationListeners.get(userId);
       if (!listeners || listeners.size === 0) {
-        const interval = conversationPollingIntervals.get(userId);
-        if (interval) {
-          clearInterval(interval);
-          conversationPollingIntervals.delete(userId);
-        }
+        stopConversationPolling(userId);
         return;
       }
 
@@ -145,8 +151,6 @@ export const subscribeToConversations = (
     void poll();
     const interval = setInterval(poll, CONVERSATION_POLL_INTERVAL_MS);
     conversationPollingIntervals.set(userId, interval);
-  } else {
-    void getConversations(userId).then((conversations) => callback(conversations));
   }
 
   return () => {
@@ -157,11 +161,7 @@ export const subscribeToConversations = (
     listeners.delete(callback);
     if (listeners.size === 0) {
       conversationListeners.delete(userId);
-      const interval = conversationPollingIntervals.get(userId);
-      if (interval) {
-        clearInterval(interval);
-        conversationPollingIntervals.delete(userId);
-      }
+      stopConversationPolling(userId);
     }
   };
 };

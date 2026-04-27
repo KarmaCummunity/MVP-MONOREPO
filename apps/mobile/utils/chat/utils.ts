@@ -78,7 +78,65 @@ export const sortMessagesByTimestamp = (messages: Message[]): Message[] =>
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
+const isMessageType = (value: unknown): value is Message['type'] =>
+  value === 'text' ||
+  value === 'image' ||
+  value === 'video' ||
+  value === 'file' ||
+  value === 'voice' ||
+  value === 'location';
+
+const parseMessageMetadata = (
+  metadata: BackendMessage['metadata'],
+): { thumbnail?: string; duration?: number; dimensions?: { width: number; height: number } } | null => {
+  if (!metadata) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      typeof metadata === 'string'
+        ? JSON.parse(metadata)
+        : metadata;
+    return parsed as { thumbnail?: string; duration?: number; dimensions?: { width: number; height: number } };
+  } catch (error) {
+    logger.warn(CHAT_SCOPE, 'Failed to parse message metadata', { error: toError(error).message });
+    return null;
+  }
+};
+
+const buildMessageFileData = (message: BackendMessage): Message['fileData'] | undefined => {
+  if (!message.file_url) {
+    return undefined;
+  }
+
+  const fileData: NonNullable<Message['fileData']> = {
+    id: message.id,
+    name: message.file_name || 'file',
+    uri: message.file_url,
+    type: ((message.file_type || message.message_type || 'file') as 'image' | 'video' | 'file' | 'voice'),
+    size: message.file_size || undefined,
+    mimeType: message.file_type || undefined,
+  };
+
+  const parsedMetadata = parseMessageMetadata(message.metadata);
+  if (parsedMetadata?.thumbnail) {
+    fileData.thumbnail = parsedMetadata.thumbnail;
+  }
+  if (parsedMetadata?.duration) {
+    fileData.duration = parsedMetadata.duration;
+  }
+  if (parsedMetadata?.dimensions) {
+    fileData.dimensions = parsedMetadata.dimensions;
+  }
+
+  return fileData;
+};
+
 export const toMessageModel = (message: BackendMessage): Message => {
+  const messageType: Message['type'] = isMessageType(message.message_type)
+    ? message.message_type
+    : 'text';
   const model: Message = {
     id: message.id,
     conversationId: message.conversation_id,
@@ -86,7 +144,7 @@ export const toMessageModel = (message: BackendMessage): Message => {
     text: message.content || '',
     timestamp: message.created_at,
     read: false,
-    type: (message.message_type || 'text') as Message['type'],
+    type: messageType,
     status: 'sent',
     replyTo: message.reply_to_id || undefined,
     edited: message.is_edited || false,
@@ -95,33 +153,9 @@ export const toMessageModel = (message: BackendMessage): Message => {
     deletedAt: message.deleted_at || undefined,
   };
 
-  if (message.file_url) {
-    model.fileData = {
-      id: message.id,
-      name: message.file_name || 'file',
-      uri: message.file_url,
-      type: ((message.file_type || message.message_type || 'file') as 'image' | 'video' | 'file' | 'voice'),
-      size: message.file_size || undefined,
-      mimeType: message.file_type || undefined,
-    };
-
-    if (message.metadata) {
-      try {
-        const metadata =
-          typeof message.metadata === 'string'
-            ? JSON.parse(message.metadata)
-            : (message.metadata as {
-                thumbnail?: string;
-                duration?: number;
-                dimensions?: { width: number; height: number };
-              });
-        if (metadata.thumbnail) model.fileData.thumbnail = metadata.thumbnail;
-        if (metadata.duration) model.fileData.duration = metadata.duration;
-        if (metadata.dimensions) model.fileData.dimensions = metadata.dimensions;
-      } catch (error) {
-        logger.warn(CHAT_SCOPE, 'Failed to parse message metadata', { error: toError(error).message });
-      }
-    }
+  const fileData = buildMessageFileData(message);
+  if (fileData) {
+    model.fileData = fileData;
   }
 
   return model;

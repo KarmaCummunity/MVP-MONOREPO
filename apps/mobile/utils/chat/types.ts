@@ -73,6 +73,7 @@ export interface BackendMessage {
   file_type?: string | null;
   metadata?: unknown;
   conversation_created?: boolean;
+  message_id?: string;
 }
 
 export type MessageListener = (messages: Message[]) => void;
