@@ -1,17 +1,18 @@
 #!/usr/bin/env ts-node
 /**
  * Master Audit Script
- * 
+ *
  * Purpose: Runs all audit scripts and generates a comprehensive summary report
- * 
+ *
  * Runs:
  * 1. audit-colors.ts
  * 2. audit-texts.ts
  * 3. audit-constants.ts
  * 4. audit-responsive.ts
  * 5. find-unused-files.ts
- * 
- * Output: audit-reports/summary.md (comprehensive summary)
+ * 6. audit-structure.ts
+ *
+ * Output: audit-reports/summary.md, master-report.json
  */
 
 import * as fs from 'fs';
@@ -38,8 +39,24 @@ interface MasterReport {
     mediumIssues: number;
     lowIssues: number;
     filesScanned: number;
+    /** Distinct relative file paths that appear in at least one audit's issues list */
     filesWithIssues: number;
   };
+}
+
+type SeverityBucket = 'critical' | 'high' | 'medium' | 'low';
+
+function emptySeverityCounts(): Record<SeverityBucket, number> {
+  return { critical: 0, high: 0, medium: 0, low: 0 };
+}
+
+function addSeverityCounts(
+  target: Record<SeverityBucket, number>,
+  source: Record<SeverityBucket, number>
+): void {
+  (Object.keys(target) as SeverityBucket[]).forEach(k => {
+    target[k] += source[k];
+  });
 }
 
 class MasterAuditor {
@@ -62,52 +79,121 @@ class MasterAuditor {
     console.log('='.repeat(70) + '\n');
   }
 
+  /**
+   * Union of file paths across audits (one file can have issues in multiple categories).
+   */
+  private countUniqueFilesWithIssues(
+    colors: ColorAuditReport,
+    texts: TextAuditReport,
+    constants: ConstantAuditReport,
+    responsive: ResponsiveAuditReport,
+    unused: UnusedFilesReport,
+    structure: StructureReport
+  ): number {
+    const paths = new Set<string>();
+    const collect = (issues: readonly { file: string }[]): void => {
+      for (const issue of issues) {
+        if (issue.file) {
+          paths.add(issue.file.replace(/\\/g, '/'));
+        }
+      }
+    };
+    collect(colors.issues);
+    collect(texts.issues);
+    collect(constants.issues);
+    collect(responsive.issues);
+    collect(unused.issues);
+    collect(structure.issues);
+    return paths.size;
+  }
+
   public async runAllAudits(): Promise<MasterReport> {
+    const stepTotal = 6;
     console.log('\n🚀 Starting comprehensive codebase audit...\n');
     console.log('This will scan all TypeScript/TSX files for:');
     console.log('  • Hardcoded colors');
     console.log('  • Hardcoded texts (i18n issues)');
     console.log('  • Magic numbers and constants');
     console.log('  • Responsive design issues');
-    console.log('  • Unused files\n');
+    console.log('  • Unused / duplicate files');
+    console.log('  • Project structure & naming\n');
     console.log('This may take a few minutes...\n');
 
     // Run all audits
-    this.printHeader('1/5: Colors Audit');
+    this.printHeader(`1/${stepTotal}: Colors Audit`);
     const colorAuditor = new ColorAuditor(this.rootDir);
     const colorsReport = colorAuditor.audit();
     colorAuditor.saveReport(path.join(this.reportsDir, 'colors-issues.json'));
     colorAuditor.printSummary();
 
-    this.printHeader('2/5: Texts/i18n Audit');
+    this.printHeader(`2/${stepTotal}: Texts/i18n Audit`);
     const textAuditor = new TextAuditor(this.rootDir);
     const textsReport = textAuditor.audit();
     textAuditor.saveReport(path.join(this.reportsDir, 'texts-issues.json'));
     textAuditor.printSummary();
 
-    this.printHeader('3/5: Constants Audit');
+    this.printHeader(`3/${stepTotal}: Constants Audit`);
     const constantAuditor = new ConstantAuditor(this.rootDir);
     const constantsReport = constantAuditor.audit();
     constantAuditor.saveReport(path.join(this.reportsDir, 'constants-issues.json'));
     constantAuditor.printSummary();
 
-    this.printHeader('4/5: Responsive Design Audit');
+    this.printHeader(`4/${stepTotal}: Responsive Design Audit`);
     const responsiveAuditor = new ResponsiveAuditor(this.rootDir);
     const responsiveReport = responsiveAuditor.audit();
     responsiveAuditor.saveReport(path.join(this.reportsDir, 'responsive-issues.json'));
     responsiveAuditor.printSummary();
 
-    this.printHeader('5/5: Unused Files Audit');
+    this.printHeader(`5/${stepTotal}: Unused Files Audit`);
     const unusedFinder = new UnusedFileFinder(this.rootDir);
     const unusedReport = unusedFinder.audit();
     unusedFinder.saveReport(path.join(this.reportsDir, 'unused-files.json'));
     unusedFinder.printSummary();
 
-    this.printHeader('6/6: Structure Audit');
+    this.printHeader(`6/${stepTotal}: Structure Audit`);
     const structureAuditor = new StructureAuditor(this.rootDir);
     const structureReport = structureAuditor.audit();
     structureAuditor.saveReport(path.join(this.reportsDir, 'structure-issues.json'));
     structureAuditor.printSummary();
+
+    const unusedSeverity = emptySeverityCounts();
+    for (const issue of unusedReport.issues) {
+      unusedSeverity[issue.severity]++;
+    }
+
+    const structureSeverity = emptySeverityCounts();
+    for (const issue of structureReport.issues) {
+      structureSeverity[issue.severity]++;
+    }
+
+    const severityTotals = emptySeverityCounts();
+    addSeverityCounts(severityTotals, colorsReport.issuesBySeverity);
+    addSeverityCounts(severityTotals, textsReport.issuesBySeverity);
+    addSeverityCounts(severityTotals, constantsReport.issuesBySeverity);
+    addSeverityCounts(severityTotals, responsiveReport.issuesBySeverity);
+    addSeverityCounts(severityTotals, unusedSeverity);
+    addSeverityCounts(severityTotals, structureSeverity);
+
+    const totalIssues =
+      colorsReport.totalIssues +
+      textsReport.totalIssues +
+      constantsReport.totalIssues +
+      responsiveReport.totalIssues +
+      unusedReport.issues.length +
+      structureReport.totalIssues;
+
+    const severitySum =
+      severityTotals.critical +
+      severityTotals.high +
+      severityTotals.medium +
+      severityTotals.low;
+
+    if (severitySum !== totalIssues) {
+      console.warn(
+        `\n⚠️  Master audit: severity totals (${severitySum}) != totalIssues (${totalIssues}). ` +
+          'Sub-audits may classify counts differently; totals above are authoritative.\n'
+      );
+    }
 
     // Create master report
     const masterReport: MasterReport = {
@@ -119,44 +205,26 @@ class MasterAuditor {
       unusedFiles: unusedReport,
       structure: structureReport,
       summary: {
-        totalIssues:
-          colorsReport.totalIssues +
-          textsReport.totalIssues +
-          constantsReport.totalIssues +
-          responsiveReport.totalIssues +
-          constantsReport.totalIssues +
-          responsiveReport.totalIssues +
-          unusedReport.issues.length +
-          structureReport.totalIssues,
-        criticalIssues:
-          colorsReport.issuesBySeverity.critical +
-          textsReport.issuesBySeverity.critical +
-          constantsReport.issuesBySeverity.critical +
-          responsiveReport.issuesBySeverity.critical,
-        highIssues:
-          colorsReport.issuesBySeverity.high +
-          textsReport.issuesBySeverity.high +
-          constantsReport.issuesBySeverity.high +
-          responsiveReport.issuesBySeverity.high,
-        mediumIssues:
-          colorsReport.issuesBySeverity.medium +
-          textsReport.issuesBySeverity.medium +
-          constantsReport.issuesBySeverity.medium +
-          responsiveReport.issuesBySeverity.medium,
-        lowIssues:
-          colorsReport.issuesBySeverity.low +
-          textsReport.issuesBySeverity.low +
-          constantsReport.issuesBySeverity.low +
-          responsiveReport.issuesBySeverity.low,
-        filesScanned: colorsReport.totalFiles,
-        filesWithIssues: Math.max(
-          colorsReport.filesWithIssues,
-          textsReport.filesWithIssues,
-          constantsReport.filesWithIssues,
-          responsiveReport.filesWithIssues,
-          // Structure report doesn't count "files with issues" property directly in same way, 
-          // but we can approximate or ignore for max simple calculation
-          0
+        totalIssues,
+        criticalIssues: severityTotals.critical,
+        highIssues: severityTotals.high,
+        mediumIssues: severityTotals.medium,
+        lowIssues: severityTotals.low,
+        filesScanned: Math.max(
+          colorsReport.totalFiles,
+          textsReport.totalFiles,
+          constantsReport.totalFiles,
+          responsiveReport.totalFiles,
+          unusedReport.totalFiles,
+          structureReport.totalFilesScanned
+        ),
+        filesWithIssues: this.countUniqueFilesWithIssues(
+          colorsReport,
+          textsReport,
+          constantsReport,
+          responsiveReport,
+          unusedReport,
+          structureReport
         )
       }
     };
@@ -173,8 +241,12 @@ class MasterAuditor {
 
     // Overall Summary
     md.push('## 📊 Overall Summary\n');
-    md.push(`- **Total Files Scanned:** ${report.summary.filesScanned}`);
-    md.push(`- **Files with Issues:** ${report.summary.filesWithIssues}`);
+    md.push(
+      `- **Total Files Scanned:** ${report.summary.filesScanned} (max across audits; unused/structure may scan a wider file set)`
+    );
+    md.push(
+      `- **Distinct Files With ≥1 Issue:** ${report.summary.filesWithIssues} (union of issue file paths across all audits)`
+    );
     md.push(`- **Total Issues Found:** ${report.summary.totalIssues}\n`);
 
     // Issues by Severity
@@ -182,10 +254,12 @@ class MasterAuditor {
     md.push('| Severity | Count | Percentage |');
     md.push('|----------|-------|------------|');
     const total = report.summary.totalIssues;
-    md.push(`| 🔴 Critical | ${report.summary.criticalIssues} | ${((report.summary.criticalIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟠 High | ${report.summary.highIssues} | ${((report.summary.highIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟡 Medium | ${report.summary.mediumIssues} | ${((report.summary.mediumIssues / total) * 100).toFixed(1)}% |`);
-    md.push(`| 🟢 Low | ${report.summary.lowIssues} | ${((report.summary.lowIssues / total) * 100).toFixed(1)}% |\n`);
+    const pct = (n: number): string =>
+      total === 0 ? '0.0' : ((n / total) * 100).toFixed(1);
+    md.push(`| 🔴 Critical | ${report.summary.criticalIssues} | ${pct(report.summary.criticalIssues)}% |`);
+    md.push(`| 🟠 High | ${report.summary.highIssues} | ${pct(report.summary.highIssues)}% |`);
+    md.push(`| 🟡 Medium | ${report.summary.mediumIssues} | ${pct(report.summary.mediumIssues)}% |`);
+    md.push(`| 🟢 Low | ${report.summary.lowIssues} | ${pct(report.summary.lowIssues)}% |\n`);
 
     // Colors
     md.push('## 🎨 Colors Audit\n');
@@ -303,8 +377,8 @@ class MasterAuditor {
     console.log('FINAL AUDIT SUMMARY'.padStart(45));
     console.log('='.repeat(70) + '\n');
 
-    console.log(`📁 Files scanned: ${report.summary.filesScanned}`);
-    console.log(`⚠️  Files with issues: ${report.summary.filesWithIssues}`);
+    console.log(`📁 Files scanned (max across audits): ${report.summary.filesScanned}`);
+    console.log(`⚠️  Distinct files with ≥1 issue: ${report.summary.filesWithIssues}`);
     console.log(`🔍 Total issues found: ${report.summary.totalIssues}\n`);
 
     console.log('Issues breakdown:');
@@ -354,7 +428,4 @@ if (require.main === module) {
 }
 
 export { MasterAuditor, MasterReport };
-
-
-
 

@@ -1194,25 +1194,25 @@ const localStyles = StyleSheet.create({
     padding: 8,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(33, 150, 243, 0.12)',
+    backgroundColor: colors.bitInfoBackground,
     borderWidth: 1,
-    borderColor: 'rgba(33, 150, 243, 0.35)',
+    borderColor: colors.bitInfoBorder,
     zIndex: 2,
   },
   bitCornerButtonText: {
-    color: 'rgba(33, 150, 243, 0.9)',
+    color: colors.bitInfoText,
     fontSize: FontSizes.small,
     fontWeight: '700',
   },
   quickDonateTitle: {
     fontSize: FontSizes.body,
     fontWeight: '700',
-    color: 'rgba(44,44,44,0.85)',
+    color: colors.textNeutralDark85,
     textAlign: 'center',
   },
   quickDonateSubtitle: {
     fontSize: FontSizes.small,
-    color: 'rgba(102,102,102,0.75)',
+    color: colors.textNeutralMuted75,
     textAlign: 'center',
     marginTop: 2,
     marginBottom: 6,
@@ -1252,7 +1252,7 @@ const localStyles = StyleSheet.create({
   sliderTrack: {
     height: "20%",
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: colors.overlayWhite85,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -1288,7 +1288,7 @@ const localStyles = StyleSheet.create({
   amountDisplayText: {
     fontSize: FontSizes.medium,
     fontWeight: '700',
-    color: 'rgba(44,44,44,0.9)',
+    color: colors.textNeutralDark90,
   },
   amountRangeRow: {
     flexDirection: 'row',
@@ -1297,7 +1297,7 @@ const localStyles = StyleSheet.create({
   },
   amountRangeText: {
     fontSize: FontSizes.caption,
-    color: 'rgba(102,102,102,0.7)',
+    color: colors.textNeutralMuted70,
   },
   // Donate CTA styles
   donateMainButton: {
@@ -1309,14 +1309,14 @@ const localStyles = StyleSheet.create({
     minWidth: 88,
   },
   donateMainButtonActive: {
-    backgroundColor: 'rgba(255, 107, 157, 0.2)',
+    backgroundColor: colors.secondary + '33',
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 157, 0.4)',
+    borderColor: colors.secondary + '66',
   },
   donateMainButtonDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: colors.overlayBlack05,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: colors.overlayBlack06,
   },
   donateMainButtonText: {
     fontSize: FontSizes.body,
@@ -1324,10 +1324,10 @@ const localStyles = StyleSheet.create({
     textAlign: 'center',
   },
   donateMainButtonTextActive: {
-    color: 'rgba(44,44,44,0.9)',
+    color: colors.textNeutralDark90,
   },
   donateMainButtonTextDisabled: {
-    color: 'rgba(0,0,0,0.3)',
+    color: colors.overlayBlack30,
   },
   // removed inline bitSmallButton in favor of corner button
   // Search Help Styles
@@ -1402,7 +1402,7 @@ const localStyles = StyleSheet.create({
   // Modal shared styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayBlack40,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -1477,7 +1477,7 @@ const localStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   bitButtonText: {
-    color: 'rgba(44,44,44,0.85)',
+    color: colors.textNeutralDark85,
     fontSize: FontSizes.medium,
     fontWeight: 'bold',
   },

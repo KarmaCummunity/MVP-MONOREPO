@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import colors from '../../globals/colors';
 
 interface HabitsStatsCardProps {
   successRate: number | null;
@@ -45,12 +46,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 12,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -63,17 +64,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: colors.habitAccentGreen,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.neutralTextBody,
     textAlign: 'center',
   },
   divider: {
     width: 1,
     height: 40,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.neutralBorderStrong,
   },
 });

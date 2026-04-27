@@ -60,6 +60,7 @@ const EXCLUDE_PATTERNS = [
   'android',
   'web',
   'globals/constants.tsx', // Don't audit the constants file itself
+  'utils/bubbles_Data.tsx', // Generated-like bubble animation coordinates, not UI layout constants
   'scripts',
   '.git',
   'coverage'

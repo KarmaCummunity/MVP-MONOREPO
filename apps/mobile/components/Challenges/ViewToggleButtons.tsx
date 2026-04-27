@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ViewMode } from '../../globals/types';
+import colors from '../../globals/colors';
 
 interface ViewToggleButtonsProps {
   currentView: ViewMode;
@@ -47,7 +48,7 @@ export const ViewToggleButtons: React.FC<ViewToggleButtonsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceCanvas,
     borderRadius: 8,
     padding: 4,
     marginHorizontal: 16,
@@ -61,8 +62,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: colors.white,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -70,11 +71,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutralTextBody,
     fontWeight: '500',
   },
   buttonTextActive: {
-    color: '#2E7D32',
+    color: colors.habitAccentGreen,
     fontWeight: 'bold',
   },
 });

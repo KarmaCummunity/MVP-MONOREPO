@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
             web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                boxShadow: `0 4px 16px ${colors.feedCardShadow}`,
             }
         }),
     },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     },
     gradientOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        backgroundColor: colors.feedDimOverlay,
         justifyContent: 'flex-end',
         padding: isMobile ? 12 : 20,
     },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
         fontSize: isMobile ? 18 : 24,
         fontWeight: '800',
         color: colors.white,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.feedTextShadow,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
         fontSize: isMobile ? FontSizes.small : FontSizes.body,
         color: colors.white,
         lineHeight: isMobile ? 16 : 22,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.feedTextShadow,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
     },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     detailBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        backgroundColor: colors.overlayWhite25,
         paddingHorizontal: isMobile ? 8 : 12,
         paddingVertical: isMobile ? 4 : 6,
         borderRadius: isMobile ? 12 : 16,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     },
     placeholderContainer: {
         height: isMobile ? 180 : 280,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: colors.surfaceCanvas,
         justifyContent: 'center',
         alignItems: 'center',
         padding: isMobile ? 16 : 24,

@@ -1,7 +1,0 @@
-organization=karmacummunity
-projectKey=KarmaCummunity_KC-MVP-server
-serverUrl=https://sonarcloud.io
-serverVersion=8.0.0.81897
-dashboardUrl=https://sonarcloud.io/dashboard?id=KarmaCummunity_KC-MVP-server
-ceTaskId=AZySlDU8hdyYNc-WT48P
-ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZySlDU8hdyYNc-WT48P

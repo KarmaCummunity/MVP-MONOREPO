@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     gap: LAYOUT_CONSTANTS.SPACING.XS,
   },
   addButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   filterButtonTextActive: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   listContainer: {
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statusOptionTextActive: {
-    color: 'white',
+    color: colors.white,
   },
   saveButton: {
     backgroundColor: colors.primary,
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: FontSizes.medium,
     fontWeight: 'bold',
   },

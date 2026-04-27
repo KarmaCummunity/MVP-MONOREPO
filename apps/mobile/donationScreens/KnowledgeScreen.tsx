@@ -288,7 +288,7 @@ export default function KnowledgeScreen({
                       onPress={() => confirmDeleteLink(link)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Ionicons name="trash-outline" size={22} color="#c0392b" />
+                      <Ionicons name="trash-outline" size={22} color={colors.destructiveAction} />
                     </TouchableOpacity>
                   ) : null}
                 </View>

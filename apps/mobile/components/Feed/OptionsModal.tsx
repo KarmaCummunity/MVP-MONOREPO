@@ -119,13 +119,13 @@ const OptionsModal: React.FC<OptionsModalProps> = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: colors.overlayBlack40,
         justifyContent: 'flex-end',
         padding: 16,
         paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     },
     overlayClear: {
-        backgroundColor: 'rgba(0,0,0,0.2)', // Lighter dim for popover
+        backgroundColor: colors.overlayBlack20,
         justifyContent: 'flex-start', // Allow absolute positioning from top
         padding: 0,
     },
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     shadow: {
-        shadowColor: "#000",
+        shadowColor: colors.shadow,
         shadowOffset: {
             width: 0,
             height: 2,

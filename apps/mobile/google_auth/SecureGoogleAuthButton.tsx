@@ -152,7 +152,7 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
                         </Text>
                         {showSecurityIndicator && (
                             <View style={styles.securityIndicator}>
-                                <Ionicons name="shield-checkmark" size={12} color={colors.success || '#4CAF50'} />
+                                <Ionicons name="shield-checkmark" size={12} color={colors.materialSuccess} />
                             </View>
                         )}
                     </>
@@ -164,18 +164,18 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
 
 const styles = StyleSheet.create({
     button: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.white,
         borderRadius: 12,
         paddingVertical: 14,
         paddingHorizontal: 20,
         width: '100%',
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
         borderWidth: 1,
-        borderColor: '#E1E4E8',
+        borderColor: colors.googleButtonBorder,
     },
     contentContainer: {
         flexDirection: 'row',
@@ -187,20 +187,20 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     text: {
-        color: '#3C4043',
+        color: colors.googleCharcoal,
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.5,
     },
     securityIndicator: {
         marginLeft: 10,
-        backgroundColor: '#F1F8F1',
+        backgroundColor: colors.googleTrustHighlight,
         borderRadius: 6,
         padding: 2,
     },
     disabledButton: {
         opacity: 0.7,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: colors.googleButtonSurfaceHover,
     },
 });
 

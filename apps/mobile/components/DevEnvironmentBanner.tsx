@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar, TouchableOpacity } from 'react-native';
 import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../utils/config.constants';
+import colors from '../globals/colors';
 
 /**
  * DevEnvironmentBanner
@@ -64,11 +65,11 @@ const DevEnvironmentBanner = () => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#E8F5E9', // Very light green
+        backgroundColor: colors.surfaceGreenTint,
         borderBottomWidth: 2,
-        borderBottomColor: '#66BB6A',
+        borderBottomColor: colors.devBannerGreen,
         zIndex: 9999,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 3,
@@ -94,11 +95,11 @@ const styles = StyleSheet.create({
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#66BB6A',
+        backgroundColor: colors.devBannerGreen,
         paddingHorizontal: 10,
         paddingVertical: 3,
         borderRadius: 14,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
@@ -111,18 +112,18 @@ const styles = StyleSheet.create({
     text: {
         fontSize: 11,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: colors.white,
         letterSpacing: 0.8,
     },
     subtext: {
         fontSize: 10,
         fontStyle: 'italic',
-        color: '#2E7D32',
+        color: colors.habitAccentGreen,
         fontWeight: '500',
     },
     tapHint: {
         fontSize: 9,
-        color: '#4CAF50',
+        color: colors.materialSuccess,
         fontStyle: 'italic',
     },
 });

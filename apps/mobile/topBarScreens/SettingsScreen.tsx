@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: biDiTextAlign('right'),
   },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  modalBackdrop: { flex: 1, backgroundColor: colors.overlayBlack40, alignItems: 'center', justifyContent: 'center' },
   modalCard: { backgroundColor: colors.white, width: 300, borderRadius: 12, padding: 16, gap: 8 },
   modalTitle: { fontSize: FontSizes.medium, color: colors.textPrimary, textAlign: 'center', marginBottom: 8 },
   modalOption: { paddingVertical: 10 },
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      boxShadow: `0 4px 20px ${colors.overlayBlack15}`,
     }),
   },
   logoutModalTitle: {
@@ -1016,7 +1016,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      boxShadow: `0 4px 20px ${colors.overlayBlack15}`,
     }),
   },
   reportModalTitle: {

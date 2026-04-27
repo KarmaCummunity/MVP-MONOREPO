@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
             web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                boxShadow: `0 4px 16px ${colors.feedCardShadow}`,
             }
         }),
     },
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     },
     gradientOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        backgroundColor: colors.feedDimOverlay,
         justifyContent: 'flex-end',
         padding: 20,
     },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
         color: colors.white,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.feedTextShadow,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
@@ -357,14 +357,14 @@ const styles = StyleSheet.create({
         fontSize: FontSizes.body,
         color: colors.white,
         lineHeight: 22,
-        textShadowColor: 'rgba(0, 0, 0, 0.8)',
+        textShadowColor: colors.feedTextShadow,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
     },
     categoryBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        backgroundColor: colors.overlayWhite25,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     },
     placeholderContainer: {
         height: 280,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: colors.surfaceGreenTint,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,

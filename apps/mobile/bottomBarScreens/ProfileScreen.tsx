@@ -2138,7 +2138,7 @@ function ProfileScreenContent({
                           <TouchableOpacity
                             style={[
                               styles.messageButton,
-                              isSubordinate ? { backgroundColor: '#ff444410', borderColor: '#ff4444' } : { backgroundColor: colors.secondary + '10', borderColor: colors.secondary }
+                              isSubordinate ? { backgroundColor: colors.error + '10', borderColor: colors.error } : { backgroundColor: colors.secondary + '10', borderColor: colors.secondary }
                             ]}
                             onPress={() => {
                               const action = isSubordinate ? 'remove' : 'add';
@@ -2169,8 +2169,8 @@ function ProfileScreenContent({
                               ]);
                             }}
                           >
-                            <Ionicons name={isSubordinate ? "person-remove-outline" : "person-add-outline"} size={20} color={isSubordinate ? '#ff4444' : colors.secondary} />
-                            <Text style={[styles.messageButtonText, { color: isSubordinate ? '#ff4444' : colors.secondary }]}>
+                            <Ionicons name={isSubordinate ? "person-remove-outline" : "person-add-outline"} size={20} color={isSubordinate ? colors.error : colors.secondary} />
+                            <Text style={[styles.messageButtonText, { color: isSubordinate ? colors.error : colors.secondary }]}>
                               {isSubordinate ? 'הסר מנהל' : 'הפוך למנהל'}
                             </Text>
                           </TouchableOpacity>
@@ -3184,7 +3184,7 @@ const styles = StyleSheet.create({
   postStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.overlayBlack60,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -3280,7 +3280,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: colors.overlayBlack30,
     zIndex: 1000,
   },
   menuOverlay: {

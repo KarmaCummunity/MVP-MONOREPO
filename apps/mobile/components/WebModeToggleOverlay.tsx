@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: colors.overlayWhite95,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     zIndex: 9999,
@@ -298,14 +298,14 @@ const styles = StyleSheet.create({
   // Mobile Menu Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayBlack40,
     justifyContent: 'flex-start',
     alignItems: 'flex-end', // Slide from right or just align right
   },
   mobileMenuContainer: {
     width: 280,
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     paddingTop: 0,
     shadowColor: colors.black,
     shadowOffset: { width: -2, height: 0 },

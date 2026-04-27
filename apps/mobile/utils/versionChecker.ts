@@ -3,6 +3,8 @@
  * מטרה: להבטיח שמשתמשים תמיד יראו את הגרסה העדכנית ביותר
  */
 
+import colors from '../globals/colors';
+
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // בדיקה כל 5 דקות
 const CURRENT_VERSION = '2.3.0'; // תתעדכן אוטומטית מ-package.json
 
@@ -91,11 +93,11 @@ function showUpdateNotification() {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, ${colors.updateBannerGradientStart} 0%, ${colors.updateBannerGradientEnd} 100%);
+    color: ${colors.white};
     padding: 16px 24px;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px ${colors.overlayBlack30};
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 15px;

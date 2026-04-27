@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
   status_open: { backgroundColor: colors.infoLight, borderColor: colors.info },
   status_in_progress: { backgroundColor: colors.warningLight, borderColor: colors.warning },
   status_stuck: { backgroundColor: colors.errorLight, borderColor: colors.error },
-  status_testing: { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
+  status_testing: { backgroundColor: colors.surfaceGreenTint, borderColor: colors.materialSuccess },
   status_done: { backgroundColor: colors.successLight, borderColor: colors.success },
   status_archived: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
   categoryBadge: { backgroundColor: colors.backgroundSecondary, borderColor: colors.secondary },
@@ -106,7 +106,7 @@ export const styles = StyleSheet.create({
     marginEnd: 24,
     borderStartWidth: 3,
     borderStartColor: colors.info,
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.surfaceAliceBlue,
   },
   subtaskIndicator: {
     flexDirection: 'row',
@@ -169,7 +169,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.3,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -177,7 +177,7 @@ export const styles = StyleSheet.create({
     zIndex: 1000
   },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalBackdrop: { flex: 1, backgroundColor: colors.overlayBlack50, justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: colors.background, borderRadius: 16, padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'right', marginBottom: 16, color: colors.textPrimary },
   modalInput: { height: 44, backgroundColor: colors.backgroundSecondary, borderRadius: 8, paddingHorizontal: 12, textAlign: 'right', marginBottom: 12, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },

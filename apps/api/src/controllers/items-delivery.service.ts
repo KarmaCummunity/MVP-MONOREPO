@@ -3,7 +3,7 @@
 // - Used by: ItemsDeliveryController
 // - Provides: CRUD operations for items, search with filters, and item requests management
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import {
@@ -32,66 +32,18 @@ export class ItemsDeliveryService {
     try {
       await client.query("BEGIN");
 
-      // Generate ID if not provided or if provided ID is a timestamp
-      // This ensures we always have a proper ID format like "item_1234567890_abc123"
-      // Similar to how rides work - the backend generates the ID, not the frontend
-      let itemId = (createItemDto as unknown as { id?: string }).id;
-      if (!itemId || /^\d{10,13}$/.test(itemId)) {
-        // If ID is missing or is a timestamp (only digits, 10-13 chars), generate a proper ID
-        // S2245: Use crypto.randomBytes instead of Math.random for ID generation
-        itemId = `item_${Date.now()}_${randomBytes(6).toString("hex")}`;
-        this.logger.log(
-          `Generated new item ID (was timestamp or missing): ${itemId}`,
-        );
-      } else {
-        this.logger.log(`Using provided item ID: ${itemId}`);
-      }
-
-      // Verify ID format before using
-      if (!itemId || itemId.length < 10) {
-        throw new Error(
-          "Invalid item ID format - ID must be at least 10 characters",
-        );
-      }
-
+      const itemId = this.resolveCreateItemId(createItemDto);
       this.logger.log(
         `Creating item with ID: ${itemId}, Type: ${typeof itemId}`,
       );
 
-      const { rows } = await client.query(
-        `
-        INSERT INTO items (
-          id, owner_id, title, description, category, condition, location,
-          price, images, tags, quantity, delivery_method, metadata, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        RETURNING *
-      `,
-        [
-          itemId,
-          createItemDto.owner_id,
-          createItemDto.title,
-          createItemDto.description || null,
-          createItemDto.category,
-          createItemDto.condition || null,
-          createItemDto.location
-            ? JSON.stringify(createItemDto.location)
-            : null,
-          createItemDto.price ?? 0,
-          createItemDto.images || [],
-          createItemDto.tags || [],
-          createItemDto.quantity || 1,
-          createItemDto.delivery_method || null,
-          createItemDto.metadata
-            ? JSON.stringify(createItemDto.metadata)
-            : null,
-          createItemDto.expires_at ? new Date(createItemDto.expires_at) : null,
-        ],
+      const createdItem = await this.insertItemRow(
+        client,
+        itemId,
+        createItemDto,
       );
-
-      const createdItem = rows[0];
       this.logger.log(`Created item - ID: ${createdItem.id}`);
 
-      // CRITICAL: Verify the ID is correct before using it
       if (!createdItem.id || createdItem.id.length < 10) {
         this.logger.error("CRITICAL: Item ID is invalid!", createdItem);
         throw new Error(
@@ -99,64 +51,7 @@ export class ItemsDeliveryService {
         );
       }
 
-      // Auto-create a corresponding post for this item
-      // This allows likes/comments to work on items in the feed
-      try {
-        const price = createItemDto.price ?? 0;
-        const postType = price > 0 ? "item" : "donation";
-        const postTitle = createItemDto.title;
-        const postDescription = createItemDto.description || "";
-
-        // Ensure item_id is the full item ID, not just timestamp
-        const itemIdForPost = createdItem.id;
-        this.logger.log(`Creating post with item_id: ${itemIdForPost}`);
-
-        await client.query(
-          `
-          INSERT INTO posts (author_id, item_id, title, description, images, post_type, metadata)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `,
-          [
-            createItemDto.owner_id,
-            itemIdForPost, // Use the full item ID
-            postTitle,
-            postDescription,
-            createItemDto.images || [],
-            postType,
-            JSON.stringify({
-              item_id: itemIdForPost, // Store full ID in metadata too
-              category: createItemDto.category,
-              price: price,
-              condition: createItemDto.condition,
-            }),
-          ],
-        );
-
-        // Verify the post was created correctly
-        const { rows: verifyRows } = await client.query(
-          `
-          SELECT id, item_id, post_type FROM posts 
-          WHERE item_id = $1 AND post_type = $2
-          ORDER BY created_at DESC LIMIT 1
-        `,
-          [itemIdForPost, postType],
-        );
-
-        if (verifyRows.length > 0) {
-          this.logger.log(
-            `Verified post created with item_id: ${verifyRows[0].item_id}`,
-          );
-        } else {
-          this.logger.error("Failed to verify post creation - post not found!");
-        }
-
-        this.logger.log(`Auto-created post for item: ${createdItem.id}`);
-      } catch (postError) {
-        this.logger.warn(
-          `Failed to auto-create post for item (continuing): ${postError}`,
-        );
-        // Don't fail the item creation if post creation fails
-      }
+      await this.tryCreateLinkedPost(client, createdItem, createItemDto);
 
       await client.query("COMMIT");
 
@@ -732,6 +627,114 @@ export class ItemsDeliveryService {
   }
 
   // ==================== Cache Management ====================
+
+  private resolveCreateItemId(createItemDto: CreateItemDto): string {
+    let itemId = (createItemDto as unknown as { id?: string }).id;
+    if (!itemId || /^\d{10,13}$/.test(itemId)) {
+      itemId = `item_${Date.now()}_${randomBytes(6).toString("hex")}`;
+      this.logger.log(
+        `Generated new item ID (was timestamp or missing): ${itemId}`,
+      );
+    } else {
+      this.logger.log(`Using provided item ID: ${itemId}`);
+    }
+    if (!itemId || itemId.length < 10) {
+      throw new Error(
+        "Invalid item ID format - ID must be at least 10 characters",
+      );
+    }
+    return itemId;
+  }
+
+  private async insertItemRow(
+    client: PoolClient,
+    itemId: string,
+    createItemDto: CreateItemDto,
+  ) {
+    const { rows } = await client.query(
+      `
+        INSERT INTO items (
+          id, owner_id, title, description, category, condition, location,
+          price, images, tags, quantity, delivery_method, metadata, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `,
+      [
+        itemId,
+        createItemDto.owner_id,
+        createItemDto.title,
+        createItemDto.description || null,
+        createItemDto.category,
+        createItemDto.condition || null,
+        createItemDto.location ? JSON.stringify(createItemDto.location) : null,
+        createItemDto.price ?? 0,
+        createItemDto.images || [],
+        createItemDto.tags || [],
+        createItemDto.quantity || 1,
+        createItemDto.delivery_method || null,
+        createItemDto.metadata ? JSON.stringify(createItemDto.metadata) : null,
+        createItemDto.expires_at ? new Date(createItemDto.expires_at) : null,
+      ],
+    );
+    return rows[0];
+  }
+
+  private async tryCreateLinkedPost(
+    client: PoolClient,
+    createdItem: { id: string },
+    createItemDto: CreateItemDto,
+  ): Promise<void> {
+    try {
+      const price = createItemDto.price ?? 0;
+      const postType = price > 0 ? "item" : "donation";
+      const itemIdForPost = createdItem.id;
+      this.logger.log(`Creating post with item_id: ${itemIdForPost}`);
+
+      await client.query(
+        `
+          INSERT INTO posts (author_id, item_id, title, description, images, post_type, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          createItemDto.owner_id,
+          itemIdForPost,
+          createItemDto.title,
+          createItemDto.description || "",
+          createItemDto.images || [],
+          postType,
+          JSON.stringify({
+            item_id: itemIdForPost,
+            category: createItemDto.category,
+            price: price,
+            condition: createItemDto.condition,
+          }),
+        ],
+      );
+
+      const { rows: verifyRows } = await client.query(
+        `
+          SELECT id, item_id, post_type FROM posts 
+          WHERE item_id = $1 AND post_type = $2
+          ORDER BY created_at DESC LIMIT 1
+        `,
+        [itemIdForPost, postType],
+      );
+
+      if (verifyRows.length > 0) {
+        this.logger.log(
+          `Verified post created with item_id: ${verifyRows[0].item_id}`,
+        );
+      } else {
+        this.logger.error("Failed to verify post creation - post not found!");
+      }
+
+      this.logger.log(`Auto-created post for item: ${createdItem.id}`);
+    } catch (postError) {
+      this.logger.warn(
+        `Failed to auto-create post for item (continuing): ${postError}`,
+      );
+    }
+  }
 
   private async invalidateItemCaches() {
     const patterns = ["items_list:*", "item:*"];

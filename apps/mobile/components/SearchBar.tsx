@@ -589,10 +589,10 @@ const localStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.overlayBlack50,
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: colors.white,
     // Dynamic styles applied in JSX for responsive sizing
     ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.25, 4),
     elevation: 5,
@@ -641,7 +641,7 @@ const localStyles = StyleSheet.create({
     alignItems: "center",
   },
   modalCloseButtonText: {
-    color: "white",
+    color: colors.white,
     fontSize: responsiveFontSize(FontSizes.medium, 16, 18),
     fontWeight: "bold",
   },

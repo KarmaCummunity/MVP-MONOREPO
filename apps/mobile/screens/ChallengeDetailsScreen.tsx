@@ -396,8 +396,8 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
                     <Switch
                       value={entryBooleanValue}
                       onValueChange={setEntryBooleanValue}
-                      trackColor={{ false: '#F44336', true: '#4CAF50' }}
-                      thumbColor="#FFFFFF"
+                      trackColor={{ false: colors.materialError, true: colors.materialSuccess }}
+                      thumbColor={colors.white}
                     />
                   </View>
                 </View>
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end' as const,
   },
   modalContent: {

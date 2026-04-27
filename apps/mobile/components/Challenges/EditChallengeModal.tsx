@@ -294,7 +294,7 @@ export default function EditChallengeModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContainer: {
