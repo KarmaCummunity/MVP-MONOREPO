@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { HabitsTrackerCell } from './HabitsTrackerCell';
 import { DailyTrackerData, ViewMode } from '../../globals/types';
+import colors from '../../globals/colors';
 
 interface HabitsTrackerTableProps {
   data: DailyTrackerData;
@@ -134,25 +135,25 @@ const styles = StyleSheet.create({
   },
   table: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   headerRow: {
     flexDirection: 'row',
     borderBottomWidth: 2,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#F9F9F9',
+    borderBottomColor: colors.neutralBorderStrong,
+    backgroundColor: colors.surfaceMutedPanel,
   },
   challengeNameColumn: {
     width: 150,
     padding: 12,
     justifyContent: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
+    borderRightColor: colors.neutralBorderStrong,
   },
   headerText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.neutralTextTitle,
   },
   datesContainer: {
     flexDirection: 'row',
@@ -166,28 +167,28 @@ const styles = StyleSheet.create({
   },
   dateHeaderText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.neutralTextBody,
     textAlign: 'center',
   },
   dateHeaderTextToday: {
-    color: '#2196F3',
+    color: colors.materialInfoBlue,
     fontWeight: 'bold',
   },
   challengeRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.surfaceStripe,
     minHeight: 70,
   },
   challengeName: {
     fontSize: 14,
-    color: '#333',
+    color: colors.neutralTextTitle,
     fontWeight: '500',
     marginBottom: 4,
   },
   streakBadge: {
     fontSize: 11,
-    color: '#FF9800',
+    color: colors.materialWarningOrange,
     fontWeight: 'bold',
   },
   cellsContainer: {
@@ -205,13 +206,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#666',
+    color: colors.neutralTextBody,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: colors.neutralTextCaption,
     textAlign: 'center',
   },
 });

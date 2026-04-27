@@ -559,7 +559,7 @@ export default function AdminMoneyScreen({ navigation }: AdminMoneyScreenProps) 
           onPress={handleAddDonation}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={28} color="white" />
+          <Ionicons name="add" size={28} color={colors.white} />
           <Text style={styles.fabButtonText}>הוסף תרומה</Text>
         </TouchableOpacity>
       )}
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
     gap: LAYOUT_CONSTANTS.SPACING.XS,
   },
   addButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   categoryChipTextSelected: {
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   modalFooter: {
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: FontSizes.medium,
-    color: 'white',
+    color: colors.white,
     fontWeight: '600',
   },
   fabButton: {
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   fabButtonText: {
-    color: 'white',
+    color: colors.white,
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },

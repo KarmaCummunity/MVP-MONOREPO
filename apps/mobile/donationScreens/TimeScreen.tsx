@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 15,
     overflow: 'hidden',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    boxShadow: `0 2px 4px ${colors.overlayBlack10}`,
     elevation: 3,
   },
   opportunityImage: {
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    boxShadow: `0 2px 4px ${colors.overlayBlack10}`,
     elevation: 2,
   },
   statNumber: {

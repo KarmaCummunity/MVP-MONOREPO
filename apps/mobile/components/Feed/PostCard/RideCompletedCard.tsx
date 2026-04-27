@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
         padding: isMobile ? 10 : 16,
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceElevated,
     },
     headerRight: {
         alignItems: 'center',
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: colors.surfaceCanvas,
     },
     contentContainer: {
         padding: isMobile ? 16 : 24,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopWidth: 1,
         borderTopColor: colors.backgroundSecondary,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: colors.surfaceElevated,
     },
     actionsLeft: {
         alignItems: 'center',

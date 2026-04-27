@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+      boxShadow: `0px 2px 4px ${colors.overlayBlack10}`,
     } : {
       shadowColor: colors.black,
       shadowOffset: { width: 0, height: 2 },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     minWidth: 130,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
+      boxShadow: `0px 4px 8px ${colors.overlayBlack15}`,
     } : {
       shadowColor: colors.black,
       shadowOffset: { width: 0, height: 4 },
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   selectedMenuItem: {
-    backgroundColor: 'rgba(76, 126, 255, 0.08)',
+    backgroundColor: colors.primaryLegacyBlue08,
   },
   menuText: {
     fontSize: 14,

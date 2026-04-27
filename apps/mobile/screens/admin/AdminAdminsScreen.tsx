@@ -700,7 +700,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                                 handleToggleAdmin(user);
                                             }}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למנהל</Text>
+                                            <Text style={[styles.actionBtnText, { color: colors.white }]}>הפוך למנהל</Text>
                                         </TouchableOpacity>
                                     )}
                                     
@@ -710,7 +710,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                             style={[styles.actionButton, { backgroundColor: colors.warning, marginTop: 8 }]}
                                             onPress={() => handleDemoteToVolunteer(user)}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למתנדב</Text>
+                                            <Text style={[styles.actionBtnText, { color: colors.white }]}>הפוך למתנדב</Text>
                                         </TouchableOpacity>
                                     )}
                                     
@@ -720,7 +720,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                             style={[styles.actionButton, { backgroundColor: colors.warning, marginTop: 8 }]}
                                             onPress={() => handlePromoteToVolunteer(user)}
                                         >
-                                            <Text style={[styles.actionBtnText, { color: 'white' }]}>הפוך למתנדב</Text>
+                                            <Text style={[styles.actionBtnText, { color: colors.white }]}>הפוך למתנדב</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -911,11 +911,11 @@ const styles = StyleSheet.create({
     addButton: { backgroundColor: colors.primary },
     removeButton: { backgroundColor: colors.error },
     lockedButton: { backgroundColor: colors.textTertiary },
-    actionBtnText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+    actionBtnText: { color: colors.white, fontSize: 12, fontWeight: 'bold' },
 
     modalBackdrop: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: colors.overlayBlack50,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         ...(Platform.OS === 'web' && {
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            boxShadow: `0 4px 20px ${colors.overlayBlack15}`,
         }),
     },
     confirmModalTitle: {
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     modalCancel: { backgroundColor: colors.backgroundSecondary },
     modalSave: { backgroundColor: colors.primary },
     modalBtnDisabled: { backgroundColor: colors.textTertiary },
-    modalBtnText: { color: 'white', fontWeight: 'bold' },
+    modalBtnText: { color: colors.white, fontWeight: 'bold' },
 
     // Current manager box
     currentManagerBox: {

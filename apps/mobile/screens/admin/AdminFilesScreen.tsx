@@ -293,9 +293,9 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                                 disabled={!selectedFile || isMutating}
                             >
                                 {isMutating ? (
-                                    <ActivityIndicator color="white" />
+                                    <ActivityIndicator color={colors.white} />
                                 ) : (
-                                    <Text style={{ color: 'white' }}>העלה</Text>
+                                    <Text style={{ color: colors.white }}>העלה</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -311,24 +311,24 @@ const styles = StyleSheet.create({
     header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background },
     title: { fontSize: 22, fontWeight: 'bold' },
     addButton: { flexDirection: 'row', backgroundColor: colors.primary, padding: 8, borderRadius: 8 },
-    addText: { color: 'white', marginLeft: 5, fontWeight: 'bold' },
-    folderBar: { flexDirection: 'row', padding: 15, alignItems: 'center', backgroundColor: '#eef' },
+    addText: { color: colors.white, marginLeft: 5, fontWeight: 'bold' },
+    folderBar: { flexDirection: 'row', padding: 15, alignItems: 'center', backgroundColor: colors.folderBarBackground },
     folderName: { marginLeft: 10, fontWeight: 'bold', color: colors.primary },
     list: { padding: 15 },
-    fileItem: { flexDirection: 'row', backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'space-between' },
+    fileItem: { flexDirection: 'row', backgroundColor: colors.white, padding: 15, borderRadius: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'space-between' },
     fileInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     textContainer: { marginLeft: 15, flex: 1 },
     fileName: { fontSize: 16, fontWeight: 'bold', textAlign: 'left' },
     fileMeta: { flexDirection: 'row', alignItems: 'center' },
-    fileDate: { fontSize: 12, color: '#888', textAlign: 'left' },
-    fileSize: { fontSize: 12, color: '#888', textAlign: 'left' },
+    fileDate: { fontSize: 12, color: colors.textMeta, textAlign: 'left' },
+    fileSize: { fontSize: 12, color: colors.textMeta, textAlign: 'left' },
     deleteBtn: { padding: 10 },
-    emptyText: { textAlign: 'center', marginTop: 30, color: '#999' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-    modalContent: { backgroundColor: 'white', padding: 20, borderRadius: 10 },
+    emptyText: { textAlign: 'center', marginTop: 30, color: colors.neutralTextCaption },
+    modalOverlay: { flex: 1, backgroundColor: colors.overlayBlack50, justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: colors.white, padding: 20, borderRadius: 10 },
     modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
     label: { marginBottom: 5, fontWeight: 'bold', textAlign: 'right' },
-    hintText: { fontSize: 12, color: '#888', textAlign: 'center', marginTop: 8 },
+    hintText: { fontSize: 12, color: colors.textMeta, textAlign: 'center', marginTop: 8 },
     pickFileButton: { 
         flexDirection: 'row', 
         alignItems: 'center', 
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     },
     selectedFileInfo: { flex: 1, marginLeft: 10 },
     selectedFileName: { fontSize: 14, fontWeight: 'bold', textAlign: 'right' },
-    selectedFileSize: { fontSize: 12, color: '#888', textAlign: 'right', marginTop: 4 },
+    selectedFileSize: { fontSize: 12, color: colors.textMeta, textAlign: 'right', marginTop: 4 },
     progressContainer: { marginBottom: 15 },
     progressBarContainer: {
         width: '100%',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         textAlign: 'center',
     },
-    input: { borderWidth: 1, borderColor: '#ddd', padding: 10, borderRadius: 5, marginBottom: 15, textAlign: 'right' },
+    input: { borderWidth: 1, borderColor: colors.adminNeutralBorder, padding: 10, borderRadius: 5, marginBottom: 15, textAlign: 'right' },
     modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
     cancelBtn: { padding: 10 },
     saveBtn: { backgroundColor: colors.primary, padding: 10, borderRadius: 5, width: 100, alignItems: 'center' },

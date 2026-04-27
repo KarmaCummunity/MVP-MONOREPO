@@ -454,7 +454,7 @@ const FloatingBubbles = () => {
     highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${highlightAlpha})`);
     highlightGradient.addColorStop(0.3, `rgba(255, 255, 255, ${highlightAlpha * 0.6})`);
     highlightGradient.addColorStop(0.7, `rgba(200, 230, 255, ${highlightAlpha * 0.3})`);
-    highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    highlightGradient.addColorStop(1, colors.overlayWhiteTransparent);
 
     ctx.beginPath();
     ctx.arc(x - bubble.radius * 0.25, y - bubble.radius * 0.35, bubble.radius * 0.45, 0, Math.PI * 2);
@@ -485,7 +485,7 @@ const FloatingBubbles = () => {
     );
 
     bottomReflectionGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.12})`);
-    bottomReflectionGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    bottomReflectionGradient.addColorStop(1, colors.overlayWhiteTransparent);
 
     ctx.beginPath();
     ctx.arc(x, y + bubble.radius * 0.7, bubble.radius * 0.25, 0, Math.PI * 2);
@@ -504,14 +504,14 @@ const FloatingBubbles = () => {
     if (bubble.labelValue) {
       ctx.font = `800 ${numberFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       ctx.lineWidth = outlineWidth;
-      ctx.strokeStyle = 'rgba(10, 22, 48, 0.7)';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+      ctx.strokeStyle = colors.bubbleCanvasStroke;
+      ctx.fillStyle = colors.bubbleCanvasFill;
       const numberY = y - bubble.radius * 0.12;
       // stroke without shadow
       ctx.shadowColor = 'transparent';
       ctx.strokeText(bubble.labelValue, x, numberY);
       // fill with soft shadow to look bubbly
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.22)';
+      ctx.shadowColor = colors.shadowBubbleStrong;
       ctx.shadowBlur = Math.max(1, bubble.radius * 0.08);
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
@@ -524,14 +524,14 @@ const FloatingBubbles = () => {
     if (bubble.labelText) {
       ctx.font = `700 ${textFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       ctx.lineWidth = Math.max(1, outlineWidth * 0.85);
-      ctx.strokeStyle = 'rgba(10, 22, 48, 0.55)';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.strokeStyle = colors.bubbleCanvasStrokeSoft;
+      ctx.fillStyle = colors.bubbleCanvasFillSoft;
       const textY = y + bubble.radius * 0.28;
       // stroke without shadow
       ctx.shadowColor = 'transparent';
       ctx.strokeText(bubble.labelText, x, textY);
       // fill with soft shadow
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.18)';
+      ctx.shadowColor = colors.shadowBubbleSoft;
       ctx.shadowBlur = Math.max(1, bubble.radius * 0.06);
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;

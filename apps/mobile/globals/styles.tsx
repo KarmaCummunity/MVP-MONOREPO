@@ -502,7 +502,7 @@ export const styles = StyleSheet.create({
    */
   cardDescription: {
     fontSize: 14,
-    color: 'gray', // Keeping this as a literal as no specific gray color is defined in Colors for this
+    color: colors.textTertiary,
   },
   /**
    * Main container style, aligning content to the bottom and with an off-white background.
@@ -699,7 +699,7 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   errorText: {
-    color: "red",
+    color: colors.error,
     fontSize: 18,
     textAlign: "center",
   },

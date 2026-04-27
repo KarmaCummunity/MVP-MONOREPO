@@ -18,6 +18,7 @@ import {
   DailyTrackerChallenge,
   EntryStatus,
 } from '../../globals/types';
+import colors from '../../globals/colors';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -232,7 +233,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color="#2E7D32" />
+          <ActivityIndicator size="small" color={colors.habitAccentGreen} />
           <Text style={styles.loadingText}>{t('quickView.loading')}</Text>
         </View>
       </View>
@@ -329,14 +330,25 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                     }
                     
                     const iconColor =
-                      status === 'success' ? '#4CAF50' : status === 'failed' ? '#F44336' : status === 'neutral' ? '#9E9E9E' : '#E0E0E0';
+                      status === 'success'
+                        ? colors.materialSuccess
+                        : status === 'failed'
+                          ? colors.materialError
+                          : status === 'neutral'
+                            ? colors.neutralWarmGray
+                            : colors.neutralBorderStrong;
 
                     return (
                       <TouchableOpacity
                         key={date}
                         style={[
                           styles.cell,
-                          { backgroundColor: iconColor === '#E0E0E0' ? '#F5F5F5' : `${iconColor}18` },
+                          {
+                            backgroundColor:
+                              iconColor === colors.neutralBorderStrong
+                                ? colors.surfaceCanvas
+                                : `${iconColor}18`,
+                          },
                           date === todayStr && styles.cellToday,
                         ]}
                         onPress={() => handleCellPress(challenge, date)}
@@ -380,12 +392,12 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -394,13 +406,13 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.neutralBorderStrong,
     paddingBottom: 8,
   },
   title: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.neutralTextTitle,
     marginBottom: 8,
   },
   toggleRow: {
@@ -411,18 +423,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceStripe,
   },
   toggleBtnActive: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.habitAccentGreen,
   },
   toggleBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#666',
+    color: colors.neutralTextBody,
   },
   toggleBtnTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -433,7 +445,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutralTextBody,
   },
   statsRow: {
     flexDirection: 'row',
@@ -446,11 +458,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: colors.habitAccentGreen,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.neutralTextBody,
     marginTop: 2,
   },
   tableScroll: {
@@ -463,7 +475,7 @@ const styles = StyleSheet.create({
   tableWrapper: {
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.neutralBorderSoft,
     borderRadius: 10,
     overflow: 'hidden',
     minWidth: '100%',
@@ -471,9 +483,9 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceCanvas,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.neutralBorderStrong,
     paddingVertical: 10,
     paddingHorizontal: 8,
   },
@@ -487,23 +499,23 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   dateColToday: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surfaceBlueTint,
   },
   dateColText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#333',
+    color: colors.neutralTextTitle,
   },
   dateColSub: {
     fontSize: 10,
-    color: '#666',
+    color: colors.neutralTextBody,
     marginTop: 2,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.surfaceStripe,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
@@ -511,7 +523,7 @@ const styles = StyleSheet.create({
     width: 100,
     minWidth: 100,
     fontSize: 13,
-    color: '#333',
+    color: colors.neutralTextTitle,
     marginEnd: 8,
   },
   cell: {
@@ -522,10 +534,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 2,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.neutralBorderSoft,
   },
   cellToday: {
-    borderColor: '#2196F3',
+    borderColor: colors.materialInfoBlue,
     borderWidth: 1.5,
   },
   cellText: {
@@ -534,7 +546,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   expandButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceCanvas,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -542,7 +554,7 @@ const styles = StyleSheet.create({
   expandButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: colors.habitAccentGreen,
   },
   emptyState: {
     alignItems: 'center',
@@ -551,12 +563,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: colors.neutralTextBody,
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: colors.neutralTextCaption,
     marginBottom: 12,
     textAlign: 'center',
   },

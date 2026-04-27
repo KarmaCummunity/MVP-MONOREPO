@@ -17,6 +17,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:ci": "npm run lint --workspace @kc/api",
     "test": "npm test --workspaces --if-present",
+    "audit:all": "npm run audit:all --workspace @kc/mobile",
     "quality:sonar:analyze": "node tools/quality/sonar/analyze-sonar-issues.js",
     "quality:sonar:compare": "node tools/quality/sonar/compare-results.js",
     "quality:sonar:stats": "node tools/quality/sonar/analyze-stats-controller.js",
@@ -35,7 +36,10 @@
     "tar": "^7.5.8",
     "fast-xml-parser": "^5.3.6",
     "ws": "^8.18.1",
-    "lodash": "^4.17.23"
+    "lodash": "^4.17.23",
+    "@nestjs/common": "11.1.19",
+    "@nestjs/core": "11.1.19",
+    "@nestjs/platform-express": "11.1.19"
   },
   "dependencies": {
     "class-transformer": "^0.5.1",

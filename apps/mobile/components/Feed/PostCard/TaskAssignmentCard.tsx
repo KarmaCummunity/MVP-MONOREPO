@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
             web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                boxShadow: `0 4px 16px ${colors.feedCardShadow}`,
             }
         }),
     },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: colors.surfaceGrayBlue,
     },
     contentContainer: {
         padding: isMobile ? 16 : 24,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
         width: isMobile ? 60 : 80,
         height: isMobile ? 60 : 80,
         borderRadius: isMobile ? 30 : 40,
-        backgroundColor: '#E6E8EB',
+        backgroundColor: colors.surfaceGrayBlueBorder,
         justifyContent: 'center',
         alignItems: 'center',
     },

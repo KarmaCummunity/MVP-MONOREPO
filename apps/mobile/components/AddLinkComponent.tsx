@@ -324,7 +324,7 @@ export default function AddLinkComponent({
           onPress={() => confirmDeleteKnowledgeLink(link)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="trash-outline" size={scaleSize(22)} color="#c0392b" />
+          <Ionicons name="trash-outline" size={scaleSize(22)} color={colors.destructiveAction} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContent: {

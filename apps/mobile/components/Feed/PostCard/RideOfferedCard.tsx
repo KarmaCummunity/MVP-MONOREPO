@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
             web: {
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                boxShadow: `0 4px 16px ${colors.feedCardShadow}`,
             }
         }),
     },
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
-        backgroundColor: '#E3F2FD',
+        backgroundColor: colors.surfaceBlueTint,
     },
     contentContainer: {
         padding: isMobile ? 16 : 24,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
                 elevation: 2,
             },
             web: {
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                boxShadow: `0 2px 8px ${colors.rideCardShadowSoft}`,
             }
         }),
     },
