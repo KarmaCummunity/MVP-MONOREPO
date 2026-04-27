@@ -70,39 +70,16 @@ const ANALYTICS_ITEM_PREFIX = 'category:';
 // TODO: Add internationalization for category names and descriptions
 // TODO: Create proper category icon management system
 // TODO: Add category access control and permissions
+/** Donation tab categories shown on DonationsScreen (subset per product scope). */
 const BASE_CATEGORIES = [
   { id: 'money',      icon: 'card-outline',        color: colors.success, bgColor: colors.successLight, screen: 'MoneyScreen' },
+  { id: 'items',      icon: 'cube-outline',        color: colors.secondary, bgColor: colors.pinkLight, screen: 'ItemsScreen' },
   { id: 'trump',      icon: 'car-outline',         color: colors.primary,    bgColor: colors.infoLight,    screen: 'TrumpScreen' },
   { id: 'knowledge',  icon: 'school-outline',      color: colors.warning, bgColor: colors.warning, screen: 'KnowledgeScreen' },
   { id: 'challenges', icon: 'trophy-outline',      color: colors.warning, bgColor: colors.warning, screen: 'MyChallengesScreen' },
   { id: 'time',       icon: 'time-outline',        color: colors.secondary,  bgColor: colors.pinkLight, screen: 'TimeScreen' },
   { id: 'food',       icon: 'restaurant-outline',  color: colors.success, bgColor: colors.successLight, screen: 'FoodScreen' },
-  { id: 'clothes',    icon: 'shirt-outline',       color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'ClothesScreen' },
-  { id: 'books',      icon: 'library-outline',     color: colors.primary, bgColor: colors.infoLight, screen: 'BooksScreen' },
-  { id: 'items',      icon: 'cube-outline',        color: colors.secondary, bgColor: colors.pinkLight, screen: 'ItemsScreen' },
-  { id: 'furniture',  icon: 'bed-outline',         color: colors.secondary, bgColor: colors.pinkLight, screen: 'FurnitureScreen' },
-  { id: 'medical',    icon: 'medical-outline',     color: colors.error,   bgColor: colors.errorLight,   screen: 'MedicalScreen' },
-  { id: 'animals',    icon: 'paw-outline',         color: colors.success, bgColor: colors.successLight, screen: 'AnimalsScreen' },
   { id: 'housing',    icon: 'home-outline',        color: colors.primary,    bgColor: colors.infoLight,    screen: 'HousingScreen' },
-  { id: 'support',    icon: 'heart-outline',       color: colors.secondary, bgColor: colors.pinkLight,   screen: 'SupportScreen' },
-  { id: 'education',  icon: 'book-outline',        color: colors.primary,    bgColor: colors.infoLight,    screen: 'EducationScreen' },
-  { id: 'environment',icon: 'leaf-outline',        color: colors.success, bgColor: colors.successLight, screen: 'EnvironmentScreen' },
-  { id: 'technology', icon: 'laptop-outline',      color: colors.primary,    bgColor: colors.infoLight,    screen: 'TechnologyScreen' },
-  { id: 'music',      icon: 'musical-notes-outline', color: colors.secondary,  bgColor: colors.pinkLight,    screen: 'MusicScreen' },
-  { id: 'games',      icon: 'game-controller-outline', color: colors.primary, bgColor: colors.infoLight, screen: 'GamesScreen' },
-  { id: 'riddles',    icon: 'help-circle-outline', color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'RiddlesScreen' },
-  { id: 'recipes',    icon: 'fast-food-outline',   color: colors.success, bgColor: colors.successLight, screen: 'RecipesScreen' },
-  { id: 'plants',     icon: 'flower-outline',      color: colors.success, bgColor: colors.successLight, screen: 'PlantsScreen' },
-  { id: 'waste',      icon: 'trash-outline',       color: colors.warning, bgColor: colors.warning, screen: 'WasteScreen' },
-  { id: 'art',        icon: 'color-palette-outline', color: colors.secondary,  bgColor: colors.pinkLight,    screen: 'ArtScreen' },
-  { id: 'sports',     icon: 'football-outline',    color: colors.primary,  bgColor: colors.infoLight,  screen: 'SportsScreen' },
-  { id: 'dreams',     icon: 'star-outline',        color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'DreamsScreen' },
-  { id: 'fertility',  icon: 'medkit-outline',      color: colors.error,   bgColor: colors.errorLight,   screen: 'FertilityScreen' },
-  { id: 'jobs',       icon: 'briefcase-outline',   color: colors.primary,    bgColor: colors.infoLight,    screen: 'JobsScreen' },
-  { id: 'matchmaking', icon: 'people-outline',     color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'MatchmakingScreen' },
-  { id: 'mentalHealth', icon: 'pulse-outline',     color: colors.secondary,  bgColor: colors.pinkLight,  screen: 'MentalHealthScreen' },
-  { id: 'goldenAge',   icon: 'person-outline',     color: colors.warning, bgColor: colors.warning, screen: 'GoldenAgeScreen' },
-  { id: 'languages',   icon: 'language-outline',   color: colors.primary,    bgColor: colors.infoLight,    screen: 'LanguagesScreen' },
 ] as const;
 
 type CategoryId = typeof BASE_CATEGORIES[number]['id'];
@@ -183,13 +160,11 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     }
   };
 
-  // קביעת הקטגוריות לסעיף הראשון - 4 קטגוריות מועדפות
   const primaryCategoryIds: CategoryId[] = ['money', 'items', 'trump', 'knowledge'];
   const primaryCategories = primaryCategoryIds
     .map((id) => BASE_CATEGORIES.find((c) => c.id === id))
     .filter((c): c is typeof BASE_CATEGORIES[number] => Boolean(c));
 
-  // כל הקטגוריות האחרות לסעיף השני
   const otherCategories = BASE_CATEGORIES.filter(
     (c) => !primaryCategoryIds.includes(c.id as CategoryId)
   );
@@ -288,7 +263,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
         {/* סעיף שני - כל הקטגוריות הנוספות */}
         <View style={[styles.modernSection, { padding: sectionPadding }]}>
           <Text style={styles.modernSectionTitle}>
-            מסכים בבניה, כרגע מכילים קישורים רלוונטים
+            {t('donations:others')}
           </Text>
           <View style={[styles.modernOtherGrid, { gap: otherCategoriesGap }]}>
             {otherCategories.map((category) => {
