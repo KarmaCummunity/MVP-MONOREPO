@@ -40,6 +40,7 @@ import type { SessionTokenPayload } from "../auth/services/jwt.service";
 import type { Request } from "express";
 import { ItemsService } from "../items/items.service";
 import { randomUUID } from "crypto";
+import { KC_ROOT_ADMIN_EMAIL_FALLBACK } from "../config/kc-root-admin.defaults";
 
 interface CreateDonationDto {
   donor_id: string;
@@ -185,13 +186,11 @@ export class DonationsController {
   }
 
   private async getRootAdminUserId(): Promise<string | null> {
-    const rootEmail = process.env.ROOT_ADMIN_EMAIL;
-    if (!rootEmail?.trim()) {
-      return null;
-    }
+    const fromEnv = process.env.ROOT_ADMIN_EMAIL?.trim();
+    const rootEmail = fromEnv || KC_ROOT_ADMIN_EMAIL_FALLBACK.trim();
     const { rows } = await this.pool.query(
       `SELECT id FROM user_profiles WHERE lower(trim(email)) = lower(trim($1)) LIMIT 1`,
-      [rootEmail.trim()],
+      [rootEmail],
     );
     return rows[0]?.id ?? null;
   }
@@ -372,13 +371,15 @@ export class DonationsController {
 
       const superAdminId = await this.getRootAdminUserId();
       if (!superAdminId) {
+        const tried =
+          process.env.ROOT_ADMIN_EMAIL?.trim() || KC_ROOT_ADMIN_EMAIL_FALLBACK;
         this.logger.warn(
-          "knowledge/contribution-request: ROOT_ADMIN_EMAIL not configured",
+          `knowledge/contribution-request: no user_profiles row for principal admin email (${tried})`,
         );
         return {
           success: false,
           error:
-            "Server is not configured to receive knowledge requests (missing ROOT_ADMIN_EMAIL)",
+            "Principal admin account not found for task assignment (check user_profiles email)",
         };
       }
 
@@ -425,7 +426,7 @@ export class DonationsController {
         description,
         "open",
         "medium",
-        "knowledge_offer",
+        "תרומת מידע",
         due.toISOString(),
         assigneeUUIDs,
         ["donations", "knowledge", "volunteer_intent"],

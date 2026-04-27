@@ -2,7 +2,7 @@
 // - Purpose: Shared top navigation bar component for stacks; shows title and quick actions (Settings, Notifications, Chat/About).
 // - Reached from: `HomeTabStack`, `SearchTabStack`, `ProfileTabStack`, `DonationsStack` as a custom header.
 // - Inputs: Props `hideTopBar` and `showPosts`; also reads `route.params.hideTopBar`. Title resolves by current route with i18n.
-// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon.
+// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon; `isAdmin` for shield + tasks shortcuts to Admin tab.
 // - Side effects: Logs focus and state changes via `logger`; animates show/hide with Reanimated.
 import React from 'react';
 import styles from '../globals/styles'; // your styles file
@@ -64,6 +64,19 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
         name: 'AdminTab',
         params: {
           state: { routes: [{ name: 'AdminDashboard' }], index: 0 },
+        },
+      } as never)
+    );
+  }, [navigation]);
+
+  const navigateToAdminTasksTab = React.useCallback(() => {
+    const tabNav = navigation.getParent?.();
+    if (!tabNav) return;
+    tabNav.dispatch(
+      CommonActions.navigate({
+        name: 'AdminTab',
+        params: {
+          state: { routes: [{ name: 'AdminTasks' }], index: 0 },
         },
       } as never)
     );
@@ -187,6 +200,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     InactiveScreen: t('common:inactive'),
     WebViewScreen: t('common:web'),
     LoginScreen: t('auth:login'),
+    AdminTasks: t('admin:topBarAdminTasks'),
   };
 
   // Get current route name
@@ -224,14 +238,24 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
         <View style={styles.topBarIconsRow as StyleProp<ViewStyle>}>
           {isAdmin && (
-            <TouchableOpacity
-              onPress={navigateToAdminTab}
-              style={styles.topBarIconButton as StyleProp<ViewStyle>}
-              accessibilityRole="button"
-              accessibilityLabel={t('admin:topBarAdmin')}
-            >
-              <Icon name="shield-outline" size={24} color={colors.black} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                onPress={navigateToAdminTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdmin')}
+              >
+                <Icon name="shield-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={navigateToAdminTasksTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdminTasks')}
+              >
+                <Icon name="checkmark-done-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+            </>
           )}
           <TouchableOpacity onPress={() => handleScreenToggle('SettingsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
             <Icon name="settings-outline" size={24} color={colors.black} />

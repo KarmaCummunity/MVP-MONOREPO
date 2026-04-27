@@ -1,4 +1,8 @@
 import type { TaskFilterCategoryMeta } from './types';
+import {
+  TASK_LIST_CATEGORY_VALUES,
+  TASK_LIST_STATUS_VALUES,
+} from '../../screens/admin/adminTasksScreen.constants';
 
 /**
  * Default registry: add entries here or pass a custom list to {@link buildFilterQuery}.
@@ -8,7 +12,7 @@ export const DEFAULT_TASK_FILTER_CATEGORIES: readonly TaskFilterCategoryMeta[] =
     id: 'status',
     filterType: 'multiSelect',
     field: 'status',
-    allowedValues: ['open', 'in_progress', 'done', 'archived', 'stuck', 'testing', 'reports'],
+    allowedValues: [...TASK_LIST_STATUS_VALUES],
   },
   {
     id: 'priority',
@@ -36,7 +40,7 @@ export const DEFAULT_TASK_FILTER_CATEGORIES: readonly TaskFilterCategoryMeta[] =
     id: 'category',
     filterType: 'multiSelect',
     field: 'category',
-    allowedValues: ['פיתוח', 'שיווק', 'שת״פ', 'ניהול', 'עיצוב', 'אחר', 'דיווח'],
+    allowedValues: [...TASK_LIST_CATEGORY_VALUES],
   },
   {
     id: 'textSearch',

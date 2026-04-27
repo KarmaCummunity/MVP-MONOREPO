@@ -1,5 +1,6 @@
 {
   "topBarAdmin": "מנהלים",
+  "topBarAdminTasks": "ניהול משימות",
   "hierarchy": {
     "loadError": "שגיאה בטעינת עץ המנהלים",
     "connectionError": "שגיאה בחיבור לשרת",

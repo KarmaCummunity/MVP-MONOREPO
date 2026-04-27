@@ -55,7 +55,6 @@
     "task_status_testing": "Status: Testing",
     "task_status_done": "Status: Done",
     "task_status_archived": "Status: Archived",
-    "task_status_reports": "Status: Reports",
     "task_priority_high": "Priority: High",
     "task_priority_medium": "Priority: Medium",
     "task_priority_low": "Priority: Low",
@@ -65,7 +64,8 @@
     "task_category_ניהול": "Category: Management",
     "task_category_עיצוב": "Category: Design",
     "task_category_אחר": "Category: Other",
-    "task_category_דיווח": "Category: Reports"
+    "task_category_דיווח": "Category: User reports",
+    "task_category_תרומת מידע": "Category: Knowledge donation"
   },
   "sort": {
     "created_desc": "Newest first",

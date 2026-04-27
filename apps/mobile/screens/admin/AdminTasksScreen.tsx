@@ -49,7 +49,7 @@ export default function AdminTasksScreen() {
     handleSaveHours,
     closeHoursModal,
     pendingTask,
-    loading,
+    listLoading,
   } = useAdminTasksScreen();
 
   return (
@@ -112,7 +112,7 @@ export default function AdminTasksScreen() {
           ]}
           ListHeaderComponent={listHeaderBelowSearch}
           ListEmptyComponent={
-            loading ? null : <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
+            listLoading ? null : <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
           }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
@@ -151,7 +151,6 @@ export default function AdminTasksScreen() {
                   { value: 'in_progress', label: t('search:filters.task_status_in_progress').replace('סטטוס: ', '').replace('Status: ', '') },
                   { value: 'stuck', label: t('search:filters.task_status_stuck').replace('סטטוס: ', '').replace('Status: ', '') },
                   { value: 'testing', label: t('search:filters.task_status_testing').replace('סטטוס: ', '').replace('Status: ', '') },
-                  { value: 'reports', label: t('search:filters.task_status_reports').replace('סטטוס: ', '').replace('Status: ', '') },
                   { value: 'done', label: t('search:filters.task_status_done').replace('סטטוס: ', '').replace('Status: ', '') },
                   { value: 'archived', label: t('search:filters.task_status_archived').replace('סטטוס: ', '').replace('Status: ', '') },
                 ]}

@@ -29,8 +29,7 @@ type TaskStatus =
   | "done"
   | "archived"
   | "stuck"
-  | "testing"
-  | "reports";
+  | "testing";
 type TaskPriority = "low" | "medium" | "high";
 
 interface CreateTaskDto {
@@ -90,7 +89,6 @@ const TASK_STATUS_VALUES: TaskStatus[] = [
   "archived",
   "stuck",
   "testing",
-  "reports",
 ];
 
 type TasksListSort =
@@ -153,14 +151,13 @@ function orderByClause(sort: TasksListSort | undefined): string {
       return `ORDER BY 
           CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
           CASE t.status 
-            WHEN 'reports' THEN 0
-            WHEN 'in_progress' THEN 1 
-            WHEN 'stuck' THEN 2 
-            WHEN 'open' THEN 3 
-            WHEN 'testing' THEN 4 
-            WHEN 'done' THEN 5 
-            WHEN 'archived' THEN 6 
-            ELSE 7 
+            WHEN 'in_progress' THEN 0 
+            WHEN 'stuck' THEN 1 
+            WHEN 'open' THEN 2 
+            WHEN 'testing' THEN 3 
+            WHEN 'done' THEN 4 
+            WHEN 'archived' THEN 5 
+            ELSE 6 
           END ASC,
 
 
@@ -946,18 +943,7 @@ export class TasksController {
 
       // Validate status
       // Validate status
-      if (
-        status &&
-        ![
-          "open",
-          "in_progress",
-          "done",
-          "archived",
-          "stuck",
-          "testing",
-          "reports",
-        ].includes(status)
-      ) {
+      if (status && !TASK_STATUS_VALUES.includes(status)) {
         return { success: false, error: "Invalid status value" };
       }
 
@@ -1415,18 +1401,8 @@ export class TasksController {
       const oldAssignees: string[] = oldTaskRes.rows[0]?.assignees || [];
       const oldStatus: string = oldTaskRes.rows[0]?.status || "open";
 
-      // Validate status if provided
-      if (
-        body.status &&
-        ![
-          "open",
-          "in_progress",
-          "done",
-          "archived",
-          "stuck",
-          "testing",
-        ].includes(body.status)
-      ) {
+      // Validate status if provided (keep in sync with TASK_STATUS_VALUES)
+      if (body.status && !TASK_STATUS_VALUES.includes(body.status)) {
         return { success: false, error: "Invalid status value" };
       }
 

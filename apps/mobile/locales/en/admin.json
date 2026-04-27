@@ -1,4 +1,6 @@
 {
+  "topBarAdmin": "Admin",
+  "topBarAdminTasks": "Task management",
   "hierarchy": {
     "loadError": "Error loading manager tree",
     "connectionError": "Error connecting to server",

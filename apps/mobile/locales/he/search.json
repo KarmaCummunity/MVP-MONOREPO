@@ -40,7 +40,6 @@
     "task_status_testing": "סטטוס: בבדיקה",
     "task_status_done": "סטטוס: בוצעה",
     "task_status_archived": "סטטוס: בארכיון",
-    "task_status_reports": "סטטוס: דיווח",
     "task_priority_high": "עדיפות: גבוהה",
     "task_priority_medium": "עדיפות: בינונית",
     "task_priority_low": "עדיפות: נמוכה",
@@ -50,7 +49,8 @@
     "task_category_ניהול": "קטגוריה: ניהול",
     "task_category_עיצוב": "קטגוריה: עיצוב",
     "task_category_אחר": "קטגוריה: אחר",
-    "task_category_דיווח": "קטגוריה: דיווח"
+    "task_category_דיווח": "קטגוריה: דיווח",
+    "task_category_תרומת מידע": "קטגוריה: תרומת מידע"
   },
   "sort": {
     "created_desc": "נוסף לאחרונה",

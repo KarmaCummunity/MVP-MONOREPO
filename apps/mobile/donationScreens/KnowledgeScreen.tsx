@@ -25,8 +25,9 @@ import HeaderComp from '../components/HeaderComp';
 import AddLinkComponent from '../components/AddLinkComponent';
 import ScrollContainer from '../components/ScrollContainer';
 import { apiService } from '../utils/apiService';
-import { mapKnowledgeContributionApiError } from '../utils/knowledgeDonationApiMessages';
-import { toastService } from '../utils/toastService';
+import { mapKnowledgeContributionApiError } from '../components/knowledgeDonationApiMessages';
+import { logger } from '../utils/loggerService';
+import { toastService, useToast } from '../utils/toastService';
 
 type KnowledgeLinkRow = {
   id: string;
@@ -43,6 +44,7 @@ export default function KnowledgeScreen({
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
 
+  const { ToastComponent } = useToast();
   const { selectedUser, isAuthenticated, isGuestMode, isAdmin } = useUser();
 
   const initialMode = routeParams?.mode === 'offer' ? true : false;
@@ -145,12 +147,22 @@ export default function KnowledgeScreen({
     }
 
     setKnowledgeOfferSending(true);
+    logger.debug('KnowledgeScreen', 'Submitting knowledge contribution request', {
+      messageLen: knowledgeOfferMessage.trim().length,
+    });
     try {
       const res = await apiService.createKnowledgeContributionRequest({
         message: knowledgeOfferMessage.trim() || undefined,
       });
 
       if (res.success) {
+        const taskId =
+          res.data && typeof res.data === 'object' && 'id' in res.data
+            ? String((res.data as { id?: string }).id ?? '')
+            : '';
+        logger.info('KnowledgeScreen', 'Knowledge contribution request created', {
+          taskId: taskId || undefined,
+        });
         setKnowledgeOfferMessage('');
         toastService.showSuccess(
           'נוצרה משימה במסך ניהול המשימות למנהלים. ניצור אתכם קשר בהקדם.',
@@ -159,9 +171,14 @@ export default function KnowledgeScreen({
         return;
       }
 
+      logger.error('KnowledgeScreen', 'Knowledge contribution request rejected', {
+        error: res.error,
+      });
       toastService.showError(mapKnowledgeContributionApiError(res.error), 4000);
     } catch (e) {
-      console.error('Knowledge offer request failed', e);
+      logger.error('KnowledgeScreen', 'Knowledge offer request failed', {
+        err: e instanceof Error ? e.message : String(e),
+      });
       toastService.showError(
         mapKnowledgeContributionApiError(
           e instanceof Error ? e.message : 'Network error - please check your connection',
@@ -339,6 +356,7 @@ export default function KnowledgeScreen({
           </View>
         )}
       </ScrollContainer>
+      {ToastComponent}
     </SafeAreaView>
   );
 }

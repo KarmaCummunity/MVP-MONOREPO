@@ -14,13 +14,16 @@ import { taskFilterStateToApiTaskFilters, type TaskFilterState } from '../../uti
 import type { AdminTask, TaskPriority, TaskStatus, TasksListSort, User, PersistedAdminTasksHeader } from './adminTasksScreen.types';
 import {
   ADMIN_TASKS_FILTER_STORAGE_KEY,
+  getAdminTasksFilterStorageKey,
   TASK_LIST_SORT_OPTIONS,
   TASK_STATUSES_EXCLUDING_DONE,
 } from './adminTasksScreen.constants';
 import {
   buildCreateTaskRequestBody,
   buildPersistedAdminTaskFilterKeys,
+  canonicalTaskCategory,
   mapCreateTaskApiErrorMessage,
+  normalizeAdminTaskFromApi,
   parseAdminTaskHeaderFilters,
   parseCreateTaskDueDate,
   parseCreateTaskEstimatedHours,
@@ -36,6 +39,7 @@ export function useAdminTasksScreen() {
   const viewOnly = routeParams?.viewOnly === true;
   useAdminProtection(true);
   const { selectedUser } = useUser();
+  const filterStorageKey = getAdminTasksFilterStorageKey(selectedUser?.id);
 
   // Ensure top bar and bottom bar are visible in view-only mode
   useFocusEffect(
@@ -96,6 +100,7 @@ export function useAdminTasksScreen() {
     : undefined;
   const [loadingSubtasks, setLoadingSubtasks] = useState<string | null>(null);
   const fetchTasksSeqRef = useRef(0);
+  const prevFilterStorageKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     console.log('📋 Tasks List Updated in Component:', tasks.map(t => `${t.id.substring(0, 8)}:${t.title}`).join(', '));
@@ -106,6 +111,8 @@ export function useAdminTasksScreen() {
     () => tasks.filter((t) => !t.parent_task_id),
     [tasks],
   );
+
+  const listLoading = !persistedHydrated || loading;
 
   const handleHeaderSearch = useCallback(
     (searchQuery: string, filterKeys?: string[], sortKeys?: string[]) => {
@@ -126,16 +133,48 @@ export function useAdminTasksScreen() {
     [],
   );
 
+  // Load persisted header/filters only after we know the current user so web does not apply
+  // another account's (or stale demo) filters from the shared legacy AsyncStorage key.
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (!selectedUser?.id) {
+        setHasPersistedSnapshot(false);
+        prevFilterStorageKeyRef.current = null;
+        setPersistedHydrated(true);
+        return;
+      }
+
+      const prevKey = prevFilterStorageKeyRef.current;
+      if (prevKey !== null && prevKey !== filterStorageKey) {
+        setQuery('');
+        setFilterAssignee('all');
+        setFilterStatuses([]);
+        setFilterPriorities([]);
+        setFilterCategories([]);
+        setListSort('priority_status');
+        setSearchBarRemountKey((k) => k + 1);
+      }
+      prevFilterStorageKeyRef.current = filterStorageKey;
+      setPersistedHydrated(false);
+
+      const keyed = filterStorageKey;
       let hadSnapshot = false;
       try {
-        const raw = await AsyncStorage.getItem(ADMIN_TASKS_FILTER_STORAGE_KEY);
+        let raw = await AsyncStorage.getItem(keyed);
+        if (!raw?.trim()) {
+          const legacy = await AsyncStorage.getItem(ADMIN_TASKS_FILTER_STORAGE_KEY);
+          if (legacy?.trim()) {
+            raw = legacy;
+            await AsyncStorage.setItem(keyed, legacy).catch(() => {});
+            await AsyncStorage.removeItem(ADMIN_TASKS_FILTER_STORAGE_KEY).catch(() => {});
+          }
+        }
         if (cancelled) {
           return;
         }
         if (!raw?.trim()) {
+          setHasPersistedSnapshot(false);
           setPersistedHydrated(true);
           return;
         }
@@ -161,16 +200,18 @@ export function useAdminTasksScreen() {
           if (hadSnapshot) {
             setHasPersistedSnapshot(true);
             setSearchBarRemountKey((k) => k + 1);
+          } else {
+            setHasPersistedSnapshot(false);
           }
           setPersistedHydrated(true);
         }
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [filterStorageKey, selectedUser?.id]);
 
   useEffect(() => {
-    if (!persistedHydrated) {
+    if (!persistedHydrated || !selectedUser?.id) {
       return;
     }
     const payload: PersistedAdminTasksHeader = {
@@ -183,12 +224,14 @@ export function useAdminTasksScreen() {
       ),
       sortKey: listSort,
     };
+    const key = getAdminTasksFilterStorageKey(selectedUser.id);
     const t = setTimeout(() => {
-      AsyncStorage.setItem(ADMIN_TASKS_FILTER_STORAGE_KEY, JSON.stringify(payload)).catch(() => {});
+      AsyncStorage.setItem(key, JSON.stringify(payload)).catch(() => {});
     }, 200);
     return () => clearTimeout(t);
   }, [
     persistedHydrated,
+    selectedUser?.id,
     query,
     filterAssignee,
     filterStatuses,
@@ -232,7 +275,7 @@ export function useAdminTasksScreen() {
       if (!res.success) {
         setError(res.error || 'שגיאה בטעינת משימות');
       } else {
-        setTasks(res.data || []);
+        setTasks((res.data || []).map(normalizeAdminTaskFromApi));
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);
@@ -306,7 +349,10 @@ export function useAdminTasksScreen() {
       try {
         const res = await apiService.getSubtasks(taskId);
         if (res.success && res.data) {
-          setSubtasks(prev => ({ ...prev, [taskId]: res.data }));
+          setSubtasks((prev) => ({
+            ...prev,
+            [taskId]: (res.data || []).map(normalizeAdminTaskFromApi),
+          }));
           // Check if parent should be marked as stuck
           const updated = await checkAndUpdateParentStatus(taskId);
           if (updated) {
@@ -326,16 +372,17 @@ export function useAdminTasksScreen() {
   };
 
   const createSubtask = (parentTask: AdminTask) => {
+    const parent = normalizeAdminTaskFromApi(parentTask);
     setFormData({
       title: '',
       description: '',
-      priority: parentTask.priority,
+      priority: parent.priority,
       status: 'open',
-      category: parentTask.category || 'פיתוח',
+      category: canonicalTaskCategory(parent.category) || 'פיתוח',
       due_date: '',
-      assignees: parentTask.assignees_details || [],
+      assignees: parent.assignees_details || [],
       tagsText: '',
-      parent_task_id: parentTask.id,
+      parent_task_id: parent.id,
       estimated_hours: '',
     });
     setEditingId(null);
@@ -463,17 +510,18 @@ export function useAdminTasksScreen() {
   };
 
   const openEdit = (task: AdminTask) => {
+    const normalized = normalizeAdminTaskFromApi(task);
     setFormData({
-      title: task.title || '',
-      description: task.description || '',
-      priority: task.priority,
-      status: task.status,
-      category: task.category || 'פיתוח',
-      due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 10) : '',
-      assignees: task.assignees_details || [],
-      tagsText: (task.tags || []).join(', '),
-      parent_task_id: task.parent_task_id || '',
-      estimated_hours: (task.estimated_hours !== null && task.estimated_hours !== undefined && task.estimated_hours > 0) ? String(task.estimated_hours) : '',
+      title: normalized.title || '',
+      description: normalized.description || '',
+      priority: normalized.priority,
+      status: normalized.status,
+      category: canonicalTaskCategory(normalized.category) || 'פיתוח',
+      due_date: normalized.due_date ? new Date(normalized.due_date).toISOString().slice(0, 10) : '',
+      assignees: normalized.assignees_details || [],
+      tagsText: (normalized.tags || []).join(', '),
+      parent_task_id: normalized.parent_task_id || '',
+      estimated_hours: (normalized.estimated_hours !== null && normalized.estimated_hours !== undefined && normalized.estimated_hours > 0) ? String(normalized.estimated_hours) : '',
     });
     setEditingId(task.id);
     setShowForm(true);
@@ -602,7 +650,7 @@ export function useAdminTasksScreen() {
   const listHeaderBelowSearch = () => (
     <View>
       <Text style={styles.header}>ניהול משימות וצוות</Text>
-      {loading ? (
+      {listLoading ? (
         <View style={[styles.loadingBanner, { flexDirection: rowDirection('row') }]}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={styles.loadingBannerText}>טוען משימות…</Text>
@@ -625,6 +673,7 @@ export function useAdminTasksScreen() {
     t,
     viewOnly,
     loading,
+    listLoading,
     setHeaderHeight,
     maxListHeight,
     handleHeaderSearch,

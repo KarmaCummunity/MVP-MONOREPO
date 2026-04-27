@@ -1,5 +1,44 @@
-import type { AdminCreateTaskFormFields, TaskPriority, TaskStatus } from './adminTasksScreen.types';
-import { TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+import type { AdminCreateTaskFormFields, AdminTask, TaskPriority, TaskStatus } from './adminTasksScreen.types';
+import { TASK_LIST_CATEGORY_OPTIONS, TASK_LIST_STATUS_OPTIONS } from './adminTasksScreen.constants';
+
+const CANONICAL_CATEGORY_VALUES = new Set(TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value));
+
+/** Legacy English/slug categories from older clients → Hebrew values used in admin form & list. */
+const LEGACY_CATEGORY_TO_CANONICAL: Record<string, string> = {
+  knowledge_offer: 'תרומת מידע',
+  report: 'דיווח',
+  moderation: 'דיווח',
+};
+
+/** Single label for category badge and form — matches {@link TASK_LIST_CATEGORY_OPTIONS} where possible. */
+export function canonicalTaskCategory(category: string | null | undefined): string {
+  const c = category?.trim() || '';
+  if (!c) return '';
+  if (CANONICAL_CATEGORY_VALUES.has(c)) return c;
+  return LEGACY_CATEGORY_TO_CANONICAL[c] ?? c;
+}
+
+/** Normalize API payloads: legacy `reports` status and slug categories. */
+export function normalizeAdminTaskFromApi(task: AdminTask): AdminTask {
+  const rawStatus = String(task.status);
+  let nextStatus: TaskStatus;
+  let category = task.category ?? undefined;
+
+  if (rawStatus === 'reports') {
+    nextStatus = 'open';
+    const cat = String(category ?? '').trim();
+    if (!cat || cat === 'report' || cat === 'moderation') {
+      category = 'דיווח';
+    }
+  } else if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === rawStatus)) {
+    nextStatus = rawStatus as TaskStatus;
+  } else {
+    nextStatus = 'open';
+  }
+
+  const canonCat = canonicalTaskCategory(category);
+  return { ...task, status: nextStatus, category: canonCat || null };
+}
 
 export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
@@ -16,9 +55,14 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
       assignee = 'me';
     }
     if (key.startsWith('task_status_')) {
-      const raw = key.slice('task_status_'.length) as TaskStatus;
-      if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === raw)) {
-        statuses.push(raw);
+      const raw = key.slice('task_status_'.length);
+      if (raw === 'reports') {
+        categories.push('דיווח');
+      } else {
+        const statusRaw = raw as TaskStatus;
+        if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === statusRaw)) {
+          statuses.push(statusRaw);
+        }
       }
     }
     if (key.startsWith('task_priority_')) {
@@ -58,8 +102,10 @@ export function formatTaskListStatusHebrew(status: string): string {
       return 'בבדיקה';
     case 'done':
       return 'בוצעה';
-    default:
+    case 'archived':
       return 'בארכיון';
+    default:
+      return status || 'לא ידוע';
   }
 }
 

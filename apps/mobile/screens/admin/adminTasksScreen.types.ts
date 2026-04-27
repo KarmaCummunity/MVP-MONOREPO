@@ -1,4 +1,4 @@
-export type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing' | 'reports';
+export type TaskStatus = 'open' | 'in_progress' | 'done' | 'archived' | 'stuck' | 'testing';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
