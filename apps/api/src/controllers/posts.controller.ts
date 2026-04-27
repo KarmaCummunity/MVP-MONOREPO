@@ -1506,6 +1506,153 @@ export class PostsController {
   }
 
   /**
+   * Single post by id (same row shape as feed / user posts lists).
+   * GET /api/posts/:postId — registered after `:postId/likes` and `:postId/comments` so those paths match first.
+   */
+  @Get(":postId")
+  async getPostById(
+    @Param("postId") postId: string,
+    @Query("viewer_id") viewerId?: string,
+  ) {
+    try {
+      await this.ensurePostsTable();
+      await this.ensureLikesCommentsTable();
+
+      let query = `
+                SELECT
+                p.id,
+                    p.author_id,
+                    p.task_id,
+                    p.ride_id,
+                    p.item_id,
+                    p.community_challenge_id,
+                    p.title,
+                    p.description,
+                    p.images,
+                    p.likes,
+                    p.comments,
+                    p.post_type,
+                    p.metadata,
+                    p.created_at,
+                    p.updated_at,
+                    CASE 
+                        WHEN u.id IS NOT NULL THEN json_build_object(
+                            'id', u.id,
+                            'name', COALESCE(u.name, 'ללא שם'),
+                            'avatar_url', COALESCE(u.avatar_url, ''),
+                            'email_verified', COALESCE(u.email_verified, false)
+                        )
+                        ELSE json_build_object(
+                            'id', p.author_id,
+                            'name', 'משתמש לא נמצא',
+                            'avatar_url', '',
+                            'email_verified', false
+                        )
+                END as author,
+                    CASE WHEN t.id IS NOT NULL THEN json_build_object(
+                        'id', t.id, 
+                        'title', t.title, 
+                        'description', t.description,
+                        'status', t.status,
+                        'estimated_hours', t.estimated_hours,
+                        'due_date', t.due_date,
+                        'assignees', (
+                            SELECT json_agg(json_build_object(
+                                'id', u_assignee.id, 
+                                'name', u_assignee.name, 
+                                'avatar', u_assignee.avatar_url
+                            ))
+                            FROM user_profiles u_assignee
+                            WHERE u_assignee.id = ANY(t.assignees)
+                        )
+                    ) ELSE NULL END as task,
+                    CASE 
+                        WHEN r.id IS NOT NULL THEN json_build_object(
+                            'id', r.id, 
+                            'from_location', r.from_location,
+                            'to_location', r.to_location,
+                            'departure_time', r.departure_time,
+                            'available_seats', r.available_seats,
+                            'price_per_seat', r.price_per_seat,
+                            'status', r.status
+                        ) 
+                        ELSE NULL 
+                    END as ride_data,
+                    CASE 
+                        WHEN i.id IS NOT NULL THEN json_build_object(
+                            'id', i.id,
+                            'title', i.title,
+                            'status', i.status
+                        )
+                        ELSE NULL
+                    END as item_data,
+                    CASE 
+                        WHEN cgc.id IS NOT NULL THEN json_build_object(
+                            'id', cgc.id,
+                            'type', cgc.type,
+                            'frequency', cgc.frequency,
+                            'difficulty', cgc.difficulty,
+                            'category', cgc.category,
+                            'goal_value', cgc.goal_value,
+                            'deadline', cgc.deadline,
+                            'image_url', cgc.image_url
+                        )
+                        ELSE NULL
+                    END as community_challenge
+                `;
+
+      const postLikesExists = await this.pool.query(`
+                SELECT EXISTS(
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_name = 'post_likes' AND table_schema = 'public'
+                ) AS exists;
+                `);
+
+      if (viewerId && postLikesExists.rows[0]?.exists) {
+        query += `,
+                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) as is_liked
+                `;
+      } else {
+        query += `,
+                    false as is_liked
+                `;
+      }
+
+      query += `
+                FROM posts p
+                LEFT JOIN user_profiles u ON p.author_id = u.id
+                LEFT JOIN tasks t ON p.task_id = t.id
+                LEFT JOIN rides r ON p.ride_id = r.id
+                LEFT JOIN items i ON p.item_id = i.id
+                LEFT JOIN community_group_challenges cgc ON p.community_challenge_id = cgc.id
+                WHERE p.id = $1
+                LIMIT 1
+            `;
+
+      const params = viewerId ? [postId, viewerId] : [postId];
+      const { rows } = await this.pool.query(query, params);
+
+      if (rows.length === 0) {
+        return { success: false, error: "Post not found" };
+      }
+
+      return { success: true, data: rows[0] };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error("Get post by id error:", {
+        message: errorMessage,
+        postId,
+        viewerId,
+      });
+      return {
+        success: false,
+        error: `Failed to get post: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
    * Update a comment (only owner can update)
    * PUT /api/posts/:postId/comments/:commentId
    */

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import colors from '../../globals/colors';
 import { useUser } from '../../stores/userStore';
 import { apiService } from '../../utils/apiService';
@@ -12,48 +13,26 @@ import {
   classifyOpenProfilePost,
 } from '../../utils/profileOpenTabPostEntry';
 import PostReelItem from '../../components/Feed/PostReelItem';
-import CommentsModal from '../../components/CommentsModal';
 import type { FeedItem } from '../../types/feed';
-import { usePostMenu } from '../../hooks/usePostMenu';
-import OptionsModal from '../../components/Feed/OptionsModal';
-import ReportPostModal from '../../components/Feed/ReportPostModal';
+import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
+import { ProfilePostGridOverlays, useProfilePostGridOverlays } from './ProfilePostGridOverlays';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
 export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
-  const { t } = useTranslation(['profile']);
+  const { t } = useTranslation(['profile', 'common']);
+  const navigation = useNavigation();
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
-  const [listRefreshKey, setListRefreshKey] = useState(0);
+  const overlays = useProfilePostGridOverlays();
   const { db } = require('../../utils/databaseService');
 
-  const handleCommentPress = useCallback((item: FeedItem) => {
-    setSelectedItemForComments(item);
-    setCommentsModalVisible(true);
-  }, []);
-
-  // Post menu hook
-  const {
-    handleMorePress,
-    optionsModalVisible,
-    setOptionsModalVisible,
-    modalOptions,
-    modalPosition,
-    reportModalVisible,
-    setReportModalVisible,
-    selectedPostForReport,
-    setSelectedPostForReport
-  } = usePostMenu();
-
-  // Report submit handler
-  const handleReportSubmit = async (_reason: string) => {
-    if (!selectedPostForReport) return;
-    // Report functionality can be implemented here if needed
-    setReportModalVisible(false);
-    setSelectedPostForReport(null);
-  };
+  const handlePostPress = useCallback(
+    (feedItem: FeedItem) => {
+      navigateToPostDetail(navigation as never, { postId: feedItem.id, initialItem: feedItem });
+    },
+    [navigation],
+  );
 
   // Use provided userId or fallback to selectedUser.id
   const targetUserId = userId || selectedUser?.id;
@@ -334,7 +313,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
     };
 
     loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db, listRefreshKey]);
+  }, [targetUserId, user, selectedUser?.id, db, overlays.listRefreshKey]);
 
   if (loading) {
     return (
@@ -370,9 +349,9 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
             item={item}
             numColumns={3}
             cardWidth={cardWidth}
-            onPress={() => { }}
-            onCommentPress={handleCommentPress}
-            onMorePress={handleMorePress}
+            onPress={handlePostPress}
+            onCommentPress={overlays.handleCommentPress}
+            onMorePress={overlays.handleMorePress}
           />
         )}
         onContentSizeChange={(w, h) => {
@@ -381,37 +360,10 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       />
-      {/* Modals */}
-      <OptionsModal
-        visible={optionsModalVisible}
-        onClose={() => setOptionsModalVisible(false)}
-        options={modalOptions}
-        title={t('common.options') || 'Options'}
-        anchorPosition={modalPosition}
+      <ProfilePostGridOverlays
+        model={overlays}
+        optionsModalTitle={t('common:options') || 'Options'}
       />
-      <ReportPostModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-        onSubmit={handleReportSubmit}
-        isLoading={false}
-      />
-      {selectedItemForComments && (
-        <CommentsModal
-          visible={commentsModalVisible}
-          onClose={() => {
-            setCommentsModalVisible(false);
-            setSelectedItemForComments(null);
-          }}
-          postId={selectedItemForComments.id}
-          postUser={selectedItemForComments.user ? {
-            id: selectedItemForComments.user.id,
-            name: selectedItemForComments.user.name || null,
-            avatar: selectedItemForComments.user.avatar || 'https://picsum.photos/seed/user/100/100'
-          } : undefined}
-          postTitle={selectedItemForComments.title || ''}
-          onCommentsCountChange={() => setListRefreshKey((k) => k + 1)}
-        />
-      )}
     </View>
   );
 };

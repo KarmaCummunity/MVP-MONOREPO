@@ -8,6 +8,7 @@
 - **Endpoints:**
   - `GET /api/posts` — paginated post feed
   - `GET /api/posts/user/:userId` — user's posts
+  - `GET /api/posts/:postId` — single post by id (same joined row shape as list endpoints; optional `viewer_id` for like state)
 
 #### 2.5.2 Post Likes
 

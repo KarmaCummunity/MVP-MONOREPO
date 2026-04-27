@@ -154,6 +154,12 @@
     "publish": "Publish",
     "titleRequired": "Please enter a title",
     "requestPublished": "Your request was published",
-    "givePublished": "Your give post was published"
+    "givePublished": "Your give post was published",
+    "rideFromPlaceholder": "Origin (where you need a ride from)",
+    "rideToPlaceholder": "Destination",
+    "rideDepartureLabel": "When",
+    "titleOptional": "Short title (optional)",
+    "rideRequestFromToRequired": "Please enter both origin and destination.",
+    "rideRequestTitleTemplate": "Ride: {{from}} → {{to}}"
   }
 }

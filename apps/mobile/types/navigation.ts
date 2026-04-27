@@ -96,6 +96,7 @@ export const VALID_ROOT_ROUTES: string[] = [
   'LandingSiteScreen',
   'WebViewScreen',
   'PostsReelsScreen',
+  'PostDetailScreen',
   'BookmarksScreen',
   'UserProfileScreen',
   'FollowersScreen',

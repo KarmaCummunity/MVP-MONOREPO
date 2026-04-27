@@ -6,6 +6,7 @@ import {
 } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { ImageSourcePropType } from "react-native";
+import type { FeedItem } from "../types/feed";
 
 export interface Task {
   id: string;
@@ -211,6 +212,7 @@ export type RootStackParamList = {
   InactiveScreen: undefined;
   WebViewScreen: undefined;
   PostsReelsScreen: undefined; // ADD THIS LINE - this was probably missing
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   BookmarksScreen: undefined;
   UserProfileScreen: {
     userId: string;

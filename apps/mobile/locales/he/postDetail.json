@@ -1,0 +1,33 @@
+{
+  "title": "פוסט",
+  "loading": "טוען פוסט…",
+  "loadError": "לא הצלחנו לטעון את הפוסט. משוך לרענון.",
+  "notFound": "הפוסט לא נמצא.",
+  "retry": "נסה שוב",
+  "sellerHint": "מפרסם/ת",
+  "viewProfile": "פרופיל",
+  "intent": {
+    "give": "לתת",
+    "request": "לקבל"
+  },
+  "rideSection": "פרטי נסיעה",
+  "taskSection": "משימה",
+  "from": "מאת",
+  "to": "אל",
+  "when": "מתי",
+  "seats": "מקומות",
+  "price": "מחיר למושב",
+  "status": "סטטוס",
+  "openChallenge": "פתיחת האתגר",
+  "types": {
+    "post": "פוסט",
+    "item": "פריט",
+    "donation": "תרומה",
+    "ride": "נסיעה",
+    "ride_offered": "הצעת נסיעה",
+    "task_assignment": "משימה",
+    "task_completion": "השלמת משימה",
+    "task_post": "משימה",
+    "community_challenge": "אתגר"
+  }
+}

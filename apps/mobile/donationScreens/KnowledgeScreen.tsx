@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import {
   NavigationProp,
@@ -28,6 +29,15 @@ import { apiService } from '../utils/apiService';
 import { mapKnowledgeContributionApiError } from '../components/knowledgeDonationApiMessages';
 import { logger } from '../utils/loggerService';
 import { toastService, useToast } from '../utils/toastService';
+import { postsService } from '../utils/postsService';
+import { mapPostToFeedItemForItemsScreen } from './items/mapPostToFeedItemForItemsScreen';
+import type { FeedItem } from '../types/feed';
+import PostReelItem from '../components/Feed/PostReelItem';
+import { usePostMenu } from '../hooks/usePostMenu';
+import OptionsModal from '../components/Feed/OptionsModal';
+import ReportPostModal from '../components/Feed/ReportPostModal';
+import { usePostComposerStore } from '../stores/postComposerStore';
+import { useTranslation } from 'react-i18next';
 
 type KnowledgeLinkRow = {
   id: string;
@@ -45,7 +55,13 @@ export default function KnowledgeScreen({
   const routeParams = route.params as { mode?: string } | undefined;
 
   const { ToastComponent } = useToast();
+  const { t: ti } = useTranslation('items');
+  const { t: tc } = useTranslation('common');
   const { selectedUser, isAuthenticated, isGuestMode, isAdmin } = useUser();
+  const { openComposer } = usePostComposerStore();
+  const [openRequestsExpanded, setOpenRequestsExpanded] = useState(false);
+  const [openRequestPosts, setOpenRequestPosts] = useState<FeedItem[]>([]);
+  const [openRequestsLoading, setOpenRequestsLoading] = useState(false);
 
   const initialMode = routeParams?.mode === 'offer' ? true : false;
   const [mode, setMode] = useState(initialMode);
@@ -56,6 +72,56 @@ export default function KnowledgeScreen({
 
   const [communityLinks, setCommunityLinks] = useState<KnowledgeLinkRow[]>([]);
   const [linksLoading, setLinksLoading] = useState(false);
+
+  const loadOpenKnowledgeRequests = useCallback(async () => {
+    setOpenRequestsLoading(true);
+    try {
+      const uid = selectedUser?.id || 'guest';
+      const openPostsResponse = await postsService.getPosts(300, 0, uid);
+      if (openPostsResponse.success && Array.isArray(openPostsResponse.data)) {
+        const requestPosts = openPostsResponse.data
+          .map(mapPostToFeedItemForItemsScreen)
+          .filter((post: FeedItem | null): post is FeedItem => Boolean(post))
+          .filter((post) => post.intent === 'request' && post.category === 'knowledge');
+        setOpenRequestPosts(requestPosts);
+      } else {
+        setOpenRequestPosts([]);
+      }
+    } catch {
+      setOpenRequestPosts([]);
+    } finally {
+      setOpenRequestsLoading(false);
+    }
+  }, [selectedUser?.id]);
+
+  const handleReportSubmit = async (_reason: string) => {
+    if (!selectedPostForReport) return;
+    setReportModalVisible(false);
+    setSelectedPostForReport(null);
+  };
+
+  const handlePostClosed = useCallback((postId: string) => {
+    setOpenRequestPosts((prev) => prev.filter((p) => p.id !== postId));
+    setTimeout(() => {
+      void loadOpenKnowledgeRequests();
+    }, 100);
+  }, [loadOpenKnowledgeRequests]);
+
+  const {
+    handleMorePress,
+    optionsModalVisible,
+    setOptionsModalVisible,
+    modalOptions,
+    modalPosition,
+    reportModalVisible,
+    setReportModalVisible,
+    selectedPostForReport,
+    setSelectedPostForReport,
+  } = usePostMenu({
+    onReopen: () => {
+      void loadOpenKnowledgeRequests();
+    },
+  });
 
   const loadCommunityLinks = useCallback(async () => {
     setLinksLoading(true);
@@ -88,8 +154,10 @@ export default function KnowledgeScreen({
     useCallback(() => {
       if (!mode) {
         void loadCommunityLinks();
+      } else {
+        void loadOpenKnowledgeRequests();
       }
-    }, [mode, loadCommunityLinks]),
+    }, [mode, loadCommunityLinks, loadOpenKnowledgeRequests]),
   );
 
   useEffect(() => {
@@ -249,6 +317,13 @@ export default function KnowledgeScreen({
       >
         {!mode ? (
           <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.requestCtaButton}
+              onPress={() => openComposer({ intent: 'request', category: 'knowledge' })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.requestCtaText}>{ti('donationScreen.search.requestCta')}</Text>
+            </TouchableOpacity>
             <Text style={styles.sectionTitle}>ידע שתרמה הקהילה</Text>
             <Text style={styles.sectionDescription}>
               קישורים שהוסיפו משתמשים — אין צורך באישור מנהל לפרסום.
@@ -297,6 +372,41 @@ export default function KnowledgeScreen({
           </View>
         ) : (
           <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.openRequestsToggle}
+              onPress={() => setOpenRequestsExpanded((prev) => !prev)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionTitle}>{ti('donationScreen.offer.openRequestsList')}</Text>
+              <Text style={styles.toggleChevron}>{openRequestsExpanded ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {openRequestsExpanded && (
+              <View style={styles.openRequestsBlock}>
+                {openRequestsLoading ? (
+                  <ActivityIndicator style={styles.loader} color={colors.secondary} />
+                ) : openRequestPosts.length === 0 ? (
+                  <Text style={styles.emptyText}>{ti('donationScreen.offer.noOpenRequests')}</Text>
+                ) : (
+                  openRequestPosts.map((post) => {
+                    const { width } = Dimensions.get('window');
+                    const cardWidth = width - 80;
+                    return (
+                      <View key={post.id} style={styles.openRequestRow}>
+                        <PostReelItem
+                          item={post}
+                          cardWidth={cardWidth}
+                          numColumns={1}
+                          onPress={() => {}}
+                          onCommentPress={() => {}}
+                          onMorePress={handleMorePress}
+                          onPostClosed={handlePostClosed}
+                        />
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            )}
             <Text style={styles.sectionTitle}>הוספת קישור</Text>
             <Text style={styles.sectionDescription}>
               כל אחד יכול להוסיף קישור; מנהלים יכולים למחוק קישורים לא מתאימים במצב מחפש.
@@ -349,6 +459,20 @@ export default function KnowledgeScreen({
           </View>
         )}
       </ScrollContainer>
+
+      <OptionsModal
+        visible={optionsModalVisible}
+        onClose={() => setOptionsModalVisible(false)}
+        options={modalOptions}
+        title={tc('options')}
+        anchorPosition={modalPosition}
+      />
+      <ReportPostModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        onSubmit={handleReportSubmit}
+        isLoading={false}
+      />
       {ToastComponent}
     </SafeAreaView>
   );
@@ -472,5 +596,37 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: FontSizes.body,
     fontWeight: '600',
+  },
+  requestCtaButton: {
+    backgroundColor: colors.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  requestCtaText: {
+    color: colors.background,
+    fontSize: FontSizes.body,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  openRequestsToggle: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  toggleChevron: {
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
+  },
+  openRequestsBlock: {
+    marginBottom: 20,
+  },
+  openRequestRow: {
+    marginBottom: 10,
+    width: '100%',
   },
 });

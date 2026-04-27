@@ -39,6 +39,7 @@ import OrgDashboardScreen from '../screens/OrgDashboardScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import TopBarNavigator from './TopBarNavigator';
@@ -91,7 +92,7 @@ export default function MainNavigator() {
       id={undefined}
       detachInactiveScreens={true}
       screenOptions={({ navigation, route }) => ({
-        headerShown: route.name === 'AdminDashboard' ? true : false,
+        headerShown: route.name === 'AdminDashboard' || route.name === 'PostDetailScreen' ? true : false,
         header: route.name === 'AdminDashboard' ? () => (
           <TopBarNavigator
             navigation={navigation as any}
@@ -125,6 +126,8 @@ export default function MainNavigator() {
               presentation: 'transparentModal',
             }}
           />
+
+          <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
 
           <Stack.Screen
             name="BookmarksScreen"

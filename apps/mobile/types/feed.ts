@@ -47,6 +47,8 @@ export interface FeedItem {
     title: string;
     description: string;
     thumbnail: string | null; // Used for images/video thumbnails
+    /** All image URLs when provided by API (detail view / mapping). */
+    images?: string[] | null;
 
     // Metadata
     timestamp: string;

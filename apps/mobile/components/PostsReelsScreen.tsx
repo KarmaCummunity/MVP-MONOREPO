@@ -34,6 +34,7 @@ import { apiService } from '../utils/apiService';
 import { postsService } from '../utils/postsService';
 import VerticalGridSlider from './VerticalGridSlider';
 import { logger } from '../utils/loggerService';
+import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 import { usePostMenu } from '../hooks/usePostMenu';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
@@ -154,36 +155,41 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     setFilterSheetVisible(true);
   }, []);
 
-  const handlePostPress = useCallback((item: FeedItem) => {
-    logger.debug('PostsReelsScreen', 'Post pressed', { itemId: item.id });
-    if (item.subtype !== 'community_challenge' || !item.challengeId) {
-      return;
-    }
-    const challengeId = item.challengeId;
-    const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
-    const tabState = tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
-      ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
-      : undefined;
-    if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
-      tabNav.navigate('DonationsTab', {
-        screen: 'ChallengeDetailsScreen',
-        params: { challengeId },
-      });
-      return;
-    }
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'HomeStack',
-        params: {
-          screen: 'DonationsTab',
-          params: {
+  const handlePostPress = useCallback(
+    (item: FeedItem) => {
+      logger.debug('PostsReelsScreen', 'Post pressed', { itemId: item.id });
+      if (item.subtype === 'community_challenge' && item.challengeId) {
+        const challengeId = item.challengeId;
+        const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
+        const tabState =
+          tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
+            ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
+            : undefined;
+        if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
+          tabNav.navigate('DonationsTab', {
             screen: 'ChallengeDetailsScreen',
             params: { challengeId },
-          },
-        },
-      } as never),
-    );
-  }, [navigation]);
+          });
+          return;
+        }
+        navigation.dispatch(
+          CommonActions.navigate({
+            name: 'HomeStack',
+            params: {
+              screen: 'DonationsTab',
+              params: {
+                screen: 'ChallengeDetailsScreen',
+                params: { challengeId },
+              },
+            },
+          } as never),
+        );
+        return;
+      }
+      navigateToPostDetail(navigation, { postId: item.id, initialItem: item });
+    },
+    [navigation],
+  );
 
   const handleCommentPress = useCallback((item: FeedItem) => {
     setSelectedItemForComments(item);
