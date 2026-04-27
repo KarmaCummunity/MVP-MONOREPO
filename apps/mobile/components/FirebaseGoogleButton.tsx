@@ -121,15 +121,14 @@ export default function FirebaseGoogleButton() {
         hasTokens: !!serverResponse.tokens,
       });
 
-      // Save JWT tokens if provided
+      // Save JWT tokens through the central tokenManager (SSOT)
       if (serverResponse.tokens) {
-        const AsyncStorage = await import('@react-native-async-storage/async-storage');
-        await AsyncStorage.default.setItem('jwt_access_token', serverResponse.tokens.accessToken);
-        await AsyncStorage.default.setItem('jwt_refresh_token', serverResponse.tokens.refreshToken);
-        await AsyncStorage.default.setItem('jwt_token_expires_at', 
-          String(Date.now() + (serverResponse.tokens.expiresIn * 1000))
+        const { tokenManager } = await import('../auth/services/tokenManager');
+        await tokenManager.setTokens(
+          serverResponse.tokens.accessToken,
+          serverResponse.tokens.refreshToken
         );
-        logger.debug('FirebaseGoogleButton', 'JWT tokens saved to storage');
+        logger.debug('FirebaseGoogleButton', 'JWT tokens saved via tokenManager');
       }
 
       // Use server-verified user data

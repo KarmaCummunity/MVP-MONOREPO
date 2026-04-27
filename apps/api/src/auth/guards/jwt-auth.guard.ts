@@ -12,11 +12,11 @@ import {
   Inject,
 } from "@nestjs/common";
 import { Request } from "express";
-import { JwtService, SessionTokenPayload } from "./jwt.service";
-import { RateLimitService } from "./rate-limit.service";
-import { FirebaseAdminService } from "./firebase-admin.service";
+import { JwtService, SessionTokenPayload } from "../services/jwt.service";
+import { RateLimitService } from "../services/rate-limit.service";
+import { FirebaseAdminService } from "../services/firebase-admin.service";
 import { Pool } from "pg";
-import { PG_POOL } from "../database/database.module";
+import { PG_POOL } from "../../database/database.module";
 
 // Extend Express Request to include user data
 declare global {

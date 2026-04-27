@@ -15,8 +15,8 @@ import {
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { SessionTokenPayload } from "../auth/jwt.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { SessionTokenPayload } from "../auth/services/jwt.service";
 
 interface LikeBody {
   user_id: string;

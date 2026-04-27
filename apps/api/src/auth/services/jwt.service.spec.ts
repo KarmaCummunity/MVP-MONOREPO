@@ -23,7 +23,7 @@ describe("JwtService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new JwtService(
-      mockRedisCache as unknown as import("../redis/redis-cache.service").RedisCacheService,
+      mockRedisCache as unknown as import("../../redis/redis-cache.service").RedisCacheService,
     );
   });
 

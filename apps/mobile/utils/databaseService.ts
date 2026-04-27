@@ -22,7 +22,7 @@ import { apiService } from './apiService';
 import { restAdapter } from './restAdapter';
 import { firestoreAdapter } from './firestoreAdapter';
 import { DB_COLLECTIONS } from './dbCollections';
-import axios from 'axios';
+import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
 
 export { DB_COLLECTIONS };
 let enhancedDbInstance: any = null;
@@ -960,28 +960,36 @@ export const db = {
   createDedicatedItem: async (itemData: any) => {
     console.log('📤 API: Creating dedicated item to:', `${API_BASE_URL}/api/dedicated-items`);
     console.log('📦 Item data:', JSON.stringify(itemData, null, 2));
-    const response = await axios.post(`${API_BASE_URL}/api/dedicated-items`, itemData);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items`, { method: 'POST', body: JSON.stringify(itemData) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Item created:', response.data);
     return response.data;
   },
 
   getDedicatedItemsByOwner: async (ownerId: string) => {
     console.log('📥 API: Fetching items for owner:', ownerId);
-    const response = await axios.get(`${API_BASE_URL}/api/dedicated-items/owner/${ownerId}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/owner/${ownerId}`);
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Received items:', response.data.length || 0);
     return response.data;
   },
 
   getDedicatedItemById: async (id: string) => {
     console.log('📥 API: Fetching item by ID:', id);
-    const response = await axios.get(`${API_BASE_URL}/api/dedicated-items/${id}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`);
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Item received');
     return response.data;
   },
 
   updateDedicatedItem: async (id: string, itemData: any) => {
     console.log('✏️ API: Updating item:', id);
-    const response = await axios.put(`${API_BASE_URL}/api/dedicated-items/${id}`, itemData);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'PUT', body: JSON.stringify(itemData) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Item updated');
     return response.data;
   },
@@ -991,7 +999,9 @@ export const db = {
 
   deleteDedicatedItem: async (id: string) => {
     console.log('🗑️ API: Deleting item:', id);
-    const response = await axios.delete(`${API_BASE_URL}/api/dedicated-items/${id}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'DELETE' });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Item deleted');
     return response.data;
   },
@@ -1015,7 +1025,9 @@ export const db = {
     is_public?: boolean;
   }) => {
     console.log('📤 API: Creating community challenge:', challengeData.title);
-    const response = await axios.post(`${API_BASE_URL}/api/community-challenges`, challengeData);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges`, { method: 'POST', body: JSON.stringify(challengeData) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Challenge created:', response.data);
     return response.data;
   },
@@ -1040,23 +1052,29 @@ export const db = {
         params.append(key, String(value));
       }
     });
-    const response = await axios.get(`${API_BASE_URL}/api/community-challenges?${params.toString()}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges?${params.toString()}`);
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Received challenges:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeDetails: async (challengeId: string) => {
     console.log('📥 API: Fetching challenge details:', challengeId);
-    const response = await axios.get(`${API_BASE_URL}/api/community-challenges/${challengeId}`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}`);
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Challenge details received');
     return response.data;
   },
 
   joinChallenge: async (challengeId: string, userId: string) => {
     console.log('🤝 API: Joining challenge:', challengeId, 'User:', userId);
-    const response = await axios.post(`${API_BASE_URL}/api/community-challenges/${challengeId}/join`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}/join`, { method: 'POST', body: JSON.stringify({
       user_id: userId
-    });
+    }) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Joined challenge successfully');
     return response.data;
   },
@@ -1069,10 +1087,11 @@ export const db = {
   }) => {
     const body = { challenge_id: challengeId, ...entryData };
     console.log('📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
-    const response = await axios.post(
-      `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`,
-      body
-    );
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`, { method: 'POST', body: JSON.stringify(body
+    ) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
     return response.data;
   },
@@ -1084,16 +1103,20 @@ export const db = {
       limit: String(limit),
       offset: String(offset)
     });
-    const response = await axios.get(
+    const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries?${params.toString()}`
     );
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Received entries:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeStatistics: async (userId: string) => {
     console.log('📊 API: Fetching challenge statistics for user:', userId);
-    const response = await axios.get(`${API_BASE_URL}/api/community-challenges/user/${userId}/stats`);
+    const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/user/${userId}/stats`);
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Statistics received');
     return response.data;
   },
@@ -1111,10 +1134,11 @@ export const db = {
   }) => {
     console.log('✏️ API: Updating challenge:', challengeId);
     const params = new URLSearchParams({ user_id: userId });
-    const response = await axios.put(
-      `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`,
-      updateData
-    );
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`, { method: 'PUT', body: JSON.stringify(updateData
+    ) });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Challenge updated');
     return response.data;
   },
@@ -1124,7 +1148,9 @@ export const db = {
     const params = new URLSearchParams({ user_id: userId });
     const url = `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`;
     console.log('🔗 API: DELETE URL:', url);
-    const response = await axios.delete(url);
+    const res = await fetchWithAuth(url, { method: 'DELETE' });
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     console.log('✅ API: Challenge deleted:', response.data);
     return response.data;
   },
@@ -1141,9 +1167,11 @@ export const db = {
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
     
-    const response = await axios.get(
+    const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/daily-tracker?${params.toString()}`
     );
+    const response = { data: await res.json(), status: res.status };
+    if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     
     const payload = response.data?.data ?? response.data;
     console.log('✅ API: Tracker data received');

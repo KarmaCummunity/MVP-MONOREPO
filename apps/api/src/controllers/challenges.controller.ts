@@ -13,7 +13,11 @@ import {
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
+  UseGuards,
 } from "@nestjs/common";
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserSession } from '../auth/interfaces/user-session.interface';
 import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
@@ -43,9 +47,6 @@ class CreateChallengeDto {
   @Min(1)
   @Max(1000000)
   customResetAmount = 0;
-
-  @IsString()
-  userId = "";
 }
 
 class UpdateChallengeDto {
@@ -85,8 +86,9 @@ class CreateResetLogDto {
   @IsString()
   challengeId = "";
 
+  @IsOptional()
   @IsString()
-  userId = "";
+  userId?: string;
 
   @IsNumber()
   @Min(1)
@@ -112,8 +114,9 @@ class CreateRecordBreakDto {
   @IsString()
   challengeId = "";
 
+  @IsOptional()
   @IsString()
-  userId = "";
+  userId?: string;
 
   @IsNumber()
   oldRecord = 0;
@@ -134,14 +137,15 @@ class CreateRecordBreakDto {
 }
 
 @Controller("api/challenges")
+@UseGuards(JwtAuthGuard)
 export class ChallengesController {
   private readonly logger = new Logger(ChallengesController.name);
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   @Post()
-  async createChallenge(@Body() createDto: CreateChallengeDto) {
-    this.logger.log(`Creating new challenge for user: ${createDto.userId}`);
+  async createChallenge(@Body() createDto: CreateChallengeDto, @CurrentUser() user: UserSession) {
+    this.logger.log(`Creating new challenge for user: ${user.userId}`);
 
     const errors = await validate(createDto);
     if (errors.length > 0) {
@@ -159,7 +163,7 @@ export class ChallengesController {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         RETURNING *`,
         [
-          createDto.userId,
+          user.userId,
           createDto.name,
           now,
           createDto.timeUnit,
@@ -188,7 +192,8 @@ export class ChallengesController {
   }
 
   @Get()
-  async getChallenges(@Query("userId") userId: string) {
+  async getChallenges(@CurrentUser() user: UserSession) {
+    const userId = user.userId;
     if (!userId) {
       throw new BadRequestException("userId is required");
     }
@@ -218,7 +223,8 @@ export class ChallengesController {
   }
 
   @Get(":id")
-  async getChallenge(@Param("id") id: string, @Query("userId") userId: string) {
+  async getChallenge(@Param("id") id: string, @CurrentUser() user: UserSession) {
+    const userId = user.userId;
     if (!userId) {
       throw new BadRequestException("userId is required");
     }
@@ -251,9 +257,10 @@ export class ChallengesController {
   @Put(":id")
   async updateChallenge(
     @Param("id") id: string,
-    @Query("userId") userId: string,
+    @CurrentUser() user: UserSession,
     @Body() updateDto: UpdateChallengeDto,
   ) {
+    const userId = user.userId;
     if (!userId) {
       throw new BadRequestException("userId is required");
     }
@@ -318,8 +325,9 @@ export class ChallengesController {
   @Delete(":id")
   async deleteChallenge(
     @Param("id") id: string,
-    @Query("userId") userId: string,
+    @CurrentUser() user: UserSession,
   ) {
+    const userId = user.userId;
     if (!userId) {
       throw new BadRequestException("userId is required");
     }
@@ -391,11 +399,9 @@ export class ChallengesController {
   @Post("restore/:id")
   async restoreChallenge(
     @Param("id") id: string,
-    @Query("userId") userId: string,
+    @CurrentUser() user: UserSession,
   ) {
-    if (!userId) {
-      throw new BadRequestException("userId is required");
-    }
+    const userId = user.userId;
 
     this.logger.log(`Restoring challenge: ${id}`);
 
@@ -460,10 +466,8 @@ export class ChallengesController {
   }
 
   @Get("history/deleted")
-  async getDeletedChallenges(@Query("userId") userId: string) {
-    if (!userId) {
-      throw new BadRequestException("userId is required");
-    }
+  async getDeletedChallenges(@CurrentUser() user: UserSession) {
+    const userId = user.userId;
 
     this.logger.log(`Fetching deleted challenges for user: ${userId}`);
 
@@ -490,7 +494,8 @@ export class ChallengesController {
   }
 
   @Post("reset-logs")
-  async createResetLog(@Body() createDto: CreateResetLogDto) {
+  async createResetLog(@Body() createDto: CreateResetLogDto, @CurrentUser() user: UserSession) {
+    createDto.userId = user.userId;
     this.logger.log(
       `Creating reset log for challenge: ${createDto.challengeId}`,
     );
@@ -533,12 +538,10 @@ export class ChallengesController {
 
   @Get("reset-logs/all")
   async getResetLogs(
-    @Query("userId") userId: string,
+    @CurrentUser() user: UserSession,
     @Query("challengeId") challengeId?: string,
   ) {
-    if (!userId) {
-      throw new BadRequestException("userId is required");
-    }
+    const userId = user.userId;
 
     this.logger.log(`Fetching reset logs for user: ${userId}`);
 
@@ -570,7 +573,8 @@ export class ChallengesController {
   }
 
   @Post("record-breaks")
-  async createRecordBreak(@Body() createDto: CreateRecordBreakDto) {
+  async createRecordBreak(@Body() createDto: CreateRecordBreakDto, @CurrentUser() user: UserSession) {
+    createDto.userId = user.userId;
     this.logger.log(
       `Creating record break for challenge: ${createDto.challengeId}`,
     );
@@ -612,12 +616,10 @@ export class ChallengesController {
 
   @Get("record-breaks/all")
   async getRecordBreaks(
-    @Query("userId") userId: string,
+    @CurrentUser() user: UserSession,
     @Query("challengeId") challengeId?: string,
   ) {
-    if (!userId) {
-      throw new BadRequestException("userId is required");
-    }
+    const userId = user.userId;
 
     this.logger.log(`Fetching record breaks for user: ${userId}`);
 

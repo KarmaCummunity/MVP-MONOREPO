@@ -257,6 +257,25 @@ export const useUserStore = create<UserState>((set, get) => ({
       console.log('🔐 userStore - checkAuthStatus - Starting auth check');
       set({ isLoading: true });
 
+      // --- One-time migration: move legacy jwt_access_token to tokenManager ---
+      try {
+        const legacyToken = await AsyncStorage.getItem('jwt_access_token');
+        const legacyRefresh = await AsyncStorage.getItem('jwt_refresh_token');
+        if (legacyToken) {
+          const { tokenManager } = await import('../auth/services/tokenManager');
+          const existing = await tokenManager.getAccessToken();
+          if (!existing) {
+            console.log('🔄 Migrating legacy JWT tokens to tokenManager...');
+            await tokenManager.setTokens(legacyToken, legacyRefresh || '');
+          }
+          // Clean up legacy keys after migration
+          await AsyncStorage.multiRemove(['jwt_access_token', 'jwt_refresh_token', 'jwt_token_expires_at']);
+        }
+      } catch (migrationError) {
+        console.warn('Token migration error (non-fatal):', migrationError);
+      }
+      // -----------------------------------------------------------------------
+
       // First, check for successful OAuth authentication
       console.log('🔐 userStore - checkAuthStatus - Checking for OAuth success');
       const oauthSuccess = await AsyncStorage.getItem('oauth_success_flag');
@@ -328,7 +347,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
               if (!authToken) {
                 console.warn('🔐 userStore - checkAuthStatus - No valid token found, clearing session');
-                // Token validation failed, clear session
+                // Token validation failed, clear session — use tokenManager as SSOT
+                const { tokenManager } = await import('../auth/services/tokenManager');
+                await tokenManager.clearTokens();
                 await AsyncStorage.multiRemove([
                   'current_user',
                   'guest_mode',
@@ -337,9 +358,6 @@ export const useUserStore = create<UserState>((set, get) => ({
                   'oauth_success_flag',
                   'google_auth_user',
                   'google_auth_token',
-                  'jwt_access_token',
-                  'jwt_token_expires_at',
-                  'jwt_refresh_token',
                 ]);
                 // Continue to unauthenticated state below
               } else {
@@ -438,7 +456,14 @@ export const useUserStore = create<UserState>((set, get) => ({
         console.warn('🔥 Firebase - Sign out error (non-fatal):', firebaseError);
       }
 
-      console.log('🔐 userStore - signOut - Removing all auth data from AsyncStorage');
+      console.log('🔐 userStore - signOut - Removing all auth data');
+      // Clear JWT tokens via tokenManager (SSOT)
+      try {
+        const { tokenManager } = await import('../auth/services/tokenManager');
+        await tokenManager.clearTokens();
+      } catch (e) {
+        console.warn('Failed to clear tokens from tokenManager:', e);
+      }
       await AsyncStorage.multiRemove([
         'current_user',
         'guest_mode',
@@ -597,8 +622,9 @@ export const useUserStore = create<UserState>((set, get) => ({
             logger.info('Auth', 'Firebase user detected, restoring session');
 
             try {
-              // Get UUID from server using firebase_uid and google_id
+              // Get UUID and JWT tokens from server using firebase_uid and google_id
               const { apiService } = await import('../utils/apiService');
+              const { tokenManager } = await import('../auth/services/tokenManager');
 
               // Extract google_id from providerData if available
               const googleProvider = firebaseUser.providerData?.find(
@@ -695,6 +721,15 @@ export const useUserStore = create<UserState>((set, get) => ({
               await AsyncStorage.setItem('current_user', JSON.stringify(userData));
               await AsyncStorage.setItem('auth_mode', 'real');
               await AsyncStorage.setItem('firebase_user_id', firebaseUser.uid);
+
+              // Save JWT tokens to tokenManager (SSOT)
+              if (resolveResponse.tokens) {
+                logger.info('Auth', 'Saving fresh JWT tokens to tokenManager');
+                await tokenManager.setTokens(
+                  resolveResponse.tokens.accessToken,
+                  resolveResponse.tokens.refreshToken
+                );
+              }
 
               // Update store state
               const enrichedUser = await enrichUserWithOrgRoles(userData);

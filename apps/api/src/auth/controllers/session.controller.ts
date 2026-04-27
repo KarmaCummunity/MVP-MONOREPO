@@ -18,10 +18,10 @@ import {
   Inject,
   Logger,
 } from "@nestjs/common";
-import { SessionService } from "../auth/session.service";
-import { RateLimitService } from "../auth/rate-limit.service";
+import { SessionService } from "../services/session.service";
+import { RateLimitService } from "../services/rate-limit.service";
 import { Pool } from "pg";
-import { PG_POOL } from "../database/database.module";
+import { PG_POOL } from "../../database/database.module";
 import * as argon2 from "argon2";
 
 @Controller("session")

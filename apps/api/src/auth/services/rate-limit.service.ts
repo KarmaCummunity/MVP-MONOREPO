@@ -3,7 +3,7 @@
 // - Reached from: `RateLimitController` and other controllers/services enforcing quotas.
 // - Rules: Built-in presets for general, login, register, password_reset, chat, search; supports custom rules.
 import { Injectable } from "@nestjs/common";
-import { RedisCacheService } from "../redis/redis-cache.service";
+import { RedisCacheService } from "../../redis/redis-cache.service";
 
 export interface RateLimitRule {
   requests: number; // Number of requests allowed

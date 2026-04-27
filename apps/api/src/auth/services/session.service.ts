@@ -3,7 +3,7 @@
 // - Reached from: `SessionController` endpoints and other services.
 // - Storage: Keys `session:*` and `user_sessions:*` with TTL; metadata includes IP/UA.
 import { Injectable } from "@nestjs/common";
-import { RedisCacheService } from "../redis/redis-cache.service";
+import { RedisCacheService } from "../../redis/redis-cache.service";
 import { randomBytes } from "crypto";
 
 export interface UserSession {

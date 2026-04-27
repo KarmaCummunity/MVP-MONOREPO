@@ -20,7 +20,7 @@ import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { UserResolutionService } from "../services/user-resolution.service";
 import { ItemsService } from "../items/items.service";
-import { JwtAuthGuard, AdminAuthGuard } from "../auth/jwt-auth.guard";
+import { JwtAuthGuard, AdminAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { randomUUID } from "crypto";
 
 type TaskStatus =

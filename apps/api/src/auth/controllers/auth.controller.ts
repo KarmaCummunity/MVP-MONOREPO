@@ -37,7 +37,7 @@ import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import * as argon2 from "argon2";
 import { OAuth2Client } from "google-auth-library";
-import { PG_POOL } from "../database/database.module";
+import { PG_POOL } from "../../database/database.module";
 import {
   IsString,
   IsEmail,
@@ -47,8 +47,8 @@ import {
 } from "class-validator";
 import { Transform } from "class-transformer";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
-import { JwtService } from "../auth/jwt.service";
-import { RedisCacheService } from "../redis/redis-cache.service";
+import { JwtService } from "../services/jwt.service";
+import { RedisCacheService } from "../../redis/redis-cache.service";
 
 // DTO for Google Auth with proper validation
 // Ensures tokens are within expected length ranges to prevent malformed data

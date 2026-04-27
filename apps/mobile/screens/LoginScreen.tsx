@@ -156,6 +156,14 @@ export default function LoginScreen() {
                     followingCount: serverUser.following_count || 0,
                     notifications: [],
                 };
+                // Save JWT tokens to tokenManager (SSOT)
+                if (userResponse.tokens) {
+                    const { tokenManager } = await import('../auth/services/tokenManager');
+                    await tokenManager.setTokens(
+                        userResponse.tokens.accessToken,
+                        userResponse.tokens.refreshToken
+                    );
+                }
                 await setCurrentPrincipal({ user: userData, role: 'user' });
                 await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
                 return;
@@ -184,6 +192,14 @@ export default function LoginScreen() {
             followingCount: serverUser.followingCount || 0,
             notifications: [],
         };
+        // Save JWT tokens to tokenManager (SSOT)
+        if (resolveResponse.tokens) {
+            const { tokenManager } = await import('../auth/services/tokenManager');
+            await tokenManager.setTokens(
+                resolveResponse.tokens.accessToken,
+                resolveResponse.tokens.refreshToken
+            );
+        }
         await setCurrentPrincipal({ user: userData, role: 'user' });
         await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
     };

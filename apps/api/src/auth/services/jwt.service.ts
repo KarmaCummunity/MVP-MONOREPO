@@ -4,7 +4,7 @@
 // - Security: Uses HMAC-SHA256 signing (SEC-001.1), proper expiration, blacklist support
 
 import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
-import { RedisCacheService } from "../redis/redis-cache.service";
+import { RedisCacheService } from "../../redis/redis-cache.service";
 import { randomBytes, createHash, createHmac } from "crypto";
 
 export interface SessionTokenPayload {

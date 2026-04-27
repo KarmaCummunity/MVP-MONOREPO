@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
-import { JwtService } from "../auth/jwt.service";
+import { JwtService } from "../auth/services/jwt.service";
 import * as argon2 from "argon2";
 import * as admin from "firebase-admin";
 
