@@ -1110,6 +1110,7 @@
   "buttons": {},
   "labels": {},
   "admin": {
+    "topBarAdmin": "מנהלים",
     "hierarchy": {
       "loadError": "שגיאה בטעינת עץ המנהלים",
       "connectionError": "שגיאה בחיבור לשרת",
