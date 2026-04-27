@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -11,6 +11,7 @@ import {
   Text,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -85,6 +86,19 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [feedFilterState, setFeedFilterState] = useState<FeedFilterState>(DEFAULT_FEED_FILTER_STATE);
 
+  const {
+    feed,
+    loading,
+    refreshing,
+    loadingMore,
+    hasMorePosts,
+    initialError,
+    loadMoreError,
+    clearLoadMoreError,
+    refresh,
+    loadMore,
+  } = useFeedData(feedMode);
+
   // Post menu hook
   const {
     handleMorePress,
@@ -126,10 +140,6 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     }
   });
 
-  // Custom Hook for Data
-  const { feed, loading, refreshing, loadingMore, hasMorePosts, refresh, loadMore } =
-    useFeedData(feedMode);
-
   const filteredFeed = useMemo(
     () => applyFeedFilters(feed, feedFilterState),
     [feed, feedFilterState],
@@ -139,10 +149,34 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
   const hasMorePostsRef = useRef(hasMorePosts);
   const loadingMoreRef = useRef(loadingMore);
+  const loadingRef = useRef(loading);
   const loadMoreRef = useRef(loadMore);
+  const listViewportHeightRef = useRef(0);
   hasMorePostsRef.current = hasMorePosts;
   loadingMoreRef.current = loadingMore;
+  loadingRef.current = loading;
   loadMoreRef.current = loadMore;
+
+  /** When the list is shorter than the viewport, onEndReached may never fire — chain loadMore until it scrolls or ends. */
+  const maybeLoadMoreIfListTooShort = useCallback(() => {
+    if (
+      loadingRef.current ||
+      !hasMorePostsRef.current ||
+      loadingMoreRef.current ||
+      listViewportHeightRef.current < 1
+    ) {
+      return;
+    }
+    loadMoreRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (loading || !hasMorePosts || loadingMore || filteredFeed.length === 0) {
+      return;
+    }
+    const t = setTimeout(maybeLoadMoreIfListTooShort, 100);
+    return () => clearTimeout(t);
+  }, [loading, hasMorePosts, loadingMore, filteredFeed.length, maybeLoadMoreIfListTooShort]);
 
   // Scroll Handling
   const lastScrollY = useRef(0);
@@ -164,11 +198,13 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     // Backup infinite scroll: onEndReached sometimes does not fire when content is short or on web.
     const distanceFromEnd =
       contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const listFitsInViewport = contentSize.height <= layoutMeasurement.height + 4;
     if (
       distanceFromEnd < FEED_NEAR_END_PX &&
       hasMorePostsRef.current &&
       !loadingMoreRef.current &&
-      contentSize.height > layoutMeasurement.height
+      !loadingRef.current &&
+      (listFitsInViewport || contentSize.height > layoutMeasurement.height)
     ) {
       loadMoreRef.current();
     }
@@ -307,15 +343,37 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   }, [handlePostPress, handleCommentPress, handleMorePress]);
 
   const renderListFooter = useCallback(() => {
-    if (!loadingMore || !hasMorePosts) {
+    if (!hasMorePosts) {
       return null;
     }
-    return (
-      <View style={styles.footerLoader} accessibilityRole="progressbar">
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    );
-  }, [loadingMore, hasMorePosts]);
+    if (loadMoreError) {
+      return (
+        <View style={styles.footerMessage} accessibilityRole="alert">
+          <Text style={styles.footerErrorText}>{loadMoreError}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              clearLoadMoreError();
+              loadMore();
+            }}
+            style={styles.footerRetryButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('feed.load_more_retry') || 'Retry'}
+          >
+            <Text style={styles.footerRetryText}>{t('feed.load_more_retry') || 'נסה שוב'}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (loadingMore) {
+      return (
+        <View style={styles.footerLoader} accessibilityRole="progressbar">
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.footerLoadingHint}>{t('feed.loading_more') || 'טוען…'}</Text>
+        </View>
+      );
+    }
+    return null;
+  }, [hasMorePosts, loadMoreError, loadingMore, clearLoadMoreError, loadMore, t]);
 
   const handleEndReached = useCallback(() => {
     if (filteredFeed.length === 0) return;
@@ -362,6 +420,25 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
         )}
 
         {/* Feed List */}
+        {initialError && !loading && feed.length === 0 ? (
+          <View style={styles.initialErrorWrap} accessibilityRole="alert">
+            <Text style={styles.initialErrorTitle}>{t('feed.load_failed_title') || 'לא ניתן לטעון את הפיד'}</Text>
+            <Text style={styles.initialErrorText}>{initialError}</Text>
+            <TouchableOpacity
+              style={styles.initialRetryButton}
+              onPress={() => refresh()}
+              accessibilityRole="button"
+              accessibilityLabel={t('feed.load_more_retry') || 'Retry'}
+            >
+              <Text style={styles.initialRetryText}>{t('feed.load_more_retry') || 'נסה שוב'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : loading && feed.length === 0 ? (
+          <View style={styles.initialLoadingWrap} accessibilityRole="progressbar">
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.initialLoadingHint}>{t('feed.loading_more') || 'טוען…'}</Text>
+          </View>
+        ) : (
         <FlatList
           data={filteredFeed}
           renderItem={renderItem}
@@ -372,6 +449,21 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
             // Add padding top to account for floating header
             !hideTopBar && { paddingTop: 70 }
           ]}
+          onLayout={(e) => {
+            listViewportHeightRef.current = e.nativeEvent.layout.height;
+          }}
+          onContentSizeChange={(_w, contentHeight) => {
+            if (
+              contentHeight > 0 &&
+              contentHeight <= listViewportHeightRef.current + 12 &&
+              hasMorePostsRef.current &&
+              !loadingMoreRef.current &&
+              !loadingRef.current &&
+              filteredFeed.length > 0
+            ) {
+              loadMoreRef.current();
+            }
+          }}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           refreshControl={
@@ -388,6 +480,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           removeClippedSubviews={false}
           showsVerticalScrollIndicator={false}
         />
+        )}
 
         <FeedFilterSheet
           visible={filterSheetVisible}
@@ -483,6 +576,75 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+  },
+  footerLoadingHint: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  footerMessage: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  footerErrorText: {
+    fontSize: 14,
+    color: colors.error,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  footerRetryButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  footerRetryText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  initialErrorWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+  },
+  initialErrorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  initialErrorText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  initialRetryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  initialRetryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  initialLoadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 80,
+    gap: 12,
+  },
+  initialLoadingHint: {
+    fontSize: 15,
+    color: colors.textSecondary,
   },
 });
 

@@ -4,7 +4,7 @@ import { logger } from '../utils/loggerService';
 import { FeedItem } from '../types/feed';
 import { mapApiPostToFeedItem } from '../utils/mapApiPostToFeedItem';
 import { useUser } from '../stores/userStore';
-import { appendUniqueFeedItems, sortFeedByTimestampDesc } from '../utils/feedPaginationMerge';
+import { appendUniqueFeedItems, sortFeedByTimestampDesc, feedHasLikelyMorePages } from '../utils/feedPaginationMerge';
 
 /** Server page size — small batches, load more on scroll (feed-style pagination). */
 const POSTS_PAGE_SIZE = 12;
@@ -73,6 +73,10 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
     const [refreshing, setRefreshing] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMorePosts, setHasMorePosts] = useState(true);
+    /** First-page fetch failed (network / HTTP). */
+    const [initialError, setInitialError] = useState<string | null>(null);
+    /** Paginated fetch failed; user can retry without losing the list. */
+    const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 
     const postsOffsetRef = useRef(0);
     const loadMoreInFlightRef = useRef(false);
@@ -88,6 +92,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             } else {
                 setLoading(true);
             }
+            setInitialError(null);
+            setLoadMoreError(null);
             postsOffsetRef.current = 0;
             setHasMorePosts(true);
             loadMoreInFlightRef.current = false;
@@ -106,6 +112,9 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                     });
                     setFeed([]);
                     setHasMorePosts(false);
+                    setInitialError(
+                        postsResponse.error || 'Failed to load feed',
+                    );
                     return;
                 }
                 const rawPosts = postsResponse.data || [];
@@ -126,6 +135,11 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 setHasMorePosts(rawPosts.length === POSTS_PAGE_SIZE);
             } catch (error) {
                 logger.error('useFeedData', 'Error loading feed', { error });
+                setFeed([]);
+                setHasMorePosts(false);
+                setInitialError(
+                    error instanceof Error ? error.message : 'Failed to load feed',
+                );
             } finally {
                 initialLoadCompleteRef.current = true;
                 setLoading(false);
@@ -146,6 +160,7 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         const viewerId = feedMode === 'friends' ? currentUser?.id : undefined;
         loadMoreInFlightRef.current = true;
         setLoadingMore(true);
+        setLoadMoreError(null);
 
         try {
             const offset = postsOffsetRef.current;
@@ -157,6 +172,9 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                     offset,
                     error: postsResponse.error,
                 });
+                setLoadMoreError(
+                    postsResponse.error || 'Failed to load more posts',
+                );
                 return;
             }
 
@@ -169,23 +187,18 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
 
             const mappedPosts = rawPosts.map(mapApiPostToFeedItem);
 
-            let appendedCount = 0;
             setFeed((prev) => {
-                const before = prev.length;
                 const merged = appendUniqueFeedItems(prev, mappedPosts);
-                appendedCount = merged.length - before;
                 return sortFeedByTimestampDesc(merged);
             });
 
             postsOffsetRef.current = offset + rawPosts.length;
-            // Stop if server returned a short page, or every row was a duplicate (bad offset / cache bug)
-            if (rawPosts.length < POSTS_PAGE_SIZE || appendedCount === 0) {
-                setHasMorePosts(false);
-            } else {
-                setHasMorePosts(true);
-            }
+            setHasMorePosts(feedHasLikelyMorePages(rawPosts.length, POSTS_PAGE_SIZE));
         } catch (error) {
             logger.error('useFeedData', 'Error loading more feed posts', { error });
+            setLoadMoreError(
+                error instanceof Error ? error.message : 'Failed to load more posts',
+            );
         } finally {
             setLoadingMore(false);
             loadMoreInFlightRef.current = false;
@@ -196,12 +209,17 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         loadInitialOrRefresh(false);
     }, [loadInitialOrRefresh]);
 
+    const clearLoadMoreError = useCallback(() => setLoadMoreError(null), []);
+
     return {
         feed,
         loading,
         refreshing,
         loadingMore,
         hasMorePosts,
+        initialError,
+        loadMoreError,
+        clearLoadMoreError,
         refresh: () => loadInitialOrRefresh(true),
         loadMore,
     };

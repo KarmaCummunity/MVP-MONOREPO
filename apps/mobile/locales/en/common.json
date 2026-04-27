@@ -69,6 +69,9 @@
     "empty_discovery": "Be the first to post!",
     "empty_filtered": "No results for the current filters",
     "empty_filtered_hint": "Change options or tap Reset in the filter panel",
+    "loading_more": "Loading posts…",
+    "load_failed_title": "Could not load the feed",
+    "load_more_retry": "Try again",
     "filterSheet": {
       "title": "Filter and sort",
       "reset": "Reset",
