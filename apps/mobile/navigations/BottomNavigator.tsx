@@ -224,31 +224,44 @@ export default function BottomNavigator(): React.ReactElement {
   };
 
   const handleTabPress = (e: any, navigation: any, routeName: string) => {
-    // Only act if the tab is already focused
+    const initialRoute = TAB_INITIAL_ROUTES[routeName];
+    if (!initialRoute) return;
+
+    // Home: any press on the Home tab must show the main feed (HomeMain), including
+    // when returning from CommunityStatsScreen or when switching back from another tab.
+    if (routeName === 'HomeScreen') {
+      e.preventDefault();
+      resetHomeScreen();
+      (navigation as { navigate: (name: string, params?: object) => void }).navigate(
+        'HomeScreen',
+        { screen: 'HomeMain' },
+      );
+      return;
+    }
+
+    // Other tabs: only reset nested stack when the tab is already focused
     if (navigation.isFocused()) {
-      const initialRoute = TAB_INITIAL_ROUTES[routeName];
-      if (initialRoute) {
-        logger.debug('BottomNavigator', `Tab ${routeName} pressed while focused - resetting stack to ${initialRoute}`);
+      logger.debug(
+        'BottomNavigator',
+        `Tab ${routeName} pressed while focused - resetting stack to ${initialRoute}`,
+      );
 
-        e.preventDefault();
+      e.preventDefault();
 
-        // Special handling for Home logic (refresh/reset via store)
-        if (routeName === 'HomeScreen') {
-          resetHomeScreen();
-        }
-
-        // Perform a deep reset of the tab's stack
-        // This resets the Tab Navigator history to just this tab, with the stack reset to initial route
-        navigation.dispatch(CommonActions.reset({
+      // Perform a deep reset of the tab's stack
+      navigation.dispatch(
+        CommonActions.reset({
           index: 0,
-          routes: [{
-            name: routeName,
-            state: {
-              routes: [{ name: initialRoute }]
-            }
-          }]
-        }));
-      }
+          routes: [
+            {
+              name: routeName,
+              state: {
+                routes: [{ name: initialRoute }],
+              },
+            },
+          ],
+        }),
+      );
     }
   };
 

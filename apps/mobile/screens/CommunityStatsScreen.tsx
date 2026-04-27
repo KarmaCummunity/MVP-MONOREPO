@@ -137,11 +137,6 @@ export default function CommunityStatsScreen() {
     });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [headerHeight, setHeaderHeight] = useState(0);
-    const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
-    const maxListHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0
-        ? screenHeight - tabBarHeight - headerHeight
-        : undefined;
 
     const loadStats = useCallback(async (forceRefresh = false) => {
         try {
@@ -265,13 +260,7 @@ export default function CommunityStatsScreen() {
     return (
         <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
             <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
-            {/* List container - limited height on web to ensure scrolling works */}
-            <View style={[
-                styles.listWrapper,
-                Platform.OS === 'web' && maxListHeight ? {
-                    maxHeight: maxListHeight,
-                } : undefined
-            ]}>
+            <View style={styles.listWrapper}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -284,15 +273,7 @@ export default function CommunityStatsScreen() {
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
                     }
                 >
-                    <View 
-                        style={styles.header}
-                        onLayout={(event) => {
-                            if (Platform.OS === 'web') {
-                                const { height } = event.nativeEvent.layout;
-                                setHeaderHeight(height);
-                            }
-                        }}
-                    >
+                    <View style={styles.header}>
                     <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
                     <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
                     <View style={styles.headerPostsRow}>
@@ -499,8 +480,17 @@ export default function CommunityStatsScreen() {
                     </View>
                 </View>
 
-                {/* Bottom padding for safe area */}
-                <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
+                {/* Bottom padding: tab bar (absolute) + safe area */}
+                <View
+                    style={{
+                        height:
+                            Platform.OS === 'ios'
+                                ? 24 + tabBarHeight + 40
+                                : Platform.OS === 'web'
+                                  ? 24 + tabBarHeight + 24
+                                  : 16 + tabBarHeight + 24,
+                    }}
+                />
                 </ScrollView>
             </View>
         </SafeAreaView>
