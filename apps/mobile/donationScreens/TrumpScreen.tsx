@@ -286,46 +286,46 @@ export default function TrumpScreen({
             onNumColumnsChange={setNumColumns}
             style={{ top: 10, left: 4, height: 160 }}
           />
-          <View style={localStyles.resultsHeader}>
-            <Text style={localStyles.resultsTitle}>
-              {trumpData.searchQuery
-                ? `${t('trump:ui.searchResultsPrefix')} "${trumpData.searchQuery}"`
-                : `${t('trump:ui.availableRides')} (${trumpData.filteredPosts.length})`}
-            </Text>
-          </View>
-
-          <ScrollContainer
-            contentStyle={localStyles.resultsList}
-            showsVerticalScrollIndicator={false}
-          >
-            <FlatList
-              data={trumpData.filteredPosts}
-              renderItem={renderPostItem}
-              keyExtractor={(item) => item.id || String(item.timestamp)}
-              key={numColumns}
-              numColumns={numColumns}
-              columnWrapperStyle={numColumns > 1 ? localStyles.columnWrapper : undefined}
-              contentContainerStyle={{ paddingHorizontal: screenPadding }}
-              scrollEnabled={false}
-              nestedScrollEnabled
-              ListEmptyComponent={renderEmptyPosts}
-              showsVerticalScrollIndicator={false}
-            />
-
-            <View style={[localStyles.section, { marginTop: 30, paddingBottom: 40 }]}>
-              <View
-                style={{
-                  flexDirection: 'row-reverse',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 12,
-                }}
-              >
-                <Text style={localStyles.sectionTitle}>{t('trump:ui.whatsappGroups')}</Text>
+          <FlatList
+            style={{ flex: 1 }}
+            data={trumpData.filteredPosts}
+            renderItem={renderPostItem}
+            keyExtractor={(item) => item.id || String(item.timestamp)}
+            key={numColumns}
+            numColumns={numColumns}
+            columnWrapperStyle={numColumns > 1 ? localStyles.columnWrapper : undefined}
+            contentContainerStyle={[
+              localStyles.resultsList,
+              { paddingHorizontal: screenPadding },
+            ]}
+            ListHeaderComponent={
+              <View style={localStyles.resultsHeader}>
+                <Text style={localStyles.resultsTitle}>
+                  {trumpData.searchQuery
+                    ? `${t('trump:ui.searchResultsPrefix')} "${trumpData.searchQuery}"`
+                    : `${t('trump:ui.availableRides')} (${trumpData.filteredPosts.length})`}
+                </Text>
               </View>
-              <AddLinkComponent category="trump" />
-            </View>
-          </ScrollContainer>
+            }
+            ListEmptyComponent={renderEmptyPosts}
+            ListFooterComponent={
+              <View style={[localStyles.section, { marginTop: 30, paddingBottom: 40 }]}>
+                <View
+                  style={{
+                    flexDirection: 'row-reverse',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text style={localStyles.sectionTitle}>{t('trump:ui.whatsappGroups')}</Text>
+                </View>
+                <AddLinkComponent category="trump" />
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
         </View>
       )}
 
