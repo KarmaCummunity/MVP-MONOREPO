@@ -10,11 +10,23 @@ Karma Community monorepo containing multiple apps:
 
 ## Replit setup
 
-The Replit preview runs the **Expo Web** version of `apps/mobile` on port 5000.
+The Replit preview runs a **static export** of the Expo Web `apps/mobile` build on port 5000 (Metro dev server is too memory-heavy for the proxy/iframe).
 
-- Workflow: `Start application` runs `npm run web --workspace @kc/mobile -- --port 5000 --host lan`
-- Metro bundler binds `0.0.0.0:5000`; the Replit proxy serves it via the iframe preview.
-- The shared types package must be built once before first start (`cd packages/shared-types && npm run build`). It outputs `dist/index.js` which the mobile app imports.
+- Workflow: `Start application` frees port 5000, runs `npx expo export --platform web` (only if `dist/` is missing) and serves the result with `npx serve -s dist -l tcp://0.0.0.0:5000 --no-clipboard`.
+- The shared types package must be built once before the first export (`npm run build --workspace @kc/shared-types`); it outputs `dist/index.js` which the mobile app imports.
+
+### Important: React / react-dom version pin
+
+The mobile workspace transitively pulls `react-dom@19.0.0` while `react@19.2.4` is installed at the workspace level. This mismatch causes React error #527 ("Incompatible React versions") at runtime and makes the page render blank with no visible UI.
+
+To fix it, both of these are pinned in `apps/mobile/package.json`:
+
+```jsonc
+"dependencies": { "react-dom": "19.2.4" },
+"overrides":   { "react-dom": "19.2.4" }
+```
+
+The override is required to defeat a peer-dep resolution that would otherwise nest `react-dom@19.0.0` under `apps/mobile/node_modules/react-dom`. After changing this you must rebuild: `rm -rf apps/mobile/dist && cd apps/mobile && npx expo export --platform web`.
 
 ## Why only mobile web?
 

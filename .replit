@@ -30,7 +30,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run web --workspace @kc/mobile -- --port 5000 --host lan"
+args = "bash -c 'fuser -k 5000/tcp 2>/dev/null; sleep 1; cd apps/mobile && (test -f dist/index.html || npx expo export --platform web) && npx serve -s dist -l tcp://0.0.0.0:5000 --no-clipboard'"
 waitForPort = 5000
 
 [deployment]
