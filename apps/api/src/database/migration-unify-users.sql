@@ -79,6 +79,8 @@ DO $$
 DECLARE
     item_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
 BEGIN
@@ -114,7 +116,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(item_record.owner_id, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(item_record.owner_id, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN item_record.owner_id !~ '@' AND length(item_record.owner_id) > 20 
                          THEN item_record.owner_id 
@@ -134,7 +136,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(item_record.owner_id, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(item_record.owner_id, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -172,6 +174,8 @@ DO $$
 DECLARE
     task_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
 BEGIN
@@ -207,7 +211,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(task_record.created_by, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(task_record.created_by, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN task_record.created_by !~ '@' AND length(task_record.created_by) > 20 
                          THEN task_record.created_by 
@@ -227,7 +231,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(task_record.created_by, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(task_record.created_by, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -260,6 +264,8 @@ DO $$
 DECLARE
     member_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
 BEGIN
@@ -295,7 +301,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(member_record.created_by, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(member_record.created_by, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN member_record.created_by !~ '@' AND length(member_record.created_by) > 20 
                          THEN member_record.created_by 
@@ -315,7 +321,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(member_record.created_by, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(member_record.created_by, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -370,4 +376,3 @@ END $$;
 -- ============================================
 -- All user ID fields have been converted to UUID
 -- Duplicate tables (links, user_id_mapping) have been removed
-
