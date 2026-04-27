@@ -31,7 +31,7 @@ i18n
     resources,
     lng: initialLang,
     fallbackLng: 'en',
-    ns: ['common', 'home', 'profile', 'donations', 'notifications', 'auth', 'errors', 'buttons', 'labels', 'settings', 'comments', 'search', 'bookmarks', 'trump', 'chat', 'landing', 'quickMessage', 'challenges'],
+    ns: ['common', 'home', 'profile', 'donations', 'notifications', 'auth', 'errors', 'buttons', 'labels', 'settings', 'comments', 'search', 'bookmarks', 'trump', 'chat', 'landing', 'quickMessage', 'challenges', 'postDetail'],
     defaultNS: 'common',
     compatibilityJSON: 'v4',
     interpolation: {

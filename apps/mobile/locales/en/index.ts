@@ -15,6 +15,7 @@ import labels from './labels.json';
 import landing from './landing.json';
 import newChatScreen from './newChatScreen.json';
 import notifications from './notifications.json';
+import postDetail from './postDetail.json';
 import profile from './profile.json';
 import quickMessage from './quickMessage.json';
 import rides from './rides.json';
@@ -40,6 +41,7 @@ export default {
   landing,
   newChatScreen,
   notifications,
+  postDetail,
   profile,
   quickMessage,
   rides,

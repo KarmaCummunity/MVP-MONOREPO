@@ -1,8 +1,9 @@
 // Extracted from ProfileScreen — Open tab.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import colors from '../../globals/colors';
 import { useUser } from '../../stores/userStore';
 import { apiService } from '../../utils/apiService';
@@ -12,6 +13,8 @@ import {
   classifyOpenProfilePost,
 } from '../../utils/profileOpenTabPostEntry';
 import PostReelItem from '../../components/Feed/PostReelItem';
+import type { FeedItem } from '../../types/feed';
+import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
 import { usePostMenu } from '../../hooks/usePostMenu';
 import OptionsModal from '../../components/Feed/OptionsModal';
 import ReportPostModal from '../../components/Feed/ReportPostModal';
@@ -19,6 +22,7 @@ import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
 export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
   const { t } = useTranslation(['profile']);
+  const navigation = useNavigation();
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +40,13 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
     selectedPostForReport,
     setSelectedPostForReport
   } = usePostMenu();
+
+  const handlePostPress = useCallback(
+    (feedItem: FeedItem) => {
+      navigateToPostDetail(navigation as never, { postId: feedItem.id, initialItem: feedItem });
+    },
+    [navigation],
+  );
 
   // Report submit handler
   const handleReportSubmit = async (_reason: string) => {
@@ -360,7 +371,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
             item={item}
             numColumns={3}
             cardWidth={cardWidth}
-            onPress={() => { }}
+            onPress={handlePostPress}
             onMorePress={handleMorePress}
           />
         )}

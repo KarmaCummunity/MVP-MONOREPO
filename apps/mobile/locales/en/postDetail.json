@@ -1,0 +1,33 @@
+{
+  "title": "Post",
+  "loading": "Loading post…",
+  "loadError": "Could not load this post. Pull to try again.",
+  "notFound": "Post not found.",
+  "retry": "Try again",
+  "sellerHint": "Publisher",
+  "viewProfile": "Profile",
+  "intent": {
+    "give": "Give",
+    "request": "Receive"
+  },
+  "rideSection": "Ride details",
+  "taskSection": "Task",
+  "from": "From",
+  "to": "To",
+  "when": "When",
+  "seats": "Seats",
+  "price": "Price per seat",
+  "status": "Status",
+  "openChallenge": "Open challenge",
+  "types": {
+    "post": "Post",
+    "item": "Item",
+    "donation": "Donation",
+    "ride": "Ride",
+    "ride_offered": "Ride offered",
+    "task_assignment": "Task",
+    "task_completion": "Task completed",
+    "task_post": "Task",
+    "community_challenge": "Challenge"
+  }
+}
