@@ -504,6 +504,217 @@ export class TasksController {
     }
   }
 
+  private appendListStatusPriorityCategoryFilters(
+    statusList: TaskStatus[] | undefined,
+    priorityList: TaskPriority[] | undefined,
+    categoryList: string[] | undefined,
+    filters: string[],
+    params: unknown[],
+  ): void {
+    if (statusList && statusList.length > 0) {
+      if (statusList.length === 1) {
+        params.push(statusList[0]);
+        filters.push(`status = $${params.length}`);
+      } else {
+        params.push(statusList);
+        filters.push(`status = ANY($${params.length}::text[])`);
+      }
+    }
+
+    if (priorityList && priorityList.length > 0) {
+      if (priorityList.length === 1) {
+        params.push(priorityList[0]);
+        filters.push(`priority = $${params.length}`);
+      } else {
+        params.push(priorityList);
+        filters.push(`priority = ANY($${params.length}::text[])`);
+      }
+    }
+
+    if (categoryList && categoryList.length > 0) {
+      if (categoryList.length === 1) {
+        params.push(categoryList[0]);
+        filters.push(`category = $${params.length}`);
+      } else {
+        params.push(categoryList);
+        filters.push(`category = ANY($${params.length}::text[])`);
+      }
+    }
+  }
+
+  private async appendListAssigneeFilter(
+    assignee: string | undefined,
+    filters: string[],
+    params: unknown[],
+  ): Promise<void> {
+    if (!assignee) {
+      return;
+    }
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let assigneeUuid = assignee;
+
+    if (!uuidRegex.test(assignee)) {
+      const resolved = await this.resolveUserIdToUUID(assignee);
+      if (resolved) {
+        this.logger.log(
+          `👤 Resolved list filter assignee ${assignee} -> ${resolved}`,
+        );
+        assigneeUuid = resolved;
+      } else {
+        this.logger.warn(
+          `⚠️ Could not resolve list filter assignee: ${assignee}`,
+        );
+      }
+    }
+
+    params.push(assigneeUuid);
+    filters.push(`$${params.length}::UUID = ANY(assignees::UUID[])`);
+  }
+
+  private async runCreateTaskAssigneeSideEffects(
+    newTask: { id: string; title: string; description: string | null },
+    assigneeUUIDs: string[],
+    createdByUuid: string | null,
+  ): Promise<void> {
+    if (assigneeUUIDs.length === 0) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    this.logger.log(
+      `🔔 Preparing to notify ${assigneeUUIDs.length} assignees...`,
+    );
+
+    for (const assigneeId of assigneeUUIDs) {
+      try {
+        this.logger.log(`🔔 Sending new task notification to ${assigneeId}`);
+
+        await this.itemsService.create(
+          "notifications",
+          assigneeId,
+          randomUUID(),
+          {
+            title: "משימה חדשה",
+            body: `הוקצתה לך משימה חדשה: ${newTask.title}`,
+            type: "system",
+            timestamp,
+            read: false,
+            userId: assigneeId,
+            data: { taskId: newTask.id },
+          },
+        );
+        this.logger.log(`✅ Notification sent to ${assigneeId}`);
+      } catch (itemError) {
+        this.logger.error(
+          `❌ Failed to create notification for ${assigneeId}. It is likely the 'notifications' table does not exist.`,
+          itemError,
+        );
+      }
+    }
+
+    const postResults = { created: 0, failed: 0, errors: [] as string[] };
+
+    try {
+      await this.ensurePostsTable();
+
+      const postCreatedFor = new Set<string>();
+
+      if (createdByUuid) {
+        try {
+          await this.pool.query(
+            `
+                INSERT INTO posts (author_id, task_id, title, description, post_type)
+                VALUES ($1, $2, $3, $4, 'task_assignment')
+              `,
+            [
+              createdByUuid,
+              newTask.id,
+              `יצרת משימה חדשה: ${newTask.title}`,
+              newTask.description
+                ? `יצרת משימה חדשה: ${newTask.description}`
+                : `יצרת משימה חדשה: ${newTask.title}`,
+            ],
+          );
+          postResults.created++;
+          postCreatedFor.add(createdByUuid);
+          this.logger.log(`✅ Post created for creator ${createdByUuid}`);
+        } catch (postError) {
+          postResults.failed++;
+          const errorMsg =
+            postError instanceof Error ? postError.message : "Unknown error";
+          postResults.errors.push(
+            `Failed for creator ${createdByUuid}: ${errorMsg}`,
+          );
+          this.logger.error(
+            `❌ Failed to create post for creator ${createdByUuid}:`,
+            postError,
+          );
+        }
+      }
+
+      this.logger.log(
+        `📝 Creating posts for ${assigneeUUIDs.length} assignees...`,
+      );
+      for (const assigneeId of assigneeUUIDs) {
+        if (postCreatedFor.has(assigneeId)) {
+          this.logger.log(
+            `⏭️ Skipping post for ${assigneeId} - already created as creator`,
+          );
+          continue;
+        }
+
+        try {
+          await this.pool.query(
+            `
+                INSERT INTO posts (author_id, task_id, title, description, post_type)
+                VALUES ($1, $2, $3, $4, 'task_assignment')
+              `,
+            [
+              assigneeId,
+              newTask.id,
+              `משימה חדשה: ${newTask.title}`,
+              newTask.description
+                ? `הוקצתה לך משימה חדשה: ${newTask.description}`
+                : `הוקצתה לך משימה חדשה: ${newTask.title}`,
+            ],
+          );
+          postResults.created++;
+          postCreatedFor.add(assigneeId);
+          this.logger.log(`✅ Post created for assignee ${assigneeId}`);
+        } catch (postError) {
+          postResults.failed++;
+          const errorMsg =
+            postError instanceof Error ? postError.message : "Unknown error";
+          postResults.errors.push(`Failed for ${assigneeId}: ${errorMsg}`);
+          this.logger.error(
+            `❌ Failed to create post for assignee ${assigneeId}:`,
+            postError,
+          );
+        }
+      }
+
+      this.logger.log(
+        `📊 Post creation summary: ${postResults.created} created, ${postResults.failed} failed`,
+      );
+
+      if (postResults.created > 0) {
+        try {
+          await this.clearPostsCaches();
+          this.logger.log("✅ Posts caches cleared after post creation");
+        } catch (cacheErr) {
+          this.logger.warn(
+            "Error clearing posts caches after creation (non-fatal):",
+            cacheErr,
+          );
+        }
+      }
+    } catch (tableError) {
+      this.logger.error("❌ Failed to ensure posts table:", tableError);
+      postResults.errors.push("Posts table initialization failed");
+    }
+  }
+
   /**
    * List tasks with filtering and pagination
    * Cache TTL: 10 minutes (tasks change moderately frequently)
@@ -577,64 +788,15 @@ export class TasksController {
       const filters: string[] = [];
       const params: unknown[] = [];
 
-      if (statusList && statusList.length > 0) {
-        if (statusList.length === 1) {
-          params.push(statusList[0]);
-          filters.push(`status = $${params.length}`);
-        } else {
-          params.push(statusList);
-          filters.push(`status = ANY($${params.length}::text[])`);
-        }
-      }
+      this.appendListStatusPriorityCategoryFilters(
+        statusList,
+        priorityList,
+        categoryList,
+        filters,
+        params,
+      );
 
-      if (priorityList && priorityList.length > 0) {
-        if (priorityList.length === 1) {
-          params.push(priorityList[0]);
-          filters.push(`priority = $${params.length}`);
-        } else {
-          params.push(priorityList);
-          filters.push(`priority = ANY($${params.length}::text[])`);
-        }
-      }
-
-      if (categoryList && categoryList.length > 0) {
-        if (categoryList.length === 1) {
-          params.push(categoryList[0]);
-          filters.push(`category = $${params.length}`);
-        } else {
-          params.push(categoryList);
-          filters.push(`category = ANY($${params.length}::text[])`);
-        }
-      }
-
-      if (assignee) {
-        // Assume assignee is UUID for now. If email, we'd need to resolve it.
-        // Ideally we resolve it to be safe.
-        // But for performance, let's assume UUID if it looks like one.
-        const uuidRegex =
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        let assigneeUuid = assignee;
-
-        if (!uuidRegex.test(assignee)) {
-          // Try to resolve if not UUID (e.g. email)
-          const resolved = await this.resolveUserIdToUUID(assignee);
-          if (resolved) {
-            this.logger.log(
-              `👤 Resolved list filter assignee ${assignee} -> ${resolved}`,
-            );
-            assigneeUuid = resolved;
-          } else {
-            this.logger.warn(
-              `⚠️ Could not resolve list filter assignee: ${assignee}`,
-            );
-          }
-        }
-
-        params.push(assigneeUuid);
-        // "assigneeUuid = ANY(assignees)" checks if uuid is in the array
-        // Cast both sides to UUID to ensure type compatibility
-        filters.push(`$${params.length}::UUID = ANY(assignees::UUID[])`);
-      }
+      await this.appendListAssigneeFilter(assignee, filters, params);
 
       // Add text search if query parameter is provided
       if (searchQuery && searchQuery.trim()) {
@@ -1137,159 +1299,11 @@ export class TasksController {
       const newTask = rows[0];
       this.logger.log("✅ Task inserted successfully:", newTask.id);
 
-      // NOTIFICATION: Notify assignees
-      if (assigneeUUIDs.length > 0) {
-        const timestamp = new Date().toISOString();
-        this.logger.log(
-          `🔔 Preparing to notify ${assigneeUUIDs.length} assignees...`,
-        );
-
-        for (const assigneeId of assigneeUUIDs) {
-          try {
-            // Check if notifications table exists first (quick safeguard)
-            // Actually, just try to create and catch error
-
-            this.logger.log(
-              `🔔 Sending new task notification to ${assigneeId}`,
-            ); // Log BEFORE attempt
-
-            await this.itemsService.create(
-              "notifications",
-              assigneeId,
-              randomUUID(),
-              {
-                title: "משימה חדשה",
-                body: `הוקצתה לך משימה חדשה: ${newTask.title}`,
-                type: "system",
-                timestamp,
-                read: false,
-                userId: assigneeId,
-                data: { taskId: newTask.id },
-              },
-            );
-            this.logger.log(`✅ Notification sent to ${assigneeId}`);
-          } catch (itemError) {
-            this.logger.error(
-              `❌ Failed to create notification for ${assigneeId}. It is likely the 'notifications' table does not exist.`,
-              itemError,
-            );
-            // Verify table existence - if it fails here, we should probably auto-create it or warn loudly
-          }
-        }
-
-        // AUTO-POST: Create posts for task assignment
-        // Track post creation results for response
-        const postResults = { created: 0, failed: 0, errors: [] as string[] };
-
-        try {
-          // Ensure posts table exists before creating posts
-          await this.ensurePostsTable();
-
-          // Track who already got a post to avoid duplicates
-          const postCreatedFor = new Set<string>();
-
-          // 1. Create post for the CREATOR first (if they exist)
-          if (createdByUuid) {
-            try {
-              await this.pool.query(
-                `
-                INSERT INTO posts (author_id, task_id, title, description, post_type)
-                VALUES ($1, $2, $3, $4, 'task_assignment')
-              `,
-                [
-                  createdByUuid,
-                  newTask.id,
-                  `יצרת משימה חדשה: ${newTask.title}`,
-                  newTask.description
-                    ? `יצרת משימה חדשה: ${newTask.description}`
-                    : `יצרת משימה חדשה: ${newTask.title}`,
-                ],
-              );
-              postResults.created++;
-              postCreatedFor.add(createdByUuid);
-              this.logger.log(`✅ Post created for creator ${createdByUuid}`);
-            } catch (postError) {
-              postResults.failed++;
-              const errorMsg =
-                postError instanceof Error
-                  ? postError.message
-                  : "Unknown error";
-              postResults.errors.push(
-                `Failed for creator ${createdByUuid}: ${errorMsg}`,
-              );
-              this.logger.error(
-                `❌ Failed to create post for creator ${createdByUuid}:`,
-                postError,
-              );
-            }
-          }
-
-          // 2. Create posts for ASSIGNEES (skip if already got post as creator)
-          this.logger.log(
-            `📝 Creating posts for ${assigneeUUIDs.length} assignees...`,
-          );
-          for (const assigneeId of assigneeUUIDs) {
-            // Skip if this assignee already got a post (e.g., they are also the creator)
-            if (postCreatedFor.has(assigneeId)) {
-              this.logger.log(
-                `⏭️ Skipping post for ${assigneeId} - already created as creator`,
-              );
-              continue;
-            }
-
-            try {
-              await this.pool.query(
-                `
-                INSERT INTO posts (author_id, task_id, title, description, post_type)
-                VALUES ($1, $2, $3, $4, 'task_assignment')
-              `,
-                [
-                  assigneeId,
-                  newTask.id,
-                  `משימה חדשה: ${newTask.title}`,
-                  newTask.description
-                    ? `הוקצתה לך משימה חדשה: ${newTask.description}`
-                    : `הוקצתה לך משימה חדשה: ${newTask.title}`,
-                ],
-              );
-              postResults.created++;
-              postCreatedFor.add(assigneeId);
-              this.logger.log(`✅ Post created for assignee ${assigneeId}`);
-            } catch (postError) {
-              postResults.failed++;
-              const errorMsg =
-                postError instanceof Error
-                  ? postError.message
-                  : "Unknown error";
-              postResults.errors.push(`Failed for ${assigneeId}: ${errorMsg}`);
-              this.logger.error(
-                `❌ Failed to create post for assignee ${assigneeId}:`,
-                postError,
-              );
-            }
-          }
-
-          this.logger.log(
-            `📊 Post creation summary: ${postResults.created} created, ${postResults.failed} failed`,
-          );
-
-          // Clear posts cache after creating posts
-          if (postResults.created > 0) {
-            try {
-              await this.clearPostsCaches();
-              this.logger.log("✅ Posts caches cleared after post creation");
-            } catch (cacheErr) {
-              this.logger.warn(
-                "Error clearing posts caches after creation (non-fatal):",
-                cacheErr,
-              );
-            }
-          }
-        } catch (tableError) {
-          this.logger.error("❌ Failed to ensure posts table:", tableError);
-          postResults.errors.push("Posts table initialization failed");
-        }
-      }
+      await this.runCreateTaskAssigneeSideEffects(
+        newTask,
+        assigneeUUIDs,
+        createdByUuid,
+      );
 
       // Clear task list caches (blocking to prevent race condition)
       try {
@@ -1403,6 +1417,211 @@ export class TasksController {
         error:
           error instanceof Error ? error.message : "Failed to log task hours",
       };
+    }
+  }
+
+  private async runUpdateTaskNewAssigneeSideEffects(
+    updatedTask: {
+      id: string;
+      title: string;
+      description: string | null;
+    },
+    addedAssignees: string[],
+  ): Promise<void> {
+    if (addedAssignees.length === 0) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    this.logger.log(
+      `🔔 Found ${addedAssignees.length} new assignees to notify...`,
+    );
+
+    for (const assigneeId of addedAssignees) {
+      try {
+        this.logger.log(`🔔 Sending notification to ${assigneeId}`);
+
+        await this.itemsService.create(
+          "notifications",
+          assigneeId,
+          randomUUID(),
+          {
+            title: "משימה חדשה",
+            body: `הוקצתה לך משימה חדשה: ${updatedTask.title}`,
+            type: "system",
+            timestamp,
+            read: false,
+            userId: assigneeId,
+            data: { taskId: updatedTask.id },
+          },
+        );
+        this.logger.log(`✅ Notification sent to ${assigneeId}`);
+      } catch (err) {
+        this.logger.error(
+          `❌ Failed to create notification for ${assigneeId}`,
+          err,
+        );
+      }
+    }
+
+    const assignPostResults = { created: 0, failed: 0 };
+
+    try {
+      await this.ensurePostsTable();
+
+      this.logger.log(
+        `📝 Creating posts for ${addedAssignees.length} newly assigned users...`,
+      );
+      for (const assigneeId of addedAssignees) {
+        try {
+          await this.pool.query(
+            `
+                  INSERT INTO posts (author_id, task_id, title, description, post_type)
+                  VALUES ($1, $2, $3, $4, 'task_assignment')
+                `,
+            [
+              assigneeId,
+              updatedTask.id,
+              `משימה חדשה: ${updatedTask.title}`,
+              updatedTask.description
+                ? `הוקצתה לך משימה חדשה: ${updatedTask.description}`
+                : `הוקצתה לך משימה חדשה: ${updatedTask.title}`,
+            ],
+          );
+          assignPostResults.created++;
+          this.logger.log(
+            `✅ Post created for newly assigned user ${assigneeId}`,
+          );
+        } catch (postError) {
+          assignPostResults.failed++;
+          this.logger.error(
+            `❌ Failed to create post for assignee ${assigneeId}:`,
+            postError,
+          );
+        }
+      }
+      this.logger.log(
+        `📊 Assignment post summary: ${assignPostResults.created} created, ${assignPostResults.failed} failed`,
+      );
+
+      if (assignPostResults.created > 0) {
+        try {
+          await this.clearPostsCaches();
+          this.logger.log(
+            "✅ Posts caches cleared after assignment post creation",
+          );
+        } catch (cacheErr) {
+          this.logger.warn(
+            "Error clearing posts caches after assignment (non-fatal):",
+            cacheErr,
+          );
+        }
+      }
+    } catch (tableError) {
+      this.logger.error(
+        "❌ Failed to ensure posts table for assignment posts:",
+        tableError,
+      );
+    }
+  }
+
+  private async runUpdateTaskCompletionPosts(task: {
+    id: string;
+    title: string;
+    description: string | null;
+    created_by: string | null;
+    assignees: string[] | null;
+  }): Promise<void> {
+    const completionPostResults = { created: 0, failed: 0 };
+
+    try {
+      await this.ensurePostsTable();
+
+      this.logger.log(`📝 Creating completion posts for task ${task.id}...`);
+
+      if (task.created_by) {
+        try {
+          await this.pool.query(
+            `
+                INSERT INTO posts (author_id, task_id, title, description, post_type)
+                VALUES ($1, $2, $3, $4, 'task_completion')
+              `,
+            [
+              task.created_by,
+              task.id,
+              `משימה הושלמה: ${task.title}`,
+              task.description
+                ? `המשימה "${task.title}" הושלמה בהצלחה! ${task.description}`
+                : `המשימה "${task.title}" הושלמה בהצלחה!`,
+            ],
+          );
+          completionPostResults.created++;
+          this.logger.log(
+            `✅ Completion post created for creator ${task.created_by}`,
+          );
+        } catch (creatorPostError) {
+          completionPostResults.failed++;
+          this.logger.error(
+            `❌ Failed to create completion post for creator ${task.created_by}:`,
+            creatorPostError,
+          );
+        }
+      }
+
+      if (task.assignees && task.assignees.length > 0) {
+        for (const assigneeId of task.assignees) {
+          if (assigneeId !== task.created_by) {
+            try {
+              await this.pool.query(
+                `
+                    INSERT INTO posts (author_id, task_id, title, description, post_type)
+                    VALUES ($1, $2, $3, $4, 'task_completion')
+                  `,
+                [
+                  assigneeId,
+                  task.id,
+                  `ביצעתי משימה: ${task.title}`,
+                  task.description
+                    ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
+                    : `השלמתי את המשימה "${task.title}" בהצלחה!`,
+                ],
+              );
+              completionPostResults.created++;
+              this.logger.log(
+                `✅ Completion post created for assignee ${assigneeId}`,
+              );
+            } catch (assigneePostError) {
+              completionPostResults.failed++;
+              this.logger.error(
+                `❌ Failed to create completion post for assignee ${assigneeId}:`,
+                assigneePostError,
+              );
+            }
+          }
+        }
+      }
+      this.logger.log(
+        `📊 Completion post summary: ${completionPostResults.created} created, ${completionPostResults.failed} failed`,
+      );
+
+      if (completionPostResults.created > 0) {
+        try {
+          await this.clearPostsCaches();
+          this.logger.log(
+            "✅ Posts caches cleared after completion post creation",
+          );
+        } catch (cacheErr) {
+          this.logger.warn(
+            "Error clearing posts caches after completion (non-fatal):",
+            cacheErr,
+          );
+        }
+      }
+    } catch (tableError) {
+      this.logger.error(
+        "❌ Failed to ensure posts table for completion posts:",
+        tableError,
+      );
     }
   }
 
@@ -1671,100 +1890,10 @@ export class TasksController {
         });
 
         if (addedAssignees.length > 0) {
-          const timestamp = new Date().toISOString();
-          this.logger.log(
-            `🔔 Found ${addedAssignees.length} new assignees to notify...`,
+          await this.runUpdateTaskNewAssigneeSideEffects(
+            updatedTask,
+            addedAssignees,
           );
-
-          for (const assigneeId of addedAssignees) {
-            try {
-              this.logger.log(`🔔 Sending notification to ${assigneeId}`);
-
-              await this.itemsService.create(
-                "notifications",
-                assigneeId,
-                randomUUID(),
-                {
-                  title: "משימה חדשה",
-                  body: `הוקצתה לך משימה חדשה: ${updatedTask.title}`,
-                  type: "system",
-                  timestamp,
-                  read: false,
-                  userId: assigneeId,
-                  data: { taskId: updatedTask.id },
-                },
-              );
-              this.logger.log(`✅ Notification sent to ${assigneeId}`);
-            } catch (err) {
-              this.logger.error(
-                `❌ Failed to create notification for ${assigneeId}`,
-                err,
-              );
-            }
-          }
-
-          // AUTO-POST: Create posts for newly assigned users
-          const assignPostResults = { created: 0, failed: 0 };
-
-          try {
-            // Ensure posts table exists before creating posts
-            await this.ensurePostsTable();
-
-            this.logger.log(
-              `📝 Creating posts for ${addedAssignees.length} newly assigned users...`,
-            );
-            for (const assigneeId of addedAssignees) {
-              try {
-                await this.pool.query(
-                  `
-                  INSERT INTO posts (author_id, task_id, title, description, post_type)
-                  VALUES ($1, $2, $3, $4, 'task_assignment')
-                `,
-                  [
-                    assigneeId,
-                    updatedTask.id,
-                    `משימה חדשה: ${updatedTask.title}`,
-                    updatedTask.description
-                      ? `הוקצתה לך משימה חדשה: ${updatedTask.description}`
-                      : `הוקצתה לך משימה חדשה: ${updatedTask.title}`,
-                  ],
-                );
-                assignPostResults.created++;
-                this.logger.log(
-                  `✅ Post created for newly assigned user ${assigneeId}`,
-                );
-              } catch (postError) {
-                assignPostResults.failed++;
-                this.logger.error(
-                  `❌ Failed to create post for assignee ${assigneeId}:`,
-                  postError,
-                );
-              }
-            }
-            this.logger.log(
-              `📊 Assignment post summary: ${assignPostResults.created} created, ${assignPostResults.failed} failed`,
-            );
-
-            // Clear posts cache after creating posts
-            if (assignPostResults.created > 0) {
-              try {
-                await this.clearPostsCaches();
-                this.logger.log(
-                  "✅ Posts caches cleared after assignment post creation",
-                );
-              } catch (cacheErr) {
-                this.logger.warn(
-                  "Error clearing posts caches after assignment (non-fatal):",
-                  cacheErr,
-                );
-              }
-            }
-          } catch (tableError) {
-            this.logger.error(
-              "❌ Failed to ensure posts table for assignment posts:",
-              tableError,
-            );
-          }
         }
       }
 
@@ -1781,106 +1910,7 @@ export class TasksController {
       }
 
       if (rows.length > 0 && body.status === "done") {
-        const task = rows[0];
-        // AUTO-POST: Create posts for task completion
-        const completionPostResults = { created: 0, failed: 0 };
-
-        try {
-          // Ensure posts table exists before creating posts
-          await this.ensurePostsTable();
-
-          this.logger.log(
-            `📝 Creating completion posts for task ${task.id}...`,
-          );
-
-          // 1. Post for creator
-          if (task.created_by) {
-            try {
-              await this.pool.query(
-                `
-                INSERT INTO posts (author_id, task_id, title, description, post_type)
-                VALUES ($1, $2, $3, $4, 'task_completion')
-              `,
-                [
-                  task.created_by,
-                  task.id,
-                  `משימה הושלמה: ${task.title}`,
-                  task.description
-                    ? `המשימה "${task.title}" הושלמה בהצלחה! ${task.description}`
-                    : `המשימה "${task.title}" הושלמה בהצלחה!`,
-                ],
-              );
-              completionPostResults.created++;
-              this.logger.log(
-                `✅ Completion post created for creator ${task.created_by}`,
-              );
-            } catch (creatorPostError) {
-              completionPostResults.failed++;
-              this.logger.error(
-                `❌ Failed to create completion post for creator ${task.created_by}:`,
-                creatorPostError,
-              );
-            }
-          }
-
-          // 2. Post for assignees
-          if (task.assignees && task.assignees.length > 0) {
-            for (const assigneeId of task.assignees) {
-              if (assigneeId !== task.created_by) {
-                // Avoid duplicate if assigned to creator
-                try {
-                  await this.pool.query(
-                    `
-                    INSERT INTO posts (author_id, task_id, title, description, post_type)
-                    VALUES ($1, $2, $3, $4, 'task_completion')
-                  `,
-                    [
-                      assigneeId,
-                      task.id,
-                      `ביצעתי משימה: ${task.title}`,
-                      task.description
-                        ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
-                        : `השלמתי את המשימה "${task.title}" בהצלחה!`,
-                    ],
-                  );
-                  completionPostResults.created++;
-                  this.logger.log(
-                    `✅ Completion post created for assignee ${assigneeId}`,
-                  );
-                } catch (assigneePostError) {
-                  completionPostResults.failed++;
-                  this.logger.error(
-                    `❌ Failed to create completion post for assignee ${assigneeId}:`,
-                    assigneePostError,
-                  );
-                }
-              }
-            }
-          }
-          this.logger.log(
-            `📊 Completion post summary: ${completionPostResults.created} created, ${completionPostResults.failed} failed`,
-          );
-
-          // Clear posts cache after creating posts
-          if (completionPostResults.created > 0) {
-            try {
-              await this.clearPostsCaches();
-              this.logger.log(
-                "✅ Posts caches cleared after completion post creation",
-              );
-            } catch (cacheErr) {
-              this.logger.warn(
-                "Error clearing posts caches after completion (non-fatal):",
-                cacheErr,
-              );
-            }
-          }
-        } catch (tableError) {
-          this.logger.error(
-            "❌ Failed to ensure posts table for completion posts:",
-            tableError,
-          );
-        }
+        await this.runUpdateTaskCompletionPosts(rows[0]);
       }
 
       return { success: true, data: rows[0] };

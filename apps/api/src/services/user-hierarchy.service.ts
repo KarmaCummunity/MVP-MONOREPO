@@ -142,6 +142,289 @@ export class UserHierarchyService {
     return { ok: true };
   }
 
+  private isManagerAssignmentCleared(
+    managerId: string | null | undefined,
+  ): boolean {
+    return (
+      managerId === null ||
+      managerId === undefined ||
+      managerId === "null" ||
+      managerId === ""
+    );
+  }
+
+  private async setManagerRemoveReportingLine(
+    id: string,
+    rootEmail: string,
+  ): Promise<{ success: boolean; error?: string; message?: string }> {
+    const { rows: currentUser } = await this.pool.query(
+      "SELECT parent_manager_id FROM user_profiles WHERE id = $1",
+      [id],
+    );
+
+    if (currentUser.length === 0) {
+      this.logger.log(`[setManager] User not found: ${id}`);
+      return { success: false, error: "User not found" };
+    }
+
+    const currentManagerId = currentUser[0].parent_manager_id;
+    this.logger.log(
+      `[setManager] Removing manager assignment for user ${id}, current manager: ${currentManagerId}`,
+    );
+
+    const { rows: userData } = await this.pool.query(
+      "SELECT roles, email FROM user_profiles WHERE id = $1",
+      [id],
+    );
+    const isAdmin =
+      userData.length > 0 &&
+      ((userData[0].roles || []).includes("admin") ||
+        (userData[0].roles || []).includes("super_admin"));
+    const isRootAdmin =
+      userData.length > 0 &&
+      rootEmail &&
+      (userData[0].email || "").toLowerCase().trim() === rootEmail;
+
+    let newRoles = Array.isArray(userData[0]?.roles)
+      ? [...userData[0].roles]
+      : [];
+
+    newRoles = newRoles.filter((r: string) => r !== "volunteer");
+
+    if (isAdmin && !isRootAdmin) {
+      newRoles = newRoles.filter(
+        (r: string) => r !== "admin" && r !== "super_admin",
+      );
+      this.logger.log(
+        `[setManager] ⚠️ Removing admin roles from user ${id} because manager assignment was removed (admin must have a manager)`,
+      );
+    }
+
+    await this.pool.query(
+      `
+          UPDATE user_profiles 
+          SET 
+            parent_manager_id = NULL, 
+            updated_at = NOW(),
+            roles = $1::text[]
+          WHERE id = $2
+        `,
+      [newRoles, id],
+    );
+
+    await this.redisCache.delete(`user_profile_${id}`);
+    await this.redisCache.invalidatePattern("users_list*");
+
+    this.logger.log(`✅ Manager removed: ${id} no longer reports to anyone`);
+    return { success: true, message: "שיוך מנהל הוסר בהצלחה" };
+  }
+
+  private async setManagerValidateCyclesAndReverseChain(
+    id: string,
+    managerId: string,
+    managerEmail: string,
+    rootEmail: string,
+  ): Promise<{ success: false; error: string } | { success: true }> {
+    if (rootEmail && (managerEmail || "").toLowerCase().trim() === rootEmail) {
+      this.logger.log(
+        `[setManager] ✅ Assigning to root admin - skipping cycle check`,
+      );
+      return { success: true };
+    }
+
+    const { rows: currentHierarchy } = await this.pool.query(
+      `
+          SELECT id, name, email, parent_manager_id 
+          FROM user_profiles 
+          WHERE id IN ($1, $2)
+        `,
+      [id, managerId],
+    );
+
+    this.logger.log(`[setManager] 🔍 Current hierarchy state:`, {
+      userId: id,
+      managerId: managerId,
+      users: (currentHierarchy as SimpleUserProfile[]).map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        parent_manager_id: u.parent_manager_id ?? null,
+      })),
+    });
+
+    const { rows: managerChainDebug } = await this.pool.query(
+      `
+          WITH RECURSIVE manager_chain AS (
+            SELECT id, parent_manager_id, 1 as depth
+            FROM user_profiles
+            WHERE id = $1
+            
+            UNION ALL
+            
+            SELECT u.id, u.parent_manager_id, mc.depth + 1
+            FROM user_profiles u
+            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
+            WHERE mc.depth < 100 AND u.parent_manager_id IS NOT NULL
+          )
+          SELECT id, parent_manager_id, depth FROM manager_chain ORDER BY depth
+        `,
+      [managerId],
+    );
+
+    this.logger.log(
+      `[setManager] 🔍 Manager chain (going up from ${managerId}):`,
+      (managerChainDebug as ManagerChainRow[]).map((m) => ({
+        id: m.id,
+        parent: m.parent_manager_id,
+        depth: m.depth,
+      })),
+    );
+
+    const { rows: cycleCheck } = await this.pool.query(
+      `
+          WITH RECURSIVE manager_chain AS (
+            SELECT id, parent_manager_id, 1 as depth
+            FROM user_profiles
+            WHERE id = $1
+            
+            UNION ALL
+            
+            SELECT u.id, u.parent_manager_id, mc.depth + 1
+            FROM user_profiles u
+            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
+            WHERE mc.depth < 100 AND u.parent_manager_id IS NOT NULL
+          )
+          SELECT id, depth FROM manager_chain WHERE id = $2 LIMIT 1
+        `,
+      [managerId, id],
+    );
+
+    if (cycleCheck.length > 0) {
+      const { rows: userDetails } = await this.pool.query(
+        "SELECT id, name, email FROM user_profiles WHERE id IN ($1, $2)",
+        [id, managerId],
+      );
+      type UserBasicInfo = {
+        id: string;
+        name: string | null;
+        email: string | null;
+      };
+      const userDetailsTyped = userDetails as UserBasicInfo[];
+      const userInfo = userDetailsTyped.find((u) => u.id === id) || {
+        id,
+        name: null,
+        email: null,
+      };
+      const managerInfo = userDetailsTyped.find((u) => u.id === managerId) || {
+        id: managerId,
+        name: null,
+        email: null,
+      };
+
+      const userName = userInfo.name || userInfo.email || id;
+      const managerName = managerInfo.name || managerInfo.email || managerId;
+
+      return {
+        success: false,
+        error: `לא ניתן להגדיר את ${managerName} כמנהל של ${userName} - זה יוצר מחזור בהיררכיה כי ${userName} כבר נמצא בשרשרת הניהול מעל ${managerName}`,
+      };
+    }
+
+    if (!rootEmail || (managerEmail || "").toLowerCase().trim() !== rootEmail) {
+      const { rows: reverseCheck } = await this.pool.query(
+        `
+          WITH RECURSIVE subordinate_tree AS (
+            SELECT id, parent_manager_id, 1 as depth
+            FROM user_profiles
+            WHERE parent_manager_id = $2
+            
+            UNION ALL
+            
+            SELECT u.id, u.parent_manager_id, st.depth + 1
+            FROM user_profiles u
+            INNER JOIN subordinate_tree st ON u.parent_manager_id = st.id
+            WHERE st.depth < 100
+          )
+          SELECT 1 FROM subordinate_tree WHERE id = $1 LIMIT 1
+        `,
+        [managerId, id],
+      );
+
+      if (reverseCheck.length > 0) {
+        const { rows: userDetails } = await this.pool.query(
+          "SELECT id, name, email FROM user_profiles WHERE id IN ($1, $2)",
+          [id, managerId],
+        );
+        const userInfo = userDetails.find((u) => u.id === id) || {
+          name: null,
+          email: null,
+        };
+        const managerInfo = userDetails.find((u) => u.id === managerId) || {
+          name: null,
+          email: null,
+        };
+
+        const userName = userInfo.name || userInfo.email || id;
+        const managerName = managerInfo.name || managerInfo.email || managerId;
+
+        return {
+          success: false,
+          error: `לא ניתן להגדיר את ${managerName} כמנהל של ${userName} - ${managerName} כבר כפוף ל-${userName}`,
+        };
+      }
+    }
+
+    return { success: true };
+  }
+
+  private buildHierarchyTreeFromRows(
+    allUsers: HierarchyUserRow[],
+    parentId: string | null,
+    level: number,
+    visitedIds: Set<string>,
+  ): HierarchyTreeNode[] {
+    if (level > 20) {
+      return [];
+    }
+
+    return allUsers
+      .filter((user) => {
+        if (level === 0) {
+          return user.email === "karmacommunity2.0@gmail.com";
+        }
+        return user.parent_manager_id === parentId;
+      })
+      .filter((user) => !visitedIds.has(user.id))
+      .map((user) => {
+        const nextVisitedIds = new Set(visitedIds);
+        nextVisitedIds.add(user.id);
+
+        const userRoles = Array.isArray(user.roles) ? user.roles : [];
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar_url: user.avatar_url,
+          level: user.level,
+          isSuperAdmin: user.is_super_admin,
+          isAdmin:
+            userRoles.includes("admin") || userRoles.includes("super_admin"),
+          isVolunteer:
+            userRoles.includes("volunteer") &&
+            !(userRoles.includes("admin") || userRoles.includes("super_admin")),
+          salary: user.salary || 0,
+          seniority_start_date:
+            user.seniority_start_date || new Date().toISOString().split("T")[0],
+          children: this.buildHierarchyTreeFromRows(
+            allUsers,
+            user.id,
+            level + 1,
+            nextVisitedIds,
+          ),
+        };
+      });
+  }
+
   async ensureSalarySeniorityColumns(): Promise<void> {
     try {
       const client = await this.pool.connect();
@@ -250,83 +533,19 @@ export class UserHierarchyService {
         };
       }
 
-      if (
-        managerId === null ||
-        managerId === undefined ||
-        managerId === "null" ||
-        managerId === ""
-      ) {
-        const { rows: currentUser } = await this.pool.query(
-          "SELECT parent_manager_id FROM user_profiles WHERE id = $1",
-          [id],
-        );
-
-        if (currentUser.length === 0) {
-          this.logger.log(`[setManager] User not found: ${id}`);
-          return { success: false, error: "User not found" };
-        }
-
-        const currentManagerId = currentUser[0].parent_manager_id;
-        this.logger.log(
-          `[setManager] Removing manager assignment for user ${id}, current manager: ${currentManagerId}`,
-        );
-
-        const { rows: userData } = await this.pool.query(
-          "SELECT roles, email FROM user_profiles WHERE id = $1",
-          [id],
-        );
-        const isAdmin =
-          userData.length > 0 &&
-          ((userData[0].roles || []).includes("admin") ||
-            (userData[0].roles || []).includes("super_admin"));
-        const isRootAdmin =
-          userData.length > 0 &&
-          rootEmail &&
-          (userData[0].email || "").toLowerCase().trim() === rootEmail;
-
-        let newRoles = Array.isArray(userData[0]?.roles)
-          ? [...userData[0].roles]
-          : [];
-
-        newRoles = newRoles.filter((r: string) => r !== "volunteer");
-
-        if (isAdmin && !isRootAdmin) {
-          newRoles = newRoles.filter(
-            (r: string) => r !== "admin" && r !== "super_admin",
-          );
-          this.logger.log(
-            `[setManager] ⚠️ Removing admin roles from user ${id} because manager assignment was removed (admin must have a manager)`,
-          );
-        }
-
-        await this.pool.query(
-          `
-          UPDATE user_profiles 
-          SET 
-            parent_manager_id = NULL, 
-            updated_at = NOW(),
-            roles = $1::text[]
-          WHERE id = $2
-        `,
-          [newRoles, id],
-        );
-
-        await this.redisCache.delete(`user_profile_${id}`);
-        await this.redisCache.invalidatePattern("users_list*");
-
-        this.logger.log(
-          `✅ Manager removed: ${id} no longer reports to anyone`,
-        );
-        return { success: true, message: "שיוך מנהל הוסר בהצלחה" };
+      if (this.isManagerAssignmentCleared(managerId)) {
+        return await this.setManagerRemoveReportingLine(id, rootEmail);
       }
 
       if (managerId === id) {
         return { success: false, error: "User cannot be their own manager" };
       }
 
+      const assignManagerId = managerId as string;
+
       const { rows: checkManager } = await this.pool.query(
         "SELECT id, email, parent_manager_id FROM user_profiles WHERE id = $1",
-        [managerId],
+        [assignManagerId],
       );
       if (checkManager.length === 0) {
         return { success: false, error: "Manager not found" };
@@ -349,168 +568,21 @@ export class UserHierarchyService {
           SET parent_manager_id = NULL, updated_at = NOW()
           WHERE id = $1
         `,
-          [managerId],
+          [assignManagerId],
         );
-        await this.redisCache.delete(`user_profile_${managerId}`);
+        await this.redisCache.delete(`user_profile_${assignManagerId}`);
         await this.redisCache.invalidatePattern("users_list*");
       }
 
-      if (
-        rootEmail &&
-        (managerEmail || "").toLowerCase().trim() === rootEmail
-      ) {
-        this.logger.log(
-          `[setManager] ✅ Assigning to root admin - skipping cycle check`,
+      const cycleCheckResult =
+        await this.setManagerValidateCyclesAndReverseChain(
+          id,
+          assignManagerId,
+          managerEmail,
+          rootEmail,
         );
-      } else {
-        const { rows: currentHierarchy } = await this.pool.query(
-          `
-          SELECT id, name, email, parent_manager_id 
-          FROM user_profiles 
-          WHERE id IN ($1, $2)
-        `,
-          [id, managerId],
-        );
-
-        this.logger.log(`[setManager] 🔍 Current hierarchy state:`, {
-          userId: id,
-          managerId: managerId,
-          users: (currentHierarchy as SimpleUserProfile[]).map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            parent_manager_id: u.parent_manager_id ?? null,
-          })),
-        });
-
-        const { rows: managerChainDebug } = await this.pool.query(
-          `
-          WITH RECURSIVE manager_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $1
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, mc.depth + 1
-            FROM user_profiles u
-            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
-            WHERE mc.depth < 100 AND u.parent_manager_id IS NOT NULL
-          )
-          SELECT id, parent_manager_id, depth FROM manager_chain ORDER BY depth
-        `,
-          [managerId],
-        );
-
-        this.logger.log(
-          `[setManager] 🔍 Manager chain (going up from ${managerId}):`,
-          (managerChainDebug as ManagerChainRow[]).map((m) => ({
-            id: m.id,
-            parent: m.parent_manager_id,
-            depth: m.depth,
-          })),
-        );
-
-        const { rows: cycleCheck } = await this.pool.query(
-          `
-          WITH RECURSIVE manager_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $1
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, mc.depth + 1
-            FROM user_profiles u
-            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
-            WHERE mc.depth < 100 AND u.parent_manager_id IS NOT NULL
-          )
-          SELECT id, depth FROM manager_chain WHERE id = $2 LIMIT 1
-        `,
-          [managerId, id],
-        );
-
-        if (cycleCheck.length > 0) {
-          const { rows: userDetails } = await this.pool.query(
-            "SELECT id, name, email FROM user_profiles WHERE id IN ($1, $2)",
-            [id, managerId],
-          );
-          type UserBasicInfo = {
-            id: string;
-            name: string | null;
-            email: string | null;
-          };
-          const userDetailsTyped = userDetails as UserBasicInfo[];
-          const userInfo = userDetailsTyped.find((u) => u.id === id) || {
-            id,
-            name: null,
-            email: null,
-          };
-          const managerInfo = userDetailsTyped.find(
-            (u) => u.id === managerId,
-          ) || {
-            id: managerId,
-            name: null,
-            email: null,
-          };
-
-          const userName = userInfo.name || userInfo.email || id;
-          const managerName =
-            managerInfo.name || managerInfo.email || managerId;
-
-          return {
-            success: false,
-            error: `לא ניתן להגדיר את ${managerName} כמנהל של ${userName} - זה יוצר מחזור בהיררכיה כי ${userName} כבר נמצא בשרשרת הניהול מעל ${managerName}`,
-          };
-        }
-      }
-
-      if (
-        !rootEmail ||
-        (managerEmail || "").toLowerCase().trim() !== rootEmail
-      ) {
-        const { rows: reverseCheck } = await this.pool.query(
-          `
-          WITH RECURSIVE subordinate_tree AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE parent_manager_id = $2
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, st.depth + 1
-            FROM user_profiles u
-            INNER JOIN subordinate_tree st ON u.parent_manager_id = st.id
-            WHERE st.depth < 100
-          )
-          SELECT 1 FROM subordinate_tree WHERE id = $1 LIMIT 1
-        `,
-          [managerId, id],
-        );
-
-        if (reverseCheck.length > 0) {
-          const { rows: userDetails } = await this.pool.query(
-            "SELECT id, name, email FROM user_profiles WHERE id IN ($1, $2)",
-            [id, managerId],
-          );
-          const userInfo = userDetails.find((u) => u.id === id) || {
-            name: null,
-            email: null,
-          };
-          const managerInfo = userDetails.find((u) => u.id === managerId) || {
-            name: null,
-            email: null,
-          };
-
-          const userName = userInfo.name || userInfo.email || id;
-          const managerName =
-            managerInfo.name || managerInfo.email || managerId;
-
-          return {
-            success: false,
-            error: `לא ניתן להגדיר את ${managerName} כמנהל של ${userName} - ${managerName} כבר כפוף ל-${userName}`,
-          };
-        }
+      if (!cycleCheckResult.success) {
+        return cycleCheckResult;
       }
 
       const { rows: userCheck } = await this.pool.query(
@@ -528,7 +600,7 @@ export class UserHierarchyService {
           rootEmail &&
           (userCheck[0].email || "").toLowerCase().trim() === rootEmail;
 
-        if (isAdmin && !isRootAdmin && !managerId) {
+        if (isAdmin && !isRootAdmin && !assignManagerId) {
           return {
             success: false,
             error:
@@ -550,19 +622,187 @@ export class UserHierarchyService {
           )
         WHERE id = $2
       `,
-        [managerId, id],
+        [assignManagerId, id],
       );
 
       await this.redisCache.delete(`user_profile_${id}`);
-      await this.redisCache.delete(`user_profile_${managerId}`);
+      await this.redisCache.delete(`user_profile_${assignManagerId}`);
       await this.redisCache.invalidatePattern("users_list*");
 
-      this.logger.log(`✅ Manager set: ${id} now reports to ${managerId}`);
+      this.logger.log(
+        `✅ Manager set: ${id} now reports to ${assignManagerId}`,
+      );
       return { success: true, message: "Manager updated successfully" };
     } catch (error) {
       this.logger.error("Set manager error:", error);
       return { success: false, error: "Failed to set manager" };
     }
+  }
+
+  private async manageHierarchyExecuteAdd(
+    client: PoolClient,
+    managerId: string,
+    subordinateId: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const { rows: cycleCheck } = await client.query(
+      `
+          WITH RECURSIVE manager_chain AS (
+            SELECT id, parent_manager_id, 1 as depth
+            FROM user_profiles
+            WHERE id = $1
+            
+            UNION ALL
+            
+            SELECT u.id, u.parent_manager_id, mc.depth + 1
+            FROM user_profiles u
+            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
+            WHERE mc.depth < 100
+          )
+          SELECT 1 FROM manager_chain WHERE id = $2 LIMIT 1
+        `,
+      [managerId, subordinateId],
+    );
+
+    if (cycleCheck.length > 0) {
+      return {
+        ok: false,
+        error:
+          "Cannot create hierarchy cycle - this would create a circular management chain",
+      };
+    }
+
+    const { rows: reverseCheck } = await client.query(
+      `
+          WITH RECURSIVE subordinate_chain AS (
+            SELECT id, parent_manager_id, 1 as depth
+            FROM user_profiles
+            WHERE id = $2
+            
+            UNION ALL
+            
+            SELECT u.id, u.parent_manager_id, sc.depth + 1
+            FROM user_profiles u
+            INNER JOIN subordinate_chain sc ON u.id = sc.parent_manager_id
+            WHERE sc.depth < 100
+          )
+          SELECT 1 FROM subordinate_chain WHERE id = $1 LIMIT 1
+        `,
+      [managerId, subordinateId],
+    );
+
+    if (reverseCheck.length > 0) {
+      return {
+        ok: false,
+        error: "Cannot assign - this user is already in your management chain",
+      };
+    }
+
+    await client.query(
+      `
+          UPDATE user_profiles 
+          SET parent_manager_id = $1, updated_at = NOW()
+          WHERE id = $2
+        `,
+      [managerId, subordinateId],
+    );
+
+    return { ok: true };
+  }
+
+  private async manageHierarchyExecuteRemove(
+    client: PoolClient,
+    managerId: string,
+    subordinateId: string,
+  ): Promise<
+    | { ok: true; message: string; data?: { transferredTasks?: number } }
+    | { ok: false; error: string }
+  > {
+    const { rows: currentCheck } = await client.query(
+      "SELECT parent_manager_id, name, email FROM user_profiles WHERE id = $1",
+      [subordinateId],
+    );
+    if (currentCheck[0]?.parent_manager_id !== managerId) {
+      return { ok: false, error: "User is not your subordinate" };
+    }
+
+    const subordinateName =
+      currentCheck[0]?.name || currentCheck[0]?.email || "Unknown";
+
+    const { rows: tasksToTransfer } = await client.query(
+      `
+          SELECT id, title, status, priority
+          FROM tasks
+          WHERE $1::UUID = ANY(assignees::UUID[]) 
+          AND status NOT IN ('done', 'archived')
+        `,
+      [subordinateId],
+    );
+
+    const transferCount = tasksToTransfer.length;
+
+    await client.query(
+      `
+          UPDATE user_profiles 
+          SET parent_manager_id = NULL, updated_at = NOW()
+          WHERE id = $1
+        `,
+      [subordinateId],
+    );
+
+    if (transferCount > 0) {
+      await client.query(
+        `
+            UPDATE tasks
+            SET assignees = array_replace(assignees::UUID[], $1::UUID, $2::UUID)::UUID[],
+                updated_at = NOW()
+            WHERE $1::UUID = ANY(assignees::UUID[]) 
+            AND status NOT IN ('done', 'archived')
+          `,
+        [subordinateId, managerId],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    if (transferCount > 0) {
+      try {
+        await this.pool.query(
+          `
+              INSERT INTO notifications (user_id, item_id, data, created_at)
+              VALUES ($1, $2, $3, NOW())
+              ON CONFLICT (user_id, item_id) DO NOTHING
+            `,
+          [
+            managerId,
+            randomUUID(),
+            JSON.stringify({
+              title: "משימות הועברו אליך",
+              body: `${transferCount} משימות הועברו אליך מ${subordinateName} שהוסר מהניהול שלך`,
+              type: "system",
+              timestamp: new Date().toISOString(),
+              read: false,
+              data: {
+                transferredTaskIds: tasksToTransfer.map((t) => t.id),
+                fromUser: subordinateId,
+                fromUserName: subordinateName,
+                count: transferCount,
+              },
+            }),
+          ],
+        );
+      } catch (notifError) {
+        this.logger.warn(
+          "Failed to create transfer notification (non-fatal):",
+          notifError,
+        );
+      }
+    }
+
+    return {
+      ok: true,
+      message: `Subordinate removed and ${transferCount} tasks transferred`,
+      data: { transferredTasks: transferCount },
+    };
   }
 
   async manageHierarchy(
@@ -598,160 +838,33 @@ export class UserHierarchyService {
       }
 
       if (action === "add") {
-        const { rows: cycleCheck } = await client.query(
-          `
-          WITH RECURSIVE manager_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $1
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, mc.depth + 1
-            FROM user_profiles u
-            INNER JOIN manager_chain mc ON u.id = mc.parent_manager_id
-            WHERE mc.depth < 100
-          )
-          SELECT 1 FROM manager_chain WHERE id = $2 LIMIT 1
-        `,
-          [managerId, subordinateId],
+        const addResult = await this.manageHierarchyExecuteAdd(
+          client,
+          managerId,
+          subordinateId,
         );
-
-        if (cycleCheck.length > 0) {
+        if (!addResult.ok) {
           await client.query("ROLLBACK");
-          return {
-            success: false,
-            error:
-              "Cannot create hierarchy cycle - this would create a circular management chain",
-          };
+          return { success: false, error: addResult.error };
         }
-
-        const { rows: reverseCheck } = await client.query(
-          `
-          WITH RECURSIVE subordinate_chain AS (
-            SELECT id, parent_manager_id, 1 as depth
-            FROM user_profiles
-            WHERE id = $2
-            
-            UNION ALL
-            
-            SELECT u.id, u.parent_manager_id, sc.depth + 1
-            FROM user_profiles u
-            INNER JOIN subordinate_chain sc ON u.id = sc.parent_manager_id
-            WHERE sc.depth < 100
-          )
-          SELECT 1 FROM subordinate_chain WHERE id = $1 LIMIT 1
-        `,
-          [managerId, subordinateId],
-        );
-
-        if (reverseCheck.length > 0) {
-          await client.query("ROLLBACK");
-          return {
-            success: false,
-            error:
-              "Cannot assign - this user is already in your management chain",
-          };
-        }
-
-        await client.query(
-          `
-          UPDATE user_profiles 
-          SET parent_manager_id = $1, updated_at = NOW()
-          WHERE id = $2
-        `,
-          [managerId, subordinateId],
-        );
-
         await client.query("COMMIT");
         return { success: true, message: "Subordinate added successfully" };
-      } else if (action === "remove") {
-        const { rows: currentCheck } = await client.query(
-          "SELECT parent_manager_id, name, email FROM user_profiles WHERE id = $1",
-          [subordinateId],
+      }
+
+      if (action === "remove") {
+        const removeResult = await this.manageHierarchyExecuteRemove(
+          client,
+          managerId,
+          subordinateId,
         );
-        if (currentCheck[0]?.parent_manager_id !== managerId) {
+        if (!removeResult.ok) {
           await client.query("ROLLBACK");
-          return { success: false, error: "User is not your subordinate" };
+          return { success: false, error: removeResult.error };
         }
-
-        const subordinateName =
-          currentCheck[0]?.name || currentCheck[0]?.email || "Unknown";
-
-        const { rows: tasksToTransfer } = await client.query(
-          `
-          SELECT id, title, status, priority
-          FROM tasks
-          WHERE $1::UUID = ANY(assignees::UUID[]) 
-          AND status NOT IN ('done', 'archived')
-        `,
-          [subordinateId],
-        );
-
-        const transferCount = tasksToTransfer.length;
-
-        await client.query(
-          `
-          UPDATE user_profiles 
-          SET parent_manager_id = NULL, updated_at = NOW()
-          WHERE id = $1
-        `,
-          [subordinateId],
-        );
-
-        if (transferCount > 0) {
-          await client.query(
-            `
-            UPDATE tasks
-            SET assignees = array_replace(assignees::UUID[], $1::UUID, $2::UUID)::UUID[],
-                updated_at = NOW()
-            WHERE $1::UUID = ANY(assignees::UUID[]) 
-            AND status NOT IN ('done', 'archived')
-          `,
-            [subordinateId, managerId],
-          );
-        }
-
-        await client.query("COMMIT");
-
-        if (transferCount > 0) {
-          try {
-            await this.pool.query(
-              `
-              INSERT INTO notifications (user_id, item_id, data, created_at)
-              VALUES ($1, $2, $3, NOW())
-              ON CONFLICT (user_id, item_id) DO NOTHING
-            `,
-              [
-                managerId,
-                randomUUID(),
-                JSON.stringify({
-                  title: "משימות הועברו אליך",
-                  body: `${transferCount} משימות הועברו אליך מ${subordinateName} שהוסר מהניהול שלך`,
-                  type: "system",
-                  timestamp: new Date().toISOString(),
-                  read: false,
-                  data: {
-                    transferredTaskIds: tasksToTransfer.map((t) => t.id),
-                    fromUser: subordinateId,
-                    fromUserName: subordinateName,
-                    count: transferCount,
-                  },
-                }),
-              ],
-            );
-          } catch (notifError) {
-            this.logger.warn(
-              "Failed to create transfer notification (non-fatal):",
-              notifError,
-            );
-          }
-        }
-
         return {
           success: true,
-          message: `Subordinate removed and ${transferCount} tasks transferred`,
-          data: { transferredTasks: transferCount },
+          message: removeResult.message,
+          data: removeResult.data,
         };
       }
 
@@ -1039,6 +1152,68 @@ export class UserHierarchyService {
     }
   }
 
+  private async loadRequestingUserForVolunteerPromotion(
+    client: PoolClient,
+    requestingAdminId: string,
+  ): Promise<RequestingUserRow[]> {
+    try {
+      const result = await client.query(
+        `SELECT id, email, roles, hierarchy_level FROM user_profiles WHERE id = $1`,
+        [requestingAdminId],
+      );
+      return result.rows as RequestingUserRow[];
+    } catch (err) {
+      const error = err as Error;
+      if (!error.message?.includes("hierarchy_level")) {
+        throw error;
+      }
+      const result = await client.query(
+        `SELECT id, email, roles FROM user_profiles WHERE id = $1`,
+        [requestingAdminId],
+      );
+      return result.rows.map(
+        (row): RequestingUserRow => ({
+          ...(row as { id: string; email: string; roles: string[] | null }),
+          hierarchy_level: null,
+        }),
+      );
+    }
+  }
+
+  private async loadTargetUserForVolunteerPromotion(
+    client: PoolClient,
+    targetUserId: string,
+  ): Promise<TargetUserRow[]> {
+    try {
+      const result = await client.query(
+        `SELECT id, name, email, roles, parent_manager_id, hierarchy_level FROM user_profiles WHERE id = $1`,
+        [targetUserId],
+      );
+      return result.rows as TargetUserRow[];
+    } catch (err) {
+      const error = err as Error;
+      if (!error.message?.includes("hierarchy_level")) {
+        throw error;
+      }
+      const result = await client.query(
+        `SELECT id, name, email, roles, parent_manager_id FROM user_profiles WHERE id = $1`,
+        [targetUserId],
+      );
+      return result.rows.map(
+        (row): TargetUserRow => ({
+          ...(row as {
+            id: string;
+            name: string | null;
+            email: string;
+            roles: string[] | null;
+            parent_manager_id: string | null;
+          }),
+          hierarchy_level: null,
+        }),
+      );
+    }
+  }
+
   async promoteToVolunteer(
     targetUserId: string,
     body: { requestingAdminId: string },
@@ -1053,30 +1228,10 @@ export class UserHierarchyService {
 
       await client.query("BEGIN");
 
-      let requestingUser: RequestingUserRow[];
-      try {
-        const result = await client.query(
-          `SELECT id, email, roles, hierarchy_level FROM user_profiles WHERE id = $1`,
-          [requestingAdminId],
-        );
-        requestingUser = result.rows as RequestingUserRow[];
-      } catch (err) {
-        const error = err as Error;
-        if (error.message && error.message.includes("hierarchy_level")) {
-          const result = await client.query(
-            `SELECT id, email, roles FROM user_profiles WHERE id = $1`,
-            [requestingAdminId],
-          );
-          requestingUser = result.rows.map(
-            (row): RequestingUserRow => ({
-              ...(row as { id: string; email: string; roles: string[] | null }),
-              hierarchy_level: null,
-            }),
-          );
-        } else {
-          throw error;
-        }
-      }
+      const requestingUser = await this.loadRequestingUserForVolunteerPromotion(
+        client,
+        requestingAdminId,
+      );
 
       if (requestingUser.length === 0) {
         await client.query("ROLLBACK");
@@ -1098,36 +1253,10 @@ export class UserHierarchyService {
         };
       }
 
-      let targetUser: TargetUserRow[];
-      try {
-        const result = await client.query(
-          `SELECT id, name, email, roles, parent_manager_id, hierarchy_level FROM user_profiles WHERE id = $1`,
-          [targetUserId],
-        );
-        targetUser = result.rows as TargetUserRow[];
-      } catch (err) {
-        const error = err as Error;
-        if (error.message && error.message.includes("hierarchy_level")) {
-          const result = await client.query(
-            `SELECT id, name, email, roles, parent_manager_id FROM user_profiles WHERE id = $1`,
-            [targetUserId],
-          );
-          targetUser = result.rows.map(
-            (row): TargetUserRow => ({
-              ...(row as {
-                id: string;
-                name: string | null;
-                email: string;
-                roles: string[] | null;
-                parent_manager_id: string | null;
-              }),
-              hierarchy_level: null,
-            }),
-          );
-        } else {
-          throw error;
-        }
-      }
+      const targetUser = await this.loadTargetUserForVolunteerPromotion(
+        client,
+        targetUserId,
+      );
 
       if (targetUser.length === 0) {
         await client.query("ROLLBACK");
@@ -1391,52 +1520,12 @@ export class UserHierarchyService {
         }
       }
 
-      const buildTree = (
-        parentId: string | null,
-        level: number,
-        visitedIds: Set<string> = new Set(),
-      ): HierarchyTreeNode[] => {
-        if (level > 20) return [];
-
-        return allUsers
-          .filter((user) => {
-            if (level === 0) {
-              return user.email === "karmacommunity2.0@gmail.com";
-            }
-            return user.parent_manager_id === parentId;
-          })
-          .filter((user) => !visitedIds.has(user.id))
-          .map((user) => {
-            const nextVisitedIds = new Set(visitedIds);
-            nextVisitedIds.add(user.id);
-
-            const userRoles = Array.isArray(user.roles) ? user.roles : [];
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              avatar_url: user.avatar_url,
-              level: user.level,
-              isSuperAdmin: user.is_super_admin,
-              isAdmin:
-                userRoles.includes("admin") ||
-                userRoles.includes("super_admin"),
-              isVolunteer:
-                userRoles.includes("volunteer") &&
-                !(
-                  userRoles.includes("admin") ||
-                  userRoles.includes("super_admin")
-                ),
-              salary: user.salary || 0,
-              seniority_start_date:
-                user.seniority_start_date ||
-                new Date().toISOString().split("T")[0],
-              children: buildTree(user.id, level + 1, nextVisitedIds),
-            };
-          });
-      };
-
-      const tree = buildTree(null, 0);
+      const tree = this.buildHierarchyTreeFromRows(
+        allUsers,
+        null,
+        0,
+        new Set(),
+      );
 
       this.logger.log(`🌳 Built hierarchy tree with ${allUsers.length} users`);
 
