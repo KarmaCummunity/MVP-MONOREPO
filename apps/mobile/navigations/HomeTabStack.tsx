@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Stack navigator for the Home tab.
 // - Reached from: `BottomNavigator` -> Tab 'HomeScreen'.
-// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route 'HomeMain'.
+// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route always `HomeMain` (posts feed). Marketing landing stays on root stack `LandingSiteScreen` in site mode, not as the Home tab root.
 // - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
 // - `resetHomeScreenTrigger`: pops nested Home stack to root (`HomeMain`) via `StackActions.popToTop` on the stack navigator key (tab parent dispatch).
@@ -27,7 +27,6 @@ import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 
 import TopBarNavigator from './TopBarNavigator';
-import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
@@ -37,17 +36,11 @@ import { HomeTabStackParamList } from '../globals/types';
 const Stack = createStackNavigator<HomeTabStackParamList>();
 
 export default function HomeTabStack(): React.ReactElement {
-  const { mode } = useWebMode();
   const { resetHomeScreenTrigger } = useUser();
   const navigation = useNavigation();
   const previousTriggerRef = useRef(resetHomeScreenTrigger);
 
-  // Determine initial route based on web mode
-  const initialRouteName = (typeof window !== 'undefined' && mode === 'site')
-    ? "LandingSiteScreen"
-    : "HomeMain";
-
-  logger.debug('HomeTabStack', 'Rendering with initial route', { initialRouteName, mode, resetHomeScreenTrigger });
+  logger.debug('HomeTabStack', 'Rendering Home tab stack', { resetHomeScreenTrigger });
 
   // Listen to resetHomeScreenTrigger and reset navigation to HomeMain
   useEffect(() => {
@@ -110,7 +103,7 @@ export default function HomeTabStack(): React.ReactElement {
   return (
     <Stack.Navigator
       id="HomeTabStack"
-      initialRouteName={initialRouteName as keyof HomeTabStackParamList}
+      initialRouteName="HomeMain"
       detachInactiveScreens={true}
       screenOptions={({ navigation, route }) => ({
         headerShown: true,
