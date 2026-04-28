@@ -4,6 +4,7 @@
 // - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route 'HomeMain'.
 // - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
+// - `resetHomeScreenTrigger`: resets only the nested Home stack to `HomeMain` via the tab navigator (never reset the tab root with stack route names).
 // - External deps: react-navigation stack, TopBarNavigator wrapper.
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
@@ -59,13 +60,24 @@ export default function HomeTabStack(): React.ReactElement {
       });
 
       try {
-        // Reset navigation stack to HomeMain
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'HomeMain' }],
-          })
-        );
+        // `useNavigation()` here resolves to the *tab* navigator (parent), not HomeTabStack.
+        // Resetting with route name `HomeMain` at that level corrupts tab state (invalid route).
+        // Reset only the nested Home stack by navigating the Home tab to `HomeMain`.
+        const tabNavigation = navigation.getParent?.();
+        if (tabNavigation?.dispatch) {
+          tabNavigation.dispatch(
+            CommonActions.navigate({
+              name: 'HomeScreen',
+              params: {
+                screen: 'HomeMain',
+              },
+            } as never)
+          );
+        } else {
+          logger.warn('HomeTabStack', 'No parent tab navigator; cannot reset to HomeMain', {
+            platform: Platform.OS,
+          });
+        }
 
         logger.debug('HomeTabStack', 'Navigation reset to HomeMain completed', {
           platform: Platform.OS,
