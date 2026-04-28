@@ -4,12 +4,12 @@
 // - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route 'HomeMain'.
 // - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
-// - `resetHomeScreenTrigger`: resets only the nested Home stack to `HomeMain` via the tab navigator (never reset the tab root with stack route names).
+// - `resetHomeScreenTrigger`: pops nested Home stack to root (`HomeMain`) via `StackActions.popToTop` on the stack navigator key (tab parent dispatch).
 // - External deps: react-navigation stack, TopBarNavigator wrapper.
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions, StackActions } from '@react-navigation/native';
 
 import HomeScreen from '../bottomBarScreens/HomeScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
@@ -60,23 +60,34 @@ export default function HomeTabStack(): React.ReactElement {
       });
 
       try {
-        // `useNavigation()` here resolves to the *tab* navigator (parent), not HomeTabStack.
-        // Resetting with route name `HomeMain` at that level corrupts tab state (invalid route).
-        // Reset only the nested Home stack by navigating the Home tab to `HomeMain`.
+        // `useNavigation()` here resolves to HomeTabStack's parent: the bottom tab navigator.
+        // Never reset the tab root with stack route names (that corrupts all tabs).
+        // Pop the nested Home stack to root: `navigate({ screen: 'HomeMain' })` does not pop
+        // when already e.g. HomeMain -> CommunityStats; use popToTop on the stack navigator key.
         const tabNavigation = navigation.getParent?.();
-        if (tabNavigation?.dispatch) {
-          tabNavigation.dispatch(
-            CommonActions.navigate({
-              name: 'HomeScreen',
-              params: {
-                screen: 'HomeMain',
-              },
-            } as never)
-          );
-        } else {
+        if (!tabNavigation?.dispatch || typeof tabNavigation.getState !== 'function') {
           logger.warn('HomeTabStack', 'No parent tab navigator; cannot reset to HomeMain', {
             platform: Platform.OS,
           });
+        } else {
+          const rootState = tabNavigation.getState();
+          const homeRoute = rootState.routes.find(
+            (r: { name?: string }) => r.name === 'HomeScreen',
+          ) as { state?: { type?: string; key?: string } } | undefined;
+          const stackState = homeRoute?.state;
+          if (stackState?.type === 'stack' && typeof stackState.key === 'string') {
+            tabNavigation.dispatch({
+              ...StackActions.popToTop(),
+              target: stackState.key,
+            });
+          } else {
+            tabNavigation.dispatch(
+              CommonActions.navigate({
+                name: 'HomeScreen',
+                params: { screen: 'HomeMain' },
+              } as never),
+            );
+          }
         }
 
         logger.debug('HomeTabStack', 'Navigation reset to HomeMain completed', {

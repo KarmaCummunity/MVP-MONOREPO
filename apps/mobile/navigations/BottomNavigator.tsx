@@ -2,7 +2,7 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press.
+// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press (focused: pop feed to root; unfocused: allow default tab switch + trigger pop).
 // - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants.
@@ -228,12 +228,14 @@ export default function BottomNavigator(): React.ReactElement {
     if (!initialRoute) return;
 
     if (routeName === 'HomeScreen') {
-      e.preventDefault();
+      // Always bump trigger so HomeTabStack pops nested stack to HomeMain (e.g. after CommunityStats).
       resetHomeScreen();
-      (navigation as { navigate: (name: string, params?: object) => void }).navigate(
-        'HomeScreen',
-        { screen: 'HomeMain' },
-      );
+      // RN 7 bottom tabs: default tab switch only runs when !focused && !defaultPrevented.
+      // Never preventDefault here when leaving another tab — otherwise the Home tab never receives
+      // the default navigate and you can stay on the previous tab while state updates (wrong screen).
+      if (navigation.isFocused()) {
+        e.preventDefault();
+      }
       return;
     }
 
