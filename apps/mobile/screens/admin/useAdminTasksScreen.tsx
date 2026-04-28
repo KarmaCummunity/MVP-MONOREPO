@@ -672,19 +672,24 @@ export function useAdminTasksScreen() {
     ],
   );
 
-  const listHeaderBelowSearch = () => (
-    <View>
-      <Text style={styles.header}>ניהול משימות וצוות</Text>
-      {listLoading ? (
-        <View style={[styles.loadingBanner, { flexDirection: rowDirection('row') }]}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={styles.loadingBannerText}>טוען משימות…</Text>
-        </View>
-      ) : null}
-      {error ? (
-        <Text style={styles.errorBanner}>{error}</Text>
-      ) : null}
-    </View>
+  // Stable element reference: inline `() => <View/>` as ListHeaderComponent forces a new
+  // header type every parent render and remounts the header on each keystroke (focus loss on web).
+  const listHeaderBelowSearch = useMemo(
+    () => (
+      <View>
+        <Text style={styles.header}>ניהול משימות וצוות</Text>
+        {listLoading ? (
+          <View style={[styles.loadingBanner, { flexDirection: rowDirection('row') }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.loadingBannerText}>טוען משימות…</Text>
+          </View>
+        ) : null}
+        {error ? (
+          <Text style={styles.errorBanner}>{error}</Text>
+        ) : null}
+      </View>
+    ),
+    [listLoading, error],
   );
 
   const closeHoursModal = () => {
