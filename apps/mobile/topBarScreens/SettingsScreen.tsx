@@ -258,37 +258,6 @@ export default function SettingsScreen() {
     setShowLangModal(true);
   };
 
-  const handleClearCachePress = () => {
-    console.log('⚙️ SettingsScreen - Clear cache pressed');
-
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(t('settings:clearCacheConfirm'));
-      if (confirmed) {
-        console.log('⚙️ SettingsScreen - Cache cleared');
-        alert(t('settings:cacheCleared'));
-      }
-    } else {
-      Alert.alert(
-        t('settings:clearCache'),
-        t('settings:clearCacheConfirm'),
-        [
-          {
-            text: t('common:cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('settings:clear'),
-            style: 'destructive',
-            onPress: () => {
-              console.log('⚙️ SettingsScreen - Cache cleared');
-              Alert.alert(t('common:done'), t('settings:cacheCleared'));
-            },
-          },
-        ]
-      );
-    }
-  };
-
   const handleReportPress = () => {
     if (!isAuthenticated) {
       if (Platform.OS === 'web') {
@@ -389,34 +358,6 @@ export default function SettingsScreen() {
       }
     } finally {
       setIsSendingReport(false);
-    }
-  };
-
-
-  // Test function for scroll functionality (development only)
-  const handleScrollTest = () => {
-    console.log('🧪 SettingsScreen - Testing scroll functionality');
-    if (scrollViewRef.current) {
-      console.log('🧪 SettingsScreen - ScrollView ref exists, attempting to scroll');
-      if ('scrollTo' in scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 200, animated: true });
-        setTimeout(() => {
-          console.log('🧪 SettingsScreen - Scrolling back to top');
-          if (scrollViewRef.current && 'scrollTo' in scrollViewRef.current) {
-            scrollViewRef.current.scrollTo({ y: 0, animated: true });
-          }
-        }, 2000);
-      } else if ('scrollToOffset' in scrollViewRef.current) {
-        (scrollViewRef.current as any).scrollToOffset({ offset: 200, animated: true });
-        setTimeout(() => {
-          console.log('🧪 SettingsScreen - Scrolling back to top');
-          if (scrollViewRef.current && 'scrollToOffset' in scrollViewRef.current) {
-            (scrollViewRef.current as any).scrollToOffset({ offset: 0, animated: true });
-          }
-        }, 2000);
-      }
-    } else {
-      console.log('🧪 SettingsScreen - ScrollView ref is null!');
     }
   };
 
@@ -594,20 +535,6 @@ export default function SettingsScreen() {
                 subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
                 onPress={handleLanguagePress}
               />
-
-              <SettingsItem
-                icon="trash-outline"
-                title={t('settings:clearCache')}
-                subtitle={t('settings:clearCacheDesc')}
-                onPress={handleClearCachePress}
-              />
-
-              <SettingsItem
-                icon="flask-outline"
-                title={t('settings:scrollTestTitle')}
-                subtitle={t('settings:scrollTestSubtitle')}
-                onPress={handleScrollTest}
-              />
             </View>
 
             {/* About Section */}
@@ -714,20 +641,6 @@ export default function SettingsScreen() {
               title={t('settings:language')}
               subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
               onPress={handleLanguagePress}
-            />
-
-            <SettingsItem
-              icon="trash-outline"
-              title={t('settings:clearCache')}
-              subtitle={t('settings:clearCacheDesc')}
-              onPress={handleClearCachePress}
-            />
-
-            <SettingsItem
-              icon="flask-outline"
-              title={t('settings:scrollTestTitle')}
-              subtitle={t('settings:scrollTestSubtitle')}
-              onPress={handleScrollTest}
             />
           </View>
 
