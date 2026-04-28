@@ -1,5 +1,5 @@
 // File overview:
-// - Purpose: App settings screen (language, theme, notifications, privacy, org/admin links). Handles logout with guest/auth distinctions.
+// - Purpose: App settings screen (language, notifications, org/admin links). Handles logout with guest/auth distinctions.
 // - Reached from: Top bar (via `TopBarNavigator`) and directly from multiple stacks as 'SettingsScreen'.
 // - Provides: Platform-specific scroll (web vs native), language modal and i18n+RTL application, navigation to About, Org Dashboard, Admin Approvals.
 // - Reads from context: `useUser()` -> `isGuestMode`, `selectedUser`, `isAuthenticated`, `signOut`.
@@ -18,7 +18,7 @@
  * @version 2.0.0
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -62,7 +62,26 @@ export default function SettingsScreen() {
   const scrollViewRef = scrollRef;
   const [, setRefreshKey] = useState(0);
   const { t } = useTranslation(['settings', 'common']);
-  const [currentLang, setCurrentLang] = useState(i18n.language || 'he');
+  const normalizeLang = useCallback((lang: string): 'he' | 'en' => {
+    const base = (lang || 'he').split('-')[0]?.toLowerCase() || 'he';
+    return base === 'he' ? 'he' : 'en';
+  }, []);
+
+  const [currentLang, setCurrentLang] = useState(() => normalizeLang(i18n.language || 'he'));
+
+  useEffect(() => {
+    const onLang = (lng: string) => setCurrentLang(normalizeLang(lng));
+    i18n.on('languageChanged', onLang);
+    return () => {
+      i18n.off('languageChanged', onLang);
+    };
+  }, [normalizeLang]);
+
+  /** Web `biDiTextAlign` mirrors left/right; list copy reads wrong for Hebrew — align by active language. */
+  const settingsTextAlign = useMemo(
+    () => ((currentLang === 'he' ? 'right' : 'left') as 'right' | 'left'),
+    [currentLang]
+  );
   const [showLangModal, setShowLangModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -220,28 +239,10 @@ export default function SettingsScreen() {
     }
   };
 
-  const handlePrivacyPress = () => {
-    console.log('⚙️ SettingsScreen - Privacy pressed');
-    if (Platform.OS === 'web') {
-      alert(t('settings:privacyComingSoon'));
-    } else {
-      Alert.alert(t('settings:privacyTitle'), t('settings:privacyComingSoon'));
-    }
-  };
-
-  const handleThemePress = () => {
-    console.log('⚙️ SettingsScreen - Theme pressed');
-    if (Platform.OS === 'web') {
-      alert(t('settings:themeComingSoon'));
-    } else {
-      Alert.alert(t('settings:themeTitle'), t('settings:themeComingSoon'));
-    }
-  };
-
   const applyLanguage = async (lang: 'he' | 'en') => {
     await AsyncStorage.setItem('app_language', lang);
     await i18n.changeLanguage(lang);
-    setCurrentLang(lang);
+    setCurrentLang(normalizeLang(lang));
     const isRTL = lang === 'he';
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.allowRTL(isRTL);
@@ -426,7 +427,8 @@ export default function SettingsScreen() {
     onPress,
     showArrow = true,
     color = colors.textPrimary,
-    dangerous = false
+    dangerous = false,
+    textAlign = settingsTextAlign,
   }: {
     icon: string;
     title: string;
@@ -435,6 +437,7 @@ export default function SettingsScreen() {
     showArrow?: boolean;
     color?: string;
     dangerous?: boolean;
+    textAlign?: 'left' | 'right' | 'center';
   }) => (
     <TouchableOpacity
       style={[styles.settingsItem, dangerous && styles.dangerousItem]}
@@ -450,11 +453,11 @@ export default function SettingsScreen() {
           />
         </View>
         <View style={styles.textContainer}>
-          <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color }]}>
+          <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color, textAlign }]}>
             {title}
           </Text>
           {subtitle && (
-            <Text style={styles.settingsSubtitle}>{subtitle}</Text>
+            <Text style={[styles.settingsSubtitle, { textAlign }]}>{subtitle}</Text>
           )}
         </View>
       </View>
@@ -528,7 +531,7 @@ export default function SettingsScreen() {
               value={reportText}
               onChangeText={setReportText}
               textAlignVertical="top"
-              textAlign={biDiTextAlign('right')}
+              textAlign={settingsTextAlign}
             />
 
             <View style={styles.logoutModalButtons}>
@@ -557,8 +560,8 @@ export default function SettingsScreen() {
       {!isGuestMode && selectedUser && (
         <View style={styles.userSection}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{selectedUser.name}</Text>
-            <Text style={styles.userEmail}>{selectedUser.email}</Text>
+            <Text style={[styles.userName, { textAlign: settingsTextAlign }]}>{selectedUser.name}</Text>
+            <Text style={[styles.userEmail, { textAlign: settingsTextAlign }]}>{selectedUser.email}</Text>
             <Text style={styles.karmaPoints}>
               {(selectedUser.karmaPoints || 0).toLocaleString()} {t('profile:stats.karmaPointsSuffix')}
             </Text>
@@ -576,7 +579,7 @@ export default function SettingsScreen() {
           <View style={styles.webScrollContent}>
             {/* App Settings Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:appSettings')}</Text>
+              <Text style={[styles.sectionTitle, { textAlign: settingsTextAlign }]}>{t('settings:appSettings')}</Text>
 
               <SettingsItem
                 icon="notifications-outline"
@@ -586,29 +589,10 @@ export default function SettingsScreen() {
               />
 
               <SettingsItem
-                icon="color-palette-outline"
-                title={t('settings:theme')}
-                subtitle={t('settings:themeDesc')}
-                onPress={handleThemePress}
-              />
-
-              <SettingsItem
                 icon="language-outline"
                 title={t('settings:language')}
                 subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
                 onPress={handleLanguagePress}
-              />
-            </View>
-
-            {/* Privacy & Security Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:privacySection')}</Text>
-
-              <SettingsItem
-                icon="shield-outline"
-                title={t('settings:privacy')}
-                subtitle={t('settings:privacyDesc')}
-                onPress={handlePrivacyPress}
               />
 
               <SettingsItem
@@ -628,7 +612,7 @@ export default function SettingsScreen() {
 
             {/* About Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:aboutSection')}</Text>
+              <Text style={[styles.sectionTitle, { textAlign: settingsTextAlign }]}>{t('settings:aboutSection')}</Text>
 
               <SettingsItem
                 icon="information-circle-outline"
@@ -697,7 +681,7 @@ export default function SettingsScreen() {
         >
           {/* App Settings Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:appSettings')}</Text>
+            <Text style={[styles.sectionTitle, { textAlign: settingsTextAlign }]}>{t('settings:appSettings')}</Text>
             {/* Org Dashboard (for org admins) */}
             {selectedUser && selectedUser.roles?.includes('org_admin') && (
               <SettingsItem
@@ -726,41 +710,10 @@ export default function SettingsScreen() {
             />
 
             <SettingsItem
-              icon="color-palette-outline"
-              title={t('settings:theme')}
-              subtitle={t('settings:themeDesc')}
-              onPress={handleThemePress}
-            />
-
-            <SettingsItem
               icon="language-outline"
               title={t('settings:language')}
               subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
               onPress={handleLanguagePress}
-            />
-          </View>
-
-          {/* My Activity Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:myActivitySection', 'הפעילות שלי')}</Text>
-
-            <SettingsItem
-              icon="trophy-outline"
-              title={t('challenges:myChallenges')}
-              subtitle={t('settings:myChallengesDesc', 'עדכון מהיר של האתגרים שהצטרפת אליהם')}
-              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
-            />
-          </View>
-
-          {/* Privacy & Security Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:privacySection')}</Text>
-
-            <SettingsItem
-              icon="shield-outline"
-              title={t('settings:privacy')}
-              subtitle={t('settings:privacyDesc')}
-              onPress={handlePrivacyPress}
             />
 
             <SettingsItem
@@ -778,9 +731,21 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* My Activity Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { textAlign: settingsTextAlign }]}>{t('settings:myActivitySection', 'הפעילות שלי')}</Text>
+
+            <SettingsItem
+              icon="trophy-outline"
+              title={t('challenges:myChallenges')}
+              subtitle={t('settings:myChallengesDesc', 'עדכון מהיר של האתגרים שהצטרפת אליהם')}
+              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
+            />
+          </View>
+
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:aboutSection')}</Text>
+            <Text style={[styles.sectionTitle, { textAlign: settingsTextAlign }]}>{t('settings:aboutSection')}</Text>
 
             <SettingsItem
               icon="information-circle-outline"
