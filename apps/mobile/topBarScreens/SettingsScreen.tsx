@@ -34,7 +34,6 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import { biDiTextAlign, rowDirection } from '../globals/responsive';
 import { FontSizes } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import { useWebMode } from '../stores/webModeStore';
@@ -119,6 +118,23 @@ export default function SettingsScreen() {
       });
     }
   }, [isAuthenticated, isGuestMode, selectedUser, navigation, mode]);
+
+  /** Layout direction follows selected language so UI updates immediately (native RTL still needs restart for full mirror). */
+  const isRTL = currentLang === 'he';
+
+  useEffect(() => {
+    const sync = (lng: string) => {
+      const code = lng?.split('-')[0];
+      if (code === 'he' || code === 'en') {
+        setCurrentLang(code);
+      }
+    };
+    sync(i18n.language || 'he');
+    i18n.on('languageChanged', sync);
+    return () => {
+      i18n.off('languageChanged', sync);
+    };
+  }, []);
 
   // Debug logs for development
   console.log('⚙️ SettingsScreen - Rendered with isGuestMode:', isGuestMode);
@@ -426,7 +442,7 @@ export default function SettingsScreen() {
     onPress,
     showArrow = true,
     color = colors.textPrimary,
-    dangerous = false
+    dangerous = false,
   }: {
     icon: string;
     title: string;
@@ -435,38 +451,49 @@ export default function SettingsScreen() {
     showArrow?: boolean;
     color?: string;
     dangerous?: boolean;
-  }) => (
-    <TouchableOpacity
-      style={[styles.settingsItem, dangerous && styles.dangerousItem]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.settingsItemLeft}>
-        <View style={[styles.iconContainer, dangerous && styles.dangerousIconContainer]}>
+  }) => {
+    const rowFlex = isRTL ? 'row-reverse' : 'row';
+    const alignMain: 'left' | 'right' = isRTL ? 'right' : 'left';
+    return (
+      <TouchableOpacity
+        style={[styles.settingsItem, { flexDirection: rowFlex }, dangerous && styles.dangerousItem]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.settingsItemLeft, { flexDirection: rowFlex }]}>
+          <View
+            style={[
+              styles.iconContainer,
+              dangerous && styles.dangerousIconContainer,
+              isRTL ? styles.iconContainerRtl : styles.iconContainerLtr,
+            ]}
+          >
+            <Ionicons
+              name={icon as any}
+              size={22}
+              color={dangerous ? colors.error : colors.primary}
+            />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color, textAlign: alignMain }]}>
+              {title}
+            </Text>
+            {subtitle && (
+              <Text style={[styles.settingsSubtitle, { textAlign: alignMain }]}>{subtitle}</Text>
+            )}
+          </View>
+        </View>
+        {showArrow && (
           <Ionicons
-            name={icon as any}
-            size={22}
-            color={dangerous ? colors.error : colors.primary}
+            name="chevron-forward"
+            size={20}
+            color={colors.textSecondary}
+            style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
           />
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color }]}>
-            {title}
-          </Text>
-          {subtitle && (
-            <Text style={styles.settingsSubtitle}>{subtitle}</Text>
-          )}
-        </View>
-      </View>
-      {showArrow && (
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color={colors.textSecondary}
-        />
-      )}
-    </TouchableOpacity>
-  );
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScreenWrapper style={styles.container}>
@@ -474,7 +501,7 @@ export default function SettingsScreen() {
       <Modal visible={showLangModal} transparent animationType="fade" onRequestClose={() => setShowLangModal(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('settings:selectLanguage')}</Text>
+            <Text style={[styles.modalTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:selectLanguage')}</Text>
             <TouchableOpacity style={styles.modalOption} onPress={() => applyLanguage('he')}>
               <Text style={styles.modalOptionText}>{`${t('settings:lang.he')} ${currentLang === 'he' ? '✓' : ''}`}</Text>
             </TouchableOpacity>
@@ -494,7 +521,7 @@ export default function SettingsScreen() {
           <View style={styles.logoutModalCard}>
             <Text style={styles.logoutModalTitle}>{t('settings:logoutTitle')}</Text>
             <Text style={styles.logoutModalMessage}>{t('settings:logoutMessage')}</Text>
-            <View style={styles.logoutModalButtons}>
+            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <TouchableOpacity
                 style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
                 onPress={handleLogoutCancel}
@@ -528,10 +555,10 @@ export default function SettingsScreen() {
               value={reportText}
               onChangeText={setReportText}
               textAlignVertical="top"
-              textAlign={biDiTextAlign('right')}
+              textAlign={isRTL ? 'right' : 'left'}
             />
 
-            <View style={styles.logoutModalButtons}>
+            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <TouchableOpacity
                 style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
                 onPress={() => setShowReportModal(false)}
@@ -557,11 +584,8 @@ export default function SettingsScreen() {
       {!isGuestMode && selectedUser && (
         <View style={styles.userSection}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{selectedUser.name}</Text>
-            <Text style={styles.userEmail}>{selectedUser.email}</Text>
-            <Text style={styles.karmaPoints}>
-              {(selectedUser.karmaPoints || 0).toLocaleString()} {t('profile:stats.karmaPointsSuffix')}
-            </Text>
+            <Text style={[styles.userName, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.name}</Text>
+            <Text style={[styles.userEmail, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.email}</Text>
           </View>
         </View>
       )}
@@ -574,23 +598,9 @@ export default function SettingsScreen() {
         // Web: Custom scrollable View with CSS overflow
         <View style={styles.webScrollContainer}>
           <View style={styles.webScrollContent}>
-            {/* App Settings Section */}
+            {/* App Settings Section — working controls */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:appSettings')}</Text>
-
-              <SettingsItem
-                icon="notifications-outline"
-                title={t('settings:notifications')}
-                subtitle={t('settings:notificationsDesc')}
-                onPress={handleNotificationsPress}
-              />
-
-              <SettingsItem
-                icon="color-palette-outline"
-                title={t('settings:theme')}
-                subtitle={t('settings:themeDesc')}
-                onPress={handleThemePress}
-              />
+              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
 
               <SettingsItem
                 icon="language-outline"
@@ -600,35 +610,9 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Privacy & Security Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:privacySection')}</Text>
-
-              <SettingsItem
-                icon="shield-outline"
-                title={t('settings:privacy')}
-                subtitle={t('settings:privacyDesc')}
-                onPress={handlePrivacyPress}
-              />
-
-              <SettingsItem
-                icon="trash-outline"
-                title={t('settings:clearCache')}
-                subtitle={t('settings:clearCacheDesc')}
-                onPress={handleClearCachePress}
-              />
-
-              <SettingsItem
-                icon="flask-outline"
-                title={t('settings:scrollTestTitle')}
-                subtitle={t('settings:scrollTestSubtitle')}
-                onPress={handleScrollTest}
-              />
-            </View>
-
             {/* About Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('settings:aboutSection')}</Text>
+              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
 
               <SettingsItem
                 icon="information-circle-outline"
@@ -654,6 +638,46 @@ export default function SettingsScreen() {
                 onPress={handleLogoutPress}
                 showArrow={false}
                 dangerous={!isGuestMode} // Red only for authenticated user (dangerous action)
+              />
+            </View>
+
+            {/* Coming soon — not wired yet */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
+
+              <SettingsItem
+                icon="notifications-outline"
+                title={t('settings:notifications')}
+                subtitle={t('settings:notificationsDesc')}
+                onPress={handleNotificationsPress}
+              />
+
+              <SettingsItem
+                icon="color-palette-outline"
+                title={t('settings:theme')}
+                subtitle={t('settings:themeDesc')}
+                onPress={handleThemePress}
+              />
+
+              <SettingsItem
+                icon="shield-outline"
+                title={t('settings:privacy')}
+                subtitle={t('settings:privacyDesc')}
+                onPress={handlePrivacyPress}
+              />
+
+              <SettingsItem
+                icon="trash-outline"
+                title={t('settings:clearCache')}
+                subtitle={t('settings:clearCacheDesc')}
+                onPress={handleClearCachePress}
+              />
+
+              <SettingsItem
+                icon="flask-outline"
+                title={t('settings:scrollTestTitle')}
+                subtitle={t('settings:scrollTestSubtitle')}
+                onPress={handleScrollTest}
               />
             </View>
           </View>
@@ -695,9 +719,9 @@ export default function SettingsScreen() {
           }}
           scrollEventThrottle={16}
         >
-          {/* App Settings Section */}
+          {/* App Settings Section — working controls */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:appSettings')}</Text>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
             {/* Org Dashboard (for org admins) */}
             {selectedUser && selectedUser.roles?.includes('org_admin') && (
               <SettingsItem
@@ -719,20 +743,6 @@ export default function SettingsScreen() {
             )}
 
             <SettingsItem
-              icon="notifications-outline"
-              title={t('settings:notifications')}
-              subtitle={t('settings:notificationsDesc')}
-              onPress={handleNotificationsPress}
-            />
-
-            <SettingsItem
-              icon="color-palette-outline"
-              title={t('settings:theme')}
-              subtitle={t('settings:themeDesc')}
-              onPress={handleThemePress}
-            />
-
-            <SettingsItem
               icon="language-outline"
               title={t('settings:language')}
               subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
@@ -742,45 +752,19 @@ export default function SettingsScreen() {
 
           {/* My Activity Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:myActivitySection', 'הפעילות שלי')}</Text>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:myActivitySection')}</Text>
 
             <SettingsItem
               icon="trophy-outline"
               title={t('challenges:myChallenges')}
-              subtitle={t('settings:myChallengesDesc', 'עדכון מהיר של האתגרים שהצטרפת אליהם')}
+              subtitle={t('settings:myChallengesDesc')}
               onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
-            />
-          </View>
-
-          {/* Privacy & Security Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:privacySection')}</Text>
-
-            <SettingsItem
-              icon="shield-outline"
-              title={t('settings:privacy')}
-              subtitle={t('settings:privacyDesc')}
-              onPress={handlePrivacyPress}
-            />
-
-            <SettingsItem
-              icon="trash-outline"
-              title={t('settings:clearCache')}
-              subtitle={t('settings:clearCacheDesc')}
-              onPress={handleClearCachePress}
-            />
-
-            <SettingsItem
-              icon="flask-outline"
-              title={t('settings:scrollTestTitle')}
-              subtitle={t('settings:scrollTestSubtitle')}
-              onPress={handleScrollTest}
             />
           </View>
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('settings:aboutSection')}</Text>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
 
             <SettingsItem
               icon="information-circle-outline"
@@ -808,6 +792,46 @@ export default function SettingsScreen() {
               dangerous={!isGuestMode} // Red only for authenticated user (dangerous action)
             />
           </View>
+
+          {/* Coming soon — not wired yet */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
+
+            <SettingsItem
+              icon="notifications-outline"
+              title={t('settings:notifications')}
+              subtitle={t('settings:notificationsDesc')}
+              onPress={handleNotificationsPress}
+            />
+
+            <SettingsItem
+              icon="color-palette-outline"
+              title={t('settings:theme')}
+              subtitle={t('settings:themeDesc')}
+              onPress={handleThemePress}
+            />
+
+            <SettingsItem
+              icon="shield-outline"
+              title={t('settings:privacy')}
+              subtitle={t('settings:privacyDesc')}
+              onPress={handlePrivacyPress}
+            />
+
+            <SettingsItem
+              icon="trash-outline"
+              title={t('settings:clearCache')}
+              subtitle={t('settings:clearCacheDesc')}
+              onPress={handleClearCachePress}
+            />
+
+            <SettingsItem
+              icon="flask-outline"
+              title={t('settings:scrollTestTitle')}
+              subtitle={t('settings:scrollTestSubtitle')}
+              onPress={handleScrollTest}
+            />
+          </View>
         </ScrollView>
       )}
     </ScreenWrapper>
@@ -821,7 +845,7 @@ const styles = StyleSheet.create({
     marginTop: Platform.OS === 'android' ? 30 : 0,
   },
   header: {
-    flexDirection: rowDirection('row'),
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
@@ -858,19 +882,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 4,
-    textAlign: biDiTextAlign('right'),
   },
   userEmail: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
     marginBottom: 8,
-    textAlign: biDiTextAlign('right'),
-  },
-  karmaPoints: {
-    fontSize: FontSizes.body,
-    color: colors.primary,
-    fontWeight: '500',
-    textAlign: 'center',
   },
 
   // Web: Custom scrollable container with CSS overflow
@@ -905,11 +921,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 16,
-    marginRight: 4,
-    textAlign: biDiTextAlign('right'),
+    marginHorizontal: 4,
   },
   settingsItem: {
-    flexDirection: rowDirection('row'),
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.backgroundSecondary,
@@ -921,7 +935,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorLight,
   },
   settingsItemLeft: {
-    flexDirection: rowDirection('row'),
     alignItems: 'center',
     flex: 1,
   },
@@ -932,7 +945,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.pinkLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconContainerLtr: {
     marginRight: 16,
+    marginLeft: 0,
+  },
+  iconContainerRtl: {
+    marginLeft: 16,
+    marginRight: 0,
   },
   dangerousIconContainer: {
     backgroundColor: colors.errorLight,
@@ -945,12 +965,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 2,
-    textAlign: biDiTextAlign('right'),
   },
   settingsSubtitle: {
     fontSize: FontSizes.small,
     color: colors.textSecondary,
-    textAlign: biDiTextAlign('right'),
   },
   modalBackdrop: { flex: 1, backgroundColor: colors.overlayBlack40, alignItems: 'center', justifyContent: 'center' },
   modalCard: { backgroundColor: colors.white, width: 300, borderRadius: 12, padding: 16, gap: 8 },
@@ -969,19 +987,18 @@ const styles = StyleSheet.create({
   logoutModalTitle: {
     fontSize: FontSizes.heading2,
     color: colors.textPrimary,
-    textAlign: biDiTextAlign('center'),
+    textAlign: 'center',
     marginBottom: 12,
     fontWeight: '700',
   },
   logoutModalMessage: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
-    textAlign: biDiTextAlign('center'),
+    textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   logoutModalButtons: {
-    flexDirection: rowDirection('row'),
     gap: 12,
     justifyContent: 'space-between',
   },
@@ -1022,14 +1039,14 @@ const styles = StyleSheet.create({
   reportModalTitle: {
     fontSize: FontSizes.heading2,
     color: colors.textPrimary,
-    textAlign: biDiTextAlign('center'),
+    textAlign: 'center',
     marginBottom: 8,
     fontWeight: '700',
   },
   reportModalSubtitle: {
     fontSize: FontSizes.body,
     color: colors.textSecondary,
-    textAlign: biDiTextAlign('center'),
+    textAlign: 'center',
     marginBottom: 20,
   },
   reportInput: {

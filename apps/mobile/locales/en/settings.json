@@ -45,8 +45,18 @@
   "restartDesc": "Please restart the app for language changes to take effect",
   "scrollTestTitle": "Scroll test",
   "scrollTestSubtitle": "Verify scrolling works (developers)",
+  "comingSoonSection": "Coming soon",
+  "myActivitySection": "My activity",
+  "myChallengesDesc": "Quick view of challenges you joined",
   "orgDashboardTitle": "Organization dashboard",
   "orgDashboardSubtitle": "Approved organization management",
   "adminApprovalsTitle": "Organization approvals",
-  "adminApprovalsSubtitle": "Manage organization requests"
+  "adminApprovalsSubtitle": "Manage organization requests",
+  "reportIssue": "Report an issue",
+  "reportIssueDesc": "Something broken? Let us know",
+  "reportTitle": "Report to admin",
+  "reportPlaceholder": "Describe your report…",
+  "reportSend": "Send report",
+  "reportSuccess": "Report sent successfully",
+  "reportError": "Could not send the report. Try again."
 }
