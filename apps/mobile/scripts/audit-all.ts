@@ -1,7 +1,6 @@
 #!/usr/bin/env ts-node
 /**
  * Master Audit Script
- *
  * Purpose: Runs all audit scripts and generates a comprehensive summary report
  *
  * Runs:
