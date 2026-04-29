@@ -36,6 +36,7 @@ import { Platform } from 'react-native';
 import { googleAuthService } from './GoogleAuthService';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL } from '../utils/dbConfig';
+import { DEV_HOSTED_API_BASE_URL } from '../utils/config.constants';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -248,7 +249,7 @@ class SecureApiService {
       
       // If on dev domain, use dev server
       if (hostname.includes('dev.')) {
-        return 'https://kc-mvp-server-development.up.railway.app';
+        return DEV_HOSTED_API_BASE_URL;
       }
       
       // Otherwise use production server

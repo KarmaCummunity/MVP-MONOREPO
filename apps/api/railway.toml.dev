@@ -28,7 +28,7 @@ NODE_ENV = "development"
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "430191522654-o70t2qnqc4bvpvmbpak7unog7pvp9c95.apps.googleusercontent.com"
 
 # CORS - Development domains (localhost + dev domain)
-CORS_ORIGIN = "http://localhost:19006,http://localhost:3000,http://localhost:8081,https://dev.karma-community-kc.com"
+CORS_ORIGIN = "http://localhost:19006,http://localhost:3000,http://localhost:8081,https://dev.karma-community-kc.com,https://prodmain-devdev-kc-mvp-dev2.up.railway.app"
 
 # Security - DEVELOPMENT JWT Secret (different from production!)
 JWT_SECRET = "d8ed28a5b1e295edc952feeb890b51d894b9661da5753a2970632d94f14ca4a2"

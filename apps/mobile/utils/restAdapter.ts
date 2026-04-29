@@ -3,7 +3,7 @@
 // - Reached from: `DatabaseService` when `USE_BACKEND` is true, and some direct auth flows.
 // - Provides: create/read/update/delete/list for collections; auth check/register/login; generic POST helper.
 // utils/restAdapter.ts
-import { API_BASE_URL } from './config.constants';
+import { API_BASE_URL, DEV_HOSTED_API_BASE_URL } from './config.constants';
 
 import { apiService } from './apiService';
 
@@ -36,7 +36,7 @@ export class RestAdapter {
 
       // If on dev domain, use dev server
       if (hostname.includes('dev.')) {
-        return 'https://kc-mvp-server-development.up.railway.app';
+        return DEV_HOSTED_API_BASE_URL;
       }
 
       // Otherwise use production server

@@ -9,7 +9,7 @@ const IS_DEV = ENVIRONMENT === 'development';
 // API URL based on environment
 const DEFAULT_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ||
   (IS_DEV
-    ? 'https://kc-mvp-server-dev.up.railway.app'
+    ? 'https://prodmain-devdev-kc-mvp-dev2.up.railway.app'
     : 'https://kc-mvp-server-production.up.railway.app');
 
 // Firebase and Google OAuth: read only from env at build time. Do not hardcode.

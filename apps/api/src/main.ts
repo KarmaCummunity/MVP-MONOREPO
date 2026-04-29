@@ -323,6 +323,7 @@ async function bootstrap(): Promise<void> {
     if (!isProduction) {
       const devDomains = [
         "https://dev.karma-community-kc.com",
+        "https://prodmain-devdev-kc-mvp-dev2.up.railway.app",
         "http://localhost:19006",
         "http://localhost:3000",
         "http://localhost:8081",

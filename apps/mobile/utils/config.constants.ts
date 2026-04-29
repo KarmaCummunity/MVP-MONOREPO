@@ -38,6 +38,10 @@ export const IS_DEVELOPMENT = projectEnv === 'development';
 export const IS_PRODUCTION = projectEnv === 'production';
 export const CURRENT_ENVIRONMENT = projectEnv;
 
+/** Hosted development API on Railway. Override with EXPO_PUBLIC_API_BASE_URL for local or other backends. */
+export const DEV_HOSTED_API_BASE_URL =
+  'https://prodmain-devdev-kc-mvp-dev2.up.railway.app';
+
 // Simple API URL resolution - evaluated at runtime for web
 const getSimpleApiUrl = (): string => {
   // Try environment variables first (highest priority - for local development)
@@ -60,9 +64,8 @@ const getSimpleApiUrl = (): string => {
     
     // If on dev domain, use dev server
     if (hostname.includes('dev.')) {
-      const devUrl = 'https://kc-mvp-server-development.up.railway.app';
-      console.log('🌐 Using dev API URL:', devUrl);
-      return devUrl;
+      console.log('🌐 Using dev API URL:', DEV_HOSTED_API_BASE_URL);
+      return DEV_HOSTED_API_BASE_URL;
     }
     
     // Otherwise use production server
@@ -73,7 +76,7 @@ const getSimpleApiUrl = (): string => {
 
   // Fallback to appropriate environment URL for native apps
   return IS_DEVELOPMENT
-    ? 'https://kc-mvp-server-development.up.railway.app'
+    ? DEV_HOSTED_API_BASE_URL
     : 'https://kc-mvp-server-production.up.railway.app';
 };
 

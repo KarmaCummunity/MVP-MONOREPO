@@ -15,7 +15,10 @@
 // TODO: Implement proper API versioning support
 // TODO: Add request/response transformation middleware
 // TODO: Add comprehensive logging and monitoring
-import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
+import {
+  API_BASE_URL as CONFIG_API_BASE_URL,
+  DEV_HOSTED_API_BASE_URL,
+} from './config.constants';
 import { logger } from './loggerService';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
 
@@ -56,7 +59,7 @@ class ApiService {
 
       // If on dev domain, use dev server
       if (hostname.includes('dev.')) {
-        return 'https://kc-mvp-server-development.up.railway.app';
+        return DEV_HOSTED_API_BASE_URL;
       }
 
       // Otherwise use production server
