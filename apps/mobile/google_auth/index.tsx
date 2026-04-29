@@ -1,5 +1,3 @@
-import { logger } from '../utils/loggerService';
-const Index_LOG = 'index';
 /**
  * ========================================
  * GOOGLE AUTHENTICATION SYSTEM - MAIN EXPORTS

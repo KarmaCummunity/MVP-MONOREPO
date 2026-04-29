@@ -33,6 +33,8 @@ import { scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import { useToast } from '../utils/toastService';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -62,6 +64,7 @@ interface SearchResult {
 }
 
 const SearchScreen = () => {
+    useLogScreenOpened('SearchScreen');
     const navigation = useNavigation<any>();
     const route = useRoute();
     const tabBarHeight = useBottomTabBarHeight();
@@ -477,7 +480,7 @@ const SearchScreen = () => {
             <TouchableOpacity
                 style={styles.aiButton}
                 onPress={() => {
-                    navigation.navigate('ChatDetailScreen', {
+                    navigateToChatDetail(navigation, {
                         conversationId: 'ai_simulation',
                         userName: t('search:ai.title') || 'AI Assistant', // Use localized title
                         otherUserId: 'ai_bot',

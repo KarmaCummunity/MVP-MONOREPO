@@ -1,4 +1,3 @@
-const GoogleAuthService_LOG = 'GoogleAuthService';
 /**
  * ========================================
  * GOOGLE AUTHENTICATION SERVICE

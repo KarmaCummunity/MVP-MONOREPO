@@ -28,6 +28,7 @@ import { logger } from '../utils/loggerService';
 
 const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
@@ -50,6 +51,7 @@ type ChatDetailRouteParams = {
 };
 
 export default function ChatDetailScreen() {
+  useLogScreenOpened('ChatDetailScreen');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<Record<string, ChatDetailRouteParams>, string>>();
   const routeParams = route.params || {};
@@ -175,7 +177,7 @@ export default function ChatDetailScreen() {
 
         // Mark messages as read when they arrive
         markMessagesAsRead(conversationId, selectedUser.id).catch(console.error);
-      });
+      }, getMessages);
     }
 
     return () => {

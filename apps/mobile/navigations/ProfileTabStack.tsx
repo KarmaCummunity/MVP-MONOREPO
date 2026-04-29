@@ -19,7 +19,6 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
 import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
@@ -33,7 +32,7 @@ export default function ProfileTabStack(): React.ReactElement {
 
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('ProfileTabStack', 'Navigator focused');
+      logger.debug('ProfileTabStack', 'Navigator focused', undefined, { periodic: true });
     }, [])
   );
 
@@ -64,7 +63,6 @@ export default function ProfileTabStack(): React.ReactElement {
       <Stack.Screen name="NewChatScreen" component={NewChatScreen} />
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
-      <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
     </Stack.Navigator>

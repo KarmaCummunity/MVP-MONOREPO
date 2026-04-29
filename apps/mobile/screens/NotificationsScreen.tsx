@@ -21,6 +21,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useUser } from '../stores/userStore';
 import {
@@ -61,7 +62,7 @@ export default function NotificationsScreen() {
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  logger.debug(NS_LOG, 'Component rendered', { selectedUserName: selectedUser?.name ?? null });
+  logger.debug(NS_LOG, 'Component rendered', { selectedUserName: selectedUser?.name ?? null }, { periodic: true });
 
   const loadNotifications = useCallback(async () => {
     logger.debug(NS_LOG, 'loadNotifications', { selectedUserName: selectedUser?.name ?? null });
@@ -88,6 +89,7 @@ export default function NotificationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('NotificationsScreen');
       logger.debug(NS_LOG, 'Screen focused, loading notifications');
       logger.debug(NS_LOG, 'selectedUser in useFocusEffect', { selectedUserName: selectedUser?.name ?? null });
       loadNotifications();
@@ -268,7 +270,7 @@ export default function NotificationsScreen() {
         await markNotificationAsRead(item.id, selectedUser.id);
       }
       if (item.type === 'message' && item.data?.conversationId) {
-        (navigation as any).navigate('ChatDetailScreen', { conversationId: item.data.conversationId });
+        navigateToChatDetail(navigation, { conversationId: item.data.conversationId });
       } else if (item.type === 'daily_challenge_reminder') {
         (navigation as any).navigate('HomeStack', {
           screen: 'DonationsTab',

@@ -20,10 +20,13 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 // Demo data is now localized via i18n inside the component
 
 export default function ChatListScreen() {
+  useLogScreenOpened('ChatListScreen');
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
@@ -145,7 +148,7 @@ export default function ChatListScreen() {
       if (!selectedUser) return;
       const unsubscribe = subscribeToConversations(selectedUser.id, updated => {
         setConversations(updated);
-      });
+      }, getConversations);
       return () => unsubscribe();
     }, [selectedUser, loadConversations])
   );
@@ -187,7 +190,7 @@ export default function ChatListScreen() {
   }, [conversations, searchQuery, usersMap, selectedUser]);
 
   const handlePressChat = (conversationId: string, otherUserId: string, userName: string, userAvatar: string) => {
-    navigation.navigate('ChatDetailScreen', { conversationId, otherUserId, userName, userAvatar });
+    navigateToChatDetail(navigation, { conversationId, otherUserId, userName, userAvatar });
   };
 
   // Create new chat – simple CTA next to the search bar

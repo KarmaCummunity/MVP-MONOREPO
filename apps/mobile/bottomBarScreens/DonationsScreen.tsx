@@ -72,14 +72,9 @@ const ANALYTICS_ITEM_PREFIX = 'category:';
 // TODO: Add category access control and permissions
 /** Donation tab categories shown on DonationsScreen (subset per product scope). */
 const BASE_CATEGORIES = [
-  { id: 'money',      icon: 'card-outline',        color: colors.success, bgColor: colors.successLight, screen: 'MoneyScreen' },
   { id: 'items',      icon: 'cube-outline',        color: colors.secondary, bgColor: colors.pinkLight, screen: 'ItemsScreen' },
   { id: 'trump',      icon: 'car-outline',         color: colors.primary,    bgColor: colors.infoLight,    screen: 'TrumpScreen' },
-  { id: 'knowledge',  icon: 'school-outline',      color: colors.warning, bgColor: colors.warning, screen: 'KnowledgeScreen' },
   { id: 'challenges', icon: 'trophy-outline',      color: colors.warning, bgColor: colors.warning, screen: 'MyChallengesScreen' },
-  { id: 'time',       icon: 'time-outline',        color: colors.secondary,  bgColor: colors.pinkLight, screen: 'TimeScreen' },
-  { id: 'food',       icon: 'restaurant-outline',  color: colors.success, bgColor: colors.successLight, screen: 'FoodScreen' },
-  { id: 'housing',    icon: 'home-outline',        color: colors.primary,    bgColor: colors.infoLight,    screen: 'HousingScreen' },
 ] as const;
 
 type CategoryId = typeof BASE_CATEGORIES[number]['id'];
@@ -107,8 +102,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      // Analytics tracking if needed
-      logger.info('DonationsScreen', 'Screen focused');
+      logger.logScreenOpened('DonationsScreen');
     }, [])
   );
 
@@ -160,7 +154,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const primaryCategoryIds: CategoryId[] = ['money', 'items', 'trump', 'knowledge'];
+  const primaryCategoryIds: CategoryId[] = ['items', 'trump', 'challenges'];
   const primaryCategories = primaryCategoryIds
     .map((id) => BASE_CATEGORIES.find((c) => c.id === id))
     .filter((c): c is typeof BASE_CATEGORIES[number] => Boolean(c));
@@ -260,7 +254,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* סעיף שני - כל הקטגוריות הנוספות */}
+        {otherCategories.length > 0 ? (
         <View style={[styles.modernSection, { padding: sectionPadding }]}>
           <Text style={styles.modernSectionTitle}>
             {t('donations:others')}
@@ -268,7 +262,6 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
           <View style={[styles.modernOtherGrid, { gap: otherCategoriesGap }]}>
             {otherCategories.map((category) => {
               const { title, subtitle } = getCategoryText(category.id as CategoryId);
-              // חישוב רוחב responsive לכרטיס קטן - 3 בשורה
               const smallCardWidth = "25%";
               return (
                 <TouchableOpacity
@@ -279,7 +272,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       width: smallCardWidth,
                       minWidth: smallCardWidth,
                       maxWidth: smallCardWidth,
-                      backgroundColor: colors.infoLight, // רקע אחיד כמו הטרמפים
+                      backgroundColor: colors.infoLight,
                       paddingVertical: responsiveSpacing(12, 14, 16),
                       paddingHorizontal: responsiveSpacing(8, 10, 12),
                     },
@@ -331,6 +324,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
             })}
           </View>
         </View>
+        ) : null}
 
       {/* Stats Section */}
       {(() => {

@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
 
 import colors from '../globals/colors';
 import { FeedItem } from '../types/feed';
@@ -71,7 +71,16 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const { selectedUser } = useUser();
+
+  useFocusEffect(
+    useCallback(() => {
+      logger.logScreenOpened('PostsReelsScreen', {
+        hostRoute: typeof route.name === 'string' ? route.name : String(route.name ?? ''),
+      });
+    }, [route.name]),
+  );
 
   // State
   const [feedMode, setFeedMode] = useState<'friends' | 'discovery'>('friends');

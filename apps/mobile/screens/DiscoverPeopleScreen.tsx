@@ -38,7 +38,9 @@ import apiService from '../utils/apiService';
 import { getScreenInfo, isLandscape } from '../globals/responsive';
 import { IS_DEVELOPMENT } from '../utils/dbConfig';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 import { createLogger } from '../utils/loggerService';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 const log = createLogger('DiscoverPeopleScreen');
 
@@ -128,7 +130,7 @@ export default function DiscoverPeopleScreen() {
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  // Helper function to check if a user is the current user
+  useLogScreenOpened('DiscoverPeopleScreen');
   const isCurrentUserCheck = useCallback((
     userId: string,
     userEmail: string | undefined,
@@ -311,13 +313,10 @@ export default function DiscoverPeopleScreen() {
   useFocusEffect(
     React.useCallback(() => {
       log.debug('👁️ DiscoverPeopleScreen - Screen focused, refreshing data...', {
-        platform: Platform.OS,
-        activeTab,
-        suggestionsCount: suggestions.length,
-        popularCount: popularUsers.length
+        platform: Platform.OS
       });
       loadUsers(false);
-    }, [loadUsers, activeTab, suggestions.length, popularUsers.length])
+    }, [loadUsers])
   );
 
   const onRefresh = useCallback(() => {
@@ -464,7 +463,7 @@ export default function DiscoverPeopleScreen() {
         conversationId = await createConversation([selectedUser.id, targetUser.id]);
       }
 
-      navigation.navigate('ChatDetailScreen', {
+      navigateToChatDetail(navigation, {
         conversationId,
         otherUserId: targetUser.id,
         userName: targetUser.name || 'ללא שם',

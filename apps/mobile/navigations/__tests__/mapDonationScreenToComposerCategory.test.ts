@@ -7,10 +7,7 @@ import type { NavigationState } from '@react-navigation/native';
 
 describe('mapDonationScreenRouteToComposerCategory', () => {
   it('maps known donation screens', () => {
-    expect(mapDonationScreenRouteToComposerCategory('MoneyScreen')).toBe('money');
-    expect(mapDonationScreenRouteToComposerCategory('KnowledgeScreen')).toBe('knowledge');
     expect(mapDonationScreenRouteToComposerCategory('TrumpScreen')).toBe('trump');
-    expect(mapDonationScreenRouteToComposerCategory('TimeScreen')).toBe('time');
     expect(mapDonationScreenRouteToComposerCategory('MyChallengesScreen')).toBe('challenges');
     expect(mapDonationScreenRouteToComposerCategory('CommunityChallengesScreen')).toBe('challenges');
     expect(mapDonationScreenRouteToComposerCategory('ChallengeDetailsScreen')).toBe('challenges');
@@ -24,7 +21,7 @@ describe('mapDonationScreenRouteToComposerCategory', () => {
 });
 
 describe('getFocusedDonationsLeafRouteName', () => {
-  const moneyLeaf = { key: 'Money-1', name: 'MoneyScreen', params: {} };
+  const itemsLeaf = { key: 'Items-1', name: 'ItemsScreen', params: {} };
 
   it('returns leaf route when DonationsTab is focused', () => {
     const state = {
@@ -39,13 +36,13 @@ describe('getFocusedDonationsLeafRouteName', () => {
           state: {
             key: 'stack',
             index: 0,
-            routeNames: ['MoneyScreen'],
-            routes: [moneyLeaf],
+            routeNames: ['ItemsScreen'],
+            routes: [itemsLeaf],
           } as NavigationState,
         },
       ],
     } as unknown as NavigationState;
-    expect(getFocusedDonationsLeafRouteName(state)).toBe('MoneyScreen');
+    expect(getFocusedDonationsLeafRouteName(state)).toBe('ItemsScreen');
   });
 
   it('returns undefined when another tab is focused', () => {
@@ -60,7 +57,7 @@ describe('getFocusedDonationsLeafRouteName', () => {
           name: 'DonationsTab',
           state: {
             index: 0,
-            routes: [moneyLeaf],
+            routes: [itemsLeaf],
           } as NavigationState,
         },
       ],
@@ -71,7 +68,7 @@ describe('getFocusedDonationsLeafRouteName', () => {
 
 describe('getDonationsStackLeafScreenName', () => {
   it('finds DonationsTab nested under a root stack (MainNavigator-style)', () => {
-    const moneyLeaf = { key: 'Money-1', name: 'MoneyScreen', params: {} };
+    const itemsLeaf = { key: 'Items-1', name: 'ItemsScreen', params: {} };
     const root = {
       key: 'root',
       index: 0,
@@ -89,7 +86,7 @@ describe('getDonationsStackLeafScreenName', () => {
                 name: 'DonationsTab',
                 state: {
                   index: 0,
-                  routes: [moneyLeaf],
+                  routes: [itemsLeaf],
                 } as NavigationState,
               },
               { key: 'c', name: 'CreatePostTab' },
@@ -99,6 +96,6 @@ describe('getDonationsStackLeafScreenName', () => {
       ],
     } as unknown as NavigationState;
 
-    expect(getDonationsStackLeafScreenName(root)).toBe('MoneyScreen');
+    expect(getDonationsStackLeafScreenName(root)).toBe('ItemsScreen');
   });
 });

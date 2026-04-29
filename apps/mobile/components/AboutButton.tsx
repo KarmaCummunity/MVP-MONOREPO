@@ -7,6 +7,7 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { navigateToAuthenticatedLandingSite } from '../navigations/landingSiteNavigation';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -21,7 +22,7 @@ interface AboutButtonProps {
    */
   iconSize?: number;
   /**
-   * Icon color (default: colors.topNavIcon)
+   * Icon color (default: black for top bar)
    */
   iconColor?: string;
   /**
@@ -53,7 +54,7 @@ interface AboutButtonProps {
 export default function AboutButton({
   style,
   iconSize = 24,
-  iconColor = colors.topNavIcon,
+  iconColor = colors.black,
   onPress,
 }: AboutButtonProps) {
   const { t } = useTranslation('common');
@@ -63,8 +64,7 @@ export default function AboutButton({
     if (onPress) {
       onPress();
     } else {
-      // Navigate to About screen by default
-      navigation.navigate('LandingSiteScreen' as never);
+      navigateToAuthenticatedLandingSite(navigation);
     }
   };
 

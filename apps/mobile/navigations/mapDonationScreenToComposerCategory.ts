@@ -47,14 +47,8 @@ export function getFocusedDonationsLeafRouteName(
 export function mapDonationScreenRouteToComposerCategory(screen: string | undefined): string {
   if (!screen) return 'items';
   switch (screen) {
-    case 'MoneyScreen':
-      return 'money';
-    case 'KnowledgeScreen':
-      return 'knowledge';
     case 'TrumpScreen':
       return 'trump';
-    case 'TimeScreen':
-      return 'time';
     case 'MyChallengesScreen':
     case 'CommunityChallengesScreen':
     case 'ChallengeDetailsScreen':

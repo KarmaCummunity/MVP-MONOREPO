@@ -12,6 +12,7 @@ module.exports = {
     'components/**/*.{ts,tsx}',
     'utils/**/*.{ts,tsx}',
     'stores/**/*.{ts,tsx}',
+    'navigations/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/scripts/**', // scripts לא נכללים ב-coverage

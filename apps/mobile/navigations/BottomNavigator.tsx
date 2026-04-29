@@ -2,10 +2,10 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press (focused: pop feed to root; unfocused: allow default tab switch + trigger pop).
+// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press (same tab: store reset + preventDefault; other tab: defer reset so tab switch wins on Web).
 // - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
-// - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants.
+// - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
 // BottomNavigator.tsx
 
 // TODO: Extract complex animation logic to custom hooks (usePulseAnimation, useTabBarAnimation)
@@ -42,20 +42,14 @@ import {
   getDonationsStackLeafScreenName,
   mapDonationScreenRouteToComposerCategory,
 } from "./mapDonationScreenToComposerCategory";
-
-// Define the type for your bottom tab navigator's route names and their parameters.
-export type BottomTabNavigatorParamList = {
-  DonationsTab: undefined;
-  CreatePostTab: undefined;
-  HomeScreen: undefined;
-  SearchTab: undefined;
-  ProfileScreen: undefined;
-  AdminTab: undefined;
-  SettingsScreen: undefined;
-  ChatListScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  NotificationsScreen: undefined;
-};
+import {
+  getActiveNestedParams,
+  buildTabStackResetPayload,
+  isTabNavigatorFocusedOnRoute,
+  TAB_INITIAL_ROUTES,
+  type NestedRouteLike,
+} from "./bottomTabNavigationUtils";
+import type { BottomTabNavigatorParamList } from "../globals/types";
 
 // Create an instance of the Bottom Tab Navigator with its parameter list type
 const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
@@ -171,7 +165,12 @@ export default function BottomNavigator(): React.ReactElement {
   // Refresh data when navigator comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('BottomNavigator', 'Navigator focused');
+      logger.debug(
+        'BottomNavigator',
+        'Navigator focused',
+        undefined,
+        { periodic: true },
+      );
       // Refresh user roles when navigator comes into focus to detect admin changes
       if (isAuthenticated && !isGuestMode) {
         refreshUserRoles();
@@ -206,60 +205,45 @@ export default function BottomNavigator(): React.ReactElement {
     }
   };
 
-  const getActiveNestedParams = (route: any): Record<string, any> | undefined => {
-    const state = route.state ?? route.params?.state;
-    if (!state) return route.params;
-    const nestedRoute = state.routes?.[state.index ?? 0];
-    if (nestedRoute) return getActiveNestedParams(nestedRoute);
-    return route.params;
-  };
-
-  // Map tab route names to their initial stack route names
-  const TAB_INITIAL_ROUTES: Record<string, string> = {
-    HomeScreen: 'HomeMain',
-    SearchTab: 'SearchScreen',
-    DonationsTab: 'DonationsScreen',
-    ProfileScreen: 'ProfileMain',
-    AdminTab: 'AdminDashboard',
-  };
-
   const handleTabPress = (e: any, navigation: any, routeName: string) => {
     const initialRoute = TAB_INITIAL_ROUTES[routeName];
     if (!initialRoute) return;
 
+    const tabNavigation = navigation.getParent?.();
+    const isThisTabSelected =
+      typeof tabNavigation?.getState === "function"
+        ? isTabNavigatorFocusedOnRoute(tabNavigation, routeName)
+        : navigation.isFocused();
+
     if (routeName === 'HomeScreen') {
-      // Always bump trigger so HomeTabStack pops nested stack to HomeMain (e.g. after CommunityStats).
-      resetHomeScreen();
-      // RN 7 bottom tabs: default tab switch only runs when !focused && !defaultPrevented.
-      // Never preventDefault here when leaving another tab — otherwise the Home tab never receives
-      // the default navigate and you can stay on the previous tab while state updates (wrong screen).
-      if (navigation.isFocused()) {
+      // Same tab re-press: pop Home stack to HomeMain via store + prevent duplicate tab action.
+      // Other tab → Home: do not sync-call resetHomeScreen (Zustand + HomeTabStack popToTop races
+      // default tab switch on Web). Defer reset to next task so the tab index updates first.
+      if (isThisTabSelected) {
+        resetHomeScreen();
         e.preventDefault();
+      } else {
+        setTimeout(() => {
+          resetHomeScreen();
+        }, 0);
       }
       return;
     }
 
-    if (navigation.isFocused()) {
+    if (isThisTabSelected) {
+      const resetPayload = buildTabStackResetPayload(routeName);
+      if (!resetPayload) return;
+
       logger.debug(
         'BottomNavigator',
-        `Tab ${routeName} pressed while focused - resetting stack to ${initialRoute}`,
+        'nav: same tab re-press — reset stack to initial route',
+        { routeName, initialRoute },
+        { periodic: true },
       );
 
       e.preventDefault();
 
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: routeName,
-              state: {
-                routes: [{ name: initialRoute }],
-              },
-            },
-          ],
-        }),
-      );
+      navigation.dispatch(CommonActions.reset(resetPayload));
     }
   };
 
@@ -269,7 +253,7 @@ export default function BottomNavigator(): React.ReactElement {
       id={undefined}
       initialRouteName="HomeScreen"
       screenOptions={({ route }): BottomTabNavigationOptions => {
-        const activeParams = getActiveNestedParams(route as any) || {};
+        const activeParams = getActiveNestedParams(route as NestedRouteLike) || {};
         const hideBottomBar = activeParams.hideBottomBar === true;
         const hideDueToSiteMode = (typeof window !== 'undefined' && mode === 'site');
         const shouldHideTabBar = hideBottomBar || hideDueToSiteMode;

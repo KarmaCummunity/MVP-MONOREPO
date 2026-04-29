@@ -18,28 +18,36 @@ try {
 const isProduction = !isDevelopment;
 
 export interface LogOptions {
-  /** Mark as recurring/periodic log (e.g. polling, re-renders, nav save) - shown with [PERIODIC] in console */
+  /** Recurring noise (polling, focus handlers). Still stored for export; omitted from console by default. */
   periodic?: boolean;
 }
 
+/** Stored log levels; `routeFocus` = screen/stack gained focus (not generic info). */
+export type LogEntryLevel = 'debug' | 'routeFocus' | 'info' | 'warn' | 'error';
+
 interface LogEntry {
   timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
+  level: LogEntryLevel;
   component: string;
   message: string;
   data?: Record<string, unknown>;
   periodic?: boolean;
+  /** Legacy persisted rows (pre–routeFocus level); kept for export formatting only. */
+  screenPresentation?: boolean;
 }
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 /** Single place for level → console mapping (avoids duplicated switch in addLog). */
-const CONSOLE_EMIT: Record<'debug' | 'info' | 'warn' | 'error', (line: string) => void> = {
-  debug: (line) => {
-    console.debug(`🔍 ${line}`);
+const CONSOLE_EMIT: Record<LogEntryLevel, (line: string) => void> = {
+  debug: (_line) => {
+    //console.debug(`🔍 ${_line}`);
   },
-  info: (line) => {
-    console.info(`ℹ️  ${line}`);
+  routeFocus: (line) => {
+    console.info(`🖥️  ${line}`);
+  },
+  info: (_line) => {
+    //console.info(`ℹ️  ${_line}`);
   },
   warn: (line) => {
     console.warn(`⚠️  ${line}`);
@@ -51,8 +59,10 @@ const CONSOLE_EMIT: Record<'debug' | 'info' | 'warn' | 'error', (line: string) =
 
 function formatLogEntryForExport(log: LogEntry): string {
   const periodicTag = log.periodic ? ' [PERIODIC]' : '';
+  const legacyScreenTag = log.screenPresentation && log.level !== 'routeFocus' ? ' [SCREEN_OPEN]' : '';
   const dataSuffix = log.data ? ` ${JSON.stringify(log.data)}` : '';
-  return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${dataSuffix}`;
+  const levelLabel = log.level === 'routeFocus' ? 'ROUTE_FOCUS' : log.level.toUpperCase();
+  return `[${log.timestamp}] ${levelLabel} ${log.component}:${periodicTag}${legacyScreenTag} ${log.message}${dataSuffix}`;
 }
 
 class LoggerService {
@@ -163,13 +173,14 @@ class LoggerService {
     }, SAVE_INTERVAL);
   }
 
-  private shouldLog(level: LogLevel): boolean {
-    const levels = { debug: 0, info: 1, warn: 2, error: 3, none: 4 };
-    return levels[level] >= levels[this.logLevel];
+  /** Threshold order for filtering; `routeFocus` aligns with `info` (diagnostic, not warn/error). */
+  private shouldLog(level: LogEntryLevel): boolean {
+    const threshold = { debug: 0, routeFocus: 1, info: 1, warn: 2, error: 3, none: 4 };
+    return threshold[level] >= threshold[this.logLevel];
   }
 
   private addLog(
-    level: 'info' | 'warn' | 'error' | 'debug',
+    level: LogEntryLevel,
     component: string,
     message: string,
     data?: Record<string, unknown>,
@@ -197,9 +208,9 @@ class LoggerService {
     }
 
     // Console: developer message only — no serialized payloads (Sonar / sensitive data).
-    if (this.enableConsoleOutput) {
-      const periodicTag = periodic ? ' [PERIODIC]' : '';
-      const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
+    // Periodic logs are intentionally not printed (nav focus, polling) to avoid console spam.
+    if (this.enableConsoleOutput && !periodic) {
+      const prefix = `[${logEntry.timestamp}] ${component}:`;
       const consoleLine = `${prefix} ${message}`;
       CONSOLE_EMIT[level](consoleLine);
     }
@@ -207,6 +218,10 @@ class LoggerService {
 
   debug(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
     this.addLog('debug', component, message, data, options);
+  }
+
+  routeFocus(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
+    this.addLog('routeFocus', component, message, data, options);
   }
 
   info(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
@@ -228,6 +243,11 @@ class LoggerService {
       toScreen,
       userId,
     });
+  }
+
+  /** Log once per navigation focus when a screen/modal is shown (use `useLogScreenOpened` at call sites). */
+  logScreenOpened(screenName: string, data?: Record<string, unknown>) {
+    this.addLog('routeFocus', screenName, 'Screen opened', data);
   }
 
   logUserAction(action: string, screen: string, data?: any, userId?: string) {
@@ -335,12 +355,13 @@ export const logger = new LoggerService();
 
 export interface BoundLogger {
   debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  routeFocus: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
   info: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
   warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
   error: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
 }
 
-const BOUND_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
+const BOUND_LEVELS = ['debug', 'routeFocus', 'info', 'warn', 'error'] as const;
 
 /** Bound component name for shorter call sites (single implementation, no per-method duplication). */
 export function createLogger(component: string): BoundLogger {

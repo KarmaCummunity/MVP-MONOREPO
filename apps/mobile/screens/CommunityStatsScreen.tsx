@@ -1,6 +1,7 @@
 // screens/CommunityStatsScreen.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, Dimensions, ActivityIndicator, Platform, RefreshControl, StatusBar } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import colors from '../globals/colors';
@@ -8,6 +9,7 @@ import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { db } from '../utils/databaseService';
 import { EnhancedStatsService } from '../utils/statsService';
 import { apiService } from '../utils/apiService';
@@ -95,6 +97,7 @@ interface CommunityStats {
 }
 
 export default function CommunityStatsScreen() {
+    useLogScreenOpened('CommunityStatsScreen');
     const { t } = useTranslation();
     const { selectedUser } = useUser();
     const tabBarHeight = useBottomTabBarHeight() || 0;
@@ -239,10 +242,11 @@ export default function CommunityStatsScreen() {
         }
     }, [selectedUser?.id]);
 
-    useEffect(() => {
-        logger.debug('CommunityStatsScreen', 'Screen viewed', { userId: selectedUser?.id });
-        void loadStats();
-    }, [loadStats, selectedUser?.id]);
+    useFocusEffect(
+        React.useCallback(() => {
+            void loadStats();
+        }, [loadStats])
+    );
 
     const onRefresh = React.useCallback(async () => {
         await loadStats(true);

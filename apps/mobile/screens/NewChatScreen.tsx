@@ -26,6 +26,7 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useUser } from '../stores/userStore';
 import { getFollowing, getFollowers, getFollowSuggestions } from '../utils/followService';
 import { createConversation, getAllConversations, conversationExists, sendMessage } from '../utils/chatService';
@@ -34,6 +35,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { logger } from '../utils/loggerService';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 
 const NEW_CHAT_LOG = 'NewChatScreen';
 
@@ -41,6 +43,7 @@ type FilterType = 'all' | 'online' | 'highKarma' | 'recentFollowers';
 type SortType = 'name' | 'karma' | 'followers' | 'recent';
 
 export default function NewChatScreen() {
+  useLogScreenOpened('NewChatScreen');
   const { t } = useTranslation(['newChatScreen']);
   const navigation = useNavigation();
   const { selectedUser } = useUser();
@@ -239,7 +242,7 @@ export default function NewChatScreen() {
         logger.debug(NEW_CHAT_LOG, 'Sent welcome message');
       }
 
-      (navigation as any).navigate('ChatDetailScreen', {
+      navigateToChatDetail(navigation, {
         conversationId,
         userName: friend.name,
         userAvatar: friend.avatar,

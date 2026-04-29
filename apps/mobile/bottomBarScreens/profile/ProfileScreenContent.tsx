@@ -38,6 +38,7 @@ import { OpenRoute } from './OpenRoute';
 import { ClosedRoute } from './ClosedRoute';
 import type { CharacterType, TabRoute, ProfileScreenRouteParams } from './profileScreenTypes';
 import { logger } from '../../utils/loggerService';
+import { navigateToChatDetail } from '../../navigations/chatDetailNavigation';
 export function ProfileScreenContent({
   tabBarHeight,
   manualParams,
@@ -579,6 +580,7 @@ export function ProfileScreenContent({
   useFocusEffect(
     React.useCallback(() => {
       const refreshStats = async () => {
+        logger.logScreenOpened('ProfileScreen');
         logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', { isOwnProfile, targetUserId });
         await updateUserStats();
         if (isOwnProfile) {
@@ -1086,7 +1088,7 @@ export function ProfileScreenContent({
                               conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                             }
 
-                            (navigation as any).navigate('ChatDetailScreen', {
+                            navigateToChatDetail(navigation, {
                               conversationId,
                               otherUserId: displayUser.id,
                               userName: displayUser.name || externalUserName || 'ללא שם',
@@ -1127,12 +1129,11 @@ export function ProfileScreenContent({
                                         // Send "I'd look to help" message
                                         // TODO: implement sendMessage in chatService or apiService
                                         // For now just navigate to chat
-                                        (navigation as any).navigate('ChatDetailScreen', {
+                                        navigateToChatDetail(navigation, {
                                           conversationId,
                                           otherUserId: displayUser.id,
                                           userName: displayUser.name,
                                           userAvatar: displayUser.avatar,
-                                          initialMessage: 'אשמח לעזור במה שצריך' // Pass this if ChatDetail supports it, or handle locally
                                         });
                                       } catch (e) { console.error(e); }
                                     }
@@ -1666,7 +1667,7 @@ export function ProfileScreenContent({
                             conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                           }
 
-                          (navigation as any).navigate('ChatDetailScreen', {
+                          navigateToChatDetail(navigation, {
                             conversationId,
                             otherUserId: displayUser.id,
                             userName: displayUser.name || externalUserName || 'ללא שם',

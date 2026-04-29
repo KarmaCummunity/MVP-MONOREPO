@@ -10,6 +10,7 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationProp, ParamListBase, StackActions, CommonActions } from '@react-navigation/native';
+import { navigateToAuthenticatedLandingSite } from './landingSiteNavigation';
 import { useRoute, useFocusEffect, useNavigationState } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import colors from '../globals/colors';
@@ -97,6 +98,13 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
         screen => screen !== screenName && currentRoute === screen
       );
 
+      if (screenName === 'LandingSiteScreen') {
+        navigateToAuthenticatedLandingSite(navigation, {
+          replaceFromTopBar: !!otherTopBarScreenOpen,
+        });
+        return;
+      }
+
       if (otherTopBarScreenOpen) {
         // Another top bar screen is open, replace it with the new screen
         // This ensures only one top bar screen is open at a time
@@ -110,19 +118,26 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     }
   };
 
-  // Log render for debugging
+  // Log render for debugging (marked periodic — high frequency when parent re-renders)
   React.useEffect(() => {
-    logger.debug('TopBarNavigator', 'Component rendered', {
-      routeName: route.name,
-      isGuestMode,
-    });
+    logger.debug(
+      'TopBarNavigator',
+      'Component rendered',
+      { routeName: route.name, isGuestMode },
+      { periodic: true },
+    );
   }, [route.name, isGuestMode]);
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('TopBarNavigator', 'Navigator focused', { routeName: route.name });
-    }, [route.name])
+      logger.debug(
+        'TopBarNavigator',
+        'Navigator focused',
+        { routeName: route.name },
+        { periodic: true },
+      );
+    }, [route.name]),
   );
 
   const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
@@ -146,15 +161,10 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     DonationsTab: t('donations:title'),
     DonationsScreen: t('donations:title'),
     ProfileScreen: t('profile:title'),
-    LandingSiteScreen: 'אודות הקהילה',
+    LandingSiteScreen: t('common:landingSiteTopBar'),
 
-    MoneyScreen: t('donations:categories.money.title'),
     TrumpScreen: t('donations:categories.trump.title'),
-    KnowledgeScreen: t('donations:categories.knowledge.title'),
-    TimeScreen: t('donations:categories.time.title'),
     ItemsScreen: t('donations:categories.items.title'),
-    FoodScreen: t('donations:categories.food.title'),
-    HousingScreen: t('donations:categories.housing.title'),
     MyChallengesScreen: t('donations:categories.challenges.title'),
     CommunityChallengesScreen: t('donations:categories.challenges.title'),
     ChallengeDetailsScreen: t('donations:categories.challenges.title'),
@@ -191,16 +201,21 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     title = routeTitles[currentRouteName] ?? 'KC';
   }
 
-  // Log important state changes
+  // Route/title updates (debug + periodic — avoid filling stored logs on every bar state tick)
   React.useEffect(() => {
-    logger.logUserAction('state-change', 'TopBarNavigator', {
-      currentRouteName,
-      activeRouteName,
-      title,
-      isGuestMode,
-      hideTopBar,
-      showPosts
-    });
+    logger.debug(
+      'TopBarNavigator',
+      'Route title state',
+      {
+        currentRouteName,
+        activeRouteName,
+        title,
+        isGuestMode,
+        hideTopBar,
+        showPosts,
+      },
+      { periodic: true },
+    );
   }, [title, currentRouteName, activeRouteName, showPosts, hideTopBar, isGuestMode]);
 
 

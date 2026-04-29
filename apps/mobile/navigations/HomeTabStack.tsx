@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Stack navigator for the Home tab.
 // - Reached from: `BottomNavigator` -> Tab 'HomeScreen'.
-// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route always `HomeMain` (posts feed). Marketing landing stays on root stack `LandingSiteScreen` in site mode, not as the Home tab root.
+// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route always `HomeMain` (posts feed). Authenticated `LandingSiteScreen` (marketing) is registered **only** here; unauthenticated web site mode uses root `LandingSiteScreen` in `MainNavigator`.
 // - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
 // - `resetHomeScreenTrigger`: pops nested Home stack to root (`HomeMain`) via `StackActions.popToTop` on the stack navigator key (tab parent dispatch).
@@ -39,8 +39,6 @@ export default function HomeTabStack(): React.ReactElement {
   const { resetHomeScreenTrigger } = useUser();
   const navigation = useNavigation();
   const previousTriggerRef = useRef(resetHomeScreenTrigger);
-
-  logger.debug('HomeTabStack', 'Rendering Home tab stack', { resetHomeScreenTrigger });
 
   // Listen to resetHomeScreenTrigger and reset navigation to HomeMain
   useEffect(() => {

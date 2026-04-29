@@ -19,7 +19,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
         if (navigation.canGoBack()) {
             navigation.goBack();
         } else {
-            navigation.navigate('Home');
+            navigation.navigate('HomeStack');
         }
     }, [navigation]);
 
@@ -37,7 +37,9 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             isVerifyingRef.current = true;
             lastCheckRef.current = now;
 
-            logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: Verifying admin status for user:', selectedUser.email);
+            logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: Verifying admin status for user', {
+              email: selectedUser.email,
+            });
 
             // Refresh user roles from database
             // This will update the store if roles changed

@@ -23,7 +23,7 @@ export function useOperatorProtection(allowViewOnly?: boolean) {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('Home');
+      navigation.navigate('HomeStack');
     }
   }, [navigation]);
 

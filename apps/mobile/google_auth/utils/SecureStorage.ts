@@ -29,8 +29,6 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../../utils/loggerService';
 
-const SecureStorage_LOG = 'SecureStorage';
-
 // ========================================
 // TYPE DEFINITIONS
 // ========================================

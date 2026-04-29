@@ -45,6 +45,7 @@ import { logger } from '../utils/loggerService';
 import TopBarNavigator from './TopBarNavigator';
 
 import { RootStackParamList } from '../globals/types';
+import { computeMainNavigatorStackKey } from './mainNavigatorStackKey';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -53,31 +54,44 @@ export default function MainNavigator() {
   const { t } = useTranslation(['common', 'profile']);
   const { mode } = useWebMode();
 
-  // Log render state for debugging
+  // Log render state for debugging (periodic — avoids noisy storage in tight re-render loops)
   useEffect(() => {
-    logger.debug('MainNavigator', 'Render state', {
-      selectedUser: selectedUser?.name || 'null',
-      isLoading,
-      isGuestMode,
-      isAuthenticated,
-      mode,
-    });
+    logger.debug(
+      'MainNavigator',
+      'Render state',
+      {
+        selectedUser: selectedUser?.name || 'null',
+        isLoading,
+        isGuestMode,
+        isAuthenticated,
+        mode,
+      },
+      { periodic: true },
+    );
   }, [selectedUser, isLoading, isGuestMode, isAuthenticated, mode]);
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('MainNavigator', 'Navigator focused');
-    }, [])
+      logger.debug('MainNavigator', 'Navigator focused', undefined, { periodic: true });
+    }, []),
   );
 
   // Stack Navigator key - only change when mode changes, or authentication state toggles major branches
   // This helps ensure clean transitions between Auth and Unauth states
-  const stackKey = useMemo(() => `stack-${mode}-${isAuthenticated || isGuestMode ? 'auth' : 'unauth'}`, [mode, isAuthenticated, isGuestMode]);
+  const stackKey = useMemo(
+    () => computeMainNavigatorStackKey(mode, isAuthenticated, isGuestMode),
+    [mode, isAuthenticated, isGuestMode],
+  );
+
+  useEffect(() => {
+    if (isLoading) {
+      logger.debug('MainNavigator', 'Showing loading screen', undefined, { periodic: true });
+    }
+  }, [isLoading]);
 
   // Loading screen
   if (isLoading) {
-    logger.debug('MainNavigator', 'Showing loading screen');
     return (
       <View style={styles.centeredScreen as any}>
         <ActivityIndicator size="large" color={colors.info} />

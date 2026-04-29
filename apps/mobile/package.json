@@ -20,6 +20,7 @@
     "build:web:local": "EXPO_PUBLIC_API_BASE_URL=http://localhost:3001 expo export:web",
     "audit:colors": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ts-node scripts/audit-colors.ts",
     "audit:texts": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ts-node scripts/audit-texts.ts",
+    "audit:nav-routes": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ts-node scripts/audit-navigate-duplicate-routes.ts",
     "audit:constants": "ts-node scripts/audit-constants.ts",
     "audit:responsive": "ts-node scripts/audit-responsive.ts",
     "audit:unused": "ts-node scripts/find-unused-files.ts",

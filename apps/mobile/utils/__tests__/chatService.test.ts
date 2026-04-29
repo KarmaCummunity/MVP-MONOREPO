@@ -74,6 +74,7 @@ jest.mock('../loggerService', () => ({
     warn: jest.fn(),
     error: jest.fn(),
     debug: jest.fn(),
+    routeFocus: jest.fn(),
   },
 }));
 

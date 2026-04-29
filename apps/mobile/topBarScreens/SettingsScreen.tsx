@@ -47,6 +47,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useScrollPositionWithHandler } from '../hooks/useScrollPosition';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
+import { navigateToAuthenticatedLandingSite } from '../navigations/landingSiteNavigation';
 import { logger } from '../utils/loggerService';
 import { apiService } from '../utils/apiService';
 
@@ -72,6 +73,7 @@ export default function SettingsScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('SettingsScreen');
       logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen focused, refreshing data...');
       // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
@@ -144,7 +146,7 @@ export default function SettingsScreen() {
 
   const handleAboutPress = () => {
     logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - About pressed');
-    navigation.navigate('LandingSiteScreen' as never);
+    navigateToAuthenticatedLandingSite(navigation);
   };
 
   /**

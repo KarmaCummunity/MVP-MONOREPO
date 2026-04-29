@@ -39,12 +39,28 @@ export interface BubbleData {
   isBackground: boolean;
 }
 
+/** Params for `ChatDetailScreen` — canonical field names (see `screens/ChatDetailScreen.tsx`). */
+export type ChatDetailScreenParams = {
+  conversationId: string;
+  userName?: string;
+  userAvatar?: string;
+  otherUserId?: string;
+};
+
+// --- Bottom Tab Navigator (BottomNavigator) Parameter List ---
+// Must match Tab.Screen names in `navigations/BottomNavigator.tsx` only (no nested "phantom" routes).
+export type BottomTabNavigatorParamList = {
+  DonationsTab: undefined;
+  CreatePostTab: undefined;
+  HomeScreen: undefined;
+  SearchTab: undefined;
+  ProfileScreen: undefined;
+  AdminTab: undefined;
+};
+
 export type DonationsStackParamList = {
   DonationsScreen: undefined;
-  MoneyScreen: undefined;
   TrumpScreen: undefined;
-  KnowledgeScreen: undefined;
-  TimeScreen: undefined;
   ItemsScreen: undefined;
   CommunityChallengesScreen: { mode?: 'search' | 'offer' } | undefined;
   ChallengeDetailsScreen: { challengeId: string; openEntryForm?: boolean } | undefined;
@@ -53,15 +69,12 @@ export type DonationsStackParamList = {
   MyCreatedChallengesScreen: undefined;
   // Top bar accessible screens that are also used inside the Donations stack
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   SettingsScreen: undefined;
   DiscoverPeopleScreen: undefined;
-  FoodScreen: undefined;
-  HousingScreen: undefined;
   UserProfileScreen: { userId: string; userName?: string; characterData?: any } | undefined;
   FollowersScreen: { userId: string; type: 'followers' | 'following'; title: string } | undefined;
 };
@@ -70,7 +83,7 @@ export type HomeTabStackParamList = {
   HomeMain: undefined;
   LandingSiteScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
@@ -90,11 +103,10 @@ export type SearchTabStackParamList = {
   FollowersScreen: { userId?: string } | undefined;
   DiscoverPeopleScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   SettingsScreen: undefined;
 };
 
@@ -102,11 +114,10 @@ export type ProfileTabStackParamList = {
   ProfileMain: { userId?: string } | undefined;
   SettingsScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   DiscoverPeopleScreen: undefined;
   EditProfileScreen: undefined;
 };
@@ -175,12 +186,7 @@ export type RootStackParamList = {
   SettingsScreen: undefined;
   ChatListScreen: undefined;
   NewChatScreen: undefined;
-  ChatDetailScreen: {
-    conversationId: string;
-    userName: string;
-    userAvatar: string;
-    otherUserId: string;
-  };
+  ChatDetailScreen: ChatDetailScreenParams;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
   InactiveScreen: undefined;
@@ -204,20 +210,6 @@ export type RootStackParamList = {
   OrgDashboardScreen: undefined;
   EditProfileScreen: undefined;
   AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean };
-};
-
-// --- Bottom Tab Navigator (BottomNavigator) Parameter List ---
-// This lists all the screens within your BottomNavigator.tsx
-export type BottomTabNavigatorParamList = {
-  DonationsTab: undefined; // Renamed to avoid nested name collision with DonationsStack's DonationsScreen
-  HomeScreen: undefined; // This is the HomeScreen with the drag handle
-  SearchTab: undefined; // Renamed to avoid nested name collision with SearchTabStack's SearchScreen
-  ProfileScreen: undefined;
-  AdminTab: undefined; // Admin management tab (only visible to admins)
-  SettingsScreen: undefined;
-  ChatListScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  NotificationsScreen: undefined;
 };
 
 // --- Donations Stack (Example - adjust if you have internal screens) ---
@@ -246,18 +238,12 @@ export type AdminStackParamList = {
   AdminCRM: undefined;
   AdminTimeManagement: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: {
-    conversationId: string;
-    userName: string;
-    userAvatar: string;
-    otherUserId: string;
-  };
+  ChatDetailScreen: ChatDetailScreenParams;
   NewChatScreen: undefined;
   SettingsScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
   DiscoverPeopleScreen: undefined;
-  LandingSiteScreen: undefined;
 };
 
 // --- Helper Types for Navigation Props ---

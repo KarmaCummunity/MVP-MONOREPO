@@ -77,6 +77,7 @@ export default function BookmarksScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('BookmarksScreen');
       logger.debug(BookmarksScreen_LOG, '🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
       loadBookmarks();
       // Force re-render by updating refresh key

@@ -324,6 +324,7 @@ export const LandingSiteScreen: React.FC = () => {
   // This fixes the issue where bars disappear when navigating from TopBar's AboutButton
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('LandingSiteScreen');
       logger.debug('LandingSiteScreen', 'Screen focused, ensuring bars are visible');
       navigation.setParams({
         hideTopBar: false,

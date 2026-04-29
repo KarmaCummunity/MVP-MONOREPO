@@ -71,6 +71,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
           HomeScreen: {
             screens: {
               HomeMain: 'home',
+              /** In-app marketing landing (authenticated); unauth site entry remains root `LandingSiteScreen: 'about-site'`. */
+              LandingSiteScreen: 'about-site/app',
             },
           },
           
@@ -113,38 +115,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
                 },
               },
 
-              // Main donation categories with mode support (offer/search)
-              // 4 main categories: money, time, knowledge, rides (trump), items
-              // Default mode is 'search' (מחפש)
-              // Paths work with or without mode - if no mode, defaults to 'search'
-              MoneyScreen: {
-                path: 'donations/money/:mode?',
-                parse: {
-                  mode: (mode: string) => {
-                    // If mode is missing, undefined, null, or 'undefined', default to 'search'
-                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
-                    return mode === 'offer' ? 'offer' : 'search';
-                  },
-                },
-              },
-              TimeScreen: {
-                path: 'donations/time/:mode?',
-                parse: {
-                  mode: (mode: string) => {
-                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
-                    return mode === 'offer' ? 'offer' : 'search';
-                  },
-                },
-              },
-              KnowledgeScreen: {
-                path: 'donations/knowledge/:mode?',
-                parse: {
-                  mode: (mode: string) => {
-                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
-                    return mode === 'offer' ? 'offer' : 'search';
-                  },
-                },
-              },
+              // Donation category screens with mode support (offer/search); default 'search'
               TrumpScreen: {
                 path: 'donations/rides/:mode?',
                 parse: {
@@ -156,24 +127,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
               },
               ItemsScreen: {
                 path: 'donations/items/:mode?',
-                parse: {
-                  mode: (mode: string) => {
-                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
-                    return mode === 'offer' ? 'offer' : 'search';
-                  },
-                },
-              },
-              FoodScreen: {
-                path: 'donations/food/:mode?',
-                parse: {
-                  mode: (mode: string) => {
-                    if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';
-                    return mode === 'offer' ? 'offer' : 'search';
-                  },
-                },
-              },
-              HousingScreen: {
-                path: 'donations/housing/:mode?',
                 parse: {
                   mode: (mode: string) => {
                     if (!mode || mode === 'undefined' || mode === 'null' || mode === '') return 'search';

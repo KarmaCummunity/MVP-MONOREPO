@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Stack navigator for admin screens (dashboard, money management, people, review) and top bar screens.
 // - Reached from: `BottomNavigator` -> Tab 'AdminTab' (only visible to admins).
-// - Provides: Admin dashboard and management screens, plus top bar screens (Settings, Notifications, About, Chat screens, LandingSiteScreen).
+// - Provides: Admin dashboard and management screens, plus top bar screens (Settings, Notifications, About, Chat screens). Marketing landing opens via `navigateToAuthenticatedLandingSite` on Home tab only.
 // - Header: Uses `TopBarNavigator`; can be hidden per-screen with route param `hideTopBar`.
 import React from "react";
 import { Platform } from "react-native";
@@ -22,7 +22,6 @@ import NewChatScreen from "../screens/NewChatScreen";
 import SettingsScreen from "../topBarScreens/SettingsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import AboutKarmaCommunityScreen from "../topBarScreens/AboutKarmaCommunityScreen";
-import LandingSiteScreen from "../screens/Landing/LandingSiteScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
 import TopBarNavigator from "./TopBarNavigator";
 import { AdminStackParamList } from "../globals/types";
@@ -33,7 +32,7 @@ const Stack = createStackNavigator<AdminStackParamList>();
 export default function AdminStack() {
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('AdminStack', 'Navigator focused');
+      logger.debug('AdminStack', 'Navigator focused', undefined, { periodic: true });
     }, [])
   );
 
@@ -74,7 +73,6 @@ export default function AdminStack() {
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
-      <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
     </Stack.Navigator>
   );
 }

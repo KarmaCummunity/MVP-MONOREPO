@@ -70,16 +70,6 @@ apps/mobile/
 
 ### 4.4 Routing / Navigation
 
-**Authentication-based routing:**torage), role management, `resetHomeScreen` |
-| `webModeStore` | `stores/webModeStore.ts` | Web `site` vs `app` mode toggle, persisted to `localStorage` (key: `kc_web_mode`) |
-| `appLoadingStore` | `stores/appLoadingStore.ts` | Feature-level loading states, errors, `markAppReady` |
-
-**Legacy Context providers (parallel to stores, not actively wrapped in App.tsx):**
-- `WebModeContext` — same semantics as `webModeStore`
-- `AppLoadingContext` — reducer-based loading (parallel to `appLoadingStore`)
-
-### 4.4 Routing / Navigation
-
 **Authentication-based routing:**
 
 ```
@@ -88,13 +78,15 @@ MainNavigator (Stack)
 │   ├── HomeStack → BottomNavigator (Tabs)
 │   │   ├── HomeScreen (HomeTabStack)
 │   │   │   ├── HomeMain (Feed)
+│   │   │   ├── LandingSiteScreen (authenticated marketing / site content — **Home tab only**; deep link `about-site/app`; use `navigateToAuthenticatedLandingSite` from other tabs)
 │   │   │   ├── CommunityStatsScreen
 │   │   │   ├── PostsReelsScreen (transparent modal)
 │   │   │   └── ... shared screens
 │   │   ├── SearchScreen (SearchTabStack)
 │   │   ├── DonationsScreen (DonationsStack)
-│   │   │   ├── MoneyScreen, ItemsScreen, TimeScreen, KnowledgeScreen
-│   │   │   ├── 30+ category screens (Food, Clothes, Books, etc.)
+│   │   │   ├── ItemsScreen, TrumpScreen
+│   │   │   ├── CommunityChallengesScreen; ChallengeDetailsScreen, ChallengeStatisticsScreen; MyChallengesScreen, MyCreatedChallengesScreen
+│   │   │   ├── Additional `donationScreens/*` files exist in the repo but are not registered on this stack (see tech-debt-log)
 │   │   │   ├── MatchmakingScreen (existing — romantic/singles, see §2.3.3)
 │   │   │   ├── ShiduchimTovScreen (NEW — Good Matching entry, see §2.15)
 │   │   │   │   ├── [non-operator] ExplainerView

@@ -51,6 +51,10 @@ interface UserState {
   isInitialized: boolean; // Flag to track if store has been initialized
   lastHomeTabScreen: string | null; // Last screen visited in HomeTabStack before switching tabs
 
+  // Navigation–store contract: `resetHomeScreen()` increments `resetHomeScreenTrigger`. Consumer: `HomeTabStack`
+  // (useEffect) pops the Home nested stack to `HomeMain` via the tab parent. Producer: `BottomNavigator` on Home
+  // tab re-press. Do not add other consumers without revisiting detach/tab focus behavior.
+
   // Actions
   setSelectedUser: (user: User | null) => Promise<void>;
   setSelectedUserWithMode: (user: User | null, mode: AuthMode) => Promise<void>;
@@ -86,7 +90,12 @@ export const userHasOperatorAccess = (user: User | null): boolean => {
 
 const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
   try {
-    logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Starting enrichment for:', user.email);
+    logger.debug(
+      UserStore_LOG,
+      `🔐 enrichUserWithOrgRoles - Starting enrichment for: ${user.email}`,
+      undefined,
+      { periodic: true },
+    );
     const emailKey = (user.email || '').toLowerCase();
     if (!emailKey) {
       logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - No email, returning user as-is');
@@ -138,14 +147,14 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
     let dbRoles = user.roles || [];
     if (userFetchResult.status === 'fulfilled' && userFetchResult.value) {
       dbRoles = userFetchResult.value;
-      logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Fetched roles from DB:', dbRoles);
+      logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Fetched roles from DB:', { dbRoles }, { periodic: true });
     }
 
     // Process Org Applications
     let approved: any = undefined;
     if (applicationsFetchResult.status === 'fulfilled' && Array.isArray(applicationsFetchResult.value)) {
       approved = applicationsFetchResult.value.find((a) => a.status === 'approved');
-      logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Found approved org:', !!approved);
+      logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Found approved org:', { approved: !!approved }, { periodic: true });
     }
 
     // Build final roles list
@@ -164,7 +173,7 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
     // Remove duplicates
     finalRoles = Array.from(new Set(finalRoles));
 
-    logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Final roles:', finalRoles);
+    logger.debug(UserStore_LOG, '🔐 enrichUserWithOrgRoles - Final roles:', { finalRoles }, { periodic: true });
     return {
       ...user,
       roles: finalRoles,
@@ -557,7 +566,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
 
     try {
-      logger.debug(UserStore_LOG, '🔐 userStore - refreshUserRoles - Refreshing roles for user:', currentUser.email);
+      logger.debug(UserStore_LOG, '🔐 userStore - refreshUserRoles - Refreshing roles for user:', { email: currentUser.email }, { periodic: true });
       const enrichedUser = await enrichUserWithOrgRoles(currentUser);
 
       // Only update if roles actually changed to prevent infinite loops

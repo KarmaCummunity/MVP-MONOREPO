@@ -1,6 +1,6 @@
 # SonarQube troubleshooting priority plan
 
-**Date:** 2026-04-27
+**Date:** 2026-04-29
 **Scan from SonarCloud:** https://sonarcloud.io
 
 **Issue scope:** Counts reflect **OPEN** issues only (`issueStatuses=OPEN`), i.e. the current SonarCloud backlog (not all-time history).
@@ -225,4 +225,4 @@
 
 ---
 
-**Last update:** 2026-04-27T11:30:17.855Z
+**Last update:** 2026-04-29T10:38:16.363Z

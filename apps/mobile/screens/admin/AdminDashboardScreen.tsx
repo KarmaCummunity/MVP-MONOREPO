@@ -88,8 +88,10 @@ const adminButtons: AdminButton[] = [
 
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { logger } from '../../utils/loggerService';
+import { useLogScreenOpened } from '../../hooks/useLogScreenOpened';
 
 export default function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps) {
+  useLogScreenOpened('AdminDashboard');
   const { selectedUser } = useUser();
   const route = useRoute();
   const routeParams = (route.params as any) || {};
