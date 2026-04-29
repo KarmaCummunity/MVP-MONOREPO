@@ -20,7 +20,6 @@ import AboutButton from '../components/AboutButton';
 import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 
 
-const TopBarNavigator_LOG = 'TopBarNavigator';
 interface TopBarNavigatorProps {
   navigation: NavigationProp<ParamListBase>;
   hideTopBar?: boolean;
@@ -126,8 +125,6 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     }, [route.name])
   );
 
-  ////logger.debug(TopBarNavigator_LOG, '🔝 TopBarNavigator - hideTopBar prop:', hideTopBar);
-
   const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
 
   React.useEffect(() => {
@@ -137,17 +134,10 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
 
   const animatedStyle = useAnimatedStyle(() => {
-    //logger.debug(TopBarNavigator_LOG, '🔝 TopBarNavigator - translateY value:', translateY.value);
     return {
       transform: [{ translateY: translateY.value }],
     };
   });
-
-  // Debug logs
-  //logger.debug(TopBarNavigator_LOG, '🔍 TopBarNavigator - Current route name:', route.name);
-  //logger.debug(TopBarNavigator_LOG, '🔍 TopBarNavigator - Route params:', route.params);
-  //logger.debug(TopBarNavigator_LOG, '🔍 TopBarNavigator - Route key:', route.key);
-  //logger.debug(TopBarNavigator_LOG, '🔍 TopBarNavigator - Full route object:', JSON.stringify(route, null, 2));
 
   // Map route names to titles using translations
   const routeTitles: Record<string, string> = {

@@ -427,7 +427,7 @@ export default function MoneyScreen({
 
   const handleToggleMode = useCallback(() => {
     setMode(!mode);
-    logger.debug('MoneyScreen', 'Mode toggled', { mode: !mode ? 'נזקק' : 'תורם' });
+    logger.debug('MoneyScreen', 'Mode toggled', { mode: mode ? 'תורם' : 'נזקק' });
   }, [mode]);
 
   const handleSelectMenuItem = useCallback((option: string) => {

@@ -1,8 +1,6 @@
-import { I18nManager, Platform } from 'react-native';
-import { logger } from './loggerService';
+import { I18nManager } from 'react-native';
 
 // Hebrew is RTL language
-const RTLConfig_LOG = 'RTLConfig';
 const RTL_LANGUAGES = ['he', 'ar'];
 
 export const isRTLLanguage = (language: string): boolean => {
@@ -18,11 +16,6 @@ export const setupRTL = (): void => {
     // Enable RTL support for Hebrew
     I18nManager.allowRTL(shouldBeRTL);
     I18nManager.forceRTL(shouldBeRTL);
-    
-    // For Android, you might need to restart the app after enabling RTL
-    if (Platform.OS === 'android') {
-      // logger.debug(RTLConfig_LOG, 'RTL changed. Please restart the app for changes to take effect.');
-    }
   }
 };
 

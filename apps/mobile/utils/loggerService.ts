@@ -146,6 +146,29 @@ class LoggerService {
     return levels[level] >= levels[this.logLevel];
   }
 
+  /** Bounded serialization for dev console — reduces Sonar "user-controlled log" noise vs raw JSON.stringify(data). */
+  private safeSerializeForConsole(data: Record<string, unknown>): string {
+    const MAX_LEN = 200;
+    const sensitive = new Set(
+      ['password', 'token', 'authorization', 'secret', 'id_token', 'refresh_token', 'accesstoken'].map((s) =>
+        s.toLowerCase(),
+      ),
+    );
+    try {
+      return JSON.stringify(data, (key, value) => {
+        if (key && sensitive.has(String(key).toLowerCase())) {
+          return '[redacted]';
+        }
+        if (typeof value === 'string' && value.length > MAX_LEN) {
+          return `${value.slice(0, MAX_LEN)}…`;
+        }
+        return value;
+      });
+    } catch {
+      return '[unserializable]';
+    }
+  }
+
   private addLog(
     level: 'info' | 'warn' | 'error' | 'debug',
     component: string,
@@ -178,7 +201,7 @@ class LoggerService {
     if (this.enableConsoleOutput) {
       const periodicTag = periodic ? ' [PERIODIC]' : '';
       const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
-      const fullMessage = data ? `${message} ${JSON.stringify(data)}` : message;
+      const fullMessage = data ? `${message} ${this.safeSerializeForConsole(data)}` : message;
 
       switch (level) {
         case 'debug':

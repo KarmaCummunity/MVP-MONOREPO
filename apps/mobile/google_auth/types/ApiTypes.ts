@@ -1,5 +1,3 @@
-import { logger } from '../../utils/loggerService';
-const ApiTypes_LOG = 'ApiTypes';
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /**
  * ========================================
@@ -1060,7 +1058,7 @@ export function isPaginatedResponse<T>(response: BaseApiResponse<T[]>): response
  * // Type-safe API call
  * const response: UserProfileResponse = await api.getCurrentUser();
  * if (isSuccessResponse(response)) {
- *   logger.debug(ApiTypes_LOG, 'User name:', response.data.name);
+ *   // logger.debug('ApiTypes', 'User name loaded');
  * }
  * 
  * // Create donation with validation

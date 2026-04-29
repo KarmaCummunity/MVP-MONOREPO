@@ -23,15 +23,27 @@ class Logger {
   }
 
   info(message: string, data?: LogData) {
-    appLogger.info(LOGGER_LEGACY_COMPONENT, message, { ...(data || {}) });
+    if (data !== undefined && Object.keys(data).length > 0) {
+      appLogger.info(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
+    } else {
+      appLogger.info(LOGGER_LEGACY_COMPONENT, message);
+    }
   }
 
   warn(message: string, data?: LogData) {
-    appLogger.warn(LOGGER_LEGACY_COMPONENT, message, { ...(data || {}) });
+    if (data !== undefined && Object.keys(data).length > 0) {
+      appLogger.warn(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
+    } else {
+      appLogger.warn(LOGGER_LEGACY_COMPONENT, message);
+    }
   }
 
   error(message: string, data?: LogData) {
-    appLogger.error(LOGGER_LEGACY_COMPONENT, message, { ...(data || {}) });
+    if (data !== undefined && Object.keys(data).length > 0) {
+      appLogger.error(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
+    } else {
+      appLogger.error(LOGGER_LEGACY_COMPONENT, message);
+    }
   }
 
   // Screen navigation logging
