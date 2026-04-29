@@ -83,6 +83,16 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
             isGrid && styles.gridContainer,
             { width: cardWidth }
         ]}>
+            {item.thumbnail && (
+                <View style={styles.fullBackgroundLayer} pointerEvents="none">
+                    <Image
+                        source={{ uri: item.thumbnail }}
+                        style={styles.fullBackgroundImage}
+                        resizeMode="contain"
+                    />
+                    <View style={styles.fullBackgroundOverlay} />
+                </View>
+            )}
             {/* Header */}
             <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <TouchableOpacity
@@ -126,31 +136,23 @@ const RegularItemCard: React.FC<BaseCardProps> = ({
             {/* Image with overlay */}
             <TouchableOpacity onPress={onPress} activeOpacity={0.95} style={styles.cardContent}>
                 {item.thumbnail ? (
-                    <View style={styles.imageContainer}>
-                        <Image
-                            source={{ uri: item.thumbnail }}
-                            style={[styles.image, isGrid && styles.imageGrid]}
-                            resizeMode="cover"
-                        />
-                        <View style={styles.gradientOverlay}>
-                            <View style={styles.overlayContent}>
-                                <Text style={styles.itemTitle} numberOfLines={2}>
-                                    {displayTitle}
+                    <View style={[styles.textContentOnImage, isGrid && styles.imageGrid]}>
+                        <View style={styles.overlayContent}>
+                            <Text style={styles.itemTitle} numberOfLines={2}>
+                                {displayTitle}
+                            </Text>
+                            {fullItemDescription && !isGrid && (
+                                <Text style={styles.itemDescription} numberOfLines={3}>
+                                    {fullItemDescription}
                                 </Text>
-                                {fullItemDescription && !isGrid && (
-                                    <Text style={styles.itemDescription} numberOfLines={3}>
-                                        {fullItemDescription}
-                                    </Text>
+                            )}
+                            <View style={[styles.detailsRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                {item.category && (
+                                    <View style={styles.detailBadge}>
+                                        <Ionicons name="pricetag" size={14} color={colors.white} />
+                                        <Text style={styles.detailText}>{item.category}</Text>
+                                    </View>
                                 )}
-                                <View style={[styles.detailsRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                                    {item.category && (
-                                        <View style={styles.detailBadge}>
-                                            <Ionicons name="pricetag" size={14} color={colors.white} />
-                                            <Text style={styles.detailText}>{item.category}</Text>
-                                        </View>
-                                    )}
-                                    {/* Removed Price from here to avoid "For Sale" confusion, unless explicit */}
-                                </View>
                             </View>
                         </View>
                     </View>
@@ -266,6 +268,18 @@ const styles = StyleSheet.create({
             }
         }),
     },
+    fullBackgroundLayer: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    fullBackgroundImage: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: colors.backgroundTertiary,
+    },
+    fullBackgroundOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.feedDimOverlay,
+    },
     gridContainer: {
         // marginHorizontal removed - FlatList with justifyContent: 'space-between' handles spacing
         minHeight: isMobile ? 180 : 250, // Smaller min height for grid on mobile
@@ -274,7 +288,7 @@ const styles = StyleSheet.create({
         padding: isMobile ? 10 : 16,
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: colors.overlayWhite25,
     },
     headerRight: {
         alignItems: 'center',
@@ -331,24 +345,15 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1, // Take available height
+        justifyContent: 'flex-end',
     },
-    imageContainer: {
-        position: 'relative',
-        height: isMobile ? 180 : 280,
-    },
-    image: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: colors.backgroundTertiary,
-    },
-    imageGrid: {
-        height: isMobile ? 120 : 180,
-    },
-    gradientOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: colors.feedDimOverlay,
+    textContentOnImage: {
+        minHeight: isMobile ? 180 : 260,
         justifyContent: 'flex-end',
         padding: isMobile ? 12 : 20,
+    },
+    imageGrid: {
+        minHeight: isMobile ? 120 : 160,
     },
     overlayContent: {
         gap: isMobile ? 4 : 8,
@@ -418,7 +423,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         borderTopWidth: 1,
-        borderTopColor: colors.backgroundSecondary,
+        borderTopColor: colors.overlayWhite25,
+        backgroundColor: colors.overlayWhite25,
     },
     actionsLeft: {
         alignItems: 'center',
