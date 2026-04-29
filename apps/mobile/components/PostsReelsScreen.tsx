@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
 
 import colors from '../globals/colors';
-import { FeedItem } from '../types/feed';
+import { FeedItem, getFeedItemChallengeId } from '../types/feed';
 import { useFeedData } from '../hooks/useFeedData';
 import PostReelItem from './Feed/PostReelItem';
 import FeedHeader from './Feed/FeedHeader';
@@ -234,33 +234,35 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const handlePostPress = useCallback(
     (item: FeedItem) => {
       logger.debug('PostsReelsScreen', 'Post pressed', { itemId: item.id });
-      if (item.subtype === 'community_challenge' && item.challengeId) {
-        const challengeId = item.challengeId;
-        const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
-        const tabState =
-          tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
-            ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
-            : undefined;
-        if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
-          tabNav.navigate('DonationsTab', {
-            screen: 'ChallengeDetailsScreen',
-            params: { challengeId },
-          });
+      if (item.subtype === 'community_challenge') {
+        const challengeId = getFeedItemChallengeId(item);
+        if (challengeId) {
+          const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
+          const tabState =
+            tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
+              ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
+              : undefined;
+          if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
+            tabNav.navigate('DonationsTab', {
+              screen: 'ChallengeDetailsScreen',
+              params: { challengeId },
+            });
+            return;
+          }
+          navigation.dispatch(
+            CommonActions.navigate({
+              name: 'HomeStack',
+              params: {
+                screen: 'DonationsTab',
+                params: {
+                  screen: 'ChallengeDetailsScreen',
+                  params: { challengeId },
+                },
+              },
+            } as never),
+          );
           return;
         }
-        navigation.dispatch(
-          CommonActions.navigate({
-            name: 'HomeStack',
-            params: {
-              screen: 'DonationsTab',
-              params: {
-                screen: 'ChallengeDetailsScreen',
-                params: { challengeId },
-              },
-            },
-          } as never),
-        );
-        return;
       }
       navigateToPostDetail(navigation, { postId: item.id, initialItem: item });
     },

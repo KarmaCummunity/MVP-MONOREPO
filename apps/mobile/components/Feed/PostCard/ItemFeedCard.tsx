@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
+import { FeedItem } from '../../../types/feed';
 import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
@@ -45,11 +46,13 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
     const { t, i18n } = useTranslation();
     const isRTL = i18n.language === 'he';
     const isRequest = item.intent === 'request';
+    const { title, description } = item;
 
     const displayTitle = resolveItemDisplayTitle(item, t);
     const fullItemDescription = React.useMemo(
-        () => buildItemCardDescription(item, t, cardKind, isDelivered),
-        [item.title, item.description, t, cardKind, isDelivered]
+        () =>
+            buildItemCardDescription({ title, description } as FeedItem, t, cardKind, isDelivered),
+        [title, description, t, cardKind, isDelivered]
     );
 
     const userName = item.user?.name || 'common.unknownUser';

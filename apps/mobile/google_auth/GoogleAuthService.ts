@@ -405,11 +405,14 @@ class GoogleAuthService {
       const timeoutId = setTimeout(() => controller.abort(), CONFIG.AUTH_TIMEOUT);
 
       try {
+        // Web: omit User-Agent — triggers CORS preflight; server must allow it in Allow-Headers.
         const response = await fetch(`${CONFIG.API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': `KarmaCommunity-${Platform.OS}`,
+            ...(Platform.OS !== 'web'
+              ? { 'User-Agent': `KarmaCommunity-${Platform.OS}` }
+              : {}),
           },
           body: JSON.stringify(requestBody),
           signal: controller.signal,

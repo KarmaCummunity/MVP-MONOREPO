@@ -27,6 +27,11 @@ import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 
 import TopBarNavigator from './TopBarNavigator';
+import {
+  findBottomTabNavigator,
+  findRootWithHomeStackRoute,
+  type NavLike,
+} from './landingSiteNavigation';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
@@ -53,33 +58,51 @@ export default function HomeTabStack(): React.ReactElement {
       });
 
       try {
-        // `useNavigation()` here resolves to HomeTabStack's parent: the bottom tab navigator.
-        // Never reset the tab root with stack route names (that corrupts all tabs).
-        // Pop the nested Home stack to root: `navigate({ screen: 'HomeMain' })` does not pop
-        // when already e.g. HomeMain -> CommunityStats; use popToTop on the stack navigator key.
-        const tabNavigation = navigation.getParent?.();
+        // `getParent()` is not always the bottom tab navigator (RN/web). Use the same walker as
+        // `navigateToAuthenticatedLandingSite` / BottomNavigator web Home tab.
+        const tabNavigation =
+          findBottomTabNavigator(navigation as NavLike) ?? navigation.getParent?.();
         if (!tabNavigation?.dispatch || typeof tabNavigation.getState !== 'function') {
-          logger.warn('HomeTabStack', 'No parent tab navigator; cannot reset to HomeMain', {
+          logger.warn('HomeTabStack', 'No bottom tab navigator; cannot reset to HomeMain', {
             platform: Platform.OS,
           });
         } else {
           const rootState = tabNavigation.getState();
-          const homeRoute = rootState.routes.find(
+          const homeRoute = rootState?.routes?.find(
             (r: { name?: string }) => r.name === 'HomeScreen',
           ) as { state?: { type?: string; key?: string } } | undefined;
-          const stackState = homeRoute?.state;
-          if (stackState?.type === 'stack' && typeof stackState.key === 'string') {
-            tabNavigation.dispatch({
-              ...StackActions.popToTop(),
-              target: stackState.key,
-            });
+          if (!homeRoute) {
+            const rootNav = findRootWithHomeStackRoute(navigation as NavLike);
+            if (rootNav?.dispatch) {
+              rootNav.dispatch(
+                CommonActions.navigate({
+                  name: 'HomeStack',
+                  params: {
+                    screen: 'HomeScreen',
+                    params: { screen: 'HomeMain' },
+                  },
+                } as never),
+              );
+            } else {
+              logger.warn('HomeTabStack', 'Tab state missing HomeScreen and no root fallback', {
+                platform: Platform.OS,
+              });
+            }
           } else {
-            tabNavigation.dispatch(
-              CommonActions.navigate({
-                name: 'HomeScreen',
-                params: { screen: 'HomeMain' },
-              } as never),
-            );
+            const stackState = homeRoute?.state;
+            if (stackState?.type === 'stack' && typeof stackState.key === 'string') {
+              tabNavigation.dispatch({
+                ...StackActions.popToTop(),
+                target: stackState.key,
+              });
+            } else {
+              tabNavigation.dispatch(
+                CommonActions.navigate({
+                  name: 'HomeScreen',
+                  params: { screen: 'HomeMain' },
+                } as never),
+              );
+            }
           }
         }
 

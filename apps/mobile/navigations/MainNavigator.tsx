@@ -33,9 +33,6 @@ import SettingsScreen from '../topBarScreens/SettingsScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
-import OrgOnboardingScreen from '../screens/OrgOnboardingScreen';
-import AdminOrgApprovalsScreen from '../screens/admin/AdminOrgApprovalsScreen';
-import OrgDashboardScreen from '../screens/OrgDashboardScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -169,9 +166,6 @@ export default function MainNavigator() {
           <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
           <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
 
-          {/* Org & Admin Screens */}
-          <Stack.Screen name="AdminOrgApprovalsScreen" component={AdminOrgApprovalsScreen} />
-          <Stack.Screen name="OrgDashboardScreen" component={OrgDashboardScreen} />
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         </Stack.Group>
@@ -189,8 +183,6 @@ export default function MainNavigator() {
           {/* In app mode (or if site mode landing navigates here), LoginScreen is main */}
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
 
-          {/* Org Onboarding is part of the sign-up flow */}
-          <Stack.Screen name="OrgOnboardingScreen" component={OrgOnboardingScreen} />
 
           {/* Legacy mapping for removed screen */}
           <Stack.Screen name="InactiveScreen" component={LoginScreen} />

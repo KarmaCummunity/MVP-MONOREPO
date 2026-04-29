@@ -101,8 +101,6 @@ const authenticatedRouteGuard: NavigationGuard = {
     // Routes that require authentication (not guest mode)
     const authenticatedRoutes = [
       'EditProfileScreen',
-      'OrgOnboardingScreen',
-      'OrgDashboardScreen',
     ];
 
     if (action.type === 'navigate' || action.type === 'replace') {

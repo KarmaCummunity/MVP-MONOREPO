@@ -107,9 +107,6 @@ export const VALID_ROOT_ROUTES: string[] = [
   'ChatDetailScreen',
   'NotificationsScreen',
   'AboutKarmaCommunityScreen',
-  'OrgOnboardingScreen',
-  'AdminOrgApprovalsScreen',
-  'OrgDashboardScreen',
   'EditProfileScreen',
   'InactiveScreen',
 ];

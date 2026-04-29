@@ -49,6 +49,11 @@ import {
   TAB_INITIAL_ROUTES,
   type NestedRouteLike,
 } from "./bottomTabNavigationUtils";
+import {
+  findBottomTabNavigator,
+  findRootWithHomeStackRoute,
+  type NavLike,
+} from "./landingSiteNavigation";
 import type { BottomTabNavigatorParamList } from "../globals/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -216,7 +221,10 @@ export default function BottomNavigator(): React.ReactElement {
     const initialRoute = TAB_INITIAL_ROUTES[routeName];
     if (!initialRoute) return;
 
-    const tabNavigation = navigation.getParent?.();
+    // `getParent()` alone can be the root stack (route `HomeStack`) on some RN/web versions — then
+    // dispatching `navigate('HomeScreen')` fails ("was not handled by any navigator"). Walk parents.
+    const tabNavigation =
+      findBottomTabNavigator(navigation as NavLike) ?? navigation.getParent?.();
     const isThisTabSelected =
       typeof tabNavigation?.getState === "function"
         ? isTabNavigatorFocusedOnRoute(tabNavigation, routeName)
@@ -230,15 +238,46 @@ export default function BottomNavigator(): React.ReactElement {
         return;
       }
       // Web touch (esp. mobile Safari): default tab activation after listeners often does not run reliably.
-      // Dispatch explicitly so Home tab always selects; defer reset so nested stack pop runs after focus.
-      if (Platform.OS === 'web' && typeof tabNavigation?.dispatch === 'function') {
-        e.preventDefault();
-        tabNavigation.dispatch(
-          CommonActions.navigate({
-            name: 'HomeScreen',
-            params: { screen: 'HomeMain' },
-          } as never),
-        );
+      // Dispatch on the real bottom-tab navigator (or root → HomeStack) so nested HomeMain resolves.
+      if (Platform.OS === 'web') {
+        const tabNav =
+          findBottomTabNavigator(navigation as NavLike) ?? tabNavigation;
+        const tabState = tabNav?.getState?.();
+        const canDispatchHomeTab =
+          typeof tabNav?.dispatch === 'function' &&
+          Array.isArray(tabState?.routeNames) &&
+          tabState.routeNames.includes('HomeScreen');
+
+        if (canDispatchHomeTab) {
+          e.preventDefault();
+          tabNav.dispatch(
+            CommonActions.navigate({
+              name: 'HomeScreen',
+              params: { screen: 'HomeMain' },
+            } as never),
+          );
+        } else {
+          const rootNav = findRootWithHomeStackRoute(navigation as NavLike);
+          if (rootNav?.dispatch) {
+            e.preventDefault();
+            rootNav.dispatch(
+              CommonActions.navigate({
+                name: 'HomeStack',
+                params: {
+                  screen: 'HomeScreen',
+                  params: { screen: 'HomeMain' },
+                },
+              } as never),
+            );
+          } else {
+            logger.warn(
+              'BottomNavigator',
+              'Home tab (web): no navigator could dispatch to HomeMain',
+              { routeName },
+              { periodic: true },
+            );
+          }
+        }
         setTimeout(() => {
           resetHomeScreen();
         }, 0);

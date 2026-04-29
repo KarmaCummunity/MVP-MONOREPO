@@ -236,9 +236,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
       // Login Screen
       LoginScreen: 'login',
       
-      // Org Onboarding (part of sign-up flow - accessible from unauthenticated stack)
-      OrgOnboardingScreen: 'org/onboarding',
-      
       // Legacy/Inactive Screen
       InactiveScreen: 'inactive',
     },

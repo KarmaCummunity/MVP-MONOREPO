@@ -82,3 +82,11 @@ export interface FeedItem {
     category?: string;
     intent?: 'give' | 'request';
 }
+
+/** Challenge UUID for navigation (top-level from API mapper or nested snapshot). */
+export function getFeedItemChallengeId(item: FeedItem): string | undefined {
+    const top = (item as { challengeId?: string }).challengeId;
+    if (typeof top === 'string' && top.length > 0) return top;
+    const nested = item.challengeData?.id;
+    return typeof nested === 'string' && nested.length > 0 ? nested : undefined;
+}

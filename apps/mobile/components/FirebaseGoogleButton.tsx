@@ -84,11 +84,12 @@ export default function FirebaseGoogleButton() {
 
       // Send Google tokens and Firebase UID to server
       // Firebase UID is different from Google ID - we need to send it separately
+      // This handler is web-only (see early return above). Do not set User-Agent: CORS preflight
+      // requires it in Access-Control-Allow-Headers; server omits it and the request fails.
       const response = await fetch(`${API_BASE_URL}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': `KarmaCommunity-${Platform.OS}`,
         },
         body: JSON.stringify({
           idToken: googleIdToken,

@@ -205,9 +205,6 @@ export type RootStackParamList = {
     title: string;
   };
   DiscoverPeopleScreen: undefined;
-  OrgOnboardingScreen: undefined;
-  AdminOrgApprovalsScreen: undefined;
-  OrgDashboardScreen: undefined;
   EditProfileScreen: undefined;
   AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean };
 };
