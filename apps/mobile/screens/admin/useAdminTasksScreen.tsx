@@ -31,6 +31,9 @@ import {
 } from './adminTasksScreen.utils';
 import { styles } from './adminTasksScreen.styles';
 import { AdminTaskListRow } from './AdminTaskListRow';
+import { logger } from '../../utils/loggerService';
+
+const ADMIN_TASKS_LOG = 'useAdminTasksScreen';
 
 export function useAdminTasksScreen() {
   const route = useRoute();
@@ -107,7 +110,11 @@ export function useAdminTasksScreen() {
   const prevFilterStorageKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('📋 Tasks List Updated in Component:', tasks.map(t => `${t.id.substring(0, 8)}:${t.title}`).join(', '));
+    logger.debug(
+      ADMIN_TASKS_LOG,
+      'Tasks list updated in component',
+      { summary: tasks.map((t) => `${t.id.substring(0, 8)}:${t.title}`).join(', ') },
+    );
   }, [tasks]);
 
   // Root tasks only; order matches API (driven by listSort)
@@ -290,13 +297,16 @@ export function useAdminTasksScreen() {
       currentUserId: selectedUser?.id,
       sort: listSort,
     });
-    console.log('🔄 Fetching tasks...', { filterState, apiFilters, selectedUserId: selectedUser?.id });
+    logger.debug(ADMIN_TASKS_LOG, 'Fetching tasks', { filterState, apiFilters, selectedUserId: selectedUser?.id });
     try {
       const res: ApiResponse<AdminTask[]> = await apiService.getTasks(apiFilters);
       if (seq !== fetchTasksSeqRef.current) {
         return;
       }
-      console.log('✅ Fetch tasks response:', res.success, res.data?.length);
+      logger.debug(ADMIN_TASKS_LOG, 'Fetch tasks response', {
+        success: res.success,
+        count: res.data?.length,
+      });
       if (!res.success) {
         setError(res.error || 'שגיאה בטעינת משימות');
       } else {
@@ -351,7 +361,7 @@ export function useAdminTasksScreen() {
         // If there are any subtasks, automatically set parent to 'stuck'
         const hasIncompleteSubtasks = res.data.some((st: AdminTask) => st.status !== 'done');
         if (hasIncompleteSubtasks) {
-          console.log(`⚠️ Setting task ${taskId} to 'stuck' - has incomplete subtasks`);
+          logger.warn(ADMIN_TASKS_LOG, "Setting task to 'stuck' - has incomplete subtasks", { taskId });
           await apiService.updateTask(taskId, { status: 'stuck' as TaskStatus });
           return true;
         }
@@ -442,7 +452,7 @@ export function useAdminTasksScreen() {
       const parsedEstimatedHours = parseCreateTaskEstimatedHours(formData.estimated_hours);
       const body = buildCreateTaskRequestBody(formData, selectedUser.id, dueParsed.iso, parsedEstimatedHours);
 
-      console.log('📤 Creating task with payload:', body);
+      logger.debug(ADMIN_TASKS_LOG, 'Creating task with payload', { body });
 
       const res: ApiResponse<AdminTask> = await apiService.createTask(body);
       if (!res.success) {

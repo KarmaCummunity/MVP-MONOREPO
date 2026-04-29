@@ -310,7 +310,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           conversationId = existingConv.id;
         }
       } catch (e) {
-        console.log('Error finding conversation, will create new', e);
+        logger.warn('ItemDetailsModal', 'Error finding conversation, will create new', {
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
 
       // 2. If not found, create new

@@ -2,7 +2,9 @@ import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
+import { logger } from '../utils/loggerService';
 
+const UseAdminProtection_LOG = 'useAdminProtection';
 export function useAdminProtection(allowViewOnly?: boolean) {
     const { isAdmin, isLoading, selectedUser, refreshUserRoles, isAuthenticated, isGuestMode } = useUser();
     const navigation = useNavigation<any>();
@@ -35,7 +37,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             isVerifyingRef.current = true;
             lastCheckRef.current = now;
 
-            console.log('🔐 Admin protection: Verifying admin status for user:', selectedUser.email);
+            logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: Verifying admin status for user:', selectedUser.email);
 
             // Refresh user roles from database
             // This will update the store if roles changed
@@ -56,13 +58,13 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             // If view-only mode is allowed and active, allow everyone (including unauthenticated)
             if (allowViewOnly && isViewOnly) {
                 // In view-only mode, allow everyone - no authentication required
-                console.log('🔐 View-only protection: Allowing access (view-only mode)');
+                logger.debug(UseAdminProtection_LOG, '🔐 View-only protection: Allowing access (view-only mode)');
                 return;
             }
 
             // 1. Immediate local check for admin access
             if (!isLoading && !isAdmin) {
-                console.log('🔐 Admin protection: User not admin (local check), redirecting');
+                logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: User not admin (local check), redirecting');
                 handleUnauthorized();
                 return;
             }

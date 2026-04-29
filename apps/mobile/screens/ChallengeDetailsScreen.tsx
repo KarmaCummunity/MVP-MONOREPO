@@ -14,6 +14,9 @@ import {
   Modal,
   Switch,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const ChallengeDetailsScreen_LOG = 'ChallengeDetailsScreen';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -83,7 +86,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         setParticipants(response.data.participants || []);
 
         // Get the post_id for comments (challenges auto-create posts)
-        console.log('📝 Challenge post_id:', response.data.post_id);
+        logger.debug(ChallengeDetailsScreen_LOG, '📝 Challenge post_id:', response.data.post_id);
         if (response.data.post_id) {
           setChallengePostId(response.data.post_id);
         } else {

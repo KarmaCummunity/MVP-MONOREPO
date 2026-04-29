@@ -3,13 +3,15 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, initializeFirestore, Firestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import Constants from 'expo-constants';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { logger } from './loggerService';
 
 // Note: Fill real values from Firebase console or use environment variables
+const FirebaseClient_LOG = 'firebaseClient';
 const extra = (Constants?.expoConfig as any)?.extra || (Constants as any)?.manifest?.extra || {};
 const mode = (extra?.mode as string) || (process.env.NODE_ENV === 'production' ? 'prod' : 'dev');
 const extraFb = (extra?.firebase?.[mode]) || {};
 
-console.log('🔥 Firebase config - loading from:', { mode, hasExtra: !!extra, hasExtraFb: !!extraFb });
+logger.debug(FirebaseClient_LOG, '🔥 Firebase config - loading from:', { mode, hasExtra: !!extra, hasExtraFb: !!extraFb });
 
 const firebaseConfig: Record<string, string | undefined> = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || extra.EXPO_PUBLIC_FIREBASE_API_KEY || extraFb.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -25,7 +27,7 @@ if (measurementId) {
   firebaseConfig.measurementId = measurementId;
 }
 
-console.log('🔥 Firebase config loaded:', { 
+logger.debug(FirebaseClient_LOG, '🔥 Firebase config loaded:', { 
   hasApiKey: !!firebaseConfig.apiKey, 
   hasProjectId: !!firebaseConfig.projectId, 
   hasAppId: !!firebaseConfig.appId,

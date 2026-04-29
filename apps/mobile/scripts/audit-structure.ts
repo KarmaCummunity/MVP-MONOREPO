@@ -67,7 +67,7 @@ class StructureAuditor {
     }
 
     public audit(): StructureReport {
-        console.log('🏗️  Starting structure audit...\n');
+        console.info('🏗️  Starting structure audit...\n');
         this.files = this.getAllFiles(this.rootDir);
         this.report.totalFilesScanned = this.files.length;
 
@@ -143,24 +143,24 @@ class StructureAuditor {
             fs.mkdirSync(dir, { recursive: true });
         }
         fs.writeFileSync(outputPath, JSON.stringify(this.report, null, 2));
-        console.log(`\n📊 Report saved to: ${outputPath}`);
+        console.info(`\n📊 Report saved to: ${outputPath}`);
     }
 
     public printSummary(): void {
-        console.log('\n' + '='.repeat(60));
-        console.log('STRUCTURE AUDIT SUMMARY');
-        console.log('='.repeat(60));
-        console.log(`\nFiles scanned: ${this.report.totalFilesScanned}`);
-        console.log(`Issues found: ${this.report.totalIssues}\n`);
+        console.info('\n' + '='.repeat(60));
+        console.info('STRUCTURE AUDIT SUMMARY');
+        console.info('='.repeat(60));
+        console.info(`\nFiles scanned: ${this.report.totalFilesScanned}`);
+        console.info(`Issues found: ${this.report.totalIssues}\n`);
 
         if (this.report.issues.length > 0) {
-            console.log('Top issues:');
+            console.info('Top issues:');
             this.report.issues.slice(0, 5).forEach(issue => {
-                console.log(`  [${issue.severity.toUpperCase()}] ${issue.file}: ${issue.message}`);
+                console.info(`  [${issue.severity.toUpperCase()}] ${issue.file}: ${issue.message}`);
             });
-            if (this.report.issues.length > 5) console.log(`  ...and ${this.report.issues.length - 5} more.`);
+            if (this.report.issues.length > 5) console.info(`  ...and ${this.report.issues.length - 5} more.`);
         }
-        console.log('\n' + '='.repeat(60) + '\n');
+        console.info('\n' + '='.repeat(60) + '\n');
     }
 }
 

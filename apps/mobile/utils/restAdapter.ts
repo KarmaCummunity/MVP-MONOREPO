@@ -6,7 +6,9 @@
 import { API_BASE_URL } from './config.constants';
 
 import { apiService } from './apiService';
+import { logger } from './loggerService';
 
+const RestAdapter_LOG = 'restAdapter';
 export class RestAdapter {
   private _baseUrl: string | null = null;
 
@@ -64,7 +66,7 @@ export class RestAdapter {
 
     // High-signal client log for production debugging
      
-    console.log(`🌐 REST → ${method} ${url}`, init?.body ? { body: init?.body } : '', token ? '(authenticated)' : '(no auth)');
+    logger.debug(RestAdapter_LOG, `🌐 REST → ${method} ${url}`, init?.body ? { body: init?.body } : '', token ? '(authenticated)' : '(no auth)');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -79,7 +81,7 @@ export class RestAdapter {
     });
     const ms = Date.now() - startedAt;
      
-    console.log(`🌐 REST ← ${method} ${url} ${res.status} (${ms}ms)`);
+    logger.debug(RestAdapter_LOG, `🌐 REST ← ${method} ${url} ${res.status} (${ms}ms)`);
     if (!res.ok) {
       const text = await res.text();
        

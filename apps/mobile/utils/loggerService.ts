@@ -71,7 +71,7 @@ class LoggerService {
         if (Array.isArray(parsedLogs) && parsedLogs.length > MAX_LOGS) {
           await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
           if (this.enableConsoleOutput) {
-            console.log(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
+            console.info(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
           }
         }
       }
@@ -182,10 +182,10 @@ class LoggerService {
 
       switch (level) {
         case 'debug':
-          console.log(`🔍 ${prefix}`, fullMessage);
+          console.debug(`🔍 ${prefix}`, fullMessage);
           break;
         case 'info':
-          console.log(`ℹ️  ${prefix}`, fullMessage);
+          console.info(`ℹ️  ${prefix}`, fullMessage);
           break;
         case 'warn':
           console.warn(`⚠️  ${prefix}`, fullMessage);
@@ -281,7 +281,7 @@ class LoggerService {
       await AsyncStorage.removeItem(LOGS_KEY);
     }
     if (this.enableConsoleOutput) {
-      console.log('🗑️ All logs cleared');
+      console.info('🗑️ All logs cleared');
     }
   }
 
@@ -300,7 +300,7 @@ class LoggerService {
       document.body.removeChild(element);
 
       if (this.enableConsoleOutput) {
-        console.log('📁 Logs downloaded');
+        console.info('📁 Logs downloaded');
       }
     }
   }
@@ -311,8 +311,8 @@ class LoggerService {
 
     const logsText = await this.exportLogs();
     if (this.enableConsoleOutput) {
-      console.log('📋 Complete logs:');
-      console.log(logsText);
+      console.info('📋 Complete logs:');
+      console.info(logsText);
     }
     return logsText;
   }

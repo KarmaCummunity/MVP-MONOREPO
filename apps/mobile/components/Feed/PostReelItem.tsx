@@ -16,6 +16,7 @@ import TaskAssignmentCard from './PostCard/TaskAssignmentCard';
 import TaskCompletionCard from './PostCard/TaskCompletionCard';
 import CommunityChallengeFeedCard from './PostCard/CommunityChallengeFeedCard';
 import QuickMessageModal from './QuickMessageModal';
+import { logger } from '../../utils/loggerService';
 
 const { width } = Dimensions.get('window');
 
@@ -238,7 +239,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                         error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.' 
                     };
                 } else if (isValidItemId(itemId)) {
-                    console.log('✅ Valid item ID, calling updateItem:', itemId);
+                    logger.debug('PostReelItem', 'Valid item ID, calling updateItem', { itemId });
                     updateResult = await apiService.updateItem(itemId, { status: 'delivered' });
                 } else {
                     console.warn('❌ Invalid item ID format:', itemId);

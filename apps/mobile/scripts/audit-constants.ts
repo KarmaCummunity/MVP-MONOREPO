@@ -360,10 +360,10 @@ class ConstantAuditor {
   }
 
   public audit(): ConstantAuditReport {
-    console.log('🔢 Starting constants audit...\n');
+    console.info('🔢 Starting constants audit...\n');
 
     const files = this.getAllFiles(this.rootDir);
-    console.log(`Found ${files.length} TypeScript files to audit\n`);
+    console.info(`Found ${files.length} TypeScript files to audit\n`);
 
     files.forEach((file, index) => {
       if (index % 10 === 0) {
@@ -374,7 +374,7 @@ class ConstantAuditor {
 
     process.stdout.write(`\rProgress: ${files.length}/${files.length} files ✓\n\n`);
 
-    console.log('Analyzing repeated values...');
+    console.info('Analyzing repeated values...');
     this.analyzeRepeatedValues();
 
     return this.report;
@@ -393,41 +393,41 @@ class ConstantAuditor {
     };
 
     fs.writeFileSync(outputPath, JSON.stringify(reportToSave, null, 2));
-    console.log(`\n📊 Report saved to: ${outputPath}`);
+    console.info(`\n📊 Report saved to: ${outputPath}`);
   }
 
   public printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('CONSTANTS AUDIT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`\nTotal files scanned: ${this.report.totalFiles}`);
-    console.log(`Files with issues: ${this.report.filesWithIssues}`);
-    console.log(`Total issues found: ${this.report.totalIssues}\n`);
+    console.info('\n' + '='.repeat(60));
+    console.info('CONSTANTS AUDIT SUMMARY');
+    console.info('='.repeat(60));
+    console.info(`\nTotal files scanned: ${this.report.totalFiles}`);
+    console.info(`Files with issues: ${this.report.filesWithIssues}`);
+    console.info(`Total issues found: ${this.report.totalIssues}\n`);
 
-    console.log('Issues by severity:');
-    console.log(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
-    console.log(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
-    console.log(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
-    console.log(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
+    console.info('Issues by severity:');
+    console.info(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
+    console.info(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
+    console.info(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
+    console.info(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
 
-    console.log('Issues by type:');
-    console.log(`  Magic numbers:    ${this.report.issuesByType['magic-number']}`);
-    console.log(`  Repeated values:  ${this.report.issuesByType['repeated-value']}`);
-    console.log(`  Hardcoded sizes:  ${this.report.issuesByType['hardcoded-size']}`);
-    console.log(`  Missing imports:  ${this.report.issuesByType['missing-import']}\n`);
+    console.info('Issues by type:');
+    console.info(`  Magic numbers:    ${this.report.issuesByType['magic-number']}`);
+    console.info(`  Repeated values:  ${this.report.issuesByType['repeated-value']}`);
+    console.info(`  Hardcoded sizes:  ${this.report.issuesByType['hardcoded-size']}`);
+    console.info(`  Missing imports:  ${this.report.issuesByType['missing-import']}\n`);
 
     if (this.report.repeatedValues.size > 0) {
-      console.log('Top 10 most repeated values:');
+      console.info('Top 10 most repeated values:');
       const sorted = Array.from(this.report.repeatedValues.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
 
       sorted.forEach(([value, count], index) => {
-        console.log(`  ${index + 1}. ${value} (${count} occurrences)`);
+        console.info(`  ${index + 1}. ${value} (${count} occurrences)`);
       });
     }
 
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.info('\n' + '='.repeat(60) + '\n');
   }
 }
 

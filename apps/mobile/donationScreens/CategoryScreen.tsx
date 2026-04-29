@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { donationResources } from '../utils/donationResources';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
+import { logger } from '../utils/loggerService';
 
 export interface CategoryConfig {
   id: string;
@@ -42,7 +43,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
 
   const handleToggleMode = () => setMode((prev) => !prev);
   const handleSelectMenuItem = (option: string) => {
-    console.log('Category menu selected:', option);
+    logger.debug('CategoryScreen', 'Category menu selected', { option });
   };
 
   const handleSearch = (
@@ -51,7 +52,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
     sorts?: string[],
     results?: any[]
   ) => {
-    console.log('Category search:', {
+    logger.debug('CategoryScreen', 'Category search', {
       query,
       filters: filters ?? [],
       sorts: sorts ?? [],

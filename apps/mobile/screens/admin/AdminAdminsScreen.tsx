@@ -62,7 +62,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
     const loadUsers = useCallback(async (forceRefresh: boolean = false) => {
         if (!selectedUser?.id) {
-            console.log('[AdminAdminsScreen] No selectedUser.id, skipping load');
+            logger.debug(LOG_SOURCE, 'No selectedUser.id, skipping load');
             return;
         }
 
@@ -76,15 +76,15 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             // Force refresh after admin operations to ensure fresh data
             if (forceRefresh) {
                 filters.forceRefresh = true;
-                console.log('[AdminAdminsScreen] 🔄 FORCE REFRESH - Loading users with filters:', filters);
+                logger.debug(LOG_SOURCE, 'FORCE REFRESH - Loading users with filters', { filters });
             } else {
-                console.log('[AdminAdminsScreen] 🔄 Loading users with filters:', filters);
+                logger.debug(LOG_SOURCE, 'Loading users with filters', { filters });
             }
 
             // Load all users for display
             const response = await apiService.getUsers(filters);
 
-            console.log('[AdminAdminsScreen] 📡 Response from getUsers:', {
+            logger.debug(LOG_SOURCE, 'Response from getUsers', {
                 success: response.success,
                 dataLength: response.data?.length,
                 error: response.error
@@ -102,29 +102,29 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 });
                 setAllManagers(managers);
 
-                console.log(`[AdminAdminsScreen] ✅ Loaded ${otherUsers.length} users, ${managers.length} managers`);
-                console.log(`[AdminAdminsScreen] 📊 Sample user data:`, otherUsers.slice(0, 2).map(u => ({
+                logger.debug(LOG_SOURCE, 'Loaded users and managers', { userCount: otherUsers.length, managerCount: managers.length });
+                logger.debug(LOG_SOURCE, 'Sample user data', { sample: otherUsers.slice(0, 2).map(u => ({
                     id: u.id,
                     name: u.name,
                     email: u.email,
                     roles: u.roles,
                     parent_manager_id: u.parent_manager_id,
                     manager_details: u.manager_details
-                })));
+                })) });
             } else {
                 setUsersList([]);
                 setAllManagers([]);
-                console.log('[AdminAdminsScreen] ❌ Failed to load users:', response.error);
+                logger.debug(LOG_SOURCE, 'Failed to load users', { error: response.error });
             }
 
             // Load eligible users for promotion (to know who can be promoted)
             const eligibleResponse = await apiService.getEligibleForPromotion(selectedUser.id);
             if (eligibleResponse.success && Array.isArray(eligibleResponse.data)) {
                 setEligibleUsers(eligibleResponse.data);
-                console.log(`[AdminAdminsScreen] Loaded ${eligibleResponse.data.length} eligible users for promotion`);
+                logger.debug(LOG_SOURCE, 'Loaded eligible users for promotion', { count: eligibleResponse.data.length });
             } else {
                 setEligibleUsers([]);
-                console.log('[AdminAdminsScreen] Failed to load eligible users:', eligibleResponse.error);
+                logger.debug(LOG_SOURCE, 'Failed to load eligible users', { error: eligibleResponse.error });
             }
         } catch (error) {
             console.error('[AdminAdminsScreen] Error loading users:', error);
@@ -143,7 +143,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin') ||
         currentUserRoles.includes('admin');
 
-    console.log('[AdminAdminsScreen] 🔐 Current user check:', {
+    logger.debug(LOG_SOURCE, 'Current user check', {
         userId: selectedUser?.id,
         email: selectedUser?.email,
         roles: selectedUser?.roles,
@@ -158,7 +158,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             const targetIsAlreadyAdmin = targetRoles.includes('admin') || targetRoles.includes('super_admin');
             const canPromoteUser = !targetIsAlreadyAdmin;
 
-            console.log('[AdminAdminsScreen] 🔍 canPromote check:', {
+            logger.debug(LOG_SOURCE, 'canPromote check', {
                 targetId: user.id,
                 targetEmail: user.email,
                 targetRoles: user.roles,
@@ -170,7 +170,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         }
         // Regular admins - check eligible list from server
         const isEligible = eligibleUsers.some(e => e.id === user.id);
-        console.log('[AdminAdminsScreen] 🔍 canPromote (regular admin):', {
+        logger.debug(LOG_SOURCE, 'canPromote (regular admin)', {
             targetId: user.id,
             targetEmail: user.email,
             isEligible,
@@ -187,13 +187,13 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         // Cannot demote yourself
         if (isSameUser) {
-            console.log('[AdminAdminsScreen] 🔍 canDemote: false (cannot demote yourself)');
+            logger.debug(LOG_SOURCE, 'canDemote: false (cannot demote yourself)');
             return false;
         }
 
         // Admin/super_admin can demote admins
         if (isCurrentUserSuperAdmin) {
-            console.log('[AdminAdminsScreen] 🔍 canDemote (admin):', {
+            logger.debug(LOG_SOURCE, 'canDemote (admin)', {
                 targetId: user.id,
                 targetEmail: user.email,
                 canDemote: true
@@ -205,7 +205,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         // Let the server do the full tree validation
         const isDirectSubordinate = user.parent_manager_id === selectedUser?.id;
 
-        console.log('[AdminAdminsScreen] 🔍 canDemote (checking hierarchy):', {
+        logger.debug(LOG_SOURCE, 'canDemote (checking hierarchy)', {
             targetId: user.id,
             isDirectSubordinate,
             allowForServerValidation: true
@@ -216,7 +216,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     };
 
     const handleToggleAdmin = async (user: any) => {
-        console.log('[AdminAdminsScreen] 🎯 handleToggleAdmin called with:', {
+        logger.debug(LOG_SOURCE, 'handleToggleAdmin called', {
             userId: user?.id,
             userName: user?.name,
             userEmail: user?.email,
@@ -230,7 +230,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         const superAdminEmails = ['navesarussi@gmail.com', 'karmacommunity2.0@gmail.com'];
         const isSuperAdmin = superAdminEmails.includes(user.email?.toLowerCase() || '');
 
-        console.log('[AdminAdminsScreen] 🔍 User check:', {
+        logger.debug(LOG_SOURCE, 'User check', {
             isAdmin,
             isSuperAdmin,
             currentRoles
@@ -238,13 +238,13 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         // Protect designated accounts from demotion only; they must still be promotable if not admin yet.
         if (isSuperAdmin && isAdmin) {
-            console.log('[AdminAdminsScreen] ❌ Blocked: Super admin (already admin)');
+            logger.debug(LOG_SOURCE, 'Blocked: Super admin (already admin)');
             Alert.alert('שגיאה', 'לא ניתן לשנות הרשאות למנהל הראשי');
             return;
         }
 
         if (!selectedUser?.id) {
-            console.log('[AdminAdminsScreen] ❌ No selectedUser.id');
+            logger.debug(LOG_SOURCE, 'No selectedUser.id');
             Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
             return;
         }
@@ -254,13 +254,13 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             ? `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${user.name || user.email}?`
             : `האם אתה בטוח שברצונך להפוך את ${user.name || user.email} למנהל תחתיך?`;
 
-        console.log('[AdminAdminsScreen] 📢 Opening admin role confirm modal:', { title, message, platform: Platform.OS });
+        logger.debug(LOG_SOURCE, 'Opening admin role confirm modal', { title, message, platform: Platform.OS });
 
         setAdminRoleConfirm({ user, isDemote: isAdmin, title, message });
     };
 
     const cancelAdminRoleConfirm = () => {
-        console.log('[AdminAdminsScreen] ❌ User cancelled admin role confirm');
+        logger.debug(LOG_SOURCE, 'User cancelled admin role confirm');
         setAdminRoleConfirm(null);
     };
 
@@ -271,7 +271,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         const { user, isDemote } = ctx;
         setAdminRoleConfirm(null);
 
-        console.log('[AdminAdminsScreen] ✅ User confirmed admin role change', {
+        logger.debug(LOG_SOURCE, 'User confirmed admin role change', {
             isDemote,
             userId: user.id,
             userName: user.name,
@@ -280,22 +280,22 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         let res;
         if (isDemote) {
-            console.log('[AdminAdminsScreen] 📡 Calling demoteAdmin');
+            logger.debug(LOG_SOURCE, 'Calling demoteAdmin');
             res = await apiService.demoteAdmin(user.id, selectedUser.id);
         } else {
-            console.log('[AdminAdminsScreen] 📡 Calling promoteToAdmin');
+            logger.debug(LOG_SOURCE, 'Calling promoteToAdmin');
             res = await apiService.promoteToAdmin(user.id, selectedUser.id);
         }
 
-        console.log(`[AdminAdminsScreen] 📡 ${isDemote ? 'Demote' : 'Promote'} response:`, res);
+        logger.debug(LOG_SOURCE, `${isDemote ? 'Demote' : 'Promote'} response`, { res });
 
         if (res.success) {
             Alert.alert('הצלחה', res.message || 'העדכון בוצע בהצלחה');
-            console.log('[AdminAdminsScreen] ✅ Operation successful, reloading users with force refresh...');
+            logger.debug(LOG_SOURCE, 'Operation successful, reloading users with force refresh');
             await loadUsers(true);
         } else {
             Alert.alert('שגיאה', res.error || 'נכשל בעדכון');
-            console.log('[AdminAdminsScreen] ❌ Operation failed:', res.error);
+            logger.debug(LOG_SOURCE, 'Operation failed', { error: res.error });
         }
     };
 
@@ -320,7 +320,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         try {
             const managerId = newManager ? newManager.id : null;
-            console.log(`[AdminAdminsScreen] 📝 Setting manager:`, {
+            logger.debug(LOG_SOURCE, 'Setting manager', {
                 userId: selectedForManager.id,
                 userName: selectedForManager.name,
                 currentManagerId: selectedForManager.parent_manager_id,
@@ -331,16 +331,16 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
             const res = await apiService.setManager(selectedForManager.id, managerId, selectedUser?.id);
 
-            console.log('[AdminAdminsScreen] 📡 setManager response:', res);
+            logger.debug(LOG_SOURCE, 'setManager response', { res });
 
             if (res.success) {
                 Alert.alert('הצלחה', managerId ? 'מנהל עודכן בהצלחה' : 'שיוך מנהל הוסר בהצלחה');
                 setShowManagerModal(false);
-                console.log('[AdminAdminsScreen] ✅ Manager updated successfully, reloading users with force refresh...');
+                logger.debug(LOG_SOURCE, 'Manager updated successfully, reloading users with force refresh');
                 await loadUsers(true); // Force refresh to bypass cache
             } else {
                 Alert.alert('שגיאה', res.error || 'נכשל בעדכון מנהל');
-                console.log('[AdminAdminsScreen] ❌ Failed to update manager:', res.error);
+                logger.debug(LOG_SOURCE, 'Failed to update manager', { error: res.error });
             }
         } catch (e) {
             console.error('[AdminAdminsScreen] ❌ Error saving manager:', e);
@@ -351,22 +351,22 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     // Direct remove function (without confirmation - used from modal button)
     const performRemoveManager = async () => {
         if (!selectedForManager) {
-            console.log('[AdminAdminsScreen] performRemoveManager called but no selectedForManager');
+            logger.debug(LOG_SOURCE, 'performRemoveManager called but no selectedForManager');
             return;
         }
 
         try {
-            console.log(`[AdminAdminsScreen] ⏳ Starting to remove manager for userId=${selectedForManager.id}, requestedBy=${selectedUser?.id}`);
+            logger.debug(LOG_SOURCE, 'Starting to remove manager', { userId: selectedForManager.id, requestedBy: selectedUser?.id });
             setIsRemovingManager(true);
 
             const res = await apiService.setManager(selectedForManager.id, null, selectedUser?.id);
 
-            console.log(`[AdminAdminsScreen] 📡 Response from setManager:`, res);
+            logger.debug(LOG_SOURCE, 'Response from setManager', { res });
 
             if (res.success) {
                 Alert.alert('הצלחה', 'שיוך מנהל הוסר בהצלחה');
                 setShowManagerModal(false);
-                console.log('[AdminAdminsScreen] ✅ Manager removed successfully, reloading users with force refresh...');
+                logger.debug(LOG_SOURCE, 'Manager removed successfully, reloading users with force refresh');
                 await loadUsers(true); // Force refresh to bypass cache
             } else {
                 Alert.alert('שגיאה', res.error || 'נכשל בהסרת שיוך מנהל');
@@ -447,7 +447,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
     };
 
     const handleDemoteToVolunteer = async (targetUser: any) => {
-        console.log('[AdminAdminsScreen] 🎯 handleDemoteToVolunteer called with:', {
+        logger.debug(LOG_SOURCE, 'handleDemoteToVolunteer called', {
             targetUserId: targetUser?.id,
             targetUserName: targetUser?.name,
             targetUserEmail: targetUser?.email,
@@ -471,7 +471,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
             return;
         }
 
-        console.log('[AdminAdminsScreen] 📢 Showing Alert.alert for demote to volunteer');
+        logger.debug(LOG_SOURCE, 'Showing Alert.alert for demote to volunteer');
         
         Alert.alert(
             'הפוך למתנדב',
@@ -481,21 +481,21 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     text: 'ביטול', 
                     style: 'cancel',
                     onPress: () => {
-                        console.log('[AdminAdminsScreen] ❌ User cancelled demote to volunteer');
+                        logger.debug(LOG_SOURCE, 'User cancelled demote to volunteer');
                     }
                 },
                 {
                     text: 'אישור',
                     style: 'destructive',
                     onPress: async () => {
-                        console.log('[AdminAdminsScreen] ✅ User confirmed demote to volunteer');
+                        logger.debug(LOG_SOURCE, 'User confirmed demote to volunteer');
                         try {
                             logger.info(LOG_SOURCE, 'Demoting admin to volunteer - Starting process', {
                                 targetUserId: targetUser.id,
                                 requestingAdminId: selectedUser.id
                             });
 
-                            console.log('[AdminAdminsScreen] 📡 Calling apiService.demoteAdmin with convertToVolunteer=true');
+                            logger.debug(LOG_SOURCE, 'Calling apiService.demoteAdmin with convertToVolunteer=true');
                             // Demote admin and convert to volunteer in one step
                             logger.info(LOG_SOURCE, 'Demoting admin to volunteer', {
                                 targetUserId: targetUser.id,
@@ -503,7 +503,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                             });
                             const demoteRes = await apiService.demoteAdmin(targetUser.id, selectedUser.id, true);
                             
-                            console.log('[AdminAdminsScreen] 📡 API Response:', demoteRes);
+                            logger.debug(LOG_SOURCE, 'demoteAdmin API Response', { demoteRes });
                             logger.info(LOG_SOURCE, 'Demote admin to volunteer API response', {
                                 success: demoteRes.success,
                                 message: demoteRes.message,
@@ -516,7 +516,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     targetUserId: targetUser.id,
                                     targetUserName: targetUser.name
                                 });
-                                console.log('[AdminAdminsScreen] ✅ Success! Reloading users...');
+                                logger.debug(LOG_SOURCE, 'Success! Reloading users');
                                 Alert.alert('הצלחה', demoteRes.message || 'המשתמש הוסר ממנהלים והפך למתנדב');
                                 await loadUsers(true);
                             } else {
@@ -682,7 +682,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                     {/* In volunteers tab: Show "הפוך למנהל" button for volunteers who can be promoted */}
                                     {(() => {
                                         const shouldShow = activeTab === 'volunteers' && isVolunteer && !isAdmin && userCanBePromoted;
-                                        console.log('[AdminAdminsScreen] 🔍 Button visibility check:', {
+                                        logger.debug(LOG_SOURCE, 'Button visibility check', {
                                             userId: user.id,
                                             userName: user.name,
                                             activeTab,
@@ -696,7 +696,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                         <TouchableOpacity
                                             style={[styles.actionButton, { backgroundColor: colors.primary, marginTop: 8 }]}
                                             onPress={() => {
-                                                console.log('[AdminAdminsScreen] 🎯 "הפוך למנהל" button pressed for user:', user.id, user.name);
+                                                logger.debug(LOG_SOURCE, '"הפוך למנהל" button pressed', { userId: user.id, userName: user.name });
                                                 handleToggleAdmin(user);
                                             }}
                                         >
@@ -788,7 +788,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                 <TouchableOpacity
                                     style={[styles.removeManagerBtn, isRemovingManager && { opacity: 0.5 }]}
                                     onPress={viewOnly ? undefined : () => {
-                                        console.log('[AdminAdminsScreen] Remove manager button pressed in modal');
+                                        logger.debug(LOG_SOURCE, 'Remove manager button pressed in modal');
                                         performRemoveManager();
                                     }}
                                     disabled={viewOnly || isRemovingManager}

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar, TouchableOpacity } from 'react-native';
 import { CURRENT_ENVIRONMENT, IS_DEVELOPMENT, API_BASE_URL } from '../utils/config.constants';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
 
 /**
  * DevEnvironmentBanner
@@ -35,7 +36,7 @@ const DevEnvironmentBanner = () => {
             alert(message);
         } else {
             // For mobile, you could implement a modal or use a toast library
-            console.log(message);
+            logger.info('DevEnvironmentBanner', message);
         }
     };
 

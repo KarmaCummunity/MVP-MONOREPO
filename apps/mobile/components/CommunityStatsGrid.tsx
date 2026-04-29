@@ -8,6 +8,7 @@ import { useUser } from '../stores/userStore';
 import { useEffect, useState } from 'react';
 import { getGlobalStats, formatShortNumber, CommunityStats, EnhancedStatsService } from '../utils/statsService';
 import { USE_BACKEND } from '../utils/dbConfig';
+import { logger } from '../utils/loggerService';
 
 export type CommunityStat = {
   key: string;
@@ -56,7 +57,7 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
     const loadStats = async (forceRefresh = false) => {
       if (!mounted) return;
       
-      console.log(`[CommunityStatsGrid] Loading stats, forceRefresh: ${forceRefresh}`);
+      logger.debug('CommunityStatsGrid', 'Loading stats', { forceRefresh });
       setLoading(true);
       
       try {
@@ -64,18 +65,18 @@ const CommunityStatsGrid: React.FC<CommunityStatsGridProps> = ({ onSelect }) => 
         
         if (USE_BACKEND && isRealAuth) {
           // Use enhanced backend service for real users
-          console.log('[CommunityStatsGrid] Fetching from backend with forceRefresh:', forceRefresh);
+          logger.debug('CommunityStatsGrid', 'Fetching from backend', { forceRefresh });
           stats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
-          console.log('[CommunityStatsGrid] Stats received from backend:', Object.keys(stats).length, 'keys');
+          logger.debug('CommunityStatsGrid', 'Stats received from backend', { keyCount: Object.keys(stats).length });
         } else {
           // Use legacy local stats for guests or if backend unavailable
-          console.log('[CommunityStatsGrid] Using local stats (no backend or not authenticated)');
+          logger.debug('CommunityStatsGrid', 'Using local stats (no backend or not authenticated)');
           stats = await getGlobalStats();
         }
         
         if (mounted) {
           setStatsState(stats);
-          console.log('[CommunityStatsGrid] Stats state updated');
+          logger.debug('CommunityStatsGrid', 'Stats state updated');
         }
       } catch (error) {
         console.error('[CommunityStatsGrid] Failed to load community stats:', error);

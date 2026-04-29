@@ -166,7 +166,7 @@ class UnusedFileFinder {
   }
 
   private findDuplicates(): void {
-    console.log('Finding duplicate files...');
+    console.info('Finding duplicate files...');
 
     this.allFiles.forEach(file => {
       const hash = this.calculateFileHash(file);
@@ -252,7 +252,7 @@ class UnusedFileFinder {
   }
 
   private findUnusedFiles(): void {
-    console.log('Analyzing imports...');
+    console.info('Analyzing imports...');
 
     // First pass: collect all imports
     this.allFiles.forEach(file => {
@@ -271,7 +271,7 @@ class UnusedFileFinder {
       }
     });
 
-    console.log('Finding unused files...');
+    console.info('Finding unused files...');
 
     // Second pass: find files that are never imported
     this.allFiles.forEach(file => {
@@ -295,7 +295,7 @@ class UnusedFileFinder {
   }
 
   private findOldBackupFiles(): void {
-    console.log('Finding old/backup files...');
+    console.info('Finding old/backup files...');
 
     this.allFiles.forEach(file => {
       if (this.isOldBackupFile(file)) {
@@ -319,11 +319,11 @@ class UnusedFileFinder {
   }
 
   public audit(): UnusedFilesReport {
-    console.log('🗑️  Starting unused files audit...\n');
+    console.info('🗑️  Starting unused files audit...\n');
 
     const files = this.getAllFiles(this.rootDir);
     this.report.totalFiles = files.length;
-    console.log(`Found ${files.length} source files to analyze\n`);
+    console.info(`Found ${files.length} source files to analyze\n`);
 
     this.findDuplicates();
     this.findUnusedFiles();
@@ -339,24 +339,24 @@ class UnusedFileFinder {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(this.report, null, 2));
-    console.log(`\n📊 Report saved to: ${outputPath}`);
+    console.info(`\n📊 Report saved to: ${outputPath}`);
   }
 
   public printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('UNUSED FILES AUDIT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`\nTotal files scanned: ${this.report.totalFiles}`);
-    console.log(`Unused files: ${this.report.unusedFiles}`);
-    console.log(`Duplicate files: ${this.report.duplicateFiles}`);
-    console.log(`Old/backup files: ${this.report.oldBackupFiles}`);
-    console.log(`Orphaned test files: ${this.report.orphanedTests}\n`);
+    console.info('\n' + '='.repeat(60));
+    console.info('UNUSED FILES AUDIT SUMMARY');
+    console.info('='.repeat(60));
+    console.info(`\nTotal files scanned: ${this.report.totalFiles}`);
+    console.info(`Unused files: ${this.report.unusedFiles}`);
+    console.info(`Duplicate files: ${this.report.duplicateFiles}`);
+    console.info(`Old/backup files: ${this.report.oldBackupFiles}`);
+    console.info(`Orphaned test files: ${this.report.orphanedTests}\n`);
 
     const spaceMB = (this.report.potentialSpaceSaved / 1024 / 1024).toFixed(2);
-    console.log(`Potential space to reclaim: ${spaceMB} MB\n`);
+    console.info(`Potential space to reclaim: ${spaceMB} MB\n`);
 
     if (this.report.issues.length > 0) {
-      console.log('Files to review:');
+      console.info('Files to review:');
 
       const byType = {
         unused: this.report.issues.filter(i => i.type === 'unused'),
@@ -367,18 +367,18 @@ class UnusedFileFinder {
 
       Object.entries(byType).forEach(([type, issues]) => {
         if (issues.length > 0) {
-          console.log(`\n  ${type.toUpperCase()} (${issues.length} files):`);
+          console.info(`\n  ${type.toUpperCase()} (${issues.length} files):`);
           issues.slice(0, 5).forEach(issue => {
-            console.log(`    - ${issue.file}`);
+            console.info(`    - ${issue.file}`);
           });
           if (issues.length > 5) {
-            console.log(`    ... and ${issues.length - 5} more`);
+            console.info(`    ... and ${issues.length - 5} more`);
           }
         }
       });
     }
 
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.info('\n' + '='.repeat(60) + '\n');
   }
 }
 

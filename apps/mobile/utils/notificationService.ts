@@ -2,8 +2,10 @@
 import { Platform, Alert } from 'react-native';
 import { db, DB_COLLECTIONS, DatabaseService } from './databaseService';
 import colors from '../globals/colors';
+import { logger } from './loggerService';
 
 // Import notifications only on supported platforms
+const NotificationService_LOG = 'notificationService';
 let Notifications: any = null;
 if (Platform.OS !== 'web') {
   try {
@@ -82,11 +84,11 @@ if (isNotificationsSupported() && Notifications) {
 export const requestNotificationPermissions = async (): Promise<boolean> => {
   try {
     if (Platform.OS === 'web' || !Notifications) {
-      console.log('🔔 Web platform or no notifications module - notifications not supported');
+      logger.debug(NotificationService_LOG, '🔔 Web platform or no notifications module - notifications not supported');
       return false;
     }
 
-    console.log('🔔 Requesting notification permissions...');
+    logger.debug(NotificationService_LOG, '🔔 Requesting notification permissions...');
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -97,7 +99,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('❌ Notification permissions not granted');
+      logger.debug(NotificationService_LOG, '❌ Notification permissions not granted');
       Alert.alert(
         'הרשאות התראות',
         'כדי לקבל התראות על הודעות חדשות ועוקבים, אנא אשר גישה להתראות בהגדרות המכשיר',
@@ -109,10 +111,10 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log('✅ Notification permissions granted');
+    logger.debug(NotificationService_LOG, '✅ Notification permissions granted');
 
     if (Platform.OS === 'android') {
-      console.log('🤖 Android platform - setting up notification channel');
+      logger.debug(NotificationService_LOG, '🤖 Android platform - setting up notification channel');
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
@@ -135,7 +137,7 @@ export const checkNotificationPermissions = async (): Promise<{
 }> => {
   try {
     if (Platform.OS === 'web' || !Notifications) {
-      console.log('🌐 Web platform or no notifications module - checking notification permissions (not supported)');
+      logger.debug(NotificationService_LOG, '🌐 Web platform or no notifications module - checking notification permissions (not supported)');
       return {
         granted: false,
         canAskAgain: false,
@@ -167,13 +169,13 @@ export const sendLocalNotification = async (
 ): Promise<string> => {
   try {
     if (Platform.OS === 'web' || !Notifications) {
-      console.log('🔔 Web platform or no notifications module - skipping local notification:', title);
+      logger.debug(NotificationService_LOG, '🔔 Web platform or no notifications module - skipping local notification:', title);
       return '';
     }
 
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
-      console.log('❌ No notification permissions, cannot send notification');
+      logger.debug(NotificationService_LOG, '❌ No notification permissions, cannot send notification');
       return '';
     }
 
@@ -188,7 +190,7 @@ export const sendLocalNotification = async (
       trigger: null, // Send immediately
     });
 
-    console.log('✅ Local notification sent:', notificationId);
+    logger.debug(NotificationService_LOG, '✅ Local notification sent:', notificationId);
     return notificationId;
   } catch (error) {
     console.error('❌ Send local notification error:', error);
@@ -204,12 +206,12 @@ export const sendMessageNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending message notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending message notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.messages) {
-      console.log('🔕 Message notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 Message notifications disabled');
       return;
     }
 
@@ -245,12 +247,12 @@ export const sendFollowNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending follow notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending follow notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.follows) {
-      console.log('🔕 Follow notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 Follow notifications disabled');
       return;
     }
 
@@ -286,12 +288,12 @@ export const sendLikeNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending like notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending like notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.likes) {
-      console.log('🔕 Like notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 Like notifications disabled');
       return;
     }
 
@@ -329,12 +331,12 @@ export const sendCommentNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending comment notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending comment notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.comments) {
-      console.log('🔕 Comment notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 Comment notifications disabled');
       return;
     }
 
@@ -372,12 +374,12 @@ export const sendTaskNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending task notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending task notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.system) {
-      console.log('🔕 System notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 System notifications disabled');
       return;
     }
 
@@ -415,12 +417,12 @@ export const sendDonationNotification = async (
 ): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - sending donation notification');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - sending donation notification');
     }
 
     const settings = await getNotificationSettings(userId);
     if (!settings.system) {
-      console.log('🔕 System notifications disabled');
+      logger.debug(NotificationService_LOG, '🔕 System notifications disabled');
       return;
     }
 
@@ -456,11 +458,11 @@ export const sendDonationNotification = async (
 export const getNotificationSettings = async (userId?: string): Promise<NotificationSettings> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - getting notification settings');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - getting notification settings');
     }
 
     if (!userId) {
-      console.log('🔔 No userId provided, returning default settings');
+      logger.debug(NotificationService_LOG, '🔔 No userId provided, returning default settings');
       return {
         messages: true,
         follows: true,
@@ -507,11 +509,11 @@ export const getNotificationSettings = async (userId?: string): Promise<Notifica
 export const updateNotificationSettings = async (settings: Partial<NotificationSettings>, userId?: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - updating notification settings');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - updating notification settings');
     }
 
     if (!userId) {
-      console.log('🔔 No userId provided, cannot update settings');
+      logger.debug(NotificationService_LOG, '🔔 No userId provided, cannot update settings');
       return;
     }
 
@@ -520,7 +522,7 @@ export const updateNotificationSettings = async (settings: Partial<NotificationS
 
     const userSettings = { notifications: updatedSettings };
     await db.updateUserSettings(userId, userSettings);
-    console.log('✅ Notification settings updated');
+    logger.debug(NotificationService_LOG, '✅ Notification settings updated');
   } catch (error) {
     console.error('❌ Update notification settings error:', error);
   }
@@ -529,11 +531,11 @@ export const updateNotificationSettings = async (settings: Partial<NotificationS
 export const saveNotification = async (notification: NotificationData): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - saving notification to history');
+      logger.debug(NotificationService_LOG, '🌐 Web platform - saving notification to history');
     }
 
     await db.createNotification(notification.userId, notification.id, notification);
-    console.log('✅ Notification saved to history');
+    logger.debug(NotificationService_LOG, '✅ Notification saved to history');
 
     // Emit in-app event so UI can update in real-time
     emitNotificationEvent(notification);
@@ -545,7 +547,7 @@ export const saveNotification = async (notification: NotificationData): Promise<
 export const getNotifications = async (userId: string): Promise<NotificationData[]> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - getting notifications for user:', userId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - getting notifications for user:', userId);
     }
 
     const notifications = await db.getUserNotifications(userId);
@@ -559,11 +561,11 @@ export const getNotifications = async (userId: string): Promise<NotificationData
 export const markNotificationAsRead = async (notificationId: string, userId: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - marking notification as read:', notificationId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - marking notification as read:', notificationId);
     }
 
     await db.markNotificationAsRead(userId, notificationId);
-    console.log('✅ Notification marked as read');
+    logger.debug(NotificationService_LOG, '✅ Notification marked as read');
   } catch (error) {
     console.error('❌ Mark notification as read error:', error);
   }
@@ -572,14 +574,14 @@ export const markNotificationAsRead = async (notificationId: string, userId: str
 export const markAllNotificationsAsRead = async (userId: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - marking all notifications as read for user:', userId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - marking all notifications as read for user:', userId);
     }
 
     const notifications = await getNotifications(userId);
     for (const notification of notifications) {
       await db.markNotificationAsRead(userId, notification.id);
     }
-    console.log('✅ All notifications marked as read');
+    logger.debug(NotificationService_LOG, '✅ All notifications marked as read');
   } catch (error) {
     console.error('❌ Mark all notifications as read error:', error);
   }
@@ -588,11 +590,11 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<void> 
 export const deleteNotification = async (notificationId: string, userId: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - deleting notification:', notificationId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - deleting notification:', notificationId);
     }
 
     await db.deleteNotification(userId, notificationId);
-    console.log('✅ Notification deleted');
+    logger.debug(NotificationService_LOG, '✅ Notification deleted');
   } catch (error) {
     console.error('❌ Delete notification error:', error);
   }
@@ -601,13 +603,13 @@ export const deleteNotification = async (notificationId: string, userId: string)
 export const clearAllNotifications = async (userId: string): Promise<void> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - clearing all notifications for user:', userId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - clearing all notifications for user:', userId);
     }
 
     const notifications = await getNotifications(userId);
     const notificationIds = notifications.map(n => n.id);
     await DatabaseService.batchDelete(DB_COLLECTIONS.NOTIFICATIONS, userId, notificationIds);
-    console.log('✅ All notifications cleared');
+    logger.debug(NotificationService_LOG, '✅ All notifications cleared');
   } catch (error) {
     console.error('❌ Clear all notifications error:', error);
   }
@@ -616,7 +618,7 @@ export const clearAllNotifications = async (userId: string): Promise<void> => {
 export const getUnreadNotificationCount = async (userId: string): Promise<number> => {
   try {
     if (Platform.OS === 'web') {
-      console.log('🌐 Web platform - getting unread notification count for user:', userId);
+      logger.debug(NotificationService_LOG, '🌐 Web platform - getting unread notification count for user:', userId);
     }
 
     const notifications = await getNotifications(userId);
@@ -630,7 +632,7 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
       // optional module / tracker unavailable
     }
     const total = unreadCount + extra;
-    console.log('📊 Unread notifications count:', total, '(server unread:', unreadCount, 'daily reminder slot:', extra, ')');
+    logger.debug(NotificationService_LOG, '📊 Unread notifications count:', total, '(server unread:', unreadCount, 'daily reminder slot:', extra, ')');
     return total;
   } catch (error) {
     console.error('❌ Get unread notification count error:', error);
@@ -640,12 +642,12 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
 
 export const setupNotificationListener = (callback: (notification: any) => void) => {
   if (!isNotificationsSupported() || !Notifications) {
-    console.log('🔔 Notifications not supported on this platform');
+    logger.debug(NotificationService_LOG, '🔔 Notifications not supported on this platform');
     return null;
   }
 
   if (Platform.OS === 'web') {
-    console.log('🌐 Web platform - setting up notification listener (will be ignored)');
+    logger.debug(NotificationService_LOG, '🌐 Web platform - setting up notification listener (will be ignored)');
     return null;
   }
 
@@ -655,12 +657,12 @@ export const setupNotificationListener = (callback: (notification: any) => void)
 
 export const setupNotificationResponseListener = (callback: (response: any) => void) => {
   if (!isNotificationsSupported()) {
-    console.log('🔔 Notifications not supported on this platform');
+    logger.debug(NotificationService_LOG, '🔔 Notifications not supported on this platform');
     return null;
   }
 
   if (Platform.OS === 'web') {
-    console.log('🌐 Web platform - setting up notification response listener (will be ignored)');
+    logger.debug(NotificationService_LOG, '🌐 Web platform - setting up notification response listener (will be ignored)');
     return null;
   }
 
@@ -676,7 +678,7 @@ const seenNotificationIds = new Set<string>();
 export const startNotificationListener = (userId: string) => {
   if (Platform.OS === 'web') return () => { };
 
-  console.log('🔔 Starting notification listener for user:', userId);
+  logger.debug(NotificationService_LOG, '🔔 Starting notification listener for user:', userId);
 
   // Initial load to populate seen set (so we don't notify for old stuff)
   getNotifications(userId).then(notifications => {
@@ -697,7 +699,7 @@ export const startNotificationListener = (userId: string) => {
       for (const notification of notifications) {
         if (!notification.read && !seenNotificationIds.has(notification.id)) {
           // New notification found!
-          console.log('🔔 New notification found via listener:', notification.id);
+          logger.debug(NotificationService_LOG, '🔔 New notification found via listener:', notification.id);
           seenNotificationIds.add(notification.id);
 
           // Trigger local notification
@@ -735,6 +737,6 @@ export const startNotificationListener = (userId: string) => {
       clearInterval(notificationPollingInterval);
       notificationPollingInterval = null;
     }
-    console.log('🔕 Notification listener stopped');
+    logger.debug(NotificationService_LOG, '🔕 Notification listener stopped');
   };
 };

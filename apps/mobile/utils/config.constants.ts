@@ -1,7 +1,9 @@
+import { logger } from './loggerService';
 // Minimal configuration constants file
 // This file ONLY exports constants with no logic to avoid circular dependencies
 
 // Detect environment based on domain when running on web
+const Config_constants_LOG = 'config.constants';
 const detectEnvironmentFromDomain = (): 'development' | 'production' => {
   // Check if running in browser (web)
   if (typeof window !== 'undefined' && window.location) {
@@ -9,18 +11,18 @@ const detectEnvironmentFromDomain = (): 'development' | 'production' => {
     
     // If on localhost, it's development
     if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
-      console.log('🌐 Environment detected from domain:', hostname, '→ development (localhost)');
+      logger.debug(Config_constants_LOG, '🌐 Environment detected from domain:', hostname, '→ development (localhost)');
       return 'development';
     }
     
     // If hostname contains 'dev.' it's development environment
     if (hostname.includes('dev.')) {
-      console.log('🌐 Environment detected from domain:', hostname, '→ development');
+      logger.debug(Config_constants_LOG, '🌐 Environment detected from domain:', hostname, '→ development');
       return 'development';
     }
     
     // Otherwise it's production
-    console.log('🌐 Environment detected from domain:', hostname, '→ production');
+    logger.debug(Config_constants_LOG, '🌐 Environment detected from domain:', hostname, '→ production');
     return 'production';
   }
   
@@ -43,7 +45,7 @@ const getSimpleApiUrl = (): string => {
   // Try environment variables first (highest priority - for local development)
   if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_BASE_URL) {
     const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-    console.log('🌐 Using API URL from EXPO_PUBLIC_API_BASE_URL:', envUrl);
+    logger.debug(Config_constants_LOG, '🌐 Using API URL from EXPO_PUBLIC_API_BASE_URL:', envUrl);
     return envUrl;
   }
   
@@ -54,20 +56,20 @@ const getSimpleApiUrl = (): string => {
     // If on localhost, use local server
     if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
       const localUrl = 'http://localhost:3001';
-      console.log('🌐 Using local API URL:', localUrl);
+      logger.debug(Config_constants_LOG, '🌐 Using local API URL:', localUrl);
       return localUrl;
     }
     
     // If on dev domain, use dev server
     if (hostname.includes('dev.')) {
       const devUrl = 'https://kc-mvp-server-development.up.railway.app';
-      console.log('🌐 Using dev API URL:', devUrl);
+      logger.debug(Config_constants_LOG, '🌐 Using dev API URL:', devUrl);
       return devUrl;
     }
     
     // Otherwise use production server
     const prodUrl = 'https://kc-mvp-server-production.up.railway.app';
-    console.log('🌐 Using production API URL:', prodUrl);
+    logger.debug(Config_constants_LOG, '🌐 Using production API URL:', prodUrl);
     return prodUrl;
   }
 

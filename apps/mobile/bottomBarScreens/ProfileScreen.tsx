@@ -9,6 +9,7 @@ import { useUser } from '../stores/userStore';
 import { ProfileScreenContent } from './profile/ProfileScreenContent';
 import { ProfileScreenWithTabBar } from './profile/ProfileScreenWithTabBar';
 import type { ProfileScreenRouteParams } from './profile/profileScreenTypes';
+import { logger } from '../utils/loggerService';
 
 export default function ProfileScreen(props: any) {
   const route = useRoute();
@@ -23,7 +24,7 @@ export default function ProfileScreen(props: any) {
       if (stored) {
         const parsedParams = JSON.parse(stored);
         routeParams = parsedParams;
-        console.log('👤 ProfileScreen - Restored params from localStorage:', parsedParams);
+        logger.debug('ProfileScreen', 'Restored params from localStorage', { parsedParams });
       }
     } catch (error) {
       console.warn('Failed to restore params from localStorage:', error);
@@ -57,8 +58,7 @@ export default function ProfileScreen(props: any) {
       normalizedSelectedUserId &&
       normalizedExternalUserId !== normalizedSelectedUserId);
 
-  // Debug log to help identify the issue
-  console.log('👤 ProfileScreen - Route check:', {
+  logger.debug('ProfileScreen', 'Route check', {
     externalUserId,
     propUserId,
     normalizedExternalUserId,
@@ -68,7 +68,7 @@ export default function ProfileScreen(props: any) {
     isExplicitOtherProfile,
     areEqual: normalizedExternalUserId === normalizedSelectedUserId,
     hasExternalUserId: !!externalUserId,
-    hasSelectedUser: !!selectedUser
+    hasSelectedUser: !!selectedUser,
   });
 
   // If explicitly viewing other profile but no user ID, we need to handle it in Content
@@ -82,7 +82,7 @@ export default function ProfileScreen(props: any) {
   if (isViewingOtherUser) {
     // Viewing another user's profile - not in bottom tab navigator
     // Use ProfileScreenContent directly with tabBarHeight = 0 (no hook call)
-    console.log('👤 ProfileScreen - Using ProfileScreenContent (other user)');
+    logger.debug('ProfileScreen', 'Using ProfileScreenContent (other user)');
     // Pass the params via route override or similar mechanism if ProfileScreenContent relies on useRoute
     // Actually ProfileScreenContent calls useRoute(). We should probably pass props to it.
     // Let's modify ProfileScreenContent to accept overrides.
@@ -91,6 +91,6 @@ export default function ProfileScreen(props: any) {
 
   // Viewing own profile (either no externalUserId, or externalUserId === selectedUser.id)
   // In bottom tab navigator, can use the hook
-  console.log('👤 ProfileScreen - Using ProfileScreenWithTabBar (own profile)');
+  logger.debug('ProfileScreen', 'Using ProfileScreenWithTabBar (own profile)');
   return <ProfileScreenWithTabBar />;
 }

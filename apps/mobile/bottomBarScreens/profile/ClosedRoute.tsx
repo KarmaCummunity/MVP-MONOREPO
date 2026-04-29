@@ -16,6 +16,7 @@ import OptionsModal from '../../components/Feed/OptionsModal';
 import ReportPostModal from '../../components/Feed/ReportPostModal';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
+import { logger } from '../../utils/loggerService';
 export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
@@ -64,7 +65,7 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
 
       try {
         setLoading(true);
-        console.log('📱 ClosedRoute - Loading closed content for userId:', targetUserId);
+        logger.debug('ClosedRoute', 'Loading closed content for userId', { targetUserId });
 
         const { USE_BACKEND, API_BASE_URL } = await import('../../utils/dbConfig');
         const allContent: any[] = [];
@@ -165,7 +166,7 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
                 });
               }
             });
-            console.log('📱 ClosedRoute - Loaded posts from API:', res.data.length);
+            logger.debug('ClosedRoute', 'Loaded posts from API', { count: res.data.length });
           }
         } catch (error) {
           console.error('Error loading posts from API:', error);
@@ -320,7 +321,7 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
           tasks.forEach((task: any) => {
             // Skip if already added via task posts
             if (existingTaskIds.has(task.id)) {
-              console.log(`📱 ClosedRoute - Skipping duplicate task: ${task.id}`);
+              logger.debug('ClosedRoute', 'Skipping duplicate task', { taskId: task.id });
               return;
             }
 
@@ -386,7 +387,7 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
           console.error('Error loading donations:', error);
         }
 
-        console.log('📱 ClosedRoute - Total closed content:', allContent.length);
+        logger.debug('ClosedRoute', 'Total closed content', { count: allContent.length });
         setPosts(allContent);
       } catch (error) {
         console.error('Error loading closed content:', error);

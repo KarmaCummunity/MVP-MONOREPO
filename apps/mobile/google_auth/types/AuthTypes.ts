@@ -1,3 +1,5 @@
+import { logger } from '../../utils/loggerService';
+const AuthTypes_LOG = 'AuthTypes';
 /**
  * ========================================
  * AUTHENTICATION TYPE DEFINITIONS
@@ -1130,7 +1132,7 @@ export function createNonce(nonce: string): Nonce {
  * // API requests
  * const response: ApiResponse<UserProfile> = await api.getProfile();
  * if (isSuccessResponse(response)) {
- *   console.log('Profile:', response.data);
+ *   logger.debug(AuthTypes_LOG, 'Profile:', response.data);
  * }
  * 
  * // Error handling
@@ -1143,6 +1145,6 @@ export function createNonce(nonce: string): Nonce {
  * 
  * // Event handling
  * const listener: AuthEventListener = (state, user, error) => {
- *   console.log('Auth state:', state);
+ *   logger.debug(AuthTypes_LOG, 'Auth state:', state);
  * };
  */

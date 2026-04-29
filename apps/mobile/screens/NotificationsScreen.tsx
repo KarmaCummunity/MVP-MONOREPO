@@ -41,8 +41,10 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/loggerService';
 
 const DAILY_CHALLENGE_SYNTHETIC_ID = '__daily_challenge_reminder__';
+const NS_LOG = 'NotificationsScreen';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -59,13 +61,13 @@ export default function NotificationsScreen() {
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  console.log('🔔 NotificationsScreen - Component rendered, selectedUser:', selectedUser?.name || 'null');
+  logger.debug(NS_LOG, 'Component rendered', { selectedUserName: selectedUser?.name ?? null });
 
   const loadNotifications = useCallback(async () => {
-    console.log('🔔 NotificationsScreen - loadNotifications - selectedUser:', selectedUser?.name || 'null');
+    logger.debug(NS_LOG, 'loadNotifications', { selectedUserName: selectedUser?.name ?? null });
 
     if (!selectedUser) {
-      console.log('🔔 NotificationsScreen - No selected user, cannot load notifications');
+      logger.debug(NS_LOG, 'No selected user, cannot load notifications');
       return;
     }
 
@@ -86,15 +88,15 @@ export default function NotificationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('🔔 NotificationsScreen - Screen focused, loading notifications...');
-      console.log('🔔 NotificationsScreen - selectedUser in useFocusEffect:', selectedUser?.name || 'null');
+      logger.debug(NS_LOG, 'Screen focused, loading notifications');
+      logger.debug(NS_LOG, 'selectedUser in useFocusEffect', { selectedUserName: selectedUser?.name ?? null });
       loadNotifications();
 
       // Subscribe to in-app notification events for real-time updates
       const unsubscribe = subscribeToNotificationEvents((notification) => {
         if (!selectedUser) return;
         if (notification.userId !== selectedUser.id) return;
-        console.log('🔔 NotificationsScreen - Realtime notification received');
+        logger.debug(NS_LOG, 'Realtime notification received');
         // Prepend the new notification and update unread counter
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + (notification.read ? 0 : 1));
@@ -158,11 +160,11 @@ export default function NotificationsScreen() {
   };
 
   const handleClearAllNotifications = async () => {
-    console.log('🔔 Clear all pressed');
+    logger.debug(NS_LOG, 'Clear all pressed');
     if (!selectedUser) return;
 
     if (mergedNotifications.length === 0) {
-      console.log('ℹ️ No notifications to clear');
+      logger.debug(NS_LOG, 'No notifications to clear');
       return;
     }
 

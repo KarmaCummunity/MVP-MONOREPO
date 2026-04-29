@@ -19,7 +19,7 @@ const colors = {
 };
 
 function log(message, color = colors.reset) {
-  console.log(`${color}${message}${colors.reset}`);
+  console.info(`${color}${message}${colors.reset}`);
 }
 
 async function testAuthentication() {
@@ -59,7 +59,7 @@ async function testAuthentication() {
     log(`  ❌ Error reading app.config.js: ${error.message}`, colors.red);
   }
   
-  console.log();
+  console.info();
   
   // Test 2: Check environment variables
   log('📋 Test 2: Checking environment variables...', colors.blue);
@@ -78,7 +78,7 @@ async function testAuthentication() {
     }
   });
   
-  console.log();
+  console.info();
   
   // Test 3: Check OAuth redirect route
   log('📋 Test 3: Checking OAuth redirect route...', colors.blue);
@@ -101,7 +101,7 @@ async function testAuthentication() {
     log(`  ❌ Error checking OAuth redirect route: ${error.message}`, colors.red);
   }
   
-  console.log();
+  console.info();
   
   // Test 4: Check Google login component
   log('📋 Test 4: Checking Google login component...', colors.blue);
@@ -142,7 +142,7 @@ async function testAuthentication() {
     log(`  ❌ Error checking Google login component: ${error.message}`, colors.red);
   }
   
-  console.log();
+  console.info();
   
   // Test 5: Network connectivity
   log('📋 Test 5: Testing network connectivity...', colors.blue);
@@ -183,7 +183,7 @@ async function testAuthentication() {
     log(`  ❌ Network test failed: ${error.message}`, colors.red);
   }
   
-  console.log();
+  console.info();
   
   // Summary
   log('🎯 Summary & Next Steps', colors.bold);
@@ -200,7 +200,7 @@ async function testAuthentication() {
   log('3. Test the authentication flow in your browser');
   log('4. Check the browser console and app logs for detailed debugging information');
   
-  console.log();
+  console.info();
 }
 
 // Run the tests

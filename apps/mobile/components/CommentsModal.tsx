@@ -69,12 +69,12 @@ export default function CommentsModal({
       
       const response = await postsService.getPostComments(postId, selectedUser?.id);
       
-      console.log('🔄 CommentsModal - getPostComments response:', {
+      logger.debug('CommentsModal', 'getPostComments response', {
         success: response.success,
         hasData: !!response.data,
         dataLength: response.data?.length,
         total: response.total,
-        error: response.error
+        error: response.error,
       });
       
       if (response.success && response.data) {
@@ -90,7 +90,7 @@ export default function CommentsModal({
           isOwner: apiComment.user_id === selectedUser?.id,
         }));
         
-        console.log('✅ CommentsModal - Setting comments:', commentsData.length);
+        logger.debug('CommentsModal', 'Setting comments', { count: commentsData.length });
         setComments(commentsData);
         logger.debug('CommentsModal', 'Comments loaded', { count: commentsData.length });
       } else {
@@ -135,11 +135,11 @@ export default function CommentsModal({
     try {
       const response = await postsService.addComment(postId, selectedUser.id, commentText);
       
-      console.log('🔄 CommentsModal - addComment response:', {
+      logger.debug('CommentsModal', 'addComment response', {
         success: response.success,
         hasData: !!response.data,
         data: response.data,
-        error: response.error
+        error: response.error,
       });
       
       if (response.success && response.data) {
@@ -156,13 +156,15 @@ export default function CommentsModal({
           isOwner: true,
         };
         
-        console.log('✅ CommentsModal - Adding comment to list:', newCommentData);
+        logger.debug('CommentsModal', 'Adding comment to list', { newComment: newCommentData });
         setComments(prev => [...prev, newCommentData]);
         setNewComment('');
         
         // Notify parent about comment count change
         if (onCommentsCountChange && response.data.comments_count !== undefined) {
-          console.log('📊 CommentsModal - Updating comment count:', response.data.comments_count);
+          logger.debug('CommentsModal', 'Updating comment count', {
+            comments_count: response.data.comments_count,
+          });
           onCommentsCountChange(response.data.comments_count);
         }
         

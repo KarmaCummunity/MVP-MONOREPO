@@ -19,6 +19,9 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const DiscoverPeopleScreen_LOG = 'DiscoverPeopleScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, NavigationProp, ParamListBase } from '@react-navigation/native';
 import colors from '../globals/colors';
@@ -141,7 +144,7 @@ export default function DiscoverPeopleScreen() {
   }, []);
 
   const loadUsers = useCallback(async (isRefresh = false) => {
-    console.log('📋 DiscoverPeopleScreen - loadUsers called', {
+    logger.debug(DiscoverPeopleScreen_LOG, '📋 DiscoverPeopleScreen - loadUsers called', {
       isRefresh,
       platform: Platform.OS,
       hasSelectedUser: !!selectedUser,
@@ -156,7 +159,7 @@ export default function DiscoverPeopleScreen() {
     }
     try {
       if (!selectedUser) {
-        console.log('⚠️ DiscoverPeopleScreen - No selectedUser, clearing data');
+        logger.debug(DiscoverPeopleScreen_LOG, '⚠️ DiscoverPeopleScreen - No selectedUser, clearing data');
         setSuggestions([]);
         setPopularUsers([]);
         setFollowStats({});
@@ -168,7 +171,7 @@ export default function DiscoverPeopleScreen() {
       const currentUserId = String(selectedUser.id).trim().toLowerCase();
       const currentUserEmail = selectedUser.email ? String(selectedUser.email).trim().toLowerCase() : '';
 
-      console.log('🔍 DiscoverPeopleScreen - Filtering users. Current user ID:', currentUserId, 'Email:', currentUserEmail);
+      logger.debug(DiscoverPeopleScreen_LOG, '🔍 DiscoverPeopleScreen - Filtering users. Current user ID:', currentUserId, 'Email:', currentUserEmail);
 
       let filteredSuggestions: any[] = [];
       // Get ALL users (no limit) - use high limit to get all users from database
@@ -178,7 +181,7 @@ export default function DiscoverPeopleScreen() {
         const isCurrentUser = isCurrentUserCheck(user.id, user.email, currentUserId, currentUserEmail);
 
         if (isCurrentUser) {
-          console.log('🚫 Filtered out current user from suggestions:', {
+          logger.debug(DiscoverPeopleScreen_LOG, '🚫 Filtered out current user from suggestions:', {
             userId: user.id,
             userEmail: user.email,
             name: user.name
@@ -191,7 +194,7 @@ export default function DiscoverPeopleScreen() {
       if (IS_DEVELOPMENT && filteredSuggestions.length < 30) {
         const mockCount = 30 - filteredSuggestions.length;
         const mockUsers = generateMockUsers(mockCount, currentUserId);
-        console.log(`🧪 Development mode: Adding ${mockCount} mock users for scroll testing`);
+        logger.debug(DiscoverPeopleScreen_LOG, `🧪 Development mode: Adding ${mockCount} mock users for scroll testing`);
         filteredSuggestions = [...filteredSuggestions, ...mockUsers];
       }
 
@@ -204,7 +207,7 @@ export default function DiscoverPeopleScreen() {
         const isCurrentUser = isCurrentUserCheck(user.id, user.email, currentUserId, currentUserEmail);
 
         if (isCurrentUser) {
-          console.log('🚫 Filtered out current user from popular:', {
+          logger.debug(DiscoverPeopleScreen_LOG, '🚫 Filtered out current user from popular:', {
             userId: user.id,
             userEmail: user.email,
             name: user.name
@@ -218,7 +221,7 @@ export default function DiscoverPeopleScreen() {
       if (IS_DEVELOPMENT && filteredPopular.length < 30) {
         const mockCount = 30 - filteredPopular.length;
         const mockUsers = generateMockUsers(mockCount, currentUserId);
-        console.log(`🧪 Development mode: Adding ${mockCount} mock users to popular for scroll testing`);
+        logger.debug(DiscoverPeopleScreen_LOG, `🧪 Development mode: Adding ${mockCount} mock users to popular for scroll testing`);
         filteredPopular.push(...mockUsers);
       }
 
@@ -247,7 +250,7 @@ export default function DiscoverPeopleScreen() {
       // Log total users found - ALWAYS log this, even if summary failed
       const totalUsersFound = filteredSuggestions.length + filteredPopular.length;
       const uniqueUsersCount = new Set([...filteredSuggestions.map(u => u.id), ...filteredPopular.map(u => u.id)]).size;
-      console.log('👥 DiscoverPeopleScreen - ספירת משתמשים:', {
+      logger.debug(DiscoverPeopleScreen_LOG, '👥 DiscoverPeopleScreen - ספירת משתמשים:', {
         סך_כול_יוזרים_במסד_נתונים: totalUsersInDatabase || 'לא זמין',
         המלצות: filteredSuggestions.length,
         פופולריים: filteredPopular.length,
@@ -277,7 +280,7 @@ export default function DiscoverPeopleScreen() {
 
       setFollowStats(stats);
       
-      console.log('✅ DiscoverPeopleScreen - loadUsers completed', {
+      logger.debug(DiscoverPeopleScreen_LOG, '✅ DiscoverPeopleScreen - loadUsers completed', {
         suggestionsCount: filteredSuggestions.length,
         popularCount: filteredPopular.length,
         totalUsers: filteredSuggestions.length + filteredPopular.length,
@@ -301,7 +304,7 @@ export default function DiscoverPeopleScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('👁️ DiscoverPeopleScreen - Screen focused, refreshing data...', {
+      logger.debug(DiscoverPeopleScreen_LOG, '👁️ DiscoverPeopleScreen - Screen focused, refreshing data...', {
         platform: Platform.OS,
         activeTab,
         suggestionsCount: suggestions.length,
@@ -312,7 +315,7 @@ export default function DiscoverPeopleScreen() {
   );
 
   const onRefresh = useCallback(() => {
-    console.log('🔄 DiscoverPeopleScreen - onRefresh called', {
+    logger.debug(DiscoverPeopleScreen_LOG, '🔄 DiscoverPeopleScreen - onRefresh called', {
       platform: Platform.OS,
       activeTab,
       currentSuggestionsCount: suggestions.length,
@@ -322,7 +325,7 @@ export default function DiscoverPeopleScreen() {
   }, [loadUsers, activeTab, suggestions.length, popularUsers.length]);
 
   const handleFollowToggle = async (targetUserId: string) => {
-    console.log('👆 DiscoverPeopleScreen - handleFollowToggle called', {
+    logger.debug(DiscoverPeopleScreen_LOG, '👆 DiscoverPeopleScreen - handleFollowToggle called', {
       targetUserId,
       platform: Platform.OS,
       hasSelectedUser: !!selectedUser,
@@ -360,14 +363,14 @@ export default function DiscoverPeopleScreen() {
 
         setSuggestions(prev => filterUsersWeFollow(prev));
         setPopularUsers(prev => filterUsersWeFollow(prev));
-        console.log(`🧪 Development: Mock follow toggle for ${targetUserId} - user removed from list`);
+        logger.debug(DiscoverPeopleScreen_LOG, `🧪 Development: Mock follow toggle for ${targetUserId} - user removed from list`);
       } else {
         // Unfollow - just update stats
         setFollowStats(prev => ({
           ...prev,
           [targetUserId]: { isFollowing: false }
         }));
-        console.log(`🧪 Development: Mock unfollow toggle for ${targetUserId}`);
+        logger.debug(DiscoverPeopleScreen_LOG, `🧪 Development: Mock unfollow toggle for ${targetUserId}`);
       }
       return;
     }
@@ -376,18 +379,18 @@ export default function DiscoverPeopleScreen() {
       const currentStats = followStats[targetUserId] || { isFollowing: false };
 
       if (currentStats.isFollowing) {
-        console.log('👋 DiscoverPeopleScreen - Unfollowing user', { targetUserId });
+        logger.debug(DiscoverPeopleScreen_LOG, '👋 DiscoverPeopleScreen - Unfollowing user', { targetUserId });
         const success = await unfollowUser(selectedUser.id, targetUserId);
         if (success) {
           setFollowStats(prev => ({
             ...prev,
             [targetUserId]: { isFollowing: false }
           }));
-          console.log('✅ DiscoverPeopleScreen - Unfollowed successfully', { targetUserId });
+          logger.debug(DiscoverPeopleScreen_LOG, '✅ DiscoverPeopleScreen - Unfollowed successfully', { targetUserId });
           Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
         }
       } else {
-        console.log('➕ DiscoverPeopleScreen - Following user', { targetUserId });
+        logger.debug(DiscoverPeopleScreen_LOG, '➕ DiscoverPeopleScreen - Following user', { targetUserId });
         const success = await followUser(selectedUser.id, targetUserId);
         if (success) {
           // Create updated follow stats that includes the newly followed user
@@ -413,7 +416,7 @@ export default function DiscoverPeopleScreen() {
           setSuggestions(prev => filterUsersWeFollow(prev));
           setPopularUsers(prev => filterUsersWeFollow(prev));
 
-          console.log('✅ DiscoverPeopleScreen - Followed successfully', { targetUserId });
+          logger.debug(DiscoverPeopleScreen_LOG, '✅ DiscoverPeopleScreen - Followed successfully', { targetUserId });
           Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
         }
       }
@@ -443,10 +446,10 @@ export default function DiscoverPeopleScreen() {
       let conversationId: string;
 
       if (existingConvId) {
-        console.log('💬 Conversation already exists:', existingConvId);
+        logger.debug(DiscoverPeopleScreen_LOG, '💬 Conversation already exists:', existingConvId);
         conversationId = existingConvId;
       } else {
-        console.log('💬 Creating new conversation...');
+        logger.debug(DiscoverPeopleScreen_LOG, '💬 Creating new conversation...');
         conversationId = await createConversation([selectedUser.id, targetUser.id]);
       }
 
@@ -468,7 +471,7 @@ export default function DiscoverPeopleScreen() {
     
     // Log only occasionally to avoid spam (every 10th item)
     if (Math.random() < 0.1) {
-      console.log('🎨 DiscoverPeopleScreen - renderUserItem', {
+      logger.debug(DiscoverPeopleScreen_LOG, '🎨 DiscoverPeopleScreen - renderUserItem', {
         userId: item.id,
         isCurrentUser,
         isFollowing: currentStats.isFollowing,
@@ -587,14 +590,14 @@ export default function DiscoverPeopleScreen() {
           if (Platform.OS === 'web') {
             const { height } = event.nativeEvent.layout;
             setHeaderHeight(height);
-            console.log('📏 DiscoverPeopleScreen - Header height measured', { height, platform: Platform.OS });
+            logger.debug(DiscoverPeopleScreen_LOG, '📏 DiscoverPeopleScreen - Header height measured', { height, platform: Platform.OS });
           }
         }}
       >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
-            console.log('⬅️ DiscoverPeopleScreen - Back button pressed');
+            logger.debug(DiscoverPeopleScreen_LOG, '⬅️ DiscoverPeopleScreen - Back button pressed');
             navigation.goBack();
           }}
         >
@@ -619,7 +622,7 @@ export default function DiscoverPeopleScreen() {
   // Data is already filtered in loadUsers, no need to filter again
   const currentData = activeTab === 'suggestions' ? suggestions : popularUsers;
 
-  console.log('🖼️ DiscoverPeopleScreen - Rendering', {
+  logger.debug(DiscoverPeopleScreen_LOG, '🖼️ DiscoverPeopleScreen - Rendering', {
     platform: Platform.OS,
     activeTab,
     dataCount: currentData.length,
@@ -671,7 +674,7 @@ export default function DiscoverPeopleScreen() {
           onScroll={(event) => {
             // Log scroll events occasionally to avoid spam
             if (Math.random() < 0.05) {
-              console.log('📜 DiscoverPeopleScreen - onScroll', {
+              logger.debug(DiscoverPeopleScreen_LOG, '📜 DiscoverPeopleScreen - onScroll', {
                 platform: Platform.OS,
                 contentOffset: event.nativeEvent.contentOffset.y,
                 contentSize: event.nativeEvent.contentSize.height,
@@ -680,7 +683,7 @@ export default function DiscoverPeopleScreen() {
             }
           }}
           onContentSizeChange={(contentWidth, contentHeight) => {
-            console.log('📐 DiscoverPeopleScreen - onContentSizeChange', {
+            logger.debug(DiscoverPeopleScreen_LOG, '📐 DiscoverPeopleScreen - onContentSizeChange', {
               platform: Platform.OS,
               contentWidth,
               contentHeight,
@@ -688,7 +691,7 @@ export default function DiscoverPeopleScreen() {
             });
           }}
           onLayout={(event) => {
-            console.log('📏 DiscoverPeopleScreen - FlatList onLayout', {
+            logger.debug(DiscoverPeopleScreen_LOG, '📏 DiscoverPeopleScreen - FlatList onLayout', {
               platform: Platform.OS,
               width: event.nativeEvent.layout.width,
               height: event.nativeEvent.layout.height

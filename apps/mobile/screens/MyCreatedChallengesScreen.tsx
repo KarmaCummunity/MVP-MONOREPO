@@ -14,6 +14,9 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const MyCreatedChallengesScreen_LOG = 'MyCreatedChallengesScreen';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
@@ -147,7 +150,7 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
       }
     };
 
-    console.log('🗑️ Attempting to delete challenge:', challenge.title, 'ID:', challenge.id);
+    logger.debug(MyCreatedChallengesScreen_LOG, '🗑️ Attempting to delete challenge:', challenge.title, 'ID:', challenge.id);
 
     // Alert.alert is a no-op on Web — use window.confirm instead
     if (Platform.OS === 'web') {
@@ -155,7 +158,7 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         `${t('deleteChallenge')}\n${t('deleteChallengeConfirm', { title: challenge.title })}`
       );
       if (confirmed) {
-        console.log('✅ Delete confirmed on web');
+        logger.debug(MyCreatedChallengesScreen_LOG, '✅ Delete confirmed on web');
         doDelete();
       }
     } else {
@@ -163,9 +166,9 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         t('deleteChallenge'),
         t('deleteChallengeConfirm', { title: challenge.title }),
         [
-          { text: t('common:cancel'), style: 'cancel', onPress: () => console.log('❌ Delete cancelled') },
+          { text: t('common:cancel'), style: 'cancel', onPress: () => logger.debug(MyCreatedChallengesScreen_LOG, '❌ Delete cancelled') },
           { text: t('common:delete'), style: 'destructive', onPress: () => {
-              console.log('✅ Delete confirmed on native');
+              logger.debug(MyCreatedChallengesScreen_LOG, '✅ Delete confirmed on native');
               doDelete();
             } 
           },

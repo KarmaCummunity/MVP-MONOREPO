@@ -21,6 +21,7 @@ import { charitiesStore } from '../utils/charitiesStore';
 import { donationResources } from '../utils/donationResources';
 import { useUser } from '../stores/userStore';
 import ScrollContainer from '../components/ScrollContainer';
+import { logger } from '../utils/loggerService';
 
 // Convert new charity format to old dummy format for compatibility
 const dummyCharitiesBase = charities.map((charity, index) => ({
@@ -98,10 +99,6 @@ export default function MoneyScreen({
 
   const { isRealAuth } = useUser();
   const { t } = useTranslation(['donations', 'common']);
-  // Debug log for MoneyScreen
-  // console.log('💰 MoneyScreen - Component rendered');
-  // console.log('💰 MoneyScreen - Navigation object:', navigation);
-  // console.log('💰 MoneyScreen - Navigation state:', JSON.stringify(navigation.getState(), null, 2));
   const [_selectedRecipient, setSelectedRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('50');
 
@@ -221,7 +218,7 @@ export default function MoneyScreen({
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('💰 MoneyScreen - Screen focused, refreshing data...');
+      logger.debug('MoneyScreen', 'Screen focused, refreshing data');
       // Reset form when returning to screen
       setAmount('');
       setSelectedRecipient('');
@@ -406,11 +403,11 @@ export default function MoneyScreen({
 
   // Function to handle search results from HeaderComp
   const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('💰 MoneyScreen - Search received:', {
+    logger.debug('MoneyScreen', 'Search received', {
       query,
       filters: filters || [],
       sorts: sorts || [],
-      resultsCount: results?.length || 0
+      resultsCount: results?.length || 0,
     });
 
     // Update state with search results
@@ -430,7 +427,7 @@ export default function MoneyScreen({
 
   const handleToggleMode = useCallback(() => {
     setMode(!mode);
-    console.log('Mode toggled:', !mode ? 'נזקק' : 'תורם');
+    logger.debug('MoneyScreen', 'Mode toggled', { mode: !mode ? 'נזקק' : 'תורם' });
   }, [mode]);
 
   const handleSelectMenuItem = useCallback((option: string) => {

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { logger } from './loggerService';
 
+const AuthTestUtils_LOG = 'authTestUtils';
 export interface AuthTestResult {
   test: string;
   status: 'pass' | 'fail' | 'warning';
@@ -479,15 +480,15 @@ export const runAuthDiagnostics = async (config?: any): Promise<AuthTestSuite> =
   
   // Log results
   console.group('🔐 Authentication Test Results');
-  console.log(`Platform: ${testSuite.platform}`);
-  console.log(`Timestamp: ${testSuite.timestamp}`);
-  console.log(`Summary: ${testSuite.summary.passed}/${testSuite.summary.total} passed, ${testSuite.summary.failed} failed, ${testSuite.summary.warnings} warnings`);
+  logger.debug(AuthTestUtils_LOG, `Platform: ${testSuite.platform}`);
+  logger.debug(AuthTestUtils_LOG, `Timestamp: ${testSuite.timestamp}`);
+  logger.debug(AuthTestUtils_LOG, `Summary: ${testSuite.summary.passed}/${testSuite.summary.total} passed, ${testSuite.summary.failed} failed, ${testSuite.summary.warnings} warnings`);
   
   testSuite.results.forEach(result => {
     const icon = result.status === 'pass' ? '✅' : result.status === 'fail' ? '❌' : '⚠️';
-    console.log(`${icon} ${result.test}: ${result.message}`);
+    logger.debug(AuthTestUtils_LOG, `${icon} ${result.test}: ${result.message}`);
     if (result.details) {
-      console.log('   Details:', result.details);
+      logger.debug(AuthTestUtils_LOG, '   Details:', result.details);
     }
   });
   
