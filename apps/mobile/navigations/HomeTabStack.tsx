@@ -31,6 +31,7 @@ import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
 import { HomeTabStackParamList } from '../globals/types';
+import { isMobileWeb } from '../globals/responsive';
 
 
 const Stack = createStackNavigator<HomeTabStackParamList>();
@@ -39,6 +40,7 @@ export default function HomeTabStack(): React.ReactElement {
   const { resetHomeScreenTrigger } = useUser();
   const navigation = useNavigation();
   const previousTriggerRef = useRef(resetHomeScreenTrigger);
+  const keepScreensMounted = Platform.OS === 'web' && isMobileWeb();
 
   // Listen to resetHomeScreenTrigger and reset navigation to HomeMain
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function HomeTabStack(): React.ReactElement {
     <Stack.Navigator
       id="HomeTabStack"
       initialRouteName="HomeMain"
-      detachInactiveScreens={true}
+      detachInactiveScreens={!keepScreensMounted}
       screenOptions={({ navigation, route }) => ({
         headerShown: true,
         header: () => (
@@ -146,5 +148,3 @@ export default function HomeTabStack(): React.ReactElement {
     </Stack.Navigator>
   );
 }
-
-
