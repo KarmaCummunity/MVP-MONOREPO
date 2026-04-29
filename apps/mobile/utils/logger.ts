@@ -22,28 +22,28 @@ class Logger {
     return Logger.instance;
   }
 
-  info(message: string, data?: LogData) {
+  private forward(
+    method: 'info' | 'warn' | 'error',
+    message: string,
+    data?: LogData
+  ) {
     if (data !== undefined && Object.keys(data).length > 0) {
-      appLogger.info(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
+      appLogger[method](LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
     } else {
-      appLogger.info(LOGGER_LEGACY_COMPONENT, message);
+      appLogger[method](LOGGER_LEGACY_COMPONENT, message);
     }
+  }
+
+  info(message: string, data?: LogData) {
+    this.forward('info', message, data);
   }
 
   warn(message: string, data?: LogData) {
-    if (data !== undefined && Object.keys(data).length > 0) {
-      appLogger.warn(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
-    } else {
-      appLogger.warn(LOGGER_LEGACY_COMPONENT, message);
-    }
+    this.forward('warn', message, data);
   }
 
   error(message: string, data?: LogData) {
-    if (data !== undefined && Object.keys(data).length > 0) {
-      appLogger.error(LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
-    } else {
-      appLogger.error(LOGGER_LEGACY_COMPONENT, message);
-    }
+    this.forward('error', message, data);
   }
 
   // Screen navigation logging

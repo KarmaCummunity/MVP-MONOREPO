@@ -33,6 +33,28 @@ interface LogEntry {
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
+/** Single place for level → console mapping (avoids duplicated switch in addLog). */
+const CONSOLE_EMIT: Record<'debug' | 'info' | 'warn' | 'error', (line: string) => void> = {
+  debug: (line) => {
+    console.debug(`🔍 ${line}`);
+  },
+  info: (line) => {
+    console.info(`ℹ️  ${line}`);
+  },
+  warn: (line) => {
+    console.warn(`⚠️  ${line}`);
+  },
+  error: (line) => {
+    console.error(`❌ ${line}`);
+  },
+};
+
+function formatLogEntryForExport(log: LogEntry): string {
+  const periodicTag = log.periodic ? ' [PERIODIC]' : '';
+  const dataSuffix = log.data ? ` ${JSON.stringify(log.data)}` : '';
+  return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${dataSuffix}`;
+}
+
 class LoggerService {
   private logs: LogEntry[] = [];
   private pendingLogs: LogEntry[] = [];
@@ -174,25 +196,12 @@ class LoggerService {
       this.saveLogs();
     }
 
-    // Console: log developer message only — never echo serialized payloads (Sonar S4778 / user-controlled data).
+    // Console: developer message only — no serialized payloads (Sonar / sensitive data).
     if (this.enableConsoleOutput) {
       const periodicTag = periodic ? ' [PERIODIC]' : '';
       const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
       const consoleLine = `${prefix} ${message}`;
-      switch (level) {
-        case 'debug':
-          console.debug(`🔍 ${consoleLine}`);
-          break;
-        case 'info':
-          console.info(`ℹ️  ${consoleLine}`);
-          break;
-        case 'warn':
-          console.warn(`⚠️  ${consoleLine}`);
-          break;
-        case 'error':
-          console.error(`❌ ${consoleLine}`);
-          break;
-      }
+      CONSOLE_EMIT[level](consoleLine);
     }
   }
 
@@ -265,12 +274,7 @@ class LoggerService {
   }
 
   async exportLogs(): Promise<string> {
-    return this.logs
-      .map(log => {
-        const periodicTag = log.periodic ? ' [PERIODIC]' : '';
-        return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${log.data ? ` ${JSON.stringify(log.data)}` : ''}`;
-      })
-      .join('\n');
+    return this.logs.map(formatLogEntryForExport).join('\n');
   }
 
   async clearLogs() {
@@ -329,16 +333,22 @@ class LoggerService {
 
 export const logger = new LoggerService();
 
-/** Bound component name for shorter call sites (reduces duplication vs repeating component string). */
-export function createLogger(component: string) {
-  return {
-    debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
-      logger.debug(component, message, data, options),
-    info: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
-      logger.info(component, message, data, options),
-    warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
-      logger.warn(component, message, data, options),
-    error: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
-      logger.error(component, message, data, options),
-  };
+export interface BoundLogger {
+  debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  info: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  error: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+}
+
+const BOUND_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
+
+/** Bound component name for shorter call sites (single implementation, no per-method duplication). */
+export function createLogger(component: string): BoundLogger {
+  const bound = {} as BoundLogger;
+  for (const level of BOUND_LEVELS) {
+    bound[level] = (message: string, data?: Record<string, unknown>, options?: LogOptions) => {
+      logger[level](component, message, data, options);
+    };
+  }
+  return bound;
 }
