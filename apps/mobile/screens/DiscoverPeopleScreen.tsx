@@ -44,23 +44,23 @@ import { logger } from '../utils/loggerService';
 // Helper function to generate mock users for testing scroll in development
 const generateMockUsers = (count: number, excludeId?: string): CharacterType[] => {
   const names = [
-    'שרה כהן', 'דוד לוי', 'רחל אברהם', 'יוסף יצחק', 'מרים משה',
-    'אברהם יעקב', 'חיה דוד', 'ישראל נחום', 'דינה שמעון', 'בנימין ראובן',
-    'לאה רחל', 'גד אשר', 'דן נפתלי', 'זבולון יששכר', 'יוסף בנימין',
-    'משה אהרן', 'שלמה דוד', 'יהודה יוסף', 'אפרים מנשה', 'רונן אמיר',
-    'יעל טל', 'נועה אור', 'רומי גיל', 'תמר דניאל', 'מיכל אמיר',
-    'עדי יהל', 'ליה גיא', 'שירה אדם', 'מור אורי', 'יערה רון'
+    'Sarah Cohen', 'David Levy', 'Rachel Abraham', 'Joseph Isaac', 'Miriam Moses',
+    'Abraham Jacob', 'Chaya David', 'Israel Nahum', 'Dina Simon', 'Benjamin Reuben',
+    'Leah Rachel', 'Gad Asher', 'Dan Naphtali', 'Zebulun Issachar', 'Joseph Benjamin',
+    'Moses Aaron', 'Solomon David', 'Judah Joseph', 'Ephraim Menashe', 'Ronen Amir',
+    'Yael Tal', 'Noa Or', 'Romi Gil', 'Tamar Daniel', 'Michal Amir',
+    'Adi Yahal', 'Lia Guy', 'Shira Adam', 'Mor Ori', 'Yael Ron'
   ];
 
   const bios = [
-    'אוהב לעזור לאחרים ולהתנדב בקהילה',
-    'פעיל חברתי ומוביל שינוי בחברה',
-    'מתנדב במספר ארגונים ותומך בפרויקטים קהילתיים',
-    'מחויב לשיפור החברה והסביבה',
-    'מאמין בנתינה ובעשייה למען הכלל',
-    'פעיל סביבתי ומתנדב בקהילה',
-    'עובד למען שוויון וצדק חברתי',
-    'תומך בפרויקטים קהילתיים וחברתיים'
+    'Enjoys helping others and volunteering in the community.',
+    'Social activist driving positive change.',
+    'Volunteers with multiple organizations and supports local projects.',
+    'Committed to improving society and the environment.',
+    'Believes in giving back and community action.',
+    'Environmental volunteer active in the neighborhood.',
+    'Works toward equality and social justice.',
+    'Supports community and social initiatives.'
   ];
 
   const rolesOptions = [

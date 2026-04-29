@@ -131,7 +131,10 @@
     "preferredLanguage": "שפה מועדפת",
     "preferredLanguagePlaceholder": "he / en",
     "interests": "תחומי עניין",
-    "interestsPlaceholder": "מופרד בפסיקים"
+    "interestsPlaceholder": "מופרד בפסיקים",
+    "saveSuccess": "הפרופיל נשמר בהצלחה",
+    "saveErrorGeneric": "אירעה שגיאה בשמירת הפרופיל. נסה שוב.",
+    "userNotIdentified": "משתמש לא מזוהה"
   },
   "recent": {
     "taskCompleted": "השלמת משימה: {{task}}",
@@ -204,6 +207,15 @@
   "follow": {
     "following": "עוקב",
     "follow": "עקוב"
+  },
+  "followersList": {
+    "loadUsersError": "שגיאה בטעינת המשתמשים",
+    "karmaPoints": "{{count}} נקודות קארמה",
+    "tasksCompleted": "{{count}} משימות הושלמו",
+    "emptyFollowersTitle": "אין עוקבים עדיין",
+    "emptyFollowingTitle": "לא עוקב אחרי אף אחד עדיין",
+    "emptyFollowersSubtitle": "כאשר אנשים יתחילו לעקוב אחריך, הם יופיעו כאן",
+    "emptyFollowingSubtitle": "התחל לעקוב אחרי אנשים כדי לראות את הפעילות שלהם"
   },
   "interestsSectionTitle": "תחומי עניין:",
   "joinedDatePrefix": "הצטרף ב-"
