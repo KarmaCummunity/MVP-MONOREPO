@@ -18,7 +18,6 @@ import notifications from './notifications.json';
 import postDetail from './postDetail.json';
 import profile from './profile.json';
 import quickMessage from './quickMessage.json';
-import rides from './rides.json';
 import search from './search.json';
 import settings from './settings.json';
 import trump from './trump.json';
@@ -44,7 +43,6 @@ export default {
   postDetail,
   profile,
   quickMessage,
-  rides,
   search,
   settings,
   trump,
