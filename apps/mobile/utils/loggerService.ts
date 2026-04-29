@@ -146,29 +146,6 @@ class LoggerService {
     return levels[level] >= levels[this.logLevel];
   }
 
-  /** Bounded serialization for dev console — reduces Sonar "user-controlled log" noise vs raw JSON.stringify(data). */
-  private safeSerializeForConsole(data: Record<string, unknown>): string {
-    const MAX_LEN = 200;
-    const sensitive = new Set(
-      ['password', 'token', 'authorization', 'secret', 'id_token', 'refresh_token', 'accesstoken'].map((s) =>
-        s.toLowerCase(),
-      ),
-    );
-    try {
-      return JSON.stringify(data, (key, value) => {
-        if (key && sensitive.has(String(key).toLowerCase())) {
-          return '[redacted]';
-        }
-        if (typeof value === 'string' && value.length > MAX_LEN) {
-          return `${value.slice(0, MAX_LEN)}…`;
-        }
-        return value;
-      });
-    } catch {
-      return '[unserializable]';
-    }
-  }
-
   private addLog(
     level: 'info' | 'warn' | 'error' | 'debug',
     component: string,
@@ -197,24 +174,23 @@ class LoggerService {
       this.saveLogs();
     }
 
-    // Console output only if enabled (disabled in production by default)
+    // Console: log developer message only — never echo serialized payloads (Sonar S4778 / user-controlled data).
     if (this.enableConsoleOutput) {
       const periodicTag = periodic ? ' [PERIODIC]' : '';
       const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
-      const fullMessage = data ? `${message} ${this.safeSerializeForConsole(data)}` : message;
-
+      const consoleLine = `${prefix} ${message}`;
       switch (level) {
         case 'debug':
-          console.debug(`🔍 ${prefix}`, fullMessage);
+          console.debug(`🔍 ${consoleLine}`);
           break;
         case 'info':
-          console.info(`ℹ️  ${prefix}`, fullMessage);
+          console.info(`ℹ️  ${consoleLine}`);
           break;
         case 'warn':
-          console.warn(`⚠️  ${prefix}`, fullMessage);
+          console.warn(`⚠️  ${consoleLine}`);
           break;
         case 'error':
-          console.error(`❌ ${prefix}`, fullMessage);
+          console.error(`❌ ${consoleLine}`);
           break;
       }
     }
@@ -352,3 +328,17 @@ class LoggerService {
 }
 
 export const logger = new LoggerService();
+
+/** Bound component name for shorter call sites (reduces duplication vs repeating component string). */
+export function createLogger(component: string) {
+  return {
+    debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
+      logger.debug(component, message, data, options),
+    info: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
+      logger.info(component, message, data, options),
+    warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
+      logger.warn(component, message, data, options),
+    error: (message: string, data?: Record<string, unknown>, options?: LogOptions) =>
+      logger.error(component, message, data, options),
+  };
+}

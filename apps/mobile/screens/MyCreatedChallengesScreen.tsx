@@ -14,9 +14,6 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-import { logger } from '../utils/loggerService';
-
-const MyCreatedChallengesScreen_LOG = 'MyCreatedChallengesScreen';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
@@ -28,6 +25,9 @@ import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
 import EditChallengeModal from '../components/Challenges/EditChallengeModal';
+import { createLogger } from '../utils/loggerService';
+
+const log = createLogger('MyCreatedChallengesScreen');
 
 export interface MyCreatedChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
@@ -150,7 +150,10 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
       }
     };
 
-    logger.debug(MyCreatedChallengesScreen_LOG, '🗑️ Attempting to delete challenge:', challenge.title, 'ID:', challenge.id);
+    log.debug('Attempting to delete challenge', {
+      challengeId: challenge.id,
+      titleLen: challenge.title?.length ?? 0,
+    });
 
     // Alert.alert is a no-op on Web — use window.confirm instead
     if (Platform.OS === 'web') {
@@ -158,7 +161,7 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         `${t('deleteChallenge')}\n${t('deleteChallengeConfirm', { title: challenge.title })}`
       );
       if (confirmed) {
-        logger.debug(MyCreatedChallengesScreen_LOG, '✅ Delete confirmed on web');
+        log.debug('✅ Delete confirmed on web');
         doDelete();
       }
     } else {
@@ -166,9 +169,9 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         t('deleteChallenge'),
         t('deleteChallengeConfirm', { title: challenge.title }),
         [
-          { text: t('common:cancel'), style: 'cancel', onPress: () => logger.debug(MyCreatedChallengesScreen_LOG, '❌ Delete cancelled') },
+          { text: t('common:cancel'), style: 'cancel', onPress: () => log.debug('❌ Delete cancelled') },
           { text: t('common:delete'), style: 'destructive', onPress: () => {
-              logger.debug(MyCreatedChallengesScreen_LOG, '✅ Delete confirmed on native');
+              log.debug('✅ Delete confirmed on native');
               doDelete();
             } 
           },
