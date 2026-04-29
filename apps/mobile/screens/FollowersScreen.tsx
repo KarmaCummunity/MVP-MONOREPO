@@ -30,6 +30,7 @@ import {
 } from '../src/services/follow.service';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
+import { useTranslation } from 'react-i18next';
 
 type FollowersScreenRouteParams = {
   userId: string;
@@ -42,6 +43,7 @@ export default function FollowersScreen() {
   const navigation = useNavigation();
   const { userId, type, title } = route.params as FollowersScreenRouteParams;
   const { selectedUser } = useUser();
+  const { t } = useTranslation(['profile', 'common', 'discover']);
   const [users, setUsers] = useState<CharacterType[]>([]);
   const [loading, setLoading] = useState(true);
   const [followStats, setFollowStats] = useState<Record<string, { isFollowing: boolean }>>({});
@@ -73,11 +75,11 @@ export default function FollowersScreen() {
       setFollowStats(stats);
     } catch (error) {
       logger.error('FollowersScreen', 'Error loading users', { error });
-      Alert.alert('שגיאה', 'שגיאה בטעינת המשתמשים');
+      Alert.alert(t('common:errorTitle'), t('profile:followersList.loadUsersError'));
     } finally {
       setLoading(false);
     }
-  }, [userId, type, selectedUser]);
+  }, [userId, type, selectedUser, t]);
 
   useEffect(() => {
     loadUsers();
@@ -92,7 +94,7 @@ export default function FollowersScreen() {
 
   const handleFollowToggle = async (targetUserId: string) => {
     if (!selectedUser) {
-      Alert.alert('שגיאה', 'יש להתחבר תחילה');
+      Alert.alert(t('common:errorTitle'), t('profile:alertsProfile.loginRequired'));
       return;
     }
 
@@ -106,7 +108,7 @@ export default function FollowersScreen() {
             ...prev,
             [targetUserId]: { isFollowing: false }
           }));
-          Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+          Alert.alert(t('discover:alerts.unfollowTitle'), t('discover:alerts.unfollowMessage'));
         }
       } else {
         const success = await followUser(selectedUser.id, targetUserId);
@@ -115,12 +117,12 @@ export default function FollowersScreen() {
             ...prev,
             [targetUserId]: { isFollowing: true }
           }));
-          Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
+          Alert.alert(t('discover:alerts.followTitle'), t('discover:alerts.followMessage'));
         }
       }
     } catch (error) {
-      console.error('❌ Follow toggle error:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
+      logger.error('FollowersScreen', 'Follow toggle error', { error });
+      Alert.alert(t('common:errorTitle'), t('discover:alerts.errorGeneric'));
     }
   };
 
@@ -148,10 +150,10 @@ export default function FollowersScreen() {
             </Text>
             <View style={styles.userStats}>
               <Text style={styles.statText}>
-                {item.karmaPoints} נקודות קארמה
+                {t('profile:followersList.karmaPoints', { count: item.karmaPoints })}
               </Text>
               <Text style={styles.statText}>
-                {item.completedTasks} משימות הושלמו
+                {t('profile:followersList.tasksCompleted', { count: item.completedTasks })}
               </Text>
             </View>
           </View>
@@ -169,7 +171,7 @@ export default function FollowersScreen() {
               styles.followButtonText,
               currentStats.isFollowing && styles.followingButtonText
             ]}>
-              {currentStats.isFollowing ? 'עוקב' : 'עקוב'}
+              {currentStats.isFollowing ? t('profile:follow.following') : t('profile:follow.follow')}
             </Text>
           </TouchableOpacity>
         )}
@@ -185,12 +187,12 @@ export default function FollowersScreen() {
         color={colors.textSecondary}
       />
       <Text style={styles.emptyStateTitle}>
-        {type === 'followers' ? 'אין עוקבים עדיין' : 'לא עוקב אחרי אף אחד עדיין'}
+        {type === 'followers' ? t('profile:followersList.emptyFollowersTitle') : t('profile:followersList.emptyFollowingTitle')}
       </Text>
       <Text style={styles.emptyStateSubtitle}>
         {type === 'followers'
-          ? 'כאשר אנשים יתחילו לעקוב אחריך, הם יופיעו כאן'
-          : 'התחל לעקוב אחרי אנשים כדי לראות את הפעילות שלהם'
+          ? t('profile:followersList.emptyFollowersSubtitle')
+          : t('profile:followersList.emptyFollowingSubtitle')
         }
       </Text>
     </View>

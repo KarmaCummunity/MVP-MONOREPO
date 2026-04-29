@@ -126,7 +126,10 @@
     "preferredLanguage": "Preferred language",
     "preferredLanguagePlaceholder": "he / en",
     "interests": "Interests",
-    "interestsPlaceholder": "Comma separated"
+    "interestsPlaceholder": "Comma separated",
+    "saveSuccess": "Profile saved successfully",
+    "saveErrorGeneric": "Could not save profile. Please try again.",
+    "userNotIdentified": "User not identified"
   },
   "recent": {
     "taskCompleted": "Task completed: {{task}}",
@@ -199,6 +202,15 @@
   "follow": {
     "following": "Following",
     "follow": "Follow"
+  },
+  "followersList": {
+    "loadUsersError": "Failed to load users",
+    "karmaPoints": "{{count}} karma points",
+    "tasksCompleted": "{{count}} tasks completed",
+    "emptyFollowersTitle": "No followers yet",
+    "emptyFollowingTitle": "Not following anyone yet",
+    "emptyFollowersSubtitle": "When people follow you, they will appear here",
+    "emptyFollowingSubtitle": "Follow people to see their activity"
   },
   "interestsSectionTitle": "Interests:",
   "joinedDatePrefix": "Joined on "

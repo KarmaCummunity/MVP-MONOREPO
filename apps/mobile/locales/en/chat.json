@@ -26,6 +26,20 @@
   "errors": {
     "createConversation": "Failed to create conversation on backend",
     "conversationNotFound": "Conversation not found or has no participants. Please create a new conversation.",
-    "sendMessage": "Failed to send message to backend"
-  }
+    "sendMessage": "Failed to send message to backend",
+    "sendRetry": "Could not send the message. Please try again.",
+    "uploadFileTitle": "File upload failed",
+    "uploadFileBody": "Could not upload the file. {{detail}}",
+    "corsFirebaseHint": "CORS issue — check Firebase Storage configuration.",
+    "unknown": "Unknown error",
+    "fileSendRetry": "Could not send the file. Please try again."
+  },
+  "demoFakeReplies": {
+    "1": "Thanks for the info! When can we pick it up?",
+    "2": "Could we get a photo of the couch?",
+    "3": "What are the couch dimensions?",
+    "4": "Is delivery available?"
+  },
+  "uploadingFileNamed": "Uploading {{name}}...",
+  "uploadingFile": "Uploading file..."
 }

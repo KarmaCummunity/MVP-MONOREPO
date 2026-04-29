@@ -38,6 +38,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as ExpoCrypto from 'expo-crypto';
 import { logger } from '../utils/loggerService';
 
 type ChatDetailRouteParams = {
@@ -53,7 +54,7 @@ export default function ChatDetailScreen() {
   const routeParams = route.params || {};
   const { conversationId: initialConversationId, userName: initialUserName, userAvatar: initialUserAvatar, otherUserId } = routeParams;
   const { selectedUser } = useUser();
-  const { t } = useTranslation(['chat']);
+  const { t } = useTranslation(['chat', 'common']);
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [headerHeight, setHeaderHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
@@ -125,11 +126,11 @@ export default function ChatDetailScreen() {
       }
     } catch (error) {
       logger.error('ChatDetailScreen', 'Load messages error', { error });
-      Alert.alert('שגיאה', 'שגיאה בטעינת ההודעות');
+      Alert.alert(t('common:errorTitle'), t('chat:loadError'));
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, selectedUser]);
+  }, [conversationId, selectedUser, t]);
 
   // Update state when screen comes into focus (e.g., when returning from profile)
   useFocusEffect(
@@ -183,14 +184,10 @@ export default function ChatDetailScreen() {
   }, [conversationId, selectedUser, loadMessages]);
 
   const _generateFakeResponse = async () => {
-    const responses = [
-      'תודה על המידע! מתי אפשר לבוא לקחת?',
-      'האם אפשר לקבל תמונה של הספה?',
-      'מה המידות של הספה?',
-      'האם יש אפשרות למשלוח?',
-    ];
-
-    const responseText = responses[Math.floor(Math.random() * responses.length)];
+    const rnd = new Uint8Array(1);
+    ExpoCrypto.getRandomValues(rnd);
+    const demoReplyIndex = (rnd[0] % 4) + 1;
+    const responseText = t(`chat:demoFakeReplies.${demoReplyIndex}`);
 
     try {
       await sendMessage({
@@ -265,9 +262,9 @@ export default function ChatDetailScreen() {
       setInputText(messageText);
 
       Alert.alert(
-        'שגיאה',
-        'שגיאה בשליחת ההודעה. אנא נסה שוב.',
-        [{ text: 'אישור', style: 'default' }]
+        t('common:errorTitle'),
+        t('chat:errors.sendRetry'),
+        [{ text: t('common:confirm'), style: 'default' }]
       );
     } finally {
       setIsSending(false);
@@ -289,12 +286,12 @@ export default function ChatDetailScreen() {
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
-        Alert.alert('שגיאה', validation.error || 'הקובץ אינו תקין');
+        Alert.alert(t('common:errorTitle'), validation.error || t('chat:fileInvalid'));
         return;
       }
 
       // Generate temp messageId for file path
-      const tempMessageId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempMessageId = `temp_${Date.now()}_${ExpoCrypto.randomUUID().replace(/-/g, '').slice(0, 9)}`;
 
       // Build file path in Firebase Storage
       const fullPath = buildChatFilePath(conversationId, tempMessageId, fileData.name);
@@ -320,13 +317,16 @@ export default function ChatDetailScreen() {
           fileSize: fileData.size,
           mimeType: fileData.mimeType,
         });
-        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
+        const errorMessage = uploadError?.message || uploadError?.code || t('chat:errors.unknown');
+        const detail = errorMessage.includes('CORS')
+          ? t('chat:errors.corsFirebaseHint')
+          : errorMessage;
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
         Alert.alert(
-          'שגיאה בהעלאת הקובץ',
-          `לא ניתן להעלות את הקובץ. ${errorMessage.includes('CORS') ? 'בעיית CORS - בדוק את הגדרות Firebase Storage.' : errorMessage}`
+          t('chat:errors.uploadFileTitle'),
+          t('chat:errors.uploadFileBody', { detail })
         );
         return;
       }
@@ -364,7 +364,7 @@ export default function ChatDetailScreen() {
       setShowUploadModal(false);
       setUploadingFile(null);
       setUploadProgress(0);
-      Alert.alert('שגיאה', 'שגיאה בשליחת הקובץ. אנא נסה שוב.');
+      Alert.alert(t('common:errorTitle'), t('chat:errors.fileSendRetry'));
     } finally {
       setIsSending(false);
     }
@@ -377,7 +377,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert('שגיאה', result.error);
+      Alert.alert(t('common:errorTitle'), result.error);
     }
   };
 
@@ -388,7 +388,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert('שגיאה', result.error);
+      Alert.alert(t('common:errorTitle'), result.error);
     }
   };
 
@@ -399,7 +399,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert('שגיאה', result.error);
+      Alert.alert(t('common:errorTitle'), result.error);
     }
   };
 
@@ -410,7 +410,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert('שגיאה', result.error);
+      Alert.alert(t('common:errorTitle'), result.error);
     }
   };
 
@@ -425,7 +425,7 @@ export default function ChatDetailScreen() {
   const renderLoadingIndicator = () => (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.secondary} />
-      <Text style={styles.loadingText}>טוען הודעות...</Text>
+      <Text style={styles.loadingText}>{t('chat:loadingMessages')}</Text>
     </View>
   );
 
@@ -452,7 +452,7 @@ export default function ChatDetailScreen() {
         {isSending ? (
           <ActivityIndicator size="small" color={colors.background} />
         ) : (
-          <Text style={styles.sendButtonText}>שלח</Text>
+          <Text style={styles.sendButtonText}>{t('chat:send')}</Text>
         )}
       </TouchableOpacity>
     </>
@@ -553,19 +553,19 @@ export default function ChatDetailScreen() {
         ]}>
           <TouchableOpacity style={styles.mediaOption} onPress={handleTakePhoto}>
             <Icon name="camera" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>צלם תמונה</Text>
+            <Text style={styles.mediaOptionText}>{t('chat:camera')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.mediaOption} onPress={handlePickImage}>
             <Icon name="image" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר תמונה</Text>
+            <Text style={styles.mediaOptionText}>{t('chat:pickImage')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.mediaOption} onPress={handlePickVideo}>
             <Icon name="videocam" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר סרטון</Text>
+            <Text style={styles.mediaOptionText}>{t('chat:pickVideo')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.mediaOption} onPress={handlePickDocument}>
             <Icon name="document" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר קובץ</Text>
+            <Text style={styles.mediaOptionText}>{t('chat:pickFile')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -627,7 +627,9 @@ export default function ChatDetailScreen() {
           <View style={styles.uploadModalContent}>
             <ActivityIndicator size="large" color={colors.primary} style={styles.uploadSpinner} />
             <Text style={styles.uploadText}>
-              {uploadingFile ? `מעלה ${uploadingFile.name}...` : 'מעלה קובץ...'}
+              {uploadingFile
+                ? t('chat:uploadingFileNamed', { name: uploadingFile.name })
+                : t('chat:uploadingFile')}
             </Text>
             <View style={styles.progressBarContainer}>
               <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />

@@ -120,42 +120,42 @@ export default function EditProfileScreen() {
           }
           
           // Show success message - use alert() for web, Alert.alert() for native
-          const successMessage = t('profile:edit.saveSuccess', 'הפרופיל נשמר בהצלחה');
+          const successMessage = t('profile:edit.saveSuccess');
           if (Platform.OS === 'web') {
             alert(successMessage);
           } else {
-            Alert.alert(t('common:success', 'הצלחה'), successMessage);
+            Alert.alert(t('common:success'), successMessage);
           }
           navigation.goBack();
         } else {
-          const errorMessage = response.error || t('common:genericTryAgain', 'אירעה שגיאה, נסה שוב');
+          const errorMessage = response.error || t('profile:edit.saveErrorGeneric');
           logger.error('EditProfileScreen', 'Save failed', { error: response.error, response });
           if (Platform.OS === 'web') {
-            alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMessage);
+            alert(t('common:errorTitle') + ': ' + errorMessage);
           } else {
             Alert.alert(
-              t('common:errorTitle', 'שגיאה'),
+              t('common:errorTitle'),
               errorMessage
             );
           }
         }
       } else {
-        const errorMsg = 'משתמש לא מזוהה';
+        const errorMsg = t('profile:edit.userNotIdentified');
         logger.error('EditProfileScreen', 'No user ID', { selectedUser });
         if (Platform.OS === 'web') {
-          alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMsg);
+          alert(t('common:errorTitle') + ': ' + errorMsg);
         } else {
-          Alert.alert(t('common:errorTitle', 'שגיאה'), errorMsg);
+          Alert.alert(t('common:errorTitle'), errorMsg);
         }
       }
     } catch (error) {
       logger.error('EditProfileScreen', 'Save exception', { error });
-      const errorMsg = t('common:genericTryAgain', 'אירעה שגיאה בשמירת הפרופיל, נסה שוב');
+      const errorMsg = t('profile:edit.saveErrorGeneric');
       if (Platform.OS === 'web') {
-        alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMsg);
+        alert(t('common:errorTitle') + ': ' + errorMsg);
       } else {
         Alert.alert(
-          t('common:errorTitle', 'שגיאה'),
+          t('common:errorTitle'),
           errorMsg
         );
       }

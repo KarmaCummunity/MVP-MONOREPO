@@ -61,7 +61,7 @@ interface TextAuditReport {
 const HEBREW_PATTERN = /[\u0590-\u05FF]+/;
 const STRING_LITERAL_PATTERN = /(['"`])(?:(?=(\\?))\2.)*?\1/g;
 
-// Files/directories to exclude
+// Files/directories to exclude (translation JSON lives under locales/ and is not scanned — only .ts/.tsx)
 const EXCLUDE_PATTERNS = [
   'node_modules',
   'dist',
@@ -70,11 +70,11 @@ const EXCLUDE_PATTERNS = [
   'ios',
   'android',
   'web',
-  'locales', // Don't audit the translation files themselves
-  'scripts',
+  'locales',
   '.git',
   'coverage',
-  'assets'
+  'assets',
+  'audit-reports'
 ];
 
 // Patterns to ignore (technical strings, not user-facing)
@@ -130,19 +130,22 @@ class TextAuditor {
     this.loadTranslations();
   }
 
+  /**
+   * Loads split locale files from locales/{lang}/*.json (same layout as app/i18n.ts).
+   */
   private loadTranslations(): void {
     try {
-      const hePath = path.join(this.rootDir, 'locales', 'he.json');
-      const enPath = path.join(this.rootDir, 'locales', 'en.json');
+      const heDir = path.join(this.rootDir, 'locales', 'he');
+      const enDir = path.join(this.rootDir, 'locales', 'en');
 
-      if (fs.existsSync(hePath)) {
-        this.translationsHe = JSON.parse(fs.readFileSync(hePath, 'utf-8'));
-        this.report.translationStats.totalKeysHe = this.countKeys(this.translationsHe);
+      if (fs.existsSync(heDir)) {
+        this.translationsHe = this.readLocaleDirectory(heDir);
+        this.report.translationStats.totalKeysHe = this.countKeysAllNamespaces(this.translationsHe);
       }
 
-      if (fs.existsSync(enPath)) {
-        this.translationsEn = JSON.parse(fs.readFileSync(enPath, 'utf-8'));
-        this.report.translationStats.totalKeysEn = this.countKeys(this.translationsEn);
+      if (fs.existsSync(enDir)) {
+        this.translationsEn = this.readLocaleDirectory(enDir);
+        this.report.translationStats.totalKeysEn = this.countKeysAllNamespaces(this.translationsEn);
       }
 
       console.log(`Loaded translations: ${this.report.translationStats.totalKeysHe} Hebrew keys, ${this.report.translationStats.totalKeysEn} English keys\n`);
@@ -151,11 +154,34 @@ class TextAuditor {
     }
   }
 
-  private countKeys(obj: any, prefix: string = ''): number {
+  private readLocaleDirectory(dir: string): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith('.json')) {
+        continue;
+      }
+      const ns = path.basename(file, '.json');
+      const fullPath = path.join(dir, file);
+      const raw = fs.readFileSync(fullPath, 'utf-8');
+      result[ns] = JSON.parse(raw);
+    }
+    return result;
+  }
+
+  private countKeysAllNamespaces(namespaced: Record<string, unknown>): number {
+    let total = 0;
+    for (const ns of Object.keys(namespaced)) {
+      total += this.countKeys(namespaced[ns] as Record<string, unknown>, ns);
+    }
+    return total;
+  }
+
+  private countKeys(obj: Record<string, unknown>, prefix: string): number {
     let count = 0;
-    for (const key in obj) {
-      if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-        count += this.countKeys(obj[key], prefix ? `${prefix}.${key}` : key);
+    for (const key of Object.keys(obj)) {
+      const value = obj[key];
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        count += this.countKeys(value as Record<string, unknown>, `${prefix}.${key}`);
       } else {
         count++;
       }
@@ -247,17 +273,16 @@ class TextAuditor {
 
       for (const match of matches) {
         const fullMatch = match[0];
-        const quote = match[1];
-        const content = fullMatch.slice(1, -1); // Remove quotes
+        const literalContent = fullMatch.slice(1, -1); // Remove quotes
         const column = match.index || 0;
 
         // Skip empty strings
-        if (!content.trim()) {
+        if (!literalContent.trim()) {
           continue;
         }
 
         // Skip ignored patterns
-        if (this.isIgnoredString(content)) {
+        if (this.isIgnoredString(literalContent)) {
           continue;
         }
 
@@ -265,7 +290,7 @@ class TextAuditor {
         const beforeMatch = line.substring(0, column);
         if (/t\s*\(\s*$/.test(beforeMatch)) {
           // Extract the key being used
-          const keyMatch = content.match(/^([a-z]+:[a-zA-Z.]+)$/);
+          const keyMatch = literalContent.match(/^([a-z]+:[a-zA-Z.]+)$/);
           if (keyMatch) {
             this.usedKeys.add(keyMatch[1]);
           }
@@ -273,35 +298,35 @@ class TextAuditor {
         }
 
         // Detect Hebrew text
-        if (this.containsHebrew(content)) {
+        if (this.containsHebrew(literalContent)) {
           this.addIssue({
             file: path.relative(this.rootDir, filePath),
             line: lineIndex + 1,
             column: column + 1,
             type: 'hardcoded-hebrew',
             severity: hasI18nImport ? 'high' : 'critical',
-            value: content,
+            value: literalContent,
             context: line.trim(),
             suggestion: hasI18nImport
-              ? `Replace "${content}" with {t('${this.suggestKey(content)}')}`
-              : `Import useTranslation and replace "${content}" with {t('key')}`,
-            suggestedKey: this.suggestKey(content)
+              ? `Replace "${literalContent}" with {t('${this.suggestKey(literalContent)}')}`
+              : `Import useTranslation and replace "${literalContent}" with {t('key')}`,
+            suggestedKey: this.suggestKey(literalContent)
           });
         }
         // Detect English text (only if it looks like user-facing text)
-        else if (content.length > 2 && /[a-zA-Z]/.test(content) && /\s/.test(content)) {
+        else if (literalContent.length > 2 && /[a-zA-Z]/.test(literalContent) && /\s/.test(literalContent)) {
           this.addIssue({
             file: path.relative(this.rootDir, filePath),
             line: lineIndex + 1,
             column: column + 1,
             type: 'hardcoded-english',
             severity: 'medium',
-            value: content,
+            value: literalContent,
             context: line.trim(),
             suggestion: hasI18nImport
-              ? `Replace "${content}" with {t('${this.suggestKey(content)}')}`
-              : `Import useTranslation and replace "${content}" with {t('key')}`,
-            suggestedKey: this.suggestKey(content)
+              ? `Replace "${literalContent}" with {t('${this.suggestKey(literalContent)}')}`
+              : `Import useTranslation and replace "${literalContent}" with {t('key')}`,
+            suggestedKey: this.suggestKey(literalContent)
           });
         }
       }
