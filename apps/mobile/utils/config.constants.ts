@@ -38,9 +38,9 @@ export const IS_DEVELOPMENT = projectEnv === 'development';
 export const IS_PRODUCTION = projectEnv === 'production';
 export const CURRENT_ENVIRONMENT = projectEnv;
 
-/** Hosted development API on Railway. Override with EXPO_PUBLIC_API_BASE_URL for local or other backends. */
+/** Hosted development API (Nest). KC-MVP hostname is web/nginx only — use KC-server URL for API. */
 export const DEV_HOSTED_API_BASE_URL =
-  'https://prodmain-devdev-kc-mvp-dev2.up.railway.app';
+  'https://prodmain-devdev-kc-server-dev2.up.railway.app';
 
 // Simple API URL resolution - evaluated at runtime for web
 const getSimpleApiUrl = (): string => {
