@@ -33,6 +33,9 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
+import { logger } from './loggerService';
+
+const AuthService_LOG = 'authService';
 
 let authInstance: any = null;
 
@@ -50,7 +53,7 @@ export const getAuthInstance = () => {
     } else {
       // React Native: Firebase automatically uses AsyncStorage
       // No need to set persistence explicitly - it's the default
-      console.log('🔥 Firebase Auth - Using native AsyncStorage persistence (default)');
+      logger.debug(AuthService_LOG, '🔥 Firebase Auth - Using native AsyncStorage persistence (default)');
     }
   }
   

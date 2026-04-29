@@ -33,6 +33,9 @@ import { UserPreview as CharacterType } from '../globals/types';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
+import { logger } from '../utils/loggerService';
+
+const NEW_CHAT_LOG = 'NewChatScreen';
 
 type FilterType = 'all' | 'online' | 'highKarma' | 'recentFollowers';
 type SortType = 'name' | 'karma' | 'followers' | 'recent';
@@ -87,7 +90,7 @@ export default function NewChatScreen() {
           friendId === '';
 
         if (isCurrentUser) {
-          console.log('🚫 NewChatScreen - Filtered out current user:', { friendId, friendEmail, name: friend.name });
+          logger.debug(NEW_CHAT_LOG, 'Filtered out current user', { friendId, friendEmail, name: friend.name });
         }
 
         return !isCurrentUser;
@@ -110,7 +113,7 @@ export default function NewChatScreen() {
             friendId === '';
 
           if (isCurrentUser) {
-            console.log('🚫 NewChatScreen - Filtered out current user from suggestions:', { friendId, friendEmail, name: friend.name });
+            logger.debug(NEW_CHAT_LOG, 'Filtered out current user from suggestions', { friendId, friendEmail, name: friend.name });
           }
 
           return !isCurrentUser;
@@ -144,7 +147,7 @@ export default function NewChatScreen() {
         friendId === '';
 
       if (isCurrentUser) {
-        console.log('🚫 NewChatScreen - Filtered out current user in applyFilters:', { friendId, friendEmail, name: friend.name });
+        logger.debug(NEW_CHAT_LOG, 'Filtered out current user in applyFilters', { friendId, friendEmail, name: friend.name });
       }
 
       return !isCurrentUser;
@@ -216,10 +219,10 @@ export default function NewChatScreen() {
       let conversationId: string;
 
       if (existingConvId) {
-        console.log('💬 Conversation already exists:', existingConvId);
+        logger.debug(NEW_CHAT_LOG, 'Conversation already exists', { conversationId: existingConvId });
         conversationId = existingConvId;
       } else {
-        console.log('💬 Creating new conversation...');
+        logger.debug(NEW_CHAT_LOG, 'Creating new conversation');
         conversationId = await createConversation([selectedUser.id, friend.id]);
 
         const welcomeMessage = {
@@ -233,7 +236,7 @@ export default function NewChatScreen() {
         };
 
         await sendMessage(welcomeMessage);
-        console.log('💬 Sent welcome message');
+        logger.debug(NEW_CHAT_LOG, 'Sent welcome message');
       }
 
       (navigation as any).navigate('ChatDetailScreen', {
@@ -262,7 +265,7 @@ export default function NewChatScreen() {
       itemId === '';
 
     if (isCurrentUser) {
-      console.log('🚫 NewChatScreen - renderFriend: Skipping current user:', { itemId, itemEmail, name: item.name });
+      logger.debug(NEW_CHAT_LOG, 'renderFriend: Skipping current user', { itemId, itemEmail, name: item.name });
       return null;
     }
 

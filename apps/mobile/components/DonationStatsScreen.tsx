@@ -41,6 +41,7 @@ const charities: any[] = [{
 import { TouchableOpacity } from "react-native";
 import colors from "../globals/colors";
 import { useTranslation } from "react-i18next";
+import { logger } from "../utils/loggerService";
 
 // Get the dimensions of the device window for responsive sizing
 const { width, height } = Dimensions.get("window");
@@ -91,7 +92,7 @@ const isOverlapping = (
 };
 
 const generateStatsLayout = () => {
-  console.log("Generating donation stats bubbles...");
+  logger.debug('DonationStatsScreen', 'Generating donation stats bubbles');
   const bubbles: any[] = [];
   let attempts = 0;
   const maxAttempts = 3000;
@@ -167,7 +168,7 @@ const generateStatsLayout = () => {
     }
   }
 
-  console.log(`Generated ${bubbles.length} bubbles total`);
+  logger.debug('DonationStatsScreen', 'Generated stats bubbles', { count: bubbles.length });
   return bubbles;
 };
 

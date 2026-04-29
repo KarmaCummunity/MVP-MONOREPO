@@ -125,8 +125,6 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     }, [route.name])
   );
 
-  ////console.log('🔝 TopBarNavigator - hideTopBar prop:', hideTopBar);
-
   const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
 
   React.useEffect(() => {
@@ -136,17 +134,10 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
 
   const animatedStyle = useAnimatedStyle(() => {
-    //console.log('🔝 TopBarNavigator - translateY value:', translateY.value);
     return {
       transform: [{ translateY: translateY.value }],
     };
   });
-
-  // Debug logs
-  //console.log('🔍 TopBarNavigator - Current route name:', route.name);
-  //console.log('🔍 TopBarNavigator - Route params:', route.params);
-  //console.log('🔍 TopBarNavigator - Route key:', route.key);
-  //console.log('🔍 TopBarNavigator - Full route object:', JSON.stringify(route, null, 2));
 
   // Map route names to titles using translations
   const routeTitles: Record<string, string> = {

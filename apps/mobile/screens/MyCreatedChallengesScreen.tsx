@@ -25,6 +25,9 @@ import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
 import EditChallengeModal from '../components/Challenges/EditChallengeModal';
+import { createLogger } from '../utils/loggerService';
+
+const log = createLogger('MyCreatedChallengesScreen');
 
 export interface MyCreatedChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
@@ -147,7 +150,10 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
       }
     };
 
-    console.log('🗑️ Attempting to delete challenge:', challenge.title, 'ID:', challenge.id);
+    log.debug('Attempting to delete challenge', {
+      challengeId: challenge.id,
+      titleLen: challenge.title?.length ?? 0,
+    });
 
     // Alert.alert is a no-op on Web — use window.confirm instead
     if (Platform.OS === 'web') {
@@ -155,7 +161,7 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         `${t('deleteChallenge')}\n${t('deleteChallengeConfirm', { title: challenge.title })}`
       );
       if (confirmed) {
-        console.log('✅ Delete confirmed on web');
+        log.debug('✅ Delete confirmed on web');
         doDelete();
       }
     } else {
@@ -163,9 +169,9 @@ export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChall
         t('deleteChallenge'),
         t('deleteChallengeConfirm', { title: challenge.title }),
         [
-          { text: t('common:cancel'), style: 'cancel', onPress: () => console.log('❌ Delete cancelled') },
+          { text: t('common:cancel'), style: 'cancel', onPress: () => log.debug('❌ Delete cancelled') },
           { text: t('common:delete'), style: 'destructive', onPress: () => {
-              console.log('✅ Delete confirmed on native');
+              log.debug('✅ Delete confirmed on native');
               doDelete();
             } 
           },

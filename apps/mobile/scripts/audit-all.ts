@@ -74,9 +74,9 @@ class MasterAuditor {
   }
 
   private printHeader(title: string): void {
-    console.log('\n' + '='.repeat(70));
-    console.log(title.toUpperCase().padStart((70 + title.length) / 2));
-    console.log('='.repeat(70) + '\n');
+    console.info('\n' + '='.repeat(70));
+    console.info(title.toUpperCase().padStart((70 + title.length) / 2));
+    console.info('='.repeat(70) + '\n');
   }
 
   /**
@@ -109,15 +109,15 @@ class MasterAuditor {
 
   public async runAllAudits(): Promise<MasterReport> {
     const stepTotal = 6;
-    console.log('\n🚀 Starting comprehensive codebase audit...\n');
-    console.log('This will scan all TypeScript/TSX files for:');
-    console.log('  • Hardcoded colors');
-    console.log('  • Hardcoded texts (i18n issues)');
-    console.log('  • Magic numbers and constants');
-    console.log('  • Responsive design issues');
-    console.log('  • Unused / duplicate files');
-    console.log('  • Project structure & naming\n');
-    console.log('This may take a few minutes...\n');
+    console.info('\n🚀 Starting comprehensive codebase audit...\n');
+    console.info('This will scan all TypeScript/TSX files for:');
+    console.info('  • Hardcoded colors');
+    console.info('  • Hardcoded texts (i18n issues)');
+    console.info('  • Magic numbers and constants');
+    console.info('  • Responsive design issues');
+    console.info('  • Unused / duplicate files');
+    console.info('  • Project structure & naming\n');
+    console.info('This may take a few minutes...\n');
 
     // Run all audits
     this.printHeader(`1/${stepTotal}: Colors Audit`);
@@ -367,38 +367,38 @@ class MasterAuditor {
     const markdown = this.generateMarkdownSummary(report);
     fs.writeFileSync(mdPath, markdown);
 
-    console.log('\n📊 Master reports saved:');
-    console.log(`   - ${jsonPath}`);
-    console.log(`   - ${mdPath}\n`);
+    console.info('\n📊 Master reports saved:');
+    console.info(`   - ${jsonPath}`);
+    console.info(`   - ${mdPath}\n`);
   }
 
   public printFinalSummary(report: MasterReport): void {
-    console.log('\n' + '='.repeat(70));
-    console.log('FINAL AUDIT SUMMARY'.padStart(45));
-    console.log('='.repeat(70) + '\n');
+    console.info('\n' + '='.repeat(70));
+    console.info('FINAL AUDIT SUMMARY'.padStart(45));
+    console.info('='.repeat(70) + '\n');
 
-    console.log(`📁 Files scanned (max across audits): ${report.summary.filesScanned}`);
-    console.log(`⚠️  Distinct files with ≥1 issue: ${report.summary.filesWithIssues}`);
-    console.log(`🔍 Total issues found: ${report.summary.totalIssues}\n`);
+    console.info(`📁 Files scanned (max across audits): ${report.summary.filesScanned}`);
+    console.info(`⚠️  Distinct files with ≥1 issue: ${report.summary.filesWithIssues}`);
+    console.info(`🔍 Total issues found: ${report.summary.totalIssues}\n`);
 
-    console.log('Issues breakdown:');
-    console.log(`  🔴 Critical: ${report.summary.criticalIssues}`);
-    console.log(`  🟠 High:     ${report.summary.highIssues}`);
-    console.log(`  🟡 Medium:   ${report.summary.mediumIssues}`);
-    console.log(`  🟢 Low:      ${report.summary.lowIssues}\n`);
+    console.info('Issues breakdown:');
+    console.info(`  🔴 Critical: ${report.summary.criticalIssues}`);
+    console.info(`  🟠 High:     ${report.summary.highIssues}`);
+    console.info(`  🟡 Medium:   ${report.summary.mediumIssues}`);
+    console.info(`  🟢 Low:      ${report.summary.lowIssues}\n`);
 
-    console.log('By category:');
-    console.log(`  🎨 Colors:     ${report.colors.totalIssues} issues`);
-    console.log(`  📝 Texts:      ${report.texts.totalIssues} issues`);
-    console.log(`  🔢 Constants:  ${report.constants.totalIssues} issues`);
-    console.log(`  📱 Responsive: ${report.responsive.totalIssues} issues`);
-    console.log(`  🗑️  Unused:     ${report.unusedFiles.issues.length} files`);
-    console.log(`  🏗️  Structure:  ${report.structure.totalIssues} issues\n`);
+    console.info('By category:');
+    console.info(`  🎨 Colors:     ${report.colors.totalIssues} issues`);
+    console.info(`  📝 Texts:      ${report.texts.totalIssues} issues`);
+    console.info(`  🔢 Constants:  ${report.constants.totalIssues} issues`);
+    console.info(`  📱 Responsive: ${report.responsive.totalIssues} issues`);
+    console.info(`  🗑️  Unused:     ${report.unusedFiles.issues.length} files`);
+    console.info(`  🏗️  Structure:  ${report.structure.totalIssues} issues\n`);
 
-    console.log('📊 Detailed reports saved in: audit-reports/');
-    console.log('📄 Read summary.md for action plan\n');
+    console.info('📊 Detailed reports saved in: audit-reports/');
+    console.info('📄 Read summary.md for action plan\n');
 
-    console.log('='.repeat(70) + '\n');
+    console.info('='.repeat(70) + '\n');
   }
 }
 
@@ -418,7 +418,7 @@ if (require.main === module) {
         process.exit(1);
       }
 
-      console.log('\n✅ Audit passed! No issues found.\n');
+      console.info('\n✅ Audit passed! No issues found.\n');
       process.exit(0);
     })
     .catch(error => {

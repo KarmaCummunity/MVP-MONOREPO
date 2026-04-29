@@ -24,6 +24,9 @@ import {
   Dimensions,
   Modal,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import ChatMessageBubble from '../components/ChatMessageBubble';
@@ -329,7 +332,7 @@ export default function ChatDetailScreen() {
         fileData: updatedFileData,
       }, [selectedUser.id, otherUserId]);
 
-      console.log('✅ File message sent');
+      logger.debug(ChatDetailScreen_LOG, '✅ File message sent');
 
       // Reload messages to show the new message
       await loadMessages();

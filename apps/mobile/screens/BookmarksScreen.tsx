@@ -12,7 +12,7 @@
 // TODO: Add bookmark categories and filtering functionality
 // TODO: Implement proper offline support with cache management
 // TODO: Add comprehensive accessibility support
-// TODO: Replace console.log with proper logging service
+// TODO: Add proper logging (uses central logger in implementation)
 // TODO: Add unit tests for all bookmark operations
 // TODO: Implement proper image loading and caching for bookmark thumbnails
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,6 +27,9 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const BookmarksScreen_LOG = 'BookmarksScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
@@ -74,7 +77,7 @@ export default function BookmarksScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
+      logger.debug(BookmarksScreen_LOG, '🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
       loadBookmarks();
       // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
@@ -102,7 +105,7 @@ export default function BookmarksScreen() {
             try {
               await removeBookmark(selectedUser.id, bookmark.postId);
               setBookmarks(prev => prev.filter(b => b.id !== bookmark.id));
-              console.log('✅ Bookmark removed');
+              logger.debug(BookmarksScreen_LOG, '✅ Bookmark removed');
             } catch (error) {
               console.error('❌ Remove bookmark error:', error);
               Alert.alert(t('common:errorTitle'), t('bookmarks:removeError'));
@@ -126,7 +129,7 @@ export default function BookmarksScreen() {
           style: 'destructive',
           onPress: () => {
             setBookmarks([]);
-            console.log('✅ All bookmarks cleared');
+            logger.debug(BookmarksScreen_LOG, '✅ All bookmarks cleared');
           }
         }
       ]

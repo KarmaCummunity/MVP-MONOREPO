@@ -1058,7 +1058,7 @@ export function isPaginatedResponse<T>(response: BaseApiResponse<T[]>): response
  * // Type-safe API call
  * const response: UserProfileResponse = await api.getCurrentUser();
  * if (isSuccessResponse(response)) {
- *   console.log('User name:', response.data.name);
+ *   // logger.debug('ApiTypes', 'User name loaded');
  * }
  * 
  * // Create donation with validation

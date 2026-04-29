@@ -1,3 +1,5 @@
+import { logger } from '../utils/loggerService';
+const Index_LOG = 'index';
 /**
  * ========================================
  * GOOGLE AUTHENTICATION SYSTEM - MAIN EXPORTS
@@ -122,7 +124,7 @@ export type { SecureGoogleAuthButtonProps as GoogleAuthButtonProps } from './Sec
  * 
  * useEffect(() => {
  *   initializeGoogleAuth().then(() => {
- *     console.log('Google Auth initialized');
+ *     logger.debug(Index_LOG, 'Google Auth initialized');
  *   });
  * }, []);
  * ```
@@ -165,7 +167,7 @@ export const initializeGoogleAuth = async (): Promise<{
  * ```typescript
  * const { isAuthenticated, user } = getAuthStatus();
  * if (isAuthenticated) {
- *   console.log('User logged in:', user.email);
+ *   logger.debug(Index_LOG, 'User logged in:', user.email);
  * }
  * ```
  */
@@ -214,7 +216,7 @@ export const logoutUser = async (): Promise<void> => {
  * @example
  * ```typescript
  * const health = await checkAuthHealth();
- * console.log('Auth system health:', health);
+ * logger.debug(Index_LOG, 'Auth system health:', health);
  * ```
  */
 export const checkAuthHealth = async (): Promise<{

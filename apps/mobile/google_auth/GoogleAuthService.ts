@@ -1,3 +1,4 @@
+const GoogleAuthService_LOG = 'GoogleAuthService';
 /**
  * ========================================
  * GOOGLE AUTHENTICATION SERVICE
@@ -283,7 +284,7 @@ class GoogleAuthService {
    * ```typescript
    * try {
    *   await GoogleAuthService.getInstance().initialize();
-   *   console.log('Auth service ready');
+   *   logger.debug(GoogleAuthService_LOG, 'Auth service ready');
    * } catch (error) {
    *   console.error('Failed to initialize auth service:', error);
    * }
@@ -361,7 +362,7 @@ class GoogleAuthService {
    * ```typescript
    * const result = await authService.authenticateWithGoogle(googleIdToken);
    * if (result.success) {
-   *   console.log('User authenticated:', result.data.user);
+   *   logger.debug(GoogleAuthService_LOG, 'User authenticated:', result.data.user);
    * } else {
    *   console.error('Authentication failed:', result.error);
    * }

@@ -19,6 +19,7 @@ import {
   EntryStatus,
 } from '../../globals/types';
 import colors from '../../globals/colors';
+import { logger } from '../../utils/loggerService';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -79,12 +80,13 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   const endDate = dateRange[dateRange.length - 1];
 
   if (__DEV__) {
-    console.log('[DailyHabitsQuickView] Component initialized:');
-    console.log('  todayStr:', todayStr);
-    console.log('  viewMode:', viewMode);
-    console.log('  dateRange:', dateRange);
-    console.log('  startDate:', startDate);
-    console.log('  endDate:', endDate);
+    logger.debug('DailyHabitsQuickView', 'Component initialized', {
+      todayStr,
+      viewMode,
+      dateRange,
+      startDate,
+      endDate,
+    });
   }
 
   const loadTodayData = useCallback(async () => {
@@ -98,19 +100,15 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       if (payload && Array.isArray(payload.challenges)) {
         if (__DEV__) {
           const dates = payload.entries_by_date ? Object.keys(payload.entries_by_date) : [];
-          console.log('[DailyHabitsQuickView] Data loaded:', { challenges: payload.challenges.length, dates });
-          dates.forEach(date => {
-            const dateEntries = payload.entries_by_date[date];
-            console.log(`[DailyHabitsQuickView] Entries for ${date}:`, dateEntries);
-            Object.keys(dateEntries).forEach(challengeId => {
-              const entry = dateEntries[challengeId];
-              console.log(`  Challenge ${challengeId}: value=${entry.value}, status=${entry.status}, notes=${entry.notes?.substring(0, 20) || 'none'}`);
-            });
+          logger.debug('DailyHabitsQuickView', 'Data loaded', {
+            challengeCount: payload.challenges.length,
+            dates,
+            entriesByDate: payload.entries_by_date,
           });
-          console.log('[DailyHabitsQuickView] Updating state with new data');
+          logger.debug('DailyHabitsQuickView', 'Updating state with new data');
         }
         setData({ ...payload });
-        if (__DEV__) console.log('[DailyHabitsQuickView] State updated with new object');
+        if (__DEV__) logger.debug('DailyHabitsQuickView', 'State updated with new object');
       } else {
         if (__DEV__) console.warn('[DailyHabitsQuickView] Invalid payload:', { hasPayload: !!payload, challengesIsArray: Array.isArray(payload?.challenges) });
         setData(null);
@@ -168,12 +166,23 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     setSelectedDate(date);
     setModalVisible(true);
     if (__DEV__) {
-      console.log('[DailyHabitsQuickView] ===== CELL PRESSED =====');
-      console.log('[DailyHabitsQuickView] Clicked date:', date);
-      console.log('[DailyHabitsQuickView] Today is:', todayStr);
-      console.log('[DailyHabitsQuickView] Date range:', dateRange);
-      console.log('[DailyHabitsQuickView] Opening edit:', { challengeId: challenge.id, title: challenge.title, type: challenge.type, goal_value: challenge.goal_value, goal_direction: challenge.goal_direction, date, value, notes, currentStatus });
-      console.log('[DailyHabitsQuickView] editingRef.current set to:', editingRef.current);
+      logger.debug('DailyHabitsQuickView', 'CELL PRESSED', {
+        date,
+        todayStr,
+        dateRange,
+        openingEdit: {
+          challengeId: challenge.id,
+          title: challenge.title,
+          type: challenge.type,
+          goal_value: challenge.goal_value,
+          goal_direction: challenge.goal_direction,
+          date,
+          value,
+          notes,
+          currentStatus,
+        },
+        editingRef: editingRef.current,
+      });
     }
   };
 
@@ -185,11 +194,14 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       return;
     }
     if (__DEV__) {
-      console.log('[DailyHabitsQuickView] ===== SAVING ENTRY =====');
-      console.log('[DailyHabitsQuickView] editingRef.current:', editingRef.current);
-      console.log('[DailyHabitsQuickView] selectedDate:', selectedDate);
-      console.log('[DailyHabitsQuickView] dateToSave:', dateToSave);
-      console.log('[DailyHabitsQuickView] Saving entry:', { challengeId, date: dateToSave, value, notes });
+      logger.debug('DailyHabitsQuickView', 'SAVING ENTRY', {
+        editingRef: editingRef.current,
+        selectedDate,
+        dateToSave,
+        challengeId,
+        value,
+        notes,
+      });
     }
     try {
       await db.addChallengeEntry(challengeId, {
@@ -198,12 +210,12 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
         notes,
         entry_date: dateToSave,
       });
-      if (__DEV__) console.log('[DailyHabitsQuickView] Save succeeded');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Save succeeded');
       editingRef.current = null;
       setModalVisible(false);
-      if (__DEV__) console.log('[DailyHabitsQuickView] Modal closed, refreshing data');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Modal closed, refreshing data');
       await loadTodayData();
-      if (__DEV__) console.log('[DailyHabitsQuickView] Data refreshed successfully');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Data refreshed successfully');
       try {
         const { emitDailyChallengeTrackerRefresh } = await import('../../utils/dailyChallengeReminder');
         emitDailyChallengeTrackerRefresh();

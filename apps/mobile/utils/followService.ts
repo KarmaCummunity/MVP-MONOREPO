@@ -2,7 +2,9 @@ import { sendFollowNotification } from './notificationService';
 import { db, DatabaseService } from './databaseService';
 import { apiService } from './apiService';
 import { USE_BACKEND } from './dbConfig';
+import { logger } from './loggerService';
 
+const FollowService_LOG = 'followService';
 /** Max concurrent profile fetches when hydrating follower/following lists (backend). */
 const USER_FETCH_CONCURRENCY = 8;
 
@@ -376,7 +378,7 @@ export const getFollowSuggestions = async (currentUserId: string, limit: number 
               userId === '';
 
             if (isCurrentUser) {
-              console.log('🚫 getFollowSuggestions - Filtered out current user:', { userId, userEmail, name: user.name });
+              logger.debug(FollowService_LOG, '🚫 getFollowSuggestions - Filtered out current user:', { userId, userEmail, name: user.name });
             }
 
             return !isCurrentUser;
@@ -406,7 +408,7 @@ export const getFollowSuggestions = async (currentUserId: string, limit: number 
 export const resetFollowRelationships = async (): Promise<void> => {
   try {
     await DatabaseService.clearAllData();
-    console.log('✅ All follow relationships reset');
+    logger.debug(FollowService_LOG, '✅ All follow relationships reset');
   } catch (error) {
     console.error('❌ Reset follow relationships error:', error);
   }
@@ -415,7 +417,7 @@ export const resetFollowRelationships = async (): Promise<void> => {
 export const createSampleFollowData = async (): Promise<void> => {
   try {
     // Demo data creation removed
-    console.log('ℹ️ createSampleFollowData skipped (demo removed)');
+    logger.debug(FollowService_LOG, 'ℹ️ createSampleFollowData skipped (demo removed)');
   } catch (error) {
     console.error('❌ Create sample follow data error:', error);
   }
@@ -460,7 +462,7 @@ export const getPopularUsers = async (limit: number = 10, excludeUserId?: string
               userId === '';
 
             if (isCurrentUser) {
-              console.log('🚫 getPopularUsers - Filtered out current user:', { userId, userEmail, name: user.name });
+              logger.debug(FollowService_LOG, '🚫 getPopularUsers - Filtered out current user:', { userId, userEmail, name: user.name });
             }
 
             return !isCurrentUser;
@@ -490,7 +492,7 @@ export const getPopularUsers = async (limit: number = 10, excludeUserId?: string
 
 export const debugFollowRelationships = async (): Promise<void> => {
   try {
-    console.log('ℹ️ debugFollowRelationships skipped (demo users removed)');
+    logger.debug(FollowService_LOG, 'ℹ️ debugFollowRelationships skipped (demo users removed)');
   } catch (error) {
     console.error('❌ Debug follow relationships error:', error);
   }
@@ -499,7 +501,7 @@ export const debugFollowRelationships = async (): Promise<void> => {
 
 export const comprehensiveSystemCheck = async (): Promise<void> => {
   try {
-    console.log('ℹ️ comprehensiveSystemCheck skipped (demo users removed)');
+    logger.debug(FollowService_LOG, 'ℹ️ comprehensiveSystemCheck skipped (demo users removed)');
   } catch (error) {
     console.error('❌ Comprehensive system check error:', error);
   }
@@ -523,7 +525,7 @@ export const updateFollowCounts = async (userId: string): Promise<void> => {
     };
 
     await db.updateUser(userId, userData);
-    console.log('✅ Updated follow counts for user:', userId, userData);
+    logger.debug(FollowService_LOG, '✅ Updated follow counts for user:', userId, userData);
   } catch (error) {
     console.error('❌ Update follow counts error:', error);
   }
