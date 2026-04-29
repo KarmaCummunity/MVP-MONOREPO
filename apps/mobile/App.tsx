@@ -91,6 +91,17 @@ SplashScreen.preventAutoHideAsync();
 // Web mode store initializes automatically when created (synchronous)
 // No need for early initialization - it reads from localStorage on creation
 
+
+const isMobileWebEnvironment = (): boolean => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+
+  const narrowViewport = window.innerWidth <= 1024;
+  const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
+  const touchDevice = /android|iphone|ipad|ipod|mobile/.test(ua) || navigator.maxTouchPoints > 1;
+
+  return narrowViewport || touchDevice;
+};
+
 function AppContent() {
   const { t } = useTranslation(['common']);
   const { selectedUser } = useUser();
@@ -165,6 +176,12 @@ function AppContent() {
 
         // Load navigation state after stores are ready
         try {
+          const shouldSkipPersistedState = isMobileWebEnvironment();
+          if (shouldSkipPersistedState) {
+            logger.info('App', 'Skipping navigation state restore on mobile web to prevent blank-screen loops');
+            setInitialNavigationState(undefined);
+            return;
+          }
           const { useWebModeStore } = await import('./stores/webModeStore');
           const { useUserStore } = await import('./stores/userStore');
           const mode = useWebModeStore.getState().mode;
@@ -237,7 +254,7 @@ function AppContent() {
         const type = data?.type as string | undefined;
         const conversationId = data?.conversationId as string | undefined;
 
-        if (navigationRef.current?.isReady()) {
+        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
           // Use navigation queue for deep link navigation to ensure proper sequencing
           if (type === 'message' && conversationId) {
             // Navigate to ChatDetailScreen - note that it requires full params according to RootStackParamList
@@ -477,7 +494,7 @@ function AppContent() {
     useEffect(() => {
       return () => {
         // Cleanup: save state before unmount
-        if (navigationRef.current?.isReady()) {
+        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
           const currentState = navigationRef.current.getRootState();
           if (currentState) {
             saveNavigationState(currentState, prevModeRef.current, prevUserIdRef.current);
@@ -494,6 +511,9 @@ function AppContent() {
     const handleNavigationStateChange = useCallback(
       (state: NavigationState | undefined) => {
         if (state) {
+          if (isMobileWebEnvironment()) {
+            return;
+          }
           const currentRoute = state.routes?.[state.index || 0];
           const routeName = currentRoute?.name || 'unknown';
           logger.debug('App', 'Navigation state changed, saving...', {
@@ -544,7 +564,7 @@ function AppContent() {
           }
         }}
         onReady={() => {
-          if (navigationRef.current?.isReady()) {
+          if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
             navigationQueue.initialize(navigationRef.current);
           }
         }}
