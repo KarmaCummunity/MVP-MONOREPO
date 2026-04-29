@@ -79,6 +79,17 @@ export default function ChatDetailScreen() {
   const [uploadingFile, setUploadingFile] = useState<FileData | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  /** On mobile web, programmatic scrollToEnd often blurs the composer; skip while typing. */
+  const composerFocusedRef = useRef(false);
+  const scrollAfterSendRef = useRef(false);
+  /** First auto-scroll after messages mount (per conversation); avoids skipping initial scroll when composer is focused. */
+  const initialListScrollPendingRef = useRef(true);
+
+  const scrollListToEnd = useCallback((animated: boolean) => {
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
 
   // Load user profile for the other user
   const loadUserProfile = useCallback(async () => {
@@ -187,6 +198,10 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId, selectedUser, loadMessages]);
 
+  useEffect(() => {
+    initialListScrollPendingRef.current = true;
+  }, [conversationId]);
+
   const handleSendMessage = async () => {
     if (inputText.trim() === '' || !selectedUser || isSending) return;
 
@@ -207,6 +222,7 @@ export default function ChatDetailScreen() {
 
     setMessages(prev => [...prev, tempMessage]);
     setInputText('');
+    scrollAfterSendRef.current = true;
     setIsSending(true);
 
     try {
@@ -423,6 +439,12 @@ export default function ChatDetailScreen() {
         multiline
         textAlignVertical="center"
         editable={!isSending}
+        onFocus={() => {
+          composerFocusedRef.current = true;
+        }}
+        onBlur={() => {
+          composerFocusedRef.current = false;
+        }}
       />
       <TouchableOpacity
         onPress={handleSendMessage}
@@ -496,6 +518,8 @@ export default function ChatDetailScreen() {
             data={messages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
             contentContainerStyle={[
               styles.messagesContainer,
               (() => {
@@ -509,13 +533,38 @@ export default function ChatDetailScreen() {
               })()
             ]}
             onContentSizeChange={() => {
-              // Use setTimeout to ensure scroll happens after layout
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-              }, 100);
+              const isWeb = Platform.OS === 'web';
+              const allowWhileFocused = scrollAfterSendRef.current;
+              if (isWeb) {
+                const isFirstScroll = initialListScrollPendingRef.current;
+                if (isFirstScroll) {
+                  initialListScrollPendingRef.current = false;
+                  if (allowWhileFocused) {
+                    scrollAfterSendRef.current = false;
+                  }
+                  setTimeout(() => scrollListToEnd(true), 50);
+                  return;
+                }
+                if (composerFocusedRef.current && !allowWhileFocused) {
+                  return;
+                }
+                if (allowWhileFocused) {
+                  scrollAfterSendRef.current = false;
+                }
+                setTimeout(() => scrollListToEnd(true), 50);
+                return;
+              }
+              if (allowWhileFocused) {
+                scrollAfterSendRef.current = false;
+              }
+              setTimeout(() => scrollListToEnd(true), 50);
             }}
             onLayout={() => {
-              flatListRef.current?.scrollToEnd({ animated: true });
+              // onLayout fires on every viewport/keyboard resize on mobile web; scrollToEnd there steals TextInput focus.
+              if (Platform.OS === 'web') {
+                return;
+              }
+              scrollListToEnd(true);
             }}
             showsVerticalScrollIndicator={false}
             style={styles.messagesList}
