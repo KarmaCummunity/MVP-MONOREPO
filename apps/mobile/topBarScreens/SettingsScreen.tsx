@@ -138,8 +138,8 @@ export default function SettingsScreen() {
   }, []);
 
   // Debug logs for development
-  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Rendered with isGuestMode:', isGuestMode);
-  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', Platform.OS);
+  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Rendered with isGuestMode:', { isGuestMode });
+  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
   logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen dimensions:', { width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
 
   const handleAboutPress = () => {
@@ -155,8 +155,8 @@ export default function SettingsScreen() {
  */
   const handleLogoutPress = () => {
     logger.debug(SettingsScreen_LOG, '⚙️ 14SettingsScreen - Logout pressed');
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', Platform.OS);
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - isGuestMode:', isGuestMode);
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - isGuestMode:', { isGuestMode });
 
     // Guest mode - direct logout without warning as it's not dangerous
     if (isGuestMode) {
@@ -712,11 +712,14 @@ export default function SettingsScreen() {
           }}
           onContentSizeChange={(contentWidth, contentHeight) => {
             logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Content size changed:', { contentWidth, contentHeight });
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Screen height:', SCREEN_HEIGHT);
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Should scroll:', contentHeight > SCREEN_HEIGHT);
+            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Screen height:', { screenHeight: SCREEN_HEIGHT });
+            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Should scroll:', {
+              shouldScroll: contentHeight > SCREEN_HEIGHT,
+            });
           }}
           onLayout={(event) => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - ScrollView layout:', event.nativeEvent.layout);
+            const { x, y, width, height } = event.nativeEvent.layout;
+            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - ScrollView layout:', { x, y, width, height });
           }}
           scrollEventThrottle={16}
         >
