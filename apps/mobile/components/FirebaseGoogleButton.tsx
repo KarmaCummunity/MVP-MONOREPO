@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    ...createShadowStyle('colors.black', { width: 0, height: 2 }, 0.1, 4),
+    ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.1, 4),
     elevation: 3,
     width: '100%',
   },

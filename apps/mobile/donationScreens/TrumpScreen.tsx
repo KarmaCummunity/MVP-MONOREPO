@@ -132,6 +132,8 @@ export default function TrumpScreen({
   const { width } = Dimensions.get('window');
   const isMobile = isMobileWeb();
   const SEARCH_GRID_COLUMNS = 2;
+  /** Horizontal gap between the two grid cards (must match `columnWrapper.gap` in trumpScreen.styles). */
+  const COLUMN_GAP = 12;
 
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
@@ -153,7 +155,7 @@ export default function TrumpScreen({
     ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
       const totalGaps = SEARCH_GRID_COLUMNS - 1;
-      const itemWidth = (availableWidth - totalGaps * 8) / SEARCH_GRID_COLUMNS;
+      const itemWidth = (availableWidth - totalGaps * COLUMN_GAP) / SEARCH_GRID_COLUMNS;
       return (
         <PostReelItem
           item={item}
@@ -166,7 +168,7 @@ export default function TrumpScreen({
         />
       );
     },
-    [screenPadding, width, handleMorePress, trumpData.handlePostClosed, handleFeedPostPress, noopCommentPress],
+    [screenPadding, width, COLUMN_GAP, handleMorePress, trumpData.handlePostClosed, handleFeedPostPress, noopCommentPress],
   );
 
   const renderEmptyPosts = useCallback(

@@ -60,8 +60,9 @@ export const trumpScreenStyles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 8,
   },
+  /** Matches search grid `COLUMN_GAP` in TrumpScreen — horizontal space between two cards per row. */
   columnWrapper: {
-    justifyContent: 'space-between',
+    gap: 12,
   },
   offerButton: {
     backgroundColor: colors.accent,

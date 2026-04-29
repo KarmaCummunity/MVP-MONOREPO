@@ -7,13 +7,9 @@ import { FeedItem } from '../../types/feed';
 import { usePostInteractions } from '../../hooks/usePostInteractions';
 import { useProfileNavigation } from '../../hooks/useProfileNavigation';
 import { useUser } from '../../stores/userStore';
-import DonationItemCard from './PostCard/DonationItemCard';
-import RegularItemCard from './PostCard/RegularItemCard';
-import ItemDeliveredCard from './PostCard/ItemDeliveredCard';
-import RideOfferedCard from './PostCard/RideOfferedCard';
-import RideCompletedCard from './PostCard/RideCompletedCard';
-import TaskAssignmentCard from './PostCard/TaskAssignmentCard';
-import TaskCompletionCard from './PostCard/TaskCompletionCard';
+import ItemFeedCard from './PostCard/ItemFeedCard';
+import RideCard from './PostCard/RideCard';
+import TaskFeedCard from './PostCard/TaskFeedCard';
 import CommunityChallengeFeedCard from './PostCard/CommunityChallengeFeedCard';
 import QuickMessageModal from './QuickMessageModal';
 import { logger } from '../../utils/loggerService';
@@ -327,7 +323,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.type === 'task_post' && item.subtype === 'task_completion') {
         return (
             <>
-                <TaskCompletionCard {...commonProps} />
+                <TaskFeedCard {...commonProps} variant="completion" />
                 {renderModal()}
             </>
         );
@@ -337,29 +333,19 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.type === 'task_post' || item.subtype === 'task_assignment') {
         return (
             <>
-                <TaskAssignmentCard {...commonProps} />
+                <TaskFeedCard {...commonProps} variant="assignment" />
                 {renderModal()}
             </>
         );
     }
 
-    // 3. Donation - Distinguish available vs delivered (same logic as items)
+    // 3. Donation - open vs delivered (give/request via item.intent on card)
     if (item.subtype === 'donation') {
-        // Check if donation is delivered/completed/expired/cancelled
-        const isDonationDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-        
-        if (isDonationDelivered) {
-            return (
-                <>
-                    <ItemDeliveredCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
-        
+        const isDonationDelivered =
+            item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
         return (
             <>
-                <DonationItemCard {...commonProps} />
+                <ItemFeedCard {...commonProps} cardKind="donation" isDelivered={!!isDonationDelivered} />
                 {renderModal()}
             </>
         );
@@ -375,43 +361,23 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         );
     }
 
-    // 5. Ride
+    // 5. Ride (active vs completed inside RideCard)
     if (item.subtype === 'ride') {
-        // Distinguish completed vs offered
-        if (item.status === 'completed') {
-            return (
-                <>
-                    <RideCompletedCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
         return (
             <>
-                <RideOfferedCard {...commonProps} />
+                <RideCard {...commonProps} />
                 {renderModal()}
             </>
         );
     }
 
-    // 6. Item (Regular) - Distinguish available vs delivered
-    // Check both subtype === 'item' OR if item has a price OR itemId or category (matching isPostOpen logic)
+    // 6. Item — open vs delivered; give vs request via item.intent
     if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
-        // Check if item is delivered/completed/expired/cancelled
-        const isItemDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-        
-        if (isItemDelivered) {
-            return (
-                <>
-                    <ItemDeliveredCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
-        
+        const isItemDelivered =
+            item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
         return (
             <>
-                <RegularItemCard {...commonProps} />
+                <ItemFeedCard {...commonProps} cardKind="item" isDelivered={!!isItemDelivered} />
                 {renderModal()}
             </>
         );
@@ -420,7 +386,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     // 7. Generic/Unknown Post Type
     return (
         <>
-            <RegularItemCard {...commonProps} />
+            <ItemFeedCard {...commonProps} cardKind="item" isDelivered={false} />
             {renderModal()}
         </>
     );

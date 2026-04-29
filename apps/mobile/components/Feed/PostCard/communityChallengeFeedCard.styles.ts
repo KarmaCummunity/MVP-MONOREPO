@@ -65,18 +65,11 @@ export const styles = StyleSheet.create({
         color: colors.textSecondary,
     },
     challengeBadge: {
-        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.secondary,
-        paddingHorizontal: isMobile ? 8 : 12,
-        paddingVertical: isMobile ? 3 : 6,
+        padding: isMobile ? 6 : 8,
         borderRadius: isMobile ? 16 : 20,
-        gap: isMobile ? 4 : 6,
-    },
-    challengeBadgeText: {
-        fontSize: isMobile ? 10 : FontSizes.small,
-        fontWeight: '600',
-        color: colors.white,
     },
     cardContent: { flex: 1, backgroundColor: '#F3F4F6' },
     heroImage: {

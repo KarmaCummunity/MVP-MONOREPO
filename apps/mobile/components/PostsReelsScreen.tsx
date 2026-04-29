@@ -44,9 +44,11 @@ import { isMobileWeb } from '../globals/responsive';
 const { width } = Dimensions.get('window');
 const isMobile = isMobileWeb();
 const HORIZONTAL_PADDING = isMobile ? 8 : 16; // Padding from screen edges
-const FEED_NUM_COLUMNS = 1;
+const FEED_NUM_COLUMNS = 2;
+/** Horizontal gap between the two cards in a row (FlatList columnWrapper). */
+const FEED_COLUMN_GAP = 8;
 
-// Virtualized list tuning: with numColumns=1, each feed row is one item. Low batch
+// Virtualized list tuning: each list row is FEED_NUM_COLUMNS items. Low batch
 // sizes (meant for multi-column grids) cap visible rows ~5 until scroll — looks
 // like a "only 5 posts" bug. Align with other screens (e.g. DiscoverPeopleScreen).
 const FEED_INITIAL_NUM_TO_RENDER = 10;
@@ -334,10 +336,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const renderItem = useCallback(({ item }: { item: FeedItem }) => {
     // Calculate available width: screen width minus horizontal padding on both sides
     const availableWidth = width - (HORIZONTAL_PADDING * 2);
-
-    // For grid view: calculate width with gaps between columns
-    // Using space-between in columnWrapper, so we need to account for gaps
-    const itemWidth = availableWidth / FEED_NUM_COLUMNS;
+    const gapTotal = FEED_COLUMN_GAP * (FEED_NUM_COLUMNS - 1);
+    const itemWidth = (availableWidth - gapTotal) / FEED_NUM_COLUMNS;
 
     return (
       <PostReelItem
@@ -482,7 +482,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           ListFooterComponent={renderListFooter}
           onEndReached={handleEndReached}
           onEndReachedThreshold={FEED_ON_END_REACHED_THRESHOLD}
-          // Optimization props (single-column feed; must render enough rows off-screen)
+          columnWrapperStyle={FEED_NUM_COLUMNS > 1 ? styles.listColumnWrapper : undefined}
+          // Optimization props (must render enough rows/cells off-screen)
           initialNumToRender={FEED_INITIAL_NUM_TO_RENDER}
           maxToRenderPerBatch={FEED_MAX_TO_RENDER_PER_BATCH}
           windowSize={FEED_WINDOW_SIZE}
@@ -564,6 +565,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 80, // Space for bottom bar
     paddingHorizontal: HORIZONTAL_PADDING, // Padding from screen edges
+  },
+  listColumnWrapper: {
+    gap: FEED_COLUMN_GAP,
   },
   emptyContainer: {
     flex: 1,

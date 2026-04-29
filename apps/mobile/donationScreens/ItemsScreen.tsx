@@ -147,6 +147,8 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const { width } = Dimensions.get('window');
   const isMobile = isMobileWeb();
   const SEARCH_GRID_COLUMNS = 2;
+  /** Horizontal gap between the two grid cards (must match `columnWrapper.gap` in itemsScreen.styles). */
+  const COLUMN_GAP = 12;
 
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
@@ -288,9 +290,8 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const renderPostItem = useCallback(
     ({ item }: ListRenderItemInfo<FeedItem>) => {
       const availableWidth = width - screenPadding * 2;
-      const columnGap = 8;
       const totalGaps = SEARCH_GRID_COLUMNS - 1;
-      const itemWidth = (availableWidth - totalGaps * columnGap) / SEARCH_GRID_COLUMNS;
+      const itemWidth = (availableWidth - totalGaps * COLUMN_GAP) / SEARCH_GRID_COLUMNS;
 
       return (
         <PostReelItem
@@ -304,7 +305,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         />
       );
     },
-    [screenPadding, width, handleMorePress, handlePostClosed, onFeedPostPress, onFeedCommentPress],
+    [screenPadding, width, COLUMN_GAP, handleMorePress, handlePostClosed, onFeedPostPress, onFeedCommentPress],
   );
 
   const renderEmptyPosts = useCallback(

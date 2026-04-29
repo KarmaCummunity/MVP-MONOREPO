@@ -135,7 +135,7 @@ MainNavigator (Stack)
 - `styles.tsx` — shared `StyleSheet` styles
 
 **Key reusable components (73+ total):**
-- **Feed:** `PostCard` variants (DonationItem, ItemDelivered, RideOffered, RideCompleted, TaskAssignment, TaskCompletion, Regular), `FeedHeader`, `PostReelItem`, `CommentsModal`, `EditPostModal`, `OptionsModal`, `QuickMessageModal`, `ReportPostModal`
+- **Feed:** unified `PostCard` implementations (`ItemFeedCard`, `RideCard`, `TaskFeedCard`), plus `CommunityChallengeFeedCard`, `FeedHeader`, `PostReelItem`, `CommentsModal`, `EditPostModal`, `OptionsModal`, `QuickMessageModal`, `ReportPostModal`
 - **Challenges:** `DailyHabitsQuickView`, `EditChallengeModal`, `EditEntryModal`, `HabitsStatsCard`, `HabitsTrackerTable`, `HabitsTrackerCell`, `ViewToggleButtons`
 - **Chat:** `ChatListItem`, `ChatMessageBubble`
 - **Forms/Input:** `SearchBar`, `FilterSortOptions`, `DatePicker`, `TimePicker`, `TimeInput`, `LocationSearchComp`, `AutocompleteDropdownComp`, `UserSelector`, `LanguageSelector`

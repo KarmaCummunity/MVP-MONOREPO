@@ -81,9 +81,6 @@ export function CommunityChallengeFeedCardHeader({
             >
                 <View style={styles.challengeBadge}>
                     <Ionicons name="trophy" size={16} color={colors.white} />
-                    <Text style={styles.challengeBadgeText}>
-                        {t('challenges:feedCard.badge')}
-                    </Text>
                 </View>
                 <TouchableOpacity
                     onPress={(e) =>

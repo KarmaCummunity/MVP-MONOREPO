@@ -3,7 +3,8 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';
@@ -126,11 +127,18 @@ const styles = StyleSheet.create({
     },
     toggleSelected: {
         backgroundColor: colors.white,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            },
+            default: {
+                shadowColor: colors.black,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2,
+            },
+        }),
     },
     toggleUnselected: {
         backgroundColor: 'transparent',
@@ -153,11 +161,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.border,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+            },
+            default: {
+                shadowColor: colors.black,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2,
+            },
+        }),
         position: 'relative',
     },
     filterBadge: {

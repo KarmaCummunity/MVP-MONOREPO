@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    ...createShadowStyle('colors.black', { width: 0, height: 2 }, 0.1, 4),
+    ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.1, 4),
     elevation: 3,
     width: '100%',
     marginVertical: 6,

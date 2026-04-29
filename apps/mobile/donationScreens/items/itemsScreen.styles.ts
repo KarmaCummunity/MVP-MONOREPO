@@ -39,8 +39,9 @@ export const itemsScreenStyles = StyleSheet.create({
   sectionWithScroller: { flex: 1, backgroundColor: colors.pinkLight, borderRadius: 12, borderWidth: 1, borderColor: colors.secondary, paddingVertical: 8, paddingHorizontal: 8 },
   innerScroll: { flex: 1 },
   itemsGridContainer: {},
+  /** Matches search grid `COLUMN_GAP` in ItemsScreen — horizontal space between two cards per row. */
   columnWrapper: {
-    justifyContent: 'space-between',
+    gap: 12,
   },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   emptyStateTitle: { fontSize: FontSizes.body, fontWeight: 'bold', color: colors.textPrimary, marginTop: 16, marginBottom: 8 },
