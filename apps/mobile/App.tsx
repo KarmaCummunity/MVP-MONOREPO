@@ -53,6 +53,7 @@ import { NavigationState } from '@react-navigation/native';
 import { navigationQueue } from './utils/navigationQueue';
 import { RootStackParamList } from './globals/types';
 import { linking } from './utils/linkingConfig';
+import { getActiveNavigationScreenChain } from './utils/getActiveNavigationScreenChain';
 // RTL is controlled via selected language in i18n and Settings
 
 // Initialize notifications only on supported platforms
@@ -493,17 +494,27 @@ function AppContent() {
     // Save navigation state when it changes
     const handleNavigationStateChange = useCallback(
       (state: NavigationState | undefined) => {
-        if (state) {
-          const currentRoute = state.routes?.[state.index || 0];
-          const routeName = currentRoute?.name || 'unknown';
-          logger.debug('App', 'Navigation state changed, saving...', {
-            routeName,
-            mode,
-            hasUserId: !!selectedUser?.id,
-            routesCount: state.routes?.length || 0,
-          });
-          saveNavigationState(state, mode, selectedUser?.id || null);
-        }
+        if (!state) return;
+
+        const screenChain = getActiveNavigationScreenChain(state);
+        const leafScreen = screenChain.length > 0 ? screenChain[screenChain.length - 1] : 'unknown';
+        logger.debug('App', '[NAV_SCREEN] Screen opened / focus changed', {
+          tag: 'NAV_SCREEN',
+          leafScreen,
+          screenChain,
+          mode,
+          hasUserId: !!selectedUser?.id,
+        });
+
+        const currentRoute = state.routes?.[state.index || 0];
+        const routeName = currentRoute?.name || 'unknown';
+        logger.debug('App', 'Navigation state changed, saving...', {
+          routeName,
+          mode,
+          hasUserId: !!selectedUser?.id,
+          routesCount: state.routes?.length || 0,
+        });
+        saveNavigationState(state, mode, selectedUser?.id || null);
       },
       [mode, selectedUser?.id]
     );
