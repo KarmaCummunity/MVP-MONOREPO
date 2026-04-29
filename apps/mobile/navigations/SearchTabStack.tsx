@@ -20,6 +20,7 @@ import NewChatScreen from '../screens/NewChatScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
 import SettingsScreen from '../topBarScreens/SettingsScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { SearchTabStackParamList } from '../globals/types';
@@ -51,6 +52,7 @@ export default function SearchTabStack(): React.ReactElement {
       })}
     >
       <Stack.Screen name="SearchScreen" component={SearchScreen} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="UserProfileScreen" component={UserProfileScreen} />
       <Stack.Screen name="FollowersScreen" component={FollowersScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />

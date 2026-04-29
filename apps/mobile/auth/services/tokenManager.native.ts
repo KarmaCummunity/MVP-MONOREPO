@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import * as SecureStore from '../secureStoreModule';
 
 const ACCESS_TOKEN_KEY = 'auth_access_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
@@ -9,11 +8,7 @@ class TokenManager {
   private isSecureStorageAvailable: boolean | null = null;
 
   async init() {
-    if (Platform.OS !== 'web') {
-      this.isSecureStorageAvailable = await SecureStore.isAvailableAsync();
-    } else {
-      this.isSecureStorageAvailable = false;
-    }
+    this.isSecureStorageAvailable = await SecureStore.isAvailableAsync();
   }
 
   async setTokens(accessToken: string, refreshToken: string) {

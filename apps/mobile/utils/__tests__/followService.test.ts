@@ -1,7 +1,12 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
-const mockGetFollowers = jest.fn();
-const mockGetFollowing = jest.fn();
+/** Explicit signature so `mockResolvedValue` is not inferred as `never` under strict Jest typings. */
+const mockGetFollowers = jest.fn<
+  (...args: unknown[]) => Promise<unknown[]>
+>();
+const mockGetFollowing = jest.fn<
+  (...args: unknown[]) => Promise<unknown[]>
+>();
 
 jest.mock('../notificationService', () => ({
   sendFollowNotification: jest.fn(),

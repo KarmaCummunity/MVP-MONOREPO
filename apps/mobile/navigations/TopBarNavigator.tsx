@@ -28,7 +28,7 @@ interface TopBarNavigatorProps {
 }
 
 function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: TopBarNavigatorProps) {
-  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile', 'admin']);
+  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile', 'admin', 'postDetail']);
 
   const route = useRoute();
   const { isGuestMode, isAdmin } = useUser();
@@ -182,6 +182,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     ChatDetailScreen: t('common:chat'),
     BookmarksScreen: t('common:favorites'),
     PostsReelsScreen: t('common:posts'),
+    PostDetailScreen: t('postDetail:title'),
     InactiveScreen: t('common:inactive'),
     WebViewScreen: t('common:web'),
     LoginScreen: t('auth:login'),

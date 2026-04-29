@@ -2,7 +2,7 @@
 // - Purpose: Stack navigator for the Home tab.
 // - Reached from: `BottomNavigator` -> Tab 'HomeScreen'.
 // - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route always `HomeMain` (posts feed). Authenticated `LandingSiteScreen` (marketing) is registered **only** here; unauthenticated web site mode uses root `LandingSiteScreen` in `MainNavigator`.
-// - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
+// - Screens: HomeMain (HomeScreen), PostDetail, ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
 // - `resetHomeScreenTrigger`: pops nested Home stack to root (`HomeMain`) via `StackActions.popToTop` on the stack navigator key (tab parent dispatch).
 // - External deps: react-navigation stack, TopBarNavigator wrapper.
@@ -35,6 +35,7 @@ import {
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import { HomeTabStackParamList } from '../globals/types';
 import { isMobileWeb } from '../globals/responsive';
 
@@ -146,6 +147,7 @@ export default function HomeTabStack(): React.ReactElement {
       })}
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />

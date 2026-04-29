@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
-import { NavigationProp, ParamListBase, useNavigation, useRoute } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import HeaderComp from '../components/HeaderComp';
@@ -39,7 +39,6 @@ export default function TrumpScreen({
   navigation: NavigationProp<ParamListBase>;
 }) {
   const { ToastComponent } = useToast();
-  const rootNav = useNavigation();
   const route = useRoute();
   const routeParams = route.params as { mode?: string } | undefined;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
@@ -145,9 +144,9 @@ export default function TrumpScreen({
 
   const handleFeedPostPress = useCallback(
     (feedItem: FeedItem) => {
-      navigateToPostDetail(rootNav as never, { postId: feedItem.id, initialItem: feedItem });
+      navigateToPostDetail(navigation, { postId: feedItem.id, initialItem: feedItem });
     },
-    [rootNav],
+    [navigation],
   );
   const noopCommentPress = useCallback((_feedItem: FeedItem) => {}, []);
 

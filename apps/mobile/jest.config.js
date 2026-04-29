@@ -1,4 +1,5 @@
 module.exports = {
+  displayName: '@kc/mobile',
   preset: 'react-native',
   // CI runs `npm test` at repo root; without this, Jest can hang on open handles
   // (e.g. notificationService side effects) and fail the job with timeout/non-zero exit.

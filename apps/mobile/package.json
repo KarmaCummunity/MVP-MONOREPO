@@ -65,8 +65,8 @@
     "expo-web-browser": "~14.2.0",
     "firebase": "^11.0.0",
     "i18next": "^25.3.2",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-i18next": "^15.6.1",
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.24.0",
@@ -88,8 +88,8 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "~19.0.10",
+    "@types/react-dom": "~19.0.4",
     "@types/react-native": "^0.72.8",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
@@ -103,8 +103,8 @@
     "jest-expo": "^54.0.16",
     "jest-react-native": "^18.0.0",
     "lint-staged": "^16.2.7",
-    "react-native": "^0.80.2",
-    "react-test-renderer": "19.2.4",
+    "react-native": "0.79.5",
+    "react-test-renderer": "19.0.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3",
     "zod": "^4.0.0"
@@ -122,6 +122,10 @@
     "ws": "^8.18.1",
     "ajv": "^8.18.0",
     "undici": "^6.21.1",
-    "lodash": "^4.17.23"
+    "lodash": "^4.17.23",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-test-renderer": "19.0.0",
+    "@types/react": "19.0.10"
   }
 }

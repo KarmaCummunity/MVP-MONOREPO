@@ -290,25 +290,27 @@ function RideTimeDateRecurringFields({
   );
 }
 
-function RideOfferForm({
-    destination, onDestinationChange,
-    fromLocation, onFromLocationChange,
-    useCurrentLocation, onToggleCurrentLocation,
-    detectedAddress, isLocating, isLocationError,
-    departureTime, onDepartureTimeChange,
-    immediateDeparture, onToggleImmediateDeparture,
-    leavingToday, onToggleLeavingToday,
-    rideDate, onDateChange,
-    isRecurring, onToggleRecurring,
-    recurrenceFrequency, onRecurrenceFrequencyChange,
-    recurrenceUnit, onRecurrenceUnitChange,
-    seats, onSeatsChange,
-    price, onPriceChange,
-    selectedTags: _selectedTags,
-    onToggleTag: _onToggleTag,
-    availableTags: _availableTags,
-    onSubmit, isValid, hideDestinationInput, isSubmitting = false
-}: RideOfferFormProps) {
+function RideOfferForm(props: RideOfferFormProps): React.ReactElement {
+    const {
+        destination, onDestinationChange,
+        fromLocation, onFromLocationChange,
+        useCurrentLocation, onToggleCurrentLocation,
+        detectedAddress, isLocating, isLocationError,
+        departureTime, onDepartureTimeChange,
+        immediateDeparture, onToggleImmediateDeparture,
+        leavingToday, onToggleLeavingToday,
+        rideDate, onDateChange,
+        isRecurring, onToggleRecurring,
+        recurrenceFrequency, onRecurrenceFrequencyChange,
+        recurrenceUnit, onRecurrenceUnitChange,
+        seats, onSeatsChange,
+        price, onPriceChange,
+        selectedTags: _selectedTags,
+        onToggleTag: _onToggleTag,
+        availableTags: _availableTags,
+        onSubmit, isValid, hideDestinationInput,
+        isSubmitting = false,
+    } = props;
     const { t } = useTranslation();
     const priceInputRef = useRef<TextInput>(null);
     const [needToPay, setNeedToPay] = useState(price !== '0' && price !== '');

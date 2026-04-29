@@ -25,7 +25,7 @@
  * LAST UPDATED: 2024
  */
 
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../auth/secureStoreModule';
 import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/loggerService';

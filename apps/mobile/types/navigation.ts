@@ -96,7 +96,6 @@ export const VALID_ROOT_ROUTES: string[] = [
   'LandingSiteScreen',
   'WebViewScreen',
   'PostsReelsScreen',
-  'PostDetailScreen',
   'BookmarksScreen',
   'UserProfileScreen',
   'FollowersScreen',
@@ -121,6 +120,7 @@ export const VALID_BOTTOM_TAB_ROUTES: string[] = [
 
 export const VALID_HOME_TAB_STACK_ROUTES: string[] = [
   'HomeMain',
+  'PostDetailScreen',
   'LandingSiteScreen',
   'ChatListScreen',
   'ChatDetailScreen',
@@ -138,6 +138,7 @@ export const VALID_HOME_TAB_STACK_ROUTES: string[] = [
 
 export const VALID_SEARCH_TAB_STACK_ROUTES: string[] = [
   'SearchScreen',
+  'PostDetailScreen',
   'UserProfileScreen',
   'FollowersScreen',
   'DiscoverPeopleScreen',
@@ -150,7 +151,8 @@ export const VALID_SEARCH_TAB_STACK_ROUTES: string[] = [
 ];
 
 export const VALID_PROFILE_TAB_STACK_ROUTES: string[] = [
-  'ProfileScreen',
+  'ProfileMain',
+  'PostDetailScreen',
   'SettingsScreen',
   'ChatListScreen',
   'ChatDetailScreen',
@@ -169,6 +171,7 @@ export const VALID_DONATIONS_STACK_ROUTES: string[] = [
   'ChallengeStatisticsScreen',
   'MyCreatedChallengesScreen',
   'ItemsScreen',
+  'PostDetailScreen',
   'TrumpScreen',
   'ChatListScreen',
   'ChatDetailScreen',

@@ -24,6 +24,7 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 import AboutKarmaCommunityScreen from "../topBarScreens/AboutKarmaCommunityScreen";
 import SettingsScreen from "../topBarScreens/SettingsScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
+import PostDetailScreen from "../screens/PostDetailScreen";
 import TopBarNavigator from "./TopBarNavigator";
 import { DonationsStackParamList } from "../globals/types";
 import { logger } from "../utils/loggerService";
@@ -62,6 +63,7 @@ export default function DonationsStack() {
     >
       <Stack.Screen name="DonationsScreen" component={DonationsScreen} />
       <Stack.Screen name="ItemsScreen" component={ItemsScreen} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="TrumpScreen" component={TrumpScreen} />
       <Stack.Screen name="CommunityChallengesScreen" component={CommunityChallengesScreen} />
       <Stack.Screen name="ChallengeDetailsScreen" component={ChallengeDetailsScreen} />

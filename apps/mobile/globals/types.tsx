@@ -62,6 +62,7 @@ export type DonationsStackParamList = {
   DonationsScreen: undefined;
   TrumpScreen: undefined;
   ItemsScreen: undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   CommunityChallengesScreen: { mode?: 'search' | 'offer' } | undefined;
   ChallengeDetailsScreen: { challengeId: string; openEntryForm?: boolean } | undefined;
   ChallengeStatisticsScreen: undefined;
@@ -81,6 +82,7 @@ export type DonationsStackParamList = {
 
 export type HomeTabStackParamList = {
   HomeMain: undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   LandingSiteScreen: undefined;
   ChatListScreen: undefined;
   ChatDetailScreen: ChatDetailScreenParams | undefined;
@@ -99,6 +101,7 @@ export type HomeTabStackParamList = {
 
 export type SearchTabStackParamList = {
   SearchScreen: { q?: string } | undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   UserProfileScreen: { userId?: string } | undefined;
   FollowersScreen: { userId?: string } | undefined;
   DiscoverPeopleScreen: undefined;
@@ -112,6 +115,7 @@ export type SearchTabStackParamList = {
 
 export type ProfileTabStackParamList = {
   ProfileMain: { userId?: string } | undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   SettingsScreen: undefined;
   ChatListScreen: undefined;
   ChatDetailScreen: ChatDetailScreenParams | undefined;
@@ -192,7 +196,6 @@ export type RootStackParamList = {
   InactiveScreen: undefined;
   WebViewScreen: undefined;
   PostsReelsScreen: undefined; // ADD THIS LINE - this was probably missing
-  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   BookmarksScreen: undefined;
   UserProfileScreen: {
     userId: string;

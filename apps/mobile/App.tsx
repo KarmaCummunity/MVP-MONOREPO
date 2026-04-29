@@ -21,7 +21,7 @@
 // TODO: Add crash reporting integration (Sentry, Bugsnag)
 // TODO: Remove magic numbers for padding (48px) - use constants file
 // TODO: Add proper accessibility support throughout the app
-import React, { useCallback, useEffect, useRef, useMemo, memo } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ActivityIndicator, Platform, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import * as Font from 'expo-font';
@@ -104,6 +104,142 @@ const isMobileWebEnvironment = (): boolean => {
 
 const shouldPersistNavigationState = (): boolean => !isMobileWebEnvironment();
 
+type AppNavigationRootProps = {
+  initialState: NavigationState | undefined;
+  navigationRef: React.MutableRefObject<NavigationContainerRef<RootStackParamList> | null>;
+};
+
+function AppNavigationRoot({ initialState, navigationRef }: AppNavigationRootProps) {
+  const { mode } = useWebMode();
+  const { isAuthenticated, isGuestMode, selectedUser } = useUser();
+  const prevModeRef = useRef<string>(mode);
+  const prevUserIdRef = useRef<string | null>(selectedUser?.id || null);
+
+  /**
+   * Determine if web mode toggle button should be visible
+   * Toggle is hidden for authenticated users (users who created an account)
+   * Toggle is shown for guest users and non-authenticated users
+   */
+  const shouldShowToggle = useMemo(
+    () => !(isAuthenticated && !isGuestMode && selectedUser),
+    [isAuthenticated, isGuestMode, selectedUser]
+  );
+
+  /**
+   * Add top padding in app mode to make room for toggle button
+   * Only add padding if toggle button is visible (not for authenticated users)
+   * This prevents unnecessary spacing when the toggle is hidden
+   */
+  const containerStyle = useMemo(() => ({
+    flex: 1,
+    paddingTop: Platform.OS === 'web' && shouldShowToggle ? 64 : 0 // Space for top bar
+  }), [shouldShowToggle]);
+
+  // Wrapper style for web - full width without maxWidth constraint
+  const webWrapperStyle = useMemo(() => Platform.OS === 'web' ? {
+    width: '100%' as const,
+    flex: 1,
+    backgroundColor: colors.backgroundSecondary,
+  } : {}, []);
+
+  // Navigation container key - only change when mode actually changes (not on auth state changes)
+  // This prevents unnecessary re-mounts when auth state updates
+  const navKey = useMemo(() => `nav-${mode}`, [mode]);
+
+  // Save navigation state before unmount (when mode or user changes)
+  useEffect(() => {
+    return () => {
+      // Cleanup: save state before unmount
+      if (navigationRef.current?.isReady() && shouldPersistNavigationState()) {
+        const currentState = navigationRef.current.getRootState();
+        if (currentState) {
+          saveNavigationState(currentState, prevModeRef.current, prevUserIdRef.current);
+          logger.debug('App', 'Navigation state saved before unmount', {
+            mode: prevModeRef.current,
+            hasUserId: !!prevUserIdRef.current,
+          });
+        }
+      }
+    };
+  }, [navigationRef]);
+
+  // Save navigation state when it changes
+  const handleNavigationStateChange = useCallback(
+    (state: NavigationState | undefined) => {
+      if (state) {
+        if (!shouldPersistNavigationState()) {
+          return;
+        }
+        const currentRoute = state.routes?.[state.index || 0];
+        const routeName = currentRoute?.name || 'unknown';
+        logger.debug('App', 'Navigation state changed, saving...', {
+          routeName,
+          mode,
+          hasUserId: !!selectedUser?.id,
+          routesCount: state.routes?.length || 0,
+        });
+        saveNavigationState(state, mode, selectedUser?.id || null);
+      }
+    },
+    [mode, selectedUser?.id]
+  );
+
+  // Initialize navigation queue with ref when container is ready
+  useEffect(() => {
+    if (navigationRef.current?.isReady()) {
+      navigationQueue.initialize(navigationRef.current);
+    }
+  }, [navigationRef]);
+
+  // Update refs when mode or userId changes
+  useEffect(() => {
+    const prevMode = prevModeRef.current;
+    const prevUserId = prevUserIdRef.current;
+
+    // If mode or userId changed, clear old navigation state
+    if (prevMode !== mode || prevUserId !== selectedUser?.id) {
+      if (prevMode && prevUserId !== undefined) {
+        // Clear old state asynchronously (don't block)
+        clearNavigationState(prevMode, prevUserId).catch((error) => {
+          logger.warn('App', 'Failed to clear old navigation state', { error });
+        });
+      }
+    }
+
+    prevModeRef.current = mode;
+    prevUserIdRef.current = selectedUser?.id || null;
+  }, [mode, selectedUser?.id]);
+
+  return (
+    <NavigationContainer<RootStackParamList>
+      key={navKey}
+      ref={(ref) => {
+        navigationRef.current = ref;
+        if (ref?.isReady()) {
+          navigationQueue.initialize(ref);
+        }
+      }}
+      onReady={() => {
+        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
+          navigationQueue.initialize(navigationRef.current);
+        }
+      }}
+      linking={linking}
+      initialState={initialState}
+      onStateChange={handleNavigationStateChange}
+    >
+      <View style={Platform.OS === 'web' ? { flex: 1, backgroundColor: colors.black } : { flex: 1 }}>
+        <View style={[containerStyle, webWrapperStyle]}>
+          <DevEnvironmentBanner />
+          <MainNavigator />
+          <WebModeToggleOverlay />
+          <StatusBar style="auto" />
+        </View>
+      </View>
+    </NavigationContainer>
+  );
+}
+
 function AppContent() {
   const { t } = useTranslation(['common']);
   const { selectedUser } = useUser();
@@ -178,24 +314,20 @@ function AppContent() {
 
         // Load navigation state after stores are ready
         try {
-          const shouldSkipPersistedState = isMobileWebEnvironment();
-          if (shouldSkipPersistedState) {
-            logger.info('App', 'Skipping navigation state restore on mobile web to prevent blank-screen loops');
-            setInitialNavigationState(undefined);
-            return;
-          }
           const { useWebModeStore } = await import('./stores/webModeStore');
           const { useUserStore } = await import('./stores/userStore');
           const mode = useWebModeStore.getState().mode;
           const userId = useUserStore.getState().selectedUser?.id || null;
-
-          if (!shouldPersistNavigationState()) {
-            logger.info('App', 'Skipping persisted navigation state on mobile web', {
+          const shouldSkipPersistedState = isMobileWebEnvironment();
+          if (shouldSkipPersistedState) {
+            logger.info('App', 'Skipping navigation state restore on mobile web to prevent blank-screen loops', {
               mode,
               hasUserId: !!userId,
             });
             setInitialNavigationState(undefined);
-            await clearNavigationState(mode, userId);
+            clearNavigationState(mode, userId).catch((error) => {
+              logger.warn('App', 'Failed to clear mobile web navigation state', { error });
+            });
           } else {
             logger.info('App', 'Loading navigation state', { mode, userId });
             const savedState = await loadNavigationState(mode, userId);
@@ -464,140 +596,11 @@ function AppContent() {
     );
   }
 
-  const AppNavigationRoot = memo(({ initialState }: { initialState: NavigationState | undefined }) => {
-    const { mode } = useWebMode();
-    const { isAuthenticated, isGuestMode, selectedUser } = useUser();
-    const prevModeRef = useRef<string>(mode);
-    const prevUserIdRef = useRef<string | null>(selectedUser?.id || null);
-
-    /**
-     * Determine if web mode toggle button should be visible
-     * Toggle is hidden for authenticated users (users who created an account)
-     * Toggle is shown for guest users and non-authenticated users
-     */
-    const shouldShowToggle = useMemo(
-      () => !(isAuthenticated && !isGuestMode && selectedUser),
-      [isAuthenticated, isGuestMode, selectedUser]
-    );
-
-    /**
-     * Add top padding in app mode to make room for toggle button
-     * Only add padding if toggle button is visible (not for authenticated users)
-     * This prevents unnecessary spacing when the toggle is hidden
-     */
-    const containerStyle = useMemo(() => ({
-      flex: 1,
-      paddingTop: Platform.OS === 'web' && shouldShowToggle ? 64 : 0 // Space for top bar
-    }), [shouldShowToggle]);
-
-    // Wrapper style for web - full width without maxWidth constraint
-    const webWrapperStyle = useMemo(() => Platform.OS === 'web' ? {
-      width: '100%' as const,
-      flex: 1,
-      backgroundColor: colors.backgroundSecondary,
-    } : {}, []);
-
-    // Navigation container key - only change when mode actually changes (not on auth state changes)
-    // This prevents unnecessary re-mounts when auth state updates
-    const navKey = useMemo(() => `nav-${mode}`, [mode]);
-
-    // Save navigation state before unmount (when mode or user changes)
-    useEffect(() => {
-      return () => {
-        // Cleanup: save state before unmount
-        if (navigationRef.current?.isReady() && shouldPersistNavigationState()) {
-          const currentState = navigationRef.current.getRootState();
-          if (currentState) {
-            saveNavigationState(currentState, prevModeRef.current, prevUserIdRef.current);
-            logger.debug('App', 'Navigation state saved before unmount', {
-              mode: prevModeRef.current,
-              hasUserId: !!prevUserIdRef.current,
-            });
-          }
-        }
-      };
-    }, []);
-
-    // Save navigation state when it changes
-    const handleNavigationStateChange = useCallback(
-      (state: NavigationState | undefined) => {
-        if (state) {
-          if (!shouldPersistNavigationState()) {
-            return;
-          }
-          const currentRoute = state.routes?.[state.index || 0];
-          const routeName = currentRoute?.name || 'unknown';
-          logger.debug('App', 'Navigation state changed, saving...', {
-            routeName,
-            mode,
-            hasUserId: !!selectedUser?.id,
-            routesCount: state.routes?.length || 0,
-          });
-          saveNavigationState(state, mode, selectedUser?.id || null);
-        }
-      },
-      [mode, selectedUser?.id]
-    );
-
-    // Initialize navigation queue with ref when container is ready
-    useEffect(() => {
-      if (navigationRef.current?.isReady()) {
-        navigationQueue.initialize(navigationRef.current);
-      }
-    }, []);
-
-    // Update refs when mode or userId changes
-    useEffect(() => {
-      const prevMode = prevModeRef.current;
-      const prevUserId = prevUserIdRef.current;
-
-      // If mode or userId changed, clear old navigation state
-      if (prevMode !== mode || prevUserId !== selectedUser?.id) {
-        if (prevMode && prevUserId !== undefined) {
-          // Clear old state asynchronously (don't block)
-          clearNavigationState(prevMode, prevUserId).catch((error) => {
-            logger.warn('App', 'Failed to clear old navigation state', { error });
-          });
-        }
-      }
-
-      prevModeRef.current = mode;
-      prevUserIdRef.current = selectedUser?.id || null;
-    }, [mode, selectedUser?.id]);
-
-    return (
-      <NavigationContainer<RootStackParamList>
-        key={navKey}
-        ref={(ref) => {
-          navigationRef.current = ref;
-          if (ref?.isReady()) {
-            navigationQueue.initialize(ref);
-          }
-        }}
-        onReady={() => {
-          if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
-            navigationQueue.initialize(navigationRef.current);
-          }
-        }}
-        linking={linking}
-        initialState={initialState}
-        onStateChange={handleNavigationStateChange}
-      >
-        <View style={Platform.OS === 'web' ? { flex: 1, backgroundColor: colors.black } : { flex: 1 }}>
-          <View style={[containerStyle, webWrapperStyle]}>
-            <DevEnvironmentBanner />
-            <MainNavigator />
-            <WebModeToggleOverlay />
-            <StatusBar style="auto" />
-          </View>
-        </View>
-      </NavigationContainer>
-    );
-  });
-  AppNavigationRoot.displayName = 'AppNavigationRoot';
-
   return (
-    <AppNavigationRoot initialState={initialNavigationState} />
+    <AppNavigationRoot
+      initialState={initialNavigationState}
+      navigationRef={navigationRef}
+    />
   );
 }
 

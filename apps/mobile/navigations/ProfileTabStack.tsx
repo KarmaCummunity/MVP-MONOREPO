@@ -19,6 +19,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
 import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
@@ -57,6 +58,7 @@ export default function ProfileTabStack(): React.ReactElement {
         component={ProfileScreen}
         initialParams={selectedUser?.id ? { userId: selectedUser.id } : undefined}
       />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
