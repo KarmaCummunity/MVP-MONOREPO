@@ -11,6 +11,7 @@ import {
   Switch,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,7 +97,7 @@ const FeedFilterSheet: React.FC<FeedFilterSheetProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.root} pointerEvents="box-none">
+      <View style={styles.root}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" />
         <View
           style={[
@@ -150,6 +151,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: 'flex-end',
+    pointerEvents: 'box-none',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -163,11 +165,18 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 12,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.12)',
+      },
+      default: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 12,
+      },
+    }),
   },
   handleBar: {
     alignSelf: 'center',

@@ -111,7 +111,6 @@ const Toast: React.FC<ToastProps> = ({
           opacity,
         },
       ]}
-      pointerEvents="none"
     >
       <View style={[styles.toast, { backgroundColor: getBackgroundColor() }]}>
         <Text style={styles.message}>{message}</Text>
@@ -141,6 +140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+      },
       ios: {
         shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
@@ -150,6 +152,7 @@ const styles = StyleSheet.create({
       android: {
         elevation: 8,
       },
+      default: {},
     }),
   },
   message: {

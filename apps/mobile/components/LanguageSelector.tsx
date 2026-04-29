@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     right: 16,
     alignItems: 'flex-end',
     zIndex: 20,
-    ...(Platform.OS === 'web' ? { pointerEvents: 'box-none' } : {}),
+    pointerEvents: 'box-none',
   },
   fab: {
     width: 36,

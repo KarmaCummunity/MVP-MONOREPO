@@ -588,9 +588,9 @@ export default function ChatDetailScreen() {
             right: 0,
             bottom: tabBarHeight,
             zIndex: 999,
-            backgroundColor: 'transparent'
+            backgroundColor: 'transparent',
+            pointerEvents: 'box-none',
           }}
-          pointerEvents="box-none"
         >
           <View style={styles.inputContainer}>
             <InputChildren />

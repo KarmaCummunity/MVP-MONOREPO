@@ -2,7 +2,7 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press (same tab: store reset + preventDefault; other tab: defer reset so tab switch wins on Web).
+// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()`; on Web, Home from another tab uses explicit `navigate(HomeScreen/HomeMain)` (touch Safari). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
 // - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
@@ -20,7 +20,7 @@
 // TODO: Implement proper deep linking support for tab navigation
 'use strict';
 import React from "react";
-import { Animated, Easing, View, StyleSheet, Platform, Pressable } from "react-native";
+import { Animated, Easing, View, StyleSheet, Platform, Pressable, useWindowDimensions } from "react-native";
 import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, CommonActions, useNavigationState } from "@react-navigation/native";
@@ -31,7 +31,7 @@ import ProfileTabStack from "./ProfileTabStack";
 import DonationsStack from "./DonationsStack";
 import AdminStack from "./AdminStack";
 import colors from "../globals/colors"; // Adjust path if needed
-import { vw, getScreenInfo, isLandscape } from "../globals/responsive";
+import { vw, getScreenInfo, isLandscape, isMobileWeb } from "../globals/responsive";
 import { LAYOUT_CONSTANTS } from "../globals/constants";
 import { useUser } from "../stores/userStore";
 import { useWebMode } from "../stores/webModeStore";
@@ -50,6 +50,7 @@ import {
   type NestedRouteLike,
 } from "./bottomTabNavigationUtils";
 import type { BottomTabNavigatorParamList } from "../globals/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Create an instance of the Bottom Tab Navigator with its parameter list type
 const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
@@ -115,8 +116,11 @@ const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, 
   });
 
   return (
-    <View style={[styles.pulseContainer, { width: containerSize, height: containerSize }]}
-      pointerEvents="none"
+    <View
+      style={[
+        styles.pulseContainer,
+        { width: containerSize, height: containerSize, pointerEvents: 'none' },
+      ]}
       accessibilityElementsHidden>
       <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring1)]} />
       <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring2)]} />
@@ -155,6 +159,9 @@ const styles = StyleSheet.create({
 export default function BottomNavigator(): React.ReactElement {
   const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
   const { mode } = useWebMode();
+  /** Re-subscribe on viewport resize so mobile-web tab bar insets stay correct when rotating / chrome hides. */
+  useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { openComposer } = usePostComposerStore();
   const composerCategory = useNavigationState((rootState) =>
     mapDonationScreenRouteToComposerCategory(
@@ -217,16 +224,29 @@ export default function BottomNavigator(): React.ReactElement {
 
     if (routeName === 'HomeScreen') {
       // Same tab re-press: pop Home stack to HomeMain via store + prevent duplicate tab action.
-      // Other tab → Home: do not sync-call resetHomeScreen (Zustand + HomeTabStack popToTop races
-      // default tab switch on Web). Defer reset to next task so the tab index updates first.
       if (isThisTabSelected) {
         resetHomeScreen();
         e.preventDefault();
-      } else {
+        return;
+      }
+      // Web touch (esp. mobile Safari): default tab activation after listeners often does not run reliably.
+      // Dispatch explicitly so Home tab always selects; defer reset so nested stack pop runs after focus.
+      if (Platform.OS === 'web' && typeof tabNavigation?.dispatch === 'function') {
+        e.preventDefault();
+        tabNavigation.dispatch(
+          CommonActions.navigate({
+            name: 'HomeScreen',
+            params: { screen: 'HomeMain' },
+          } as never),
+        );
         setTimeout(() => {
           resetHomeScreen();
         }, 0);
+        return;
       }
+      setTimeout(() => {
+        resetHomeScreen();
+      }, 0);
       return;
     }
 
@@ -261,6 +281,9 @@ export default function BottomNavigator(): React.ReactElement {
         const landscape = isLandscape();
         const horizontalInset = isDesktop ? vw(20) : isTablet ? vw(10) : LAYOUT_CONSTANTS.SPACING.MD;
         const barHeight = landscape ? 40 : (isDesktop ? 56 : isTablet ? 54 : 46);
+        const webMobile = Platform.OS === 'web' && isMobileWeb();
+        const tabBarBottomInset =
+          webMobile ? Math.max(insets.bottom, 12) : 0;
         return ({
           headerShown: false,
           tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number; }) => {
@@ -281,13 +304,21 @@ export default function BottomNavigator(): React.ReactElement {
             position: "absolute",
             left: horizontalInset,
             right: horizontalInset,
+            bottom: webMobile ? 0 : undefined,
             borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.XLARGE,
             elevation: LAYOUT_CONSTANTS.SHADOW.MEDIUM.elevation,
-            height: barHeight,
+            height: barHeight + tabBarBottomInset,
+            paddingBottom: tabBarBottomInset,
             backgroundColor: colors.cardBackground,
             display: shouldHideTabBar ? 'none' as const : 'flex' as const,
             // Web: desktop layouts + full-bleed scrollers need a high stacking order so the + tab receives clicks
             ...(!shouldHideTabBar ? { zIndex: Platform.OS === 'web' ? 20000 : 20 } : {}),
+            ...(Platform.OS === 'web' && !shouldHideTabBar
+              ? ({
+                  touchAction: 'manipulation' as const,
+                  WebkitTouchCallout: 'none' as const,
+                } as Record<string, unknown>)
+              : {}),
           },
         });
       }}

@@ -69,16 +69,14 @@ export default function VerticalGridSlider({
         <View
             style={[styles.columnSliderContainer, style]}
             collapsable={false}
-            pointerEvents="box-none"
         >
             {/* Combined Touch & Visual Area with PanResponder */}
             <View
                 style={styles.touchArea}
-                pointerEvents="auto"
                 {...panResponder.panHandlers}
             >
                 {/* Visuals Layer */}
-                <View style={styles.visualsContainer} pointerEvents="none">
+                <View style={styles.visualsContainer}>
                     {/* Continuous Track Line */}
                     <View style={styles.columnSliderTrack} />
 
@@ -116,6 +114,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         width: 40,
         height: 180,
+        pointerEvents: 'box-none',
         ...(Platform.OS === 'android' ? {
             elevation: 999,
         } : {}),
@@ -125,11 +124,13 @@ const styles = StyleSheet.create({
         height: 180, // Full height container
         alignItems: 'center',
         paddingTop: 10, // Match visual offset
+        pointerEvents: 'auto',
     },
     visualsContainer: {
         width: '100%',
         height: 160, // Track height
         alignItems: 'center',
+        pointerEvents: 'none',
     },
     columnSliderTrack: {
         width: 2,
@@ -149,10 +150,17 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
         borderWidth: 2,
         borderColor: colors.white,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 4,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+            },
+            default: {
+                shadowColor: colors.black,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 3,
+                elevation: 4,
+            },
+        }),
     },
 });

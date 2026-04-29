@@ -484,11 +484,18 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         padding: 8,
         borderRadius: 20,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            },
+            default: {
+                elevation: 2,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+            },
+        }),
     },
     langText: {
         marginLeft: 6,
@@ -524,11 +531,18 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 480,
         alignSelf: 'center',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 24,
-        elevation: 8,
+        ...Platform.select({
+            web: {
+                boxShadow: `0 8px 24px ${colors.overlayBlack15}`,
+            },
+            default: {
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.08,
+                shadowRadius: 24,
+                elevation: 8,
+            },
+        }),
     },
     googleContainer: {
         marginBottom: 20,
@@ -592,11 +606,18 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 8,
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+            },
+            default: {
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 4,
+            },
+        }),
     },
     disabledBtn: {
         opacity: 0.7,

@@ -70,11 +70,18 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderBottomColor: colors.devBannerGreen,
         zIndex: 9999,
-        shadowColor: colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+            },
+            default: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+                elevation: 3,
+            },
+        }),
     },
     safeArea: {
         // On iOS, SafeAreaView handles the notch
@@ -100,11 +107,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 3,
         borderRadius: 14,
-        shadowColor: colors.shadow,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-        elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+            },
+            default: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.2,
+                shadowRadius: 2,
+                elevation: 2,
+            },
+        }),
     },
     dot: {
         fontSize: 12,
