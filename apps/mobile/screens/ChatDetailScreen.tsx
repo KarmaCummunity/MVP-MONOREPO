@@ -38,6 +38,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as ExpoCrypto from 'expo-crypto';
 import { logger } from '../utils/loggerService';
 
 type ChatDetailRouteParams = {
@@ -183,7 +184,9 @@ export default function ChatDetailScreen() {
   }, [conversationId, selectedUser, loadMessages]);
 
   const _generateFakeResponse = async () => {
-    const demoReplyIndex = Math.floor(Math.random() * 4) + 1;
+    const rnd = new Uint8Array(1);
+    ExpoCrypto.getRandomValues(rnd);
+    const demoReplyIndex = (rnd[0] % 4) + 1;
     const responseText = t(`chat:demoFakeReplies.${demoReplyIndex}`);
 
     try {
@@ -288,7 +291,7 @@ export default function ChatDetailScreen() {
       }
 
       // Generate temp messageId for file path
-      const tempMessageId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempMessageId = `temp_${Date.now()}_${ExpoCrypto.randomUUID().replace(/-/g, '').slice(0, 9)}`;
 
       // Build file path in Firebase Storage
       const fullPath = buildChatFilePath(conversationId, tempMessageId, fileData.name);
