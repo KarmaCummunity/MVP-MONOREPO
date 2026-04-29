@@ -20,6 +20,7 @@ import type { FeedItem } from '../../types/feed';
 import { ITEM_CATEGORY_DEFS } from './itemCategoryDefs';
 import type { ItemType } from './itemsScreen.types';
 import { itemsScreenStyles } from './itemsScreen.styles';
+import { logger } from '../../utils/loggerService';
 
 type Styles = typeof itemsScreenStyles;
 
@@ -317,7 +318,7 @@ export function ItemsScreenOfferMode({
                     numColumns={1}
                     onPress={onPostPress}
                     onCommentPress={(feedItem) => {
-                      console.log('Comment pressed:', feedItem.id);
+                      logger.debug('ItemsScreenOfferMode', 'Comment pressed', { feedItemId: feedItem.id });
                     }}
                     onMorePress={onMorePress}
                     onPostClosed={onPostClosed}

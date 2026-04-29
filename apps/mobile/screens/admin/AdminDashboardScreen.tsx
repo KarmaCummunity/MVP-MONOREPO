@@ -87,6 +87,7 @@ const adminButtons: AdminButton[] = [
 ];
 
 import { useAdminProtection } from '../../hooks/useAdminProtection';
+import { logger } from '../../utils/loggerService';
 
 export default function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps) {
   const { selectedUser } = useUser();
@@ -99,7 +100,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
   useFocusEffect(
     React.useCallback(() => {
       if (viewOnly) {
-        console.log('🔐 AdminDashboard - View-only mode: Ensuring bars are visible');
+        logger.debug('AdminDashboard', 'View-only mode: Ensuring bars are visible');
         (navigation as any).setParams({
           hideTopBar: false,
           hideBottomBar: false,

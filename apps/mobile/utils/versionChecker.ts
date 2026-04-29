@@ -1,9 +1,11 @@
+const VersionChecker_LOG = 'versionChecker';
 /**
  * Version Checker - בדיקת עדכונים חדשים לאפליקציה
  * מטרה: להבטיח שמשתמשים תמיד יראו את הגרסה העדכנית ביותר
  */
 
 import colors from '../globals/colors';
+import { logger } from './loggerService';
 
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // בדיקה כל 5 דקות
 const CURRENT_VERSION = '2.3.0'; // תתעדכן אוטומטית מ-package.json
@@ -164,7 +166,7 @@ async function clearBrowserCache() {
     // ניקוי localStorage של הודעות ישנות
     localStorage.removeItem('last-update-notification');
     
-    console.log('Browser cache cleared successfully');
+    logger.debug(VersionChecker_LOG, 'Browser cache cleared successfully');
   } catch (error) {
     console.error('Error clearing cache:', error);
   }
@@ -176,12 +178,12 @@ async function clearBrowserCache() {
 export function initVersionChecker() {
   // Only run on web platform
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    console.log('Version checker: Not running on web platform');
+    logger.debug(VersionChecker_LOG, 'Version checker: Not running on web platform');
     return;
   }
 
-  console.log(`KC App Version: ${getCurrentVersion()}`);
-  console.log(`Build Timestamp: ${getCurrentBuildTimestamp()}`);
+  logger.debug(VersionChecker_LOG, `KC App Version: ${getCurrentVersion()}`);
+  logger.debug(VersionChecker_LOG, `Build Timestamp: ${getCurrentBuildTimestamp()}`);
 
   // בדיקה ראשונית אחרי 10 שניות (לאחר שהאפליקציה נטענה)
   setTimeout(async () => {

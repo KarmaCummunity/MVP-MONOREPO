@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { DailyTrackerChallenge } from '../../globals/types';
 import colors from '../../globals/colors';
+import { logger } from '../../utils/loggerService';
 
 interface EditEntryModalProps {
   visible: boolean;
@@ -47,7 +48,12 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
       setValue(nextValue);
       setNotes(nextNotes);
       if (__DEV__) {
-        console.log('[EditEntryModal] Opened with values:', { date, existingValue, nextValue, existingNotes: existingNotes?.slice(0, 20) });
+        logger.debug('EditEntryModal', 'Opened with values', {
+          date,
+          existingValue,
+          nextValue,
+          existingNotesPreview: existingNotes?.slice(0, 20),
+        });
       }
     }
   }, [visible, date, existingValue, existingNotes, challenge]);
@@ -55,7 +61,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   if (!challenge) return null;
 
   const handleSave = async () => {
-    if (__DEV__) console.log('[EditEntryModal] Save clicked:', { value, notes });
+    if (__DEV__) logger.debug('EditEntryModal', 'Save clicked', { value, notes });
     setSaving(true);
     try {
       await onSave(value, notes);

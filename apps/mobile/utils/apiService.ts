@@ -19,6 +19,7 @@ import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
 
+const ApiService_LOG = 'apiService';
 /** Admin tasks endpoints can run heavier SQL; allow longer than default fetch abort */
 const TASKS_HTTP_TIMEOUT_MS = 90_000;
 
@@ -405,7 +406,7 @@ class ApiService {
 
   async setManager(userId: string, managerId: string | null, requestingUserId?: string): Promise<ApiResponse> {
     const body = { managerId, requestingUserId };
-    console.log(`[apiService.setManager] Sending request: userId=${userId}, managerId=${managerId} (type: ${typeof managerId}), body:`, JSON.stringify(body));
+    logger.debug(ApiService_LOG, `[apiService.setManager] Sending request: userId=${userId}, managerId=${managerId} (type: ${typeof managerId}), body:`, JSON.stringify(body));
     return this.request(`/api/users/${userId}/set-manager`, {
       method: 'POST',
       body: JSON.stringify(body),

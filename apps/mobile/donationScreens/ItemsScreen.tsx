@@ -23,6 +23,7 @@ import { useItemsScreenFilters } from './items/useItemsScreenFilters';
 import { ItemsScreenSearchMode } from './items/ItemsScreenSearchMode';
 import { ItemsScreenOfferMode } from './items/ItemsScreenOfferMode';
 import type { ItemsScreenProps, ItemType, DonationItem } from './items/itemsScreen.types';
+import { logger } from '../utils/loggerService';
 import { usePostComposerStore } from '../stores/postComposerStore';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 
@@ -281,7 +282,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     [navigation],
   );
   const onFeedCommentPress = useCallback((feedItem: FeedItem) => {
-    console.log('Comment pressed:', feedItem.id);
+    logger.debug('ItemsScreen', 'Comment pressed', { feedItemId: feedItem.id });
   }, []);
 
   const renderPostItem = useCallback(

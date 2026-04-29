@@ -37,6 +37,7 @@ import { styles, SCREEN_HEIGHT } from './profileScreen.styles';
 import { OpenRoute } from './OpenRoute';
 import { ClosedRoute } from './ClosedRoute';
 import type { CharacterType, TabRoute, ProfileScreenRouteParams } from './profileScreenTypes';
+import { logger } from '../../utils/loggerService';
 export function ProfileScreenContent({
   tabBarHeight,
   manualParams,
@@ -67,7 +68,7 @@ export function ProfileScreenContent({
         if (stored) {
           const parsedParams = JSON.parse(stored);
           routeParams = parsedParams;
-          console.log('👤 ProfileScreen - Restored params from localStorage:', parsedParams);
+          logger.debug('ProfileScreenContent', 'Restored params from localStorage', { parsedParams });
         }
       } catch (error) {
         console.warn('Failed to restore params from localStorage:', error);
@@ -106,8 +107,7 @@ export function ProfileScreenContent({
 
   const targetUserId = externalUserId || selectedUser?.id;
 
-  // Debug log to help identify the issue
-  console.log('👤 ProfileScreenContent - Profile check:', {
+  logger.debug('ProfileScreenContent', 'Profile check', {
     externalUserId,
     normalizedExternalUserId,
     selectedUserId: selectedUser?.id,
@@ -115,7 +115,7 @@ export function ProfileScreenContent({
     isOwnProfile,
     areEqual: normalizedExternalUserId === normalizedSelectedUserId,
     hasExternalUserId: !!externalUserId,
-    hasSelectedUser: !!selectedUser
+    hasSelectedUser: !!selectedUser,
   });
 
   const [index, setIndex] = useState(0);
@@ -261,7 +261,7 @@ export function ProfileScreenContent({
       if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) return;
 
       try {
-        console.log('👤 ProfileScreen - Loading follow stats for user:', viewingUser.name);
+        logger.debug('ProfileScreenContent', 'Loading follow stats for user', { name: viewingUser.name });
         const [stats, counts] = await Promise.all([
           getFollowStats(viewingUser.id, selectedUser.id),
           getUpdatedFollowCounts(viewingUser.id),
@@ -579,7 +579,7 @@ export function ProfileScreenContent({
   useFocusEffect(
     React.useCallback(() => {
       const refreshStats = async () => {
-        console.log('👤 ProfileScreen - Screen focused, refreshing stats...', { isOwnProfile, targetUserId });
+        logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', { isOwnProfile, targetUserId });
         await updateUserStats();
         if (isOwnProfile) {
           await loadRecentActivities();
@@ -715,7 +715,7 @@ export function ProfileScreenContent({
             style={[styles.webScrollContent, { paddingBottom: tabBarHeight + scaleSize(24) }]}
             onLayout={(e) => {
               const h = e.nativeEvent.layout.height;
-              console.log('🧭 ProfileScreen[WEB] content layout height:', h, 'window:', SCREEN_HEIGHT);
+              logger.debug('ProfileScreenContent[WEB]', 'content layout height', { height: h, windowHeight: SCREEN_HEIGHT });
             }}
           >
             {/* Header for other user's profile */}
@@ -1079,10 +1079,10 @@ export function ProfileScreenContent({
                             let conversationId: string;
 
                             if (existingConvId) {
-                              console.log('💬 Conversation already exists:', existingConvId);
+                              logger.debug('ProfileScreenContent', 'Conversation already exists', { conversationId: existingConvId });
                               conversationId = existingConvId;
                             } else {
-                              console.log('💬 Creating new conversation...');
+                              logger.debug('ProfileScreenContent', 'Creating new conversation');
                               conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                             }
 
@@ -1659,10 +1659,10 @@ export function ProfileScreenContent({
                           let conversationId: string;
 
                           if (existingConvId) {
-                            console.log('💬 Conversation already exists:', existingConvId);
+                            logger.debug('ProfileScreenContent', 'Conversation already exists', { conversationId: existingConvId });
                             conversationId = existingConvId;
                           } else {
-                            console.log('💬 Creating new conversation...');
+                            logger.debug('ProfileScreenContent', 'Creating new conversation');
                             conversationId = await createConversation([selectedUser.id, displayUser.id!]);
                           }
 

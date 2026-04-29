@@ -4,7 +4,9 @@
 // - Communicates with: /api/posts/* endpoints on the backend
 
 import { API_BASE_URL } from './config.constants';
+import { logger } from './loggerService';
 
+const PostsService_LOG = 'postsService';
 export interface PostsApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -96,7 +98,7 @@ class PostsService {
         ...options,
       };
 
-      console.log(`🌐 PostsService Request: ${config.method || 'GET'} ${url}`, {
+      logger.debug(PostsService_LOG, `🌐 PostsService Request: ${config.method || 'GET'} ${url}`, {
         hasAuth: !!authToken,
         authTokenLength: authToken?.length || 0
       });
@@ -118,7 +120,7 @@ class PostsService {
         };
       }
 
-      console.log(`✅ PostsService Response: ${endpoint}`, data);
+      logger.debug(PostsService_LOG, `✅ PostsService Response: ${endpoint}`, data);
       return data;
     } catch (error) {
       console.error(`❌ PostsService Network Error:`, error);

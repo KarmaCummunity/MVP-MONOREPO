@@ -1,5 +1,7 @@
-// utils/logger.ts
+// utils/logger.ts — delegates to central RN logger service (no raw console.log).
+import { logger as appLogger } from './loggerService';
 
+const LOGGER_LEGACY_COMPONENT = 'LegacyLogger';
 export interface LogData {
   screen?: string;
   action?: string;
@@ -20,16 +22,28 @@ class Logger {
     return Logger.instance;
   }
 
+  private forward(
+    method: 'info' | 'warn' | 'error',
+    message: string,
+    data?: LogData
+  ) {
+    if (data !== undefined && Object.keys(data).length > 0) {
+      appLogger[method](LOGGER_LEGACY_COMPONENT, message, data as Record<string, unknown>);
+    } else {
+      appLogger[method](LOGGER_LEGACY_COMPONENT, message);
+    }
+  }
+
   info(message: string, data?: LogData) {
-    console.log(`[INFO] ${message}`, data || '');
+    this.forward('info', message, data);
   }
 
   warn(message: string, data?: LogData) {
-    console.warn(`[WARN] ${message}`, data || '');
+    this.forward('warn', message, data);
   }
 
   error(message: string, data?: LogData) {
-    console.error(`[ERROR] ${message}`, data || '');
+    this.forward('error', message, data);
   }
 
   // Screen navigation logging

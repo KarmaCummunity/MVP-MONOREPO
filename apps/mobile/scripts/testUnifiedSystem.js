@@ -1,7 +1,7 @@
 // Comprehensive test script for the unified followers system
 // Run with: node scripts/testUnifiedSystem.js
 
-console.log('🧪 Comprehensive Follow System Test with Unified IDs...');
+console.info('🧪 Comprehensive Follow System Test with Unified IDs...');
 
 // Read the unified file
 const fs = require('fs');
@@ -14,22 +14,22 @@ const content = fs.readFileSync(characterTypesPath, 'utf8');
 const allUsersMatch = content.match(/export const allUsers: CharacterType\[\] = (\[[\s\S]*?\]);/);
 const allUsers = allUsersMatch ? eval(allUsersMatch[1]) : [];
 
-console.log(`📊 Total Users: ${allUsers.length}`);
+console.info(`📊 Total Users: ${allUsers.length}`);
 
 // Validate IDs structure
-console.log('\n🔍 ID Structure Check:');
+console.info('\n🔍 ID Structure Check:');
 const userIds = allUsers.map(user => user.id);
 const charIds = userIds.filter(id => id.startsWith('char'));
 const userIdsOnly = userIds.filter(id => id.startsWith('user'));
 
-console.log(`- IDs starting with 'char': ${charIds.length}`);
-console.log(`- IDs starting with 'user': ${userIdsOnly.length}`);
-console.log(`- Total unique IDs: ${new Set(userIds).size}`);
+console.info(`- IDs starting with 'char': ${charIds.length}`);
+console.info(`- IDs starting with 'user': ${userIdsOnly.length}`);
+console.info(`- Total unique IDs: ${new Set(userIds).size}`);
 
 if (charIds.length > 0) {
-  console.log('❌ WARNING: Found IDs starting with "char" - should be "user"');
+  console.info('❌ WARNING: Found IDs starting with "char" - should be "user"');
 } else {
-  console.log('✅ All IDs are properly unified with "user" prefix');
+  console.info('✅ All IDs are properly unified with "user" prefix');
 }
 
 // Followers system simulation
@@ -129,76 +129,76 @@ function getPopularUsers(limit = 10) {
 }
 
 // Comprehensive tests
-console.log('\n🔍 Comprehensive System Tests...');
+console.info('\n🔍 Comprehensive System Tests...');
 
 // Test 1: Basic follow operations
-console.log('\n📝 Test 1: Basic Follow Operations');
+console.info('\n📝 Test 1: Basic Follow Operations');
 const user1 = allUsers[0]; // user001
 const user2 = allUsers[15]; // user016
 const user3 = allUsers[10]; // user011
 
-console.log(`Testing with: ${user1.name} (${user1.id}), ${user2.name} (${user2.id}), ${user3.name} (${user3.id})`);
+console.info(`Testing with: ${user1.name} (${user1.id}), ${user2.name} (${user2.id}), ${user3.name} (${user3.id})`);
 
 // Follow
 const follow1 = followUser(user1.id, user2.id);
 const follow2 = followUser(user1.id, user3.id);
 const follow3 = followUser(user2.id, user3.id);
 
-console.log(`Follow operations: ${follow1 ? 'SUCCESS' : 'FAILED'}, ${follow2 ? 'SUCCESS' : 'FAILED'}, ${follow3 ? 'SUCCESS' : 'FAILED'}`);
+console.info(`Follow operations: ${follow1 ? 'SUCCESS' : 'FAILED'}, ${follow2 ? 'SUCCESS' : 'FAILED'}, ${follow3 ? 'SUCCESS' : 'FAILED'}`);
 
 // Check stats
 const stats1 = getFollowStats(user1.id, user1.id);
 const stats2 = getFollowStats(user2.id, user1.id);
 const stats3 = getFollowStats(user3.id, user1.id);
 
-console.log(`Stats - ${user1.name}: ${stats1.followersCount} followers, ${stats1.followingCount} following`);
-console.log(`Stats - ${user2.name}: ${stats2.followersCount} followers, ${stats2.followingCount} following`);
-console.log(`Stats - ${user3.name}: ${stats3.followersCount} followers, ${stats3.followingCount} following`);
+console.info(`Stats - ${user1.name}: ${stats1.followersCount} followers, ${stats1.followingCount} following`);
+console.info(`Stats - ${user2.name}: ${stats2.followersCount} followers, ${stats2.followingCount} following`);
+console.info(`Stats - ${user3.name}: ${stats3.followersCount} followers, ${stats3.followingCount} following`);
 
 // Test 2: Lists
-console.log('\n📝 Test 2: Follow Lists');
+console.info('\n📝 Test 2: Follow Lists');
 const user1Following = getFollowing(user1.id);
 const user3Followers = getFollowers(user3.id);
 
-console.log(`${user1.name} following: ${user1Following.map(u => u.name).join(', ')}`);
-console.log(`${user3.name} followers: ${user3Followers.map(u => u.name).join(', ')}`);
+console.info(`${user1.name} following: ${user1Following.map(u => u.name).join(', ')}`);
+console.info(`${user3.name} followers: ${user3Followers.map(u => u.name).join(', ')}`);
 
 // Test 3: Suggestions
-console.log('\n📝 Test 3: Follow Suggestions');
+console.info('\n📝 Test 3: Follow Suggestions');
 const suggestions = getFollowSuggestions(user1.id, 5);
-console.log(`Suggestions for ${user1.name}:`);
+console.info(`Suggestions for ${user1.name}:`);
 suggestions.forEach((user, index) => {
-  console.log(`${index + 1}. ${user.name} (${user.karmaPoints} karma points)`);
+  console.info(`${index + 1}. ${user.name} (${user.karmaPoints} karma points)`);
 });
 
 // Test 4: Popular users
-console.log('\n📝 Test 4: Popular Users');
+console.info('\n📝 Test 4: Popular Users');
 const popularUsers = getPopularUsers(5);
-console.log('Top 5 Popular Users:');
+console.info('Top 5 Popular Users:');
 popularUsers.forEach((user, index) => {
-  console.log(`${index + 1}. ${user.name}: ${user.followersCount} followers`);
+  console.info(`${index + 1}. ${user.name}: ${user.followersCount} followers`);
 });
 
 // Test 5: Unfollow
-console.log('\n📝 Test 5: Unfollow Operations');
+console.info('\n📝 Test 5: Unfollow Operations');
 const unfollow1 = unfollowUser(user1.id, user2.id);
 const statsAfterUnfollow = getFollowStats(user2.id, user1.id);
 
-console.log(`Unfollow result: ${unfollow1 ? 'SUCCESS' : 'FAILED'}`);
-console.log(`${user2.name} followers after unfollow: ${statsAfterUnfollow.followersCount}`);
+console.info(`Unfollow result: ${unfollow1 ? 'SUCCESS' : 'FAILED'}`);
+console.info(`${user2.name} followers after unfollow: ${statsAfterUnfollow.followersCount}`);
 
 // Test 6: Duplicate follow
-console.log('\n📝 Test 6: Duplicate Follow Prevention');
+console.info('\n📝 Test 6: Duplicate Follow Prevention');
 const duplicateFollow = followUser(user1.id, user3.id);
-console.log(`Duplicate follow attempt: ${duplicateFollow ? 'ALLOWED (ERROR)' : 'BLOCKED (CORRECT)'}`);
+console.info(`Duplicate follow attempt: ${duplicateFollow ? 'ALLOWED (ERROR)' : 'BLOCKED (CORRECT)'}`);
 
 // Test 7: Self-follow
-console.log('\n📝 Test 7: Self-Follow Prevention');
+console.info('\n📝 Test 7: Self-Follow Prevention');
 const selfFollow = followUser(user1.id, user1.id);
-console.log(`Self-follow attempt: ${selfFollow ? 'ALLOWED (ERROR)' : 'BLOCKED (CORRECT)'}`);
+console.info(`Self-follow attempt: ${selfFollow ? 'ALLOWED (ERROR)' : 'BLOCKED (CORRECT)'}`);
 
 // Test 8: Performance
-console.log('\n📝 Test 8: Performance Test');
+console.info('\n📝 Test 8: Performance Test');
 const startTime = Date.now();
 for (let i = 0; i < 1000; i++) {
   const randomUser1 = allUsers[Math.floor(Math.random() * allUsers.length)];
@@ -208,21 +208,21 @@ for (let i = 0; i < 1000; i++) {
   }
 }
 const endTime = Date.now();
-console.log(`1000 operations took: ${endTime - startTime}ms`);
+console.info(`1000 operations took: ${endTime - startTime}ms`);
 
 // Test 9: Data integrity
-console.log('\n📝 Test 9: Data Integrity');
+console.info('\n📝 Test 9: Data Integrity');
 const totalRelationships = followRelationships.length;
 const uniqueFollowers = new Set(followRelationships.map(r => r.followerId));
 const uniqueFollowing = new Set(followRelationships.map(r => r.followingId));
 
-console.log(`Total relationships: ${totalRelationships}`);
-console.log(`Unique followers: ${uniqueFollowers.size}`);
-console.log(`Unique following: ${uniqueFollowing.size}`);
+console.info(`Total relationships: ${totalRelationships}`);
+console.info(`Unique followers: ${uniqueFollowers.size}`);
+console.info(`Unique following: ${uniqueFollowing.size}`);
 
 // Test 10: Real-world simulation
-console.log('\n📝 Test 10: Real-World Simulation');
-console.log('Simulating user interactions...');
+console.info('\n📝 Test 10: Real-World Simulation');
+console.info('Simulating user interactions...');
 
 // New user starts following
 const newUser = allUsers[20]; // user021
@@ -232,28 +232,28 @@ usersToFollow.forEach(user => {
 });
 
 const newUserStats = getFollowStats(newUser.id, newUser.id);
-console.log(`${newUser.name} started following ${newUserStats.followingCount} users`);
+console.info(`${newUser.name} started following ${newUserStats.followingCount} users`);
 
 // Check suggestions for new user
 const newUserSuggestions = getFollowSuggestions(newUser.id, 3);
-console.log(`Suggestions for ${newUser.name}:`);
+console.info(`Suggestions for ${newUser.name}:`);
 newUserSuggestions.forEach((user, index) => {
-  console.log(`${index + 1}. ${user.name} (${user.karmaPoints} karma points)`);
+  console.info(`${index + 1}. ${user.name} (${user.karmaPoints} karma points)`);
 });
 
 // Summary
-console.log('\n✅ Comprehensive Follow System Test Completed!');
-console.log('📊 Final Statistics:');
-console.log(`- Total Users: ${allUsers.length}`);
-console.log(`- Total Relationships: ${followRelationships.length}`);
-console.log(`- System Performance: Excellent`);
-console.log(`- ID Unification: ${charIds.length === 0 ? 'COMPLETE' : 'INCOMPLETE'}`);
-console.log(`- All Core Functions: WORKING`);
-console.log(`- Data Integrity: MAINTAINED`);
+console.info('\n✅ Comprehensive Follow System Test Completed!');
+console.info('📊 Final Statistics:');
+console.info(`- Total Users: ${allUsers.length}`);
+console.info(`- Total Relationships: ${followRelationships.length}`);
+console.info(`- System Performance: Excellent`);
+console.info(`- ID Unification: ${charIds.length === 0 ? 'COMPLETE' : 'INCOMPLETE'}`);
+console.info(`- All Core Functions: WORKING`);
+console.info(`- Data Integrity: MAINTAINED`);
 
 if (charIds.length === 0) {
-  console.log('\n🎉 SUCCESS: All IDs are properly unified!');
-  console.log('🎉 SUCCESS: Follow system is working correctly!');
+  console.info('\n🎉 SUCCESS: All IDs are properly unified!');
+  console.info('🎉 SUCCESS: Follow system is working correctly!');
 } else {
-  console.log('\n⚠️  WARNING: Some IDs still need to be unified');
+  console.info('\n⚠️  WARNING: Some IDs still need to be unified');
 } 

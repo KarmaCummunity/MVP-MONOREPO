@@ -23,7 +23,9 @@ import { restAdapter } from './restAdapter';
 import { firestoreAdapter } from './firestoreAdapter';
 import { DB_COLLECTIONS } from './dbCollections';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
+import { logger } from './loggerService';
 
+const DatabaseService_LOG = 'databaseService';
 export { DB_COLLECTIONS };
 let enhancedDbInstance: any = null;
 
@@ -108,7 +110,7 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.setItem(key, JSON.stringify(data));
       }
-      console.log(`✅ DatabaseService - Created ${collection} item:`, itemId);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Created ${collection} item:`, itemId);
     } catch (error) {
       console.error(`❌ DatabaseService - Create ${collection} error:`, error);
       throw error;
@@ -146,16 +148,16 @@ export class DatabaseService {
     try {
       if (USE_BACKEND) {
         await restAdapter.update(collection, userId, itemId, data);
-        console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.update(collection, userId, itemId, data);
-        console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
       } else {
         const existing = await this.read<T>(collection, userId, itemId);
         if (existing) {
           const updated = { ...existing, ...data };
           await this.create(collection, userId, itemId, updated);
-          console.log(`✅ DatabaseService - Updated ${collection} item:`, itemId);
+          logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
         }
       }
     } catch (error) {
@@ -178,7 +180,7 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.removeItem(key);
       }
-      console.log(`✅ DatabaseService - Deleted ${collection} item:`, itemId);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Deleted ${collection} item:`, itemId);
     } catch (error) {
       console.error(`❌ DatabaseService - Delete ${collection} error:`, error);
       throw error;
@@ -274,17 +276,17 @@ export class DatabaseService {
            
           await restAdapter.create(collection, userId, id, data);
         }
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items (Backend)`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch created ${items.length} ${collection} items (Backend)`);
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.batchCreate(collection, userId, items);
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items (Firestore)`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch created ${items.length} ${collection} items (Firestore)`);
       } else {
         const keyValuePairs: [string, string][] = items.map(({ id, data }) => [
           getDBKey(collection, userId, id),
           JSON.stringify(data)
         ]);
         await AsyncStorage.multiSet(keyValuePairs);
-        console.log(`✅ DatabaseService - Batch created ${items.length} ${collection} items`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch created ${items.length} ${collection} items`);
       }
     } catch (error) {
       console.error(`❌ DatabaseService - Batch create ${collection} error:`, error);
@@ -303,14 +305,14 @@ export class DatabaseService {
            
           await restAdapter.delete(collection, userId, id);
         }
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Backend)`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Backend)`);
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.batchDelete(collection, userId, itemIds);
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Firestore)`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items (Firestore)`);
       } else {
         const keys = itemIds.map(id => getDBKey(collection, userId, id));
         await AsyncStorage.multiRemove(keys);
-        console.log(`✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items`);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Batch deleted ${itemIds.length} ${collection} items`);
       }
     } catch (error) {
       console.error(`❌ DatabaseService - Batch delete ${collection} error:`, error);
@@ -340,7 +342,7 @@ export class DatabaseService {
       const keys = await AsyncStorage.getAllKeys();
       const userKeys = keys.filter(key => key.includes(`_${userId}_`) || key.endsWith(`_${userId}`));
       await AsyncStorage.multiRemove(userKeys);
-      console.log(`✅ DatabaseService - Deleted all data for user: ${userId}`);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Deleted all data for user: ${userId}`);
     } catch (error) {
       console.error('❌ DatabaseService - Delete user data error:', error);
       throw error;
@@ -351,7 +353,7 @@ export class DatabaseService {
   static async clearAllData(): Promise<void> {
     try {
       await AsyncStorage.clear();
-      console.log('✅ DatabaseService - Cleared all data');
+      logger.debug(DatabaseService_LOG, '✅ DatabaseService - Cleared all data');
     } catch (error) {
       console.error('❌ DatabaseService - Clear all data error:', error);
       throw error;
@@ -372,7 +374,7 @@ export class DatabaseService {
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove);
       }
-      console.log('✅ DatabaseService - Cleared local collection keys:', keysToRemove.length);
+      logger.debug(DatabaseService_LOG, '✅ DatabaseService - Cleared local collection keys:', keysToRemove.length);
     } catch (error) {
       console.error('❌ DatabaseService - Clear local collections error:', error);
       throw error;
@@ -415,7 +417,7 @@ export class DatabaseService {
         }
       }
 
-      console.log(`✅ DatabaseService - Imported data for user: ${userId}`);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Imported data for user: ${userId}`);
     } catch (error) {
       console.error('❌ DatabaseService - Import user data error:', error);
       throw error;
@@ -649,7 +651,7 @@ export const db = {
             // The server should store this as-is, treating it as the intended local time
             const isoString = localDate.toISOString();
 
-            console.log('🕐 Converting time:', { dateStr, timeStr, localDate: localDate.toLocaleString('he-IL'), isoString });
+            logger.debug(DatabaseService_LOG, '🕐 Converting time:', { dateStr, timeStr, localDate: localDate.toLocaleString('he-IL'), isoString });
 
             // Check if date is valid
             if (isNaN(localDate.getTime())) {
@@ -701,7 +703,7 @@ export const db = {
           metadata: { source: 'legacy-app', legacy_id: rideId },
         };
 
-        console.log('🚗 Creating ride with payload:', JSON.stringify(payload, null, 2));
+        logger.debug(DatabaseService_LOG, '🚗 Creating ride with payload:', JSON.stringify(payload, null, 2));
         const res = await apiService.createRide(payload);
         if (!res.success) throw new Error(res.error || 'Failed to create ride');
 
@@ -760,11 +762,11 @@ export const db = {
         }
         // Don't set status filter - let server return all active/published rides
         // The server defaults to 'active' but we want to see all published rides too
-        console.log('🔍 listRides filters:', filters);
+        logger.debug(DatabaseService_LOG, '🔍 listRides filters:', filters);
         const apiRides = await enhancedDB.getRides(filters);
-        console.log('📋 listRides returned:', apiRides?.length || 0, 'rides');
+        logger.debug(DatabaseService_LOG, '📋 listRides returned:', apiRides?.length || 0, 'rides');
         if (apiRides && apiRides.length > 0) {
-          console.log('📋 First ride sample:', JSON.stringify({
+          logger.debug(DatabaseService_LOG, '📋 First ride sample:', JSON.stringify({
             id: apiRides[0].id,
             status: apiRides[0].status,
             from: apiRides[0].from_location?.name,
@@ -958,39 +960,39 @@ export const db = {
   // ========================================
 
   createDedicatedItem: async (itemData: any) => {
-    console.log('📤 API: Creating dedicated item to:', `${API_BASE_URL}/api/dedicated-items`);
-    console.log('📦 Item data:', JSON.stringify(itemData, null, 2));
+    logger.debug(DatabaseService_LOG, '📤 API: Creating dedicated item to:', `${API_BASE_URL}/api/dedicated-items`);
+    logger.debug(DatabaseService_LOG, '📦 Item data:', JSON.stringify(itemData, null, 2));
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items`, { method: 'POST', body: JSON.stringify(itemData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Item created:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Item created:', response.data);
     return response.data;
   },
 
   getDedicatedItemsByOwner: async (ownerId: string) => {
-    console.log('📥 API: Fetching items for owner:', ownerId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching items for owner:', ownerId);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/owner/${ownerId}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Received items:', response.data.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received items:', response.data.length || 0);
     return response.data;
   },
 
   getDedicatedItemById: async (id: string) => {
-    console.log('📥 API: Fetching item by ID:', id);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching item by ID:', id);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Item received');
+    logger.debug(DatabaseService_LOG, '✅ API: Item received');
     return response.data;
   },
 
   updateDedicatedItem: async (id: string, itemData: any) => {
-    console.log('✏️ API: Updating item:', id);
+    logger.debug(DatabaseService_LOG, '✏️ API: Updating item:', id);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'PUT', body: JSON.stringify(itemData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Item updated');
+    logger.debug(DatabaseService_LOG, '✅ API: Item updated');
     return response.data;
   },
 
@@ -998,11 +1000,11 @@ export const db = {
   // All user data is now unified in user_profiles table with UUID identifiers
 
   deleteDedicatedItem: async (id: string) => {
-    console.log('🗑️ API: Deleting item:', id);
+    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting item:', id);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'DELETE' });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Item deleted');
+    logger.debug(DatabaseService_LOG, '✅ API: Item deleted');
     return response.data;
   },
 
@@ -1024,11 +1026,11 @@ export const db = {
     category?: string;
     is_public?: boolean;
   }) => {
-    console.log('📤 API: Creating community challenge:', challengeData.title);
+    logger.debug(DatabaseService_LOG, '📤 API: Creating community challenge:', challengeData.title);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges`, { method: 'POST', body: JSON.stringify(challengeData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Challenge created:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge created:', response.data);
     return response.data;
   },
 
@@ -1045,7 +1047,7 @@ export const db = {
     limit?: number;
     offset?: number;
   } = {}) => {
-    console.log('📥 API: Fetching community challenges with filters:', filters);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching community challenges with filters:', filters);
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -1055,27 +1057,27 @@ export const db = {
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges?${params.toString()}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Received challenges:', response.data.data?.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received challenges:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeDetails: async (challengeId: string) => {
-    console.log('📥 API: Fetching challenge details:', challengeId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge details:', challengeId);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Challenge details received');
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge details received');
     return response.data;
   },
 
   joinChallenge: async (challengeId: string, userId: string) => {
-    console.log('🤝 API: Joining challenge:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '🤝 API: Joining challenge:', challengeId, 'User:', userId);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}/join`, { method: 'POST', body: JSON.stringify({
       user_id: userId
     }) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Joined challenge successfully');
+    logger.debug(DatabaseService_LOG, '✅ API: Joined challenge successfully');
     return response.data;
   },
 
@@ -1086,18 +1088,18 @@ export const db = {
     notes?: string;
   }) => {
     const body = { challenge_id: challengeId, ...entryData };
-    console.log('📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
+    logger.debug(DatabaseService_LOG, '📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
     const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`, { method: 'POST', body: JSON.stringify(body
     ) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
+    logger.debug(DatabaseService_LOG, '✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
     return response.data;
   },
 
   getChallengeEntries: async (challengeId: string, userId: string, limit = 100, offset = 0) => {
-    console.log('📥 API: Fetching challenge entries:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge entries:', challengeId, 'User:', userId);
     const params = new URLSearchParams({
       user_id: userId,
       limit: String(limit),
@@ -1108,16 +1110,16 @@ export const db = {
     );
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Received entries:', response.data.data?.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received entries:', response.data.data?.length || 0);
     return response.data;
   },
 
   getChallengeStatistics: async (userId: string) => {
-    console.log('📊 API: Fetching challenge statistics for user:', userId);
+    logger.debug(DatabaseService_LOG, '📊 API: Fetching challenge statistics for user:', userId);
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/user/${userId}/stats`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Statistics received');
+    logger.debug(DatabaseService_LOG, '✅ API: Statistics received');
     return response.data;
   },
 
@@ -1132,26 +1134,26 @@ export const db = {
     category?: string;
     is_active?: boolean;
   }) => {
-    console.log('✏️ API: Updating challenge:', challengeId);
+    logger.debug(DatabaseService_LOG, '✏️ API: Updating challenge:', challengeId);
     const params = new URLSearchParams({ user_id: userId });
     const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`, { method: 'PUT', body: JSON.stringify(updateData
     ) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Challenge updated');
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge updated');
     return response.data;
   },
 
   deleteCommunityChallenge: async (challengeId: string, userId: string) => {
-    console.log('🗑️ API: Deleting challenge:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting challenge:', challengeId, 'User:', userId);
     const params = new URLSearchParams({ user_id: userId });
     const url = `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`;
-    console.log('🔗 API: DELETE URL:', url);
+    logger.debug(DatabaseService_LOG, '🔗 API: DELETE URL:', url);
     const res = await fetchWithAuth(url, { method: 'DELETE' });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    console.log('✅ API: Challenge deleted:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge deleted:', response.data);
     return response.data;
   },
 
@@ -1160,8 +1162,8 @@ export const db = {
   // ========================================
 
   getDailyTrackerData: async (userId: string, startDate?: string, endDate?: string) => {
-    console.log('📊 API: Fetching daily tracker data for user:', userId);
-    console.log('📅 Date range:', startDate, '-', endDate);
+    logger.debug(DatabaseService_LOG, '📊 API: Fetching daily tracker data for user:', userId);
+    logger.debug(DatabaseService_LOG, '📅 Date range:', startDate, '-', endDate);
     
     const params = new URLSearchParams({ user_id: userId });
     if (startDate) params.append('start_date', startDate);
@@ -1174,12 +1176,12 @@ export const db = {
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
     
     const payload = response.data?.data ?? response.data;
-    console.log('✅ API: Tracker data received');
-    console.log('   Challenges:', payload?.challenges?.length ?? 0);
-    console.log('   Success rate:', payload?.stats?.total_success_rate ?? 'N/A');
+    logger.debug(DatabaseService_LOG, '✅ API: Tracker data received');
+    logger.debug(DatabaseService_LOG, '   Challenges:', payload?.challenges?.length ?? 0);
+    logger.debug(DatabaseService_LOG, '   Success rate:', payload?.stats?.total_success_rate ?? 'N/A');
     if (payload?.entries_by_date && typeof __DEV__ !== 'undefined' && __DEV__) {
       const dates = Object.keys(payload.entries_by_date);
-      console.log('   Dates with entries:', dates.join(', '));
+      logger.debug(DatabaseService_LOG, '   Dates with entries:', dates.join(', '));
     }
     return response.data;
   },

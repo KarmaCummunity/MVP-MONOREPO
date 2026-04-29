@@ -145,7 +145,7 @@ class TextAuditor {
         this.report.translationStats.totalKeysEn = this.countKeys(this.translationsEn);
       }
 
-      console.log(`Loaded translations: ${this.report.translationStats.totalKeysHe} Hebrew keys, ${this.report.translationStats.totalKeysEn} English keys\n`);
+      console.info(`Loaded translations: ${this.report.translationStats.totalKeysHe} Hebrew keys, ${this.report.translationStats.totalKeysEn} English keys\n`);
     } catch (error) {
       console.error('Error loading translations:', error);
     }
@@ -363,10 +363,10 @@ class TextAuditor {
   }
 
   public audit(): TextAuditReport {
-    console.log('📝 Starting text/i18n audit...\n');
+    console.info('📝 Starting text/i18n audit...\n');
 
     const files = this.getAllFiles(this.rootDir);
-    console.log(`Found ${files.length} TypeScript files to audit\n`);
+    console.info(`Found ${files.length} TypeScript files to audit\n`);
 
     files.forEach((file, index) => {
       if (index % 10 === 0) {
@@ -387,36 +387,36 @@ class TextAuditor {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(this.report, null, 2));
-    console.log(`\n📊 Report saved to: ${outputPath}`);
+    console.info(`\n📊 Report saved to: ${outputPath}`);
   }
 
   public printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('TEXT/I18N AUDIT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`\nTotal files scanned: ${this.report.totalFiles}`);
-    console.log(`Files with issues: ${this.report.filesWithIssues}`);
-    console.log(`Total issues found: ${this.report.totalIssues}\n`);
+    console.info('\n' + '='.repeat(60));
+    console.info('TEXT/I18N AUDIT SUMMARY');
+    console.info('='.repeat(60));
+    console.info(`\nTotal files scanned: ${this.report.totalFiles}`);
+    console.info(`Files with issues: ${this.report.filesWithIssues}`);
+    console.info(`Total issues found: ${this.report.totalIssues}\n`);
 
-    console.log('Translation coverage:');
-    console.log(`  Hebrew keys:  ${this.report.translationStats.totalKeysHe}`);
-    console.log(`  English keys: ${this.report.translationStats.totalKeysEn}\n`);
+    console.info('Translation coverage:');
+    console.info(`  Hebrew keys:  ${this.report.translationStats.totalKeysHe}`);
+    console.info(`  English keys: ${this.report.translationStats.totalKeysEn}\n`);
 
-    console.log('Issues by severity:');
-    console.log(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
-    console.log(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
-    console.log(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
-    console.log(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
+    console.info('Issues by severity:');
+    console.info(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
+    console.info(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
+    console.info(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
+    console.info(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
 
-    console.log('Issues by type:');
-    console.log(`  Hardcoded Hebrew:  ${this.report.issuesByType['hardcoded-hebrew']}`);
-    console.log(`  Hardcoded English: ${this.report.issuesByType['hardcoded-english']}`);
-    console.log(`  Missing keys:      ${this.report.issuesByType['missing-key']}`);
-    console.log(`  Unused keys:       ${this.report.issuesByType['unused-key']}`);
-    console.log(`  Missing i18n:      ${this.report.issuesByType['no-i18n-import']}\n`);
+    console.info('Issues by type:');
+    console.info(`  Hardcoded Hebrew:  ${this.report.issuesByType['hardcoded-hebrew']}`);
+    console.info(`  Hardcoded English: ${this.report.issuesByType['hardcoded-english']}`);
+    console.info(`  Missing keys:      ${this.report.issuesByType['missing-key']}`);
+    console.info(`  Unused keys:       ${this.report.issuesByType['unused-key']}`);
+    console.info(`  Missing i18n:      ${this.report.issuesByType['no-i18n-import']}\n`);
 
     if (this.report.totalIssues > 0) {
-      console.log('Top 5 files with most issues:');
+      console.info('Top 5 files with most issues:');
       const fileIssueCount = new Map<string, number>();
       this.report.issues.forEach(issue => {
         fileIssueCount.set(issue.file, (fileIssueCount.get(issue.file) || 0) + 1);
@@ -427,11 +427,11 @@ class TextAuditor {
         .slice(0, 5);
 
       sorted.forEach(([file, count], index) => {
-        console.log(`  ${index + 1}. ${file} (${count} issues)`);
+        console.info(`  ${index + 1}. ${file} (${count} issues)`);
       });
     }
 
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.info('\n' + '='.repeat(60) + '\n');
   }
 }
 

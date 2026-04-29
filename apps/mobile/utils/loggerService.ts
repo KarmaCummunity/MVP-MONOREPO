@@ -33,6 +33,28 @@ interface LogEntry {
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
+/** Single place for level → console mapping (avoids duplicated switch in addLog). */
+const CONSOLE_EMIT: Record<'debug' | 'info' | 'warn' | 'error', (line: string) => void> = {
+  debug: (line) => {
+    console.debug(`🔍 ${line}`);
+  },
+  info: (line) => {
+    console.info(`ℹ️  ${line}`);
+  },
+  warn: (line) => {
+    console.warn(`⚠️  ${line}`);
+  },
+  error: (line) => {
+    console.error(`❌ ${line}`);
+  },
+};
+
+function formatLogEntryForExport(log: LogEntry): string {
+  const periodicTag = log.periodic ? ' [PERIODIC]' : '';
+  const dataSuffix = log.data ? ` ${JSON.stringify(log.data)}` : '';
+  return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${dataSuffix}`;
+}
+
 class LoggerService {
   private logs: LogEntry[] = [];
   private pendingLogs: LogEntry[] = [];
@@ -71,7 +93,7 @@ class LoggerService {
         if (Array.isArray(parsedLogs) && parsedLogs.length > MAX_LOGS) {
           await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
           if (this.enableConsoleOutput) {
-            console.log(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
+            console.info(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
           }
         }
       }
@@ -174,26 +196,12 @@ class LoggerService {
       this.saveLogs();
     }
 
-    // Console output only if enabled (disabled in production by default)
+    // Console: developer message only — no serialized payloads (Sonar / sensitive data).
     if (this.enableConsoleOutput) {
       const periodicTag = periodic ? ' [PERIODIC]' : '';
       const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
-      const fullMessage = data ? `${message} ${JSON.stringify(data)}` : message;
-
-      switch (level) {
-        case 'debug':
-          console.log(`🔍 ${prefix}`, fullMessage);
-          break;
-        case 'info':
-          console.log(`ℹ️  ${prefix}`, fullMessage);
-          break;
-        case 'warn':
-          console.warn(`⚠️  ${prefix}`, fullMessage);
-          break;
-        case 'error':
-          console.error(`❌ ${prefix}`, fullMessage);
-          break;
-      }
+      const consoleLine = `${prefix} ${message}`;
+      CONSOLE_EMIT[level](consoleLine);
     }
   }
 
@@ -266,12 +274,7 @@ class LoggerService {
   }
 
   async exportLogs(): Promise<string> {
-    return this.logs
-      .map(log => {
-        const periodicTag = log.periodic ? ' [PERIODIC]' : '';
-        return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${log.data ? ` ${JSON.stringify(log.data)}` : ''}`;
-      })
-      .join('\n');
+    return this.logs.map(formatLogEntryForExport).join('\n');
   }
 
   async clearLogs() {
@@ -281,7 +284,7 @@ class LoggerService {
       await AsyncStorage.removeItem(LOGS_KEY);
     }
     if (this.enableConsoleOutput) {
-      console.log('🗑️ All logs cleared');
+      console.info('🗑️ All logs cleared');
     }
   }
 
@@ -300,7 +303,7 @@ class LoggerService {
       document.body.removeChild(element);
 
       if (this.enableConsoleOutput) {
-        console.log('📁 Logs downloaded');
+        console.info('📁 Logs downloaded');
       }
     }
   }
@@ -311,8 +314,8 @@ class LoggerService {
 
     const logsText = await this.exportLogs();
     if (this.enableConsoleOutput) {
-      console.log('📋 Complete logs:');
-      console.log(logsText);
+      console.info('📋 Complete logs:');
+      console.info(logsText);
     }
     return logsText;
   }
@@ -329,3 +332,23 @@ class LoggerService {
 }
 
 export const logger = new LoggerService();
+
+export interface BoundLogger {
+  debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  info: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  error: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+}
+
+const BOUND_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
+
+/** Bound component name for shorter call sites (single implementation, no per-method duplication). */
+export function createLogger(component: string): BoundLogger {
+  const bound = {} as BoundLogger;
+  for (const level of BOUND_LEVELS) {
+    bound[level] = (message: string, data?: Record<string, unknown>, options?: LogOptions) => {
+      logger[level](component, message, data, options);
+    };
+  }
+  return bound;
+}

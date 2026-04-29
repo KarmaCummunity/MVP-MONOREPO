@@ -20,6 +20,7 @@ import OptionsModal from '../../components/Feed/OptionsModal';
 import ReportPostModal from '../../components/Feed/ReportPostModal';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
+import { logger } from '../../utils/loggerService';
 export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
@@ -68,7 +69,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
 
       try {
         setLoading(true);
-        console.log('📱 OpenRoute - Loading open content for userId:', targetUserId);
+        logger.debug('OpenRoute', 'Loading open content for userId', { targetUserId });
 
         const { USE_BACKEND, API_BASE_URL } = await import('../../utils/dbConfig');
         const allContent: any[] = [];
@@ -92,7 +93,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
               }
               allContent.push(buildOpenTabEntryFromPost(p, user, row));
             });
-            console.log('📱 OpenRoute - Loaded posts from API:', res.data.length);
+            logger.debug('OpenRoute', 'Loaded posts from API', { count: res.data.length });
           }
         } catch (error) {
           console.error('Error loading posts from API:', error);
@@ -173,7 +174,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
         // Load rides (active, full)
         try {
           const allRides = await enhancedDB.getRides({});
-          console.log('[ProfileScreen OpenRoute] Fetched rides:', allRides.length);
+          logger.debug('OpenRoute', 'Fetched rides', { count: allRides.length });
 
           const userRides = allRides.filter((ride: any) => {
             const driverId = ride.driver_id || ride.createdBy || ride.created_by || ride.driverId;
@@ -181,13 +182,13 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
             const isUserRide = driverId === targetUserId && (status === 'active' || status === 'full');
 
             if (isUserRide) {
-              console.log('[ProfileScreen OpenRoute] Found user ride:', ride.id, 'driver:', driverId);
+              logger.debug('OpenRoute', 'Found user ride', { rideId: ride.id, driverId });
             }
 
             return isUserRide;
           });
 
-          console.log('[ProfileScreen OpenRoute] User rides count:', userRides.length);
+          logger.debug('OpenRoute', 'User rides count', { count: userRides.length });
 
           userRides.forEach((ride: any) => {
             if (existingRideIds.has(ride.id)) return;
@@ -258,7 +259,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
           tasks.forEach((task: any) => {
             // Skip if already added via task posts
             if (existingTaskIds.has(task.id)) {
-              console.log(`📱 OpenRoute - Skipping duplicate task: ${task.id}`);
+              logger.debug('OpenRoute', 'Skipping duplicate task', { taskId: task.id });
               return;
             }
 
@@ -324,7 +325,7 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
           console.error('Error loading donations:', error);
         }
 
-        console.log('📱 OpenRoute - Total open content:', allContent.length);
+        logger.debug('OpenRoute', 'Total open content', { count: allContent.length });
         setPosts(allContent);
       } catch (error) {
         console.error('Error loading open content:', error);

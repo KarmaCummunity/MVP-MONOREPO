@@ -19,6 +19,7 @@ import { useUser } from '../stores/userStore';
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
 import AddLinkComponent from '../components/AddLinkComponent';
+import { logger } from '../utils/loggerService';
 
 // Mock data for volunteer opportunities
 const volunteerOpportunities = [
@@ -158,7 +159,7 @@ export default function TimeScreen({
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('⏰ TimeScreen - Screen focused, refreshing data...');
+      logger.debug('TimeScreen', 'Screen focused, refreshing data');
       // Reset form when returning to screen
       setSelectedTask(null);
       // Force re-render by updating refresh key
@@ -195,7 +196,7 @@ export default function TimeScreen({
   ];
 
   const handleVolunteerPress = (opportunity: any) => {
-    console.log('Volunteer opportunity pressed:', opportunity.title);
+    logger.debug('TimeScreen', 'Volunteer opportunity pressed', { title: opportunity.title });
     Alert.alert(
       'הצטרפות להתנדבות',
       `האם תרצה להצטרף להתנדבות "${opportunity.title}"?`,
@@ -216,7 +217,7 @@ export default function TimeScreen({
   };
 
   const handleEmergencyLink = async () => {
-    console.log('Emergency volunteer link pressed');
+    logger.debug('TimeScreen', 'Emergency volunteer link pressed');
     const url = 'https://www.volunteer.gov.il';
     try {
       const supported = await Linking.canOpenURL(url);
@@ -233,11 +234,11 @@ export default function TimeScreen({
 
   // Function to handle search results from HeaderComp
   const handleSearch = (query: string, filters?: string[], sorts?: string[], results?: any[]) => {
-    console.log('⏰ TimeScreen - Search received:', { 
-      query, 
-      filters: filters || [], 
-      sorts: sorts || [], 
-      resultsCount: results?.length || 0 
+    logger.debug('TimeScreen', 'Search received', {
+      query,
+      filters: filters || [],
+      sorts: sorts || [],
+      resultsCount: results?.length || 0,
     });
     
     // Update state with search results
@@ -280,7 +281,7 @@ export default function TimeScreen({
         mode={mode}
         menuOptions={['הגדרות', 'עזרה', 'צור קשר']}
         onToggleMode={() => setMode(!mode)}
-        onSelectMenuItem={(option: string) => console.log('Menu selected:', option)}
+        onSelectMenuItem={(option: string) => logger.debug('TimeScreen', 'Menu selected', { option })}
         title=""
         placeholder="חפש הזדמנויות התנדבות..."
         filterOptions={timeFilterOptions}

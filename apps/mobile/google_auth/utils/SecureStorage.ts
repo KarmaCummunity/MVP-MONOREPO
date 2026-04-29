@@ -29,6 +29,8 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../../utils/loggerService';
 
+const SecureStorage_LOG = 'SecureStorage';
+
 // ========================================
 // TYPE DEFINITIONS
 // ========================================
@@ -130,7 +132,7 @@ const SENSITIVE_PATTERNS = [
  * // Retrieve data
  * const result = await SecureStorage.getItem('auth_token');
  * if (result.success) {
- *   console.log('Token:', result.data);
+ *   logger.debug(SecureStorage_LOG, 'Token:', result.data);
  * }
  * 
  * // Remove data
@@ -158,7 +160,7 @@ class SecureStorageClass {
    * });
    * 
    * if (result.success) {
-   *   console.log('Token stored securely');
+   *   logger.debug(SecureStorage_LOG, 'Token stored securely');
    * } else {
    *   console.error('Storage failed:', result.error);
    * }
@@ -260,9 +262,9 @@ class SecureStorageClass {
    * const result = await SecureStorage.getItem('access_token');
    * if (result.success && result.data) {
    *   const token = result.data;
-   *   console.log('Retrieved token:', token);
+   *   logger.debug(SecureStorage_LOG, 'Retrieved token:', token);
    * } else {
-   *   console.log('No token found or error:', result.error);
+   *   logger.debug(SecureStorage_LOG, 'No token found or error:', result.error);
    * }
    * ```
    */
@@ -859,12 +861,12 @@ export default SecureStorage;
  * // Retrieve with error handling
  * const result = await getAuthToken('access');
  * if (result.success) {
- *   console.log('Token:', result.data);
+ *   logger.debug(SecureStorage_LOG, 'Token:', result.data);
  * } else {
  *   console.error('No token:', result.error);
  * }
  * 
  * // Cleanup expired items
  * const cleaned = await SecureStorage.cleanup();
- * console.log('Cleaned items:', cleaned.data);
+ * logger.debug(SecureStorage_LOG, 'Cleaned items:', cleaned.data);
  */
