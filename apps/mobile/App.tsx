@@ -102,6 +102,8 @@ const isMobileWebEnvironment = (): boolean => {
   return narrowViewport || touchDevice;
 };
 
+const shouldPersistNavigationState = (): boolean => !isMobileWebEnvironment();
+
 function AppContent() {
   const { t } = useTranslation(['common']);
   const { selectedUser } = useUser();
@@ -187,17 +189,26 @@ function AppContent() {
           const mode = useWebModeStore.getState().mode;
           const userId = useUserStore.getState().selectedUser?.id || null;
 
-          logger.info('App', 'Loading navigation state', { mode, userId });
-          const savedState = await loadNavigationState(mode, userId);
-          if (savedState) {
-            setInitialNavigationState(savedState);
-            logger.info('App', 'Navigation state loaded successfully', {
+          if (!shouldPersistNavigationState()) {
+            logger.info('App', 'Skipping persisted navigation state on mobile web', {
               mode,
               hasUserId: !!userId,
-              routeNames: savedState.routes?.map((r: { name: string }) => r.name) || []
             });
+            setInitialNavigationState(undefined);
+            await clearNavigationState(mode, userId);
           } else {
-            logger.info('App', 'No saved navigation state found', { mode, hasUserId: !!userId });
+            logger.info('App', 'Loading navigation state', { mode, userId });
+            const savedState = await loadNavigationState(mode, userId);
+            if (savedState) {
+              setInitialNavigationState(savedState);
+              logger.info('App', 'Navigation state loaded successfully', {
+                mode,
+                hasUserId: !!userId,
+                routeNames: savedState.routes?.map((r: { name: string }) => r.name) || []
+              });
+            } else {
+              logger.info('App', 'No saved navigation state found', { mode, hasUserId: !!userId });
+            }
           }
         } catch (navError) {
           logger.warn('App', 'Error loading navigation state, continuing anyway', { error: navError });
@@ -494,7 +505,7 @@ function AppContent() {
     useEffect(() => {
       return () => {
         // Cleanup: save state before unmount
-        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
+        if (navigationRef.current?.isReady() && shouldPersistNavigationState()) {
           const currentState = navigationRef.current.getRootState();
           if (currentState) {
             saveNavigationState(currentState, prevModeRef.current, prevUserIdRef.current);
@@ -511,7 +522,7 @@ function AppContent() {
     const handleNavigationStateChange = useCallback(
       (state: NavigationState | undefined) => {
         if (state) {
-          if (isMobileWebEnvironment()) {
+          if (!shouldPersistNavigationState()) {
             return;
           }
           const currentRoute = state.routes?.[state.index || 0];
@@ -651,4 +662,3 @@ const errorStyles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

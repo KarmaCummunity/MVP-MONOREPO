@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebMode } from '../stores/webModeStore';
 import { useUser } from '../stores/userStore';
-import colors from '../globals/colors';
+import colors, { SCRIM_BLACK_40, SCRIM_WHITE_95 } from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: colors.overlayWhite95,
+    backgroundColor: SCRIM_WHITE_95,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     zIndex: 9999,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   // Mobile Menu Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlayBlack40,
+    backgroundColor: SCRIM_BLACK_40,
     justifyContent: 'flex-start',
     alignItems: 'flex-end', // Slide from right or just align right
   },

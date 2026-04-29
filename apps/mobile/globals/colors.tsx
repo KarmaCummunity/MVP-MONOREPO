@@ -55,6 +55,10 @@ const palette = {
   updateBannerEnd: '#764ba2',
 };
 
+/** Modal / frosted bar scrims — exported so style sheets avoid flaky `colors` key inference. */
+export const SCRIM_BLACK_40 = 'rgba(0,0,0,0.4)' as const;
+export const SCRIM_WHITE_95 = 'rgba(255, 255, 255, 0.95)' as const;
+
 const colors = {
   // --- Core Theme ---
   primary: palette.tealDark,
@@ -227,7 +231,7 @@ const colors = {
   // Overlays & scrims (avoid scattered rgba literals in screens)
   overlayBlack60: 'rgba(0,0,0,0.6)',
   overlayBlack50: 'rgba(0,0,0,0.5)',
-  overlayBlack40: 'rgba(0,0,0,0.4)',
+  overlayBlack40: SCRIM_BLACK_40,
   overlayBlack30: 'rgba(0,0,0,0.3)',
   overlayBlack15: 'rgba(0,0,0,0.15)',
   overlayBlack10: 'rgba(0, 0, 0, 0.1)',
@@ -299,7 +303,7 @@ const colors = {
   overlayWhite25: 'rgba(255, 255, 255, 0.25)',
   overlayWhite80: 'rgba(255, 255, 255, 0.8)',
   overlayWhite92: 'rgba(255, 255, 255, 0.92)',
-  overlayWhite95: 'rgba(255, 255, 255, 0.95)',
+  overlayWhite95: SCRIM_WHITE_95,
   overlayWhite98: 'rgba(255, 255, 255, 0.98)',
   overlayWhiteTransparent: 'rgba(255, 255, 255, 0)',
   overlayGreenAccent10: 'rgba(0, 200, 83, 0.1)',

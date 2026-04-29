@@ -406,7 +406,7 @@ class ApiService {
 
   async setManager(userId: string, managerId: string | null, requestingUserId?: string): Promise<ApiResponse> {
     const body = { managerId, requestingUserId };
-    logger.debug(ApiService_LOG, `[apiService.setManager] Sending request: userId=${userId}, managerId=${managerId} (type: ${typeof managerId}), body:`, JSON.stringify(body));
+    logger.debug(ApiService_LOG, `[apiService.setManager] Sending request: userId=${userId}, managerId=${managerId} (type: ${typeof managerId})`, { body });
     return this.request(`/api/users/${userId}/set-manager`, {
       method: 'POST',
       body: JSON.stringify(body),
