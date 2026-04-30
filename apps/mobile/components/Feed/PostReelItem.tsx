@@ -1,7 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-    Dimensions,
-} from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FeedItem } from '../../types/feed';
 import { usePostInteractions } from '../../hooks/usePostInteractions';
@@ -13,8 +11,6 @@ import TaskFeedCard from './PostCard/TaskFeedCard';
 import CommunityChallengeFeedCard from './PostCard/CommunityChallengeFeedCard';
 import QuickMessageModal from './QuickMessageModal';
 import { logger } from '../../utils/loggerService';
-
-const { width } = Dimensions.get('window');
 
 interface PostReelItemProps {
     item: FeedItem;
@@ -28,13 +24,17 @@ interface PostReelItemProps {
 
 const PostReelItem: React.FC<PostReelItemProps> = ({
     item,
-    cardWidth = width,
+    cardWidth: cardWidthProp,
     numColumns = 1,
     onPress,
     onCommentPress,
     onMorePress,
     onPostClosed
 }) => {
+    const { width: windowWidth } = useWindowDimensions();
+    /** On web, initial Dimensions can be 0 before layout — avoid negative/zero card widths. */
+    const cardWidth = cardWidthProp ?? Math.max(1, windowWidth);
+
     const {
         isLiked,
         likesCount,

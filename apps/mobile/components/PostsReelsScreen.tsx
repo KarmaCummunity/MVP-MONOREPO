@@ -3,7 +3,6 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Dimensions,
   SafeAreaView,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -12,6 +11,8 @@ import {
   Alert,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
@@ -40,10 +41,8 @@ import { usePostMenu } from '../hooks/usePostMenu';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
 import { isMobileWeb } from '../globals/responsive';
+import { computeFeedCellWidth } from '../utils/feedLayout';
 
-const { width } = Dimensions.get('window');
-const isMobile = isMobileWeb();
-const HORIZONTAL_PADDING = isMobile ? 8 : 16; // Padding from screen edges
 const FEED_NUM_COLUMNS = 2;
 /** Horizontal gap between the two cards in a row (FlatList columnWrapper). */
 const FEED_COLUMN_GAP = 8;
@@ -75,6 +74,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { selectedUser } = useUser();
+  const { width: windowWidth } = useWindowDimensions();
+  const horizontalPadding = isMobileWeb() ? 8 : 16;
 
   useFocusEffect(
     useCallback(() => {
@@ -335,23 +336,30 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     }
   };
 
-  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
-    // Calculate available width: screen width minus horizontal padding on both sides
-    const availableWidth = width - (HORIZONTAL_PADDING * 2);
-    const gapTotal = FEED_COLUMN_GAP * (FEED_NUM_COLUMNS - 1);
-    const itemWidth = (availableWidth - gapTotal) / FEED_NUM_COLUMNS;
+  const feedCellWidth = useMemo(
+    () =>
+      computeFeedCellWidth({
+        windowWidth,
+        horizontalPadding,
+        numColumns: FEED_NUM_COLUMNS,
+        columnGap: FEED_COLUMN_GAP,
+      }),
+    [windowWidth, horizontalPadding],
+  );
 
-    return (
+  const renderItem = useCallback(
+    ({ item }: { item: FeedItem }) => (
       <PostReelItem
         item={item}
-        cardWidth={itemWidth}
+        cardWidth={feedCellWidth}
         numColumns={FEED_NUM_COLUMNS}
         onPress={handlePostPress}
         onCommentPress={handleCommentPress}
         onMorePress={handleMorePress}
       />
-    );
-  }, [handlePostPress, handleCommentPress, handleMorePress]);
+    ),
+    [feedCellWidth, handlePostPress, handleCommentPress, handleMorePress],
+  );
 
   const renderListFooter = useCallback(() => {
     if (!hasMorePosts) {
@@ -455,8 +463,10 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={FEED_NUM_COLUMNS}
+          style={Platform.OS === 'web' ? styles.listFlex : undefined}
           contentContainerStyle={[
             styles.listContent,
+            { paddingHorizontal: horizontalPadding },
             // Add padding top to account for floating header
             !hideTopBar && { paddingTop: 70 }
           ]}
@@ -565,8 +575,12 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   listContent: {
+    flexGrow: 1,
     paddingBottom: 80, // Space for bottom bar
-    paddingHorizontal: HORIZONTAL_PADDING, // Padding from screen edges
+  },
+  listFlex: {
+    flex: 1,
+    minHeight: 0,
   },
   listColumnWrapper: {
     gap: FEED_COLUMN_GAP,
