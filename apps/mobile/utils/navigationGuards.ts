@@ -58,7 +58,7 @@ const profileScreenGuard: NavigationGuard = {
           return {
             allowed: false,
             reason: 'Profile screen is not available in guest mode',
-            redirectTo: 'HomeScreen',
+            redirectTo: 'HomeStack',
           };
         }
       }
@@ -81,7 +81,7 @@ const adminTabGuard: NavigationGuard = {
           return {
             allowed: false,
             reason: 'Admin screens are only available to administrators',
-            redirectTo: 'HomeScreen',
+            redirectTo: 'HomeStack',
           };
         }
       }
