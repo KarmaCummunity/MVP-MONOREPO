@@ -50,6 +50,8 @@ interface HeaderSectionProps {
   initialSelectedFilters?: string[];
   initialSelectedSorts?: string[];
   sanitizeSelectedFilters?: (filters: string[]) => string[];
+  /** Map filter storage key to chip/modal label; defaults to trump then search i18n keys. */
+  formatFilterLabel?: (filterKey: string) => string;
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -70,9 +72,17 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   initialSelectedFilters,
   initialSelectedSorts,
   sanitizeSelectedFilters,
+  formatFilterLabel: formatFilterLabelProp,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
+
+  const defaultFormatFilterLabel = React.useCallback(
+    (key: string) =>
+      t(`trump:filters.${key}`, { defaultValue: t(`search:filters.${key}`, { defaultValue: key }) }),
+    [t],
+  );
+  const formatFilterLabel = formatFilterLabelProp ?? defaultFormatFilterLabel;
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const removeFilterRef = React.useRef<((filter: string) => void) | null>(null);
@@ -140,6 +150,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
             hideSortButton={hideSortButton}
             hideFilterButton={hideFilterButton}
             sanitizeSelectedFilters={sanitizeSelectedFilters}
+            formatFilterLabel={formatFilterLabel}
           />
         </View>
         {!hideModeToggle && (
@@ -191,8 +202,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
                     onPress={() => handleRemoveFilter(filter)}
                   >
                     <Text style={headerStyles.selectedFilterSortButtonText}>
-                      {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${filter}`, { defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }) })}
+                      {formatFilterLabel(filter)}
                     </Text>
                     <Ionicons name="close-circle" size={scaleSize(12)} color={colors.black} style={headerStyles.removeIcon} />
                   </TouchableOpacity>

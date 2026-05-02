@@ -113,6 +113,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
         sortOptions={[t('donations:sort.name'), t('donations:sort.date'), t('donations:sort.rating')]}
         searchData={[]}
         onSearch={handleSearch}
+        formatFilterLabel={(label) => label}
       />
 
       <ScrollContainer contentStyle={[

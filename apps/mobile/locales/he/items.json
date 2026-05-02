@@ -53,7 +53,8 @@
       "forParts": "לחלפים",
       "pickup": "עם איסוף עצמי",
       "paidDelivery": "משלוח בתשלום",
-      "accessibility": "נגישות"
+      "accessibility": "נגישות",
+      "includeRequests": "הצג בקשות"
     },
     "sorts": {
       "alphabetical": "אלפביתי",

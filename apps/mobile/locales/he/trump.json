@@ -39,7 +39,8 @@
     "noSmoking": "בלי עישון",
     "withPets": "עם חיות",
     "withKids": "עם ילדים",
-    "includePast": "כולל נסיעות שעברו"
+    "includePast": "כולל נסיעות שעברו",
+    "includeRequests": "הצג בקשות"
   },
   "category": {
     "other": "אחר"

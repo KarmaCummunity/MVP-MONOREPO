@@ -42,6 +42,8 @@ interface SearchBarProps {
   hideFilterButton?: boolean;
   /** Optional post-process for filter keys (e.g. admin tasks: drop show-completed when status chips are on). */
   sanitizeSelectedFilters?: (filters: string[]) => string[];
+  /** Map filter option id/label to display text (screen supplies i18n; default: trump then search keys). */
+  formatFilterLabel?: (filterKey: string) => string;
 }
 
 const SearchBar = ({
@@ -62,6 +64,7 @@ const SearchBar = ({
   hideSortButton = false,
   hideFilterButton = false,
   sanitizeSelectedFilters,
+  formatFilterLabel: formatFilterLabelProp,
 }: SearchBarProps) => {
   const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -90,6 +93,11 @@ const SearchBar = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot hydrate
   }, []);
+
+  const formatFilterLabel =
+    formatFilterLabelProp ??
+    ((key: string) =>
+      t(`trump:filters.${key}`, { defaultValue: t(`search:filters.${key}`, { defaultValue: key }) }));
 
   // Effect to inform parent about active conditions
   useEffect(() => {
@@ -399,8 +407,7 @@ const SearchBar = ({
                         isFilterSelected(option) && localStyles.modalOptionTextSelected,
                       ]}
                     >
-                      {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${option}`, { defaultValue: t(`search:filters.${option}`, { defaultValue: option }) })}
+                      {formatFilterLabel(option)}
                     </Text>
                     {isFilterSelected(option) && (
                       <Ionicons
@@ -528,8 +535,7 @@ const SearchBar = ({
                     onPress={() => removeFilter(filter)}
                   >
                     <Text style={localStyles.selectedFilterSortButtonText}>
-                      {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${filter}`, { defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }) })}
+                      {formatFilterLabel(filter)}
                     </Text>
                     <Ionicons name="close-circle" size={12} color={colors.black} style={localStyles.removeIcon} />
                   </TouchableOpacity>
