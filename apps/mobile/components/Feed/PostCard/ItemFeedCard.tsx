@@ -8,6 +8,7 @@ import { FeedItem } from '../../../types/feed';
 import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
+import { isGridFixedHeight, resolveGridFixedOuterStyle } from './postCardGridLayout';
 
 export interface ItemFeedCardProps extends BaseCardProps {
     /** Donation vs generic item — drives badge colors and placeholder copy. */
@@ -61,8 +62,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     const showFullActions = !isDelivered;
     const hasThumbnail = !!item.thumbnail;
-    const gridFixedOuter =
-        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
+    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
 
     const renderHeader = (overlay = false) => (
         <View
@@ -201,10 +201,10 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
         <View
             style={[
                 styles.container,
-                isGrid && !gridFixedOuter && styles.gridContainer,
+                isGrid && !isGridFixedHeight(gridOuterFixed) && styles.gridContainer,
                 hasThumbnail && styles.mediaContainer,
                 isDelivered && styles.containerDelivered,
-                gridFixedOuter,
+                gridOuterFixed,
                 { width: cardWidth }
             ]}
         >
@@ -215,7 +215,10 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
                     <View
                         style={[
                             styles.mediaStage,
-                            isGrid && gridFixedOuter ? styles.mediaStageGridFlex : isGrid && styles.mediaStageGrid,
+                            isGrid &&
+                                (isGridFixedHeight(gridOuterFixed)
+                                    ? styles.mediaStageGridFlex
+                                    : styles.mediaStageGrid),
                             isDelivered && styles.imageContainerDelivered
                         ]}
                     >
@@ -260,14 +263,14 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
                     <TouchableOpacity
                         onPress={onPress}
                         activeOpacity={0.95}
-                        style={[styles.cardContent, isGrid && gridFixedOuter && styles.cardContentGridFill]}
+                        style={[styles.cardContent, isGridFixedHeight(gridOuterFixed) && styles.cardContentGridFill]}
                     >
                     <View
                         style={[
                             styles.placeholderContainer,
                             cardKind === 'donation' && !isDelivered && styles.placeholderDonation,
-                            isGrid && !gridFixedOuter && styles.imageGrid,
-                            isGrid && gridFixedOuter && styles.placeholderContainerGridFlex,
+                            isGrid && !isGridFixedHeight(gridOuterFixed) && styles.imageGrid,
+                            isGridFixedHeight(gridOuterFixed) && styles.placeholderContainerGridFlex,
                             isDelivered && styles.placeholderDelivered
                         ]}
                     >

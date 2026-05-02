@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
 import { BaseCardProps } from './types';
+import { isGridFixedHeight, resolveGridFixedOuterStyle } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 
 const isMobile = isMobileWeb();
@@ -36,16 +37,15 @@ const RideCard: React.FC<BaseCardProps> = ({
 
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const locations = { from: item.from || '', to: item.to || '' };
-    const gridFixedOuter =
-        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
+    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
 
     return (
         <View
             style={[
                 styles.container,
-                isGrid && !gridFixedOuter && styles.gridContainer,
+                isGrid && !isGridFixedHeight(gridOuterFixed) && styles.gridContainer,
                 isCompleted && styles.containerCompleted,
-                gridFixedOuter,
+                gridOuterFixed,
                 { width: cardWidth }
             ]}
         >
@@ -96,7 +96,7 @@ const RideCard: React.FC<BaseCardProps> = ({
                 style={[
                     styles.cardContent,
                     isCompleted && styles.cardContentCompleted,
-                    isGrid && gridFixedOuter && styles.cardContentGridFill
+                    isGridFixedHeight(gridOuterFixed) && styles.cardContentGridFill
                 ]}
             >
                 {isCompleted ? (

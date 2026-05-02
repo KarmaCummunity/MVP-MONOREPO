@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
-import { FontSizes } from '../../../globals/constants';
-import { BaseCardProps } from './types';
+import { TaskAssignmentFeedCardBody } from './TaskAssignmentFeedCardBody';
+import { TaskFeedVariant } from './TaskFeedCard.types';
+import { styles } from './taskFeedCard.styles';
+import { isGridFixedHeight, resolveGridFixedOuterStyle } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
+import type { BaseCardProps } from './types';
 
-export type TaskFeedVariant = 'assignment' | 'completion';
+export type { TaskFeedVariant } from './TaskFeedCard.types';
 
 export interface TaskFeedCardProps extends BaseCardProps {
     variant: TaskFeedVariant;
@@ -41,16 +44,15 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     const isRTL = i18n.language === 'he';
     const isCompletion = variant === 'completion';
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
-    const gridFixedOuter =
-        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
+    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
 
     return (
         <View
             style={[
                 styles.container,
-                isGrid && !gridFixedOuter && styles.gridContainer,
+                isGrid && !isGridFixedHeight(gridOuterFixed) && styles.gridContainer,
                 isCompletion && styles.containerCompletion,
-                gridFixedOuter,
+                gridOuterFixed,
                 { width: cardWidth }
             ]}
         >
@@ -97,7 +99,7 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
                 style={[
                     styles.cardContent,
                     isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment,
-                    isGrid && gridFixedOuter && styles.cardContentGridFill
+                    isGridFixedHeight(gridOuterFixed) && styles.cardContentGridFill
                 ]}
             >
                 {isCompletion ? (
@@ -139,66 +141,7 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
                         </View>
                     </View>
                 ) : (
-                    <View style={[styles.contentContainer, isGrid && styles.contentContainerGrid]}>
-                        <View style={styles.iconContainer}>
-                            <Ionicons name="construct-outline" size={isMobile ? 24 : 32} color={colors.primary} />
-                        </View>
-                        {isGrid ? (
-                            <View style={styles.textContainer}>
-                                <Text
-                                    style={[styles.description, { textAlign: 'center', fontWeight: '700' }]}
-                                    numberOfLines={2}
-                                >
-                                    {item.taskData?.title || item.title || t('post.noTitle')}
-                                </Text>
-                            </View>
-                        ) : (
-                            <>
-                                <View style={styles.textContainer}>
-                                    <Text style={[styles.titleAssignment, { textAlign: 'center' }]}>
-                                        {t('tasks.status.new_for_you')}
-                                    </Text>
-                                    <Text
-                                        style={[styles.description, { textAlign: 'center', fontWeight: 'bold', marginTop: 4 }]}
-                                        numberOfLines={2}
-                                    >
-                                        {item.taskData?.title || item.title || t('post.noTitle')}
-                                    </Text>
-                                    {(item.description || item.taskData?.description) && (
-                                        <Text style={[styles.description, { textAlign: 'center' }]} numberOfLines={3}>
-                                            {item.taskData?.description || item.description}
-                                        </Text>
-                                    )}
-                                </View>
-                                <View style={styles.detailsSection}>
-                                    <View style={styles.detailRow}>
-                                        <Ionicons name="person-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                        <Text style={styles.detailText}>
-                                            {t('task.opened_by', 'נוצר ע"י')}: {item.user.name}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Ionicons name="people-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                        <Text style={styles.detailText}>
-                                            {t('task.performer', 'מבצע')}:{' '}
-                                            {item.taskData?.assignees && item.taskData.assignees.length > 0
-                                                ? item.taskData.assignees.map((a) => a.name).join(', ')
-                                                : t('task.unassigned', 'טרם שובץ')}
-                                        </Text>
-                                    </View>
-                                    {item.taskData?.estimated_hours ? (
-                                        <View style={styles.detailRow}>
-                                            <Ionicons name="time-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                            <Text style={styles.detailText}>
-                                                {t('task.duration', 'משך זמן')}: {item.taskData.estimated_hours}{' '}
-                                                {t('common.hours', 'שעות')}
-                                            </Text>
-                                        </View>
-                                    ) : null}
-                                </View>
-                            </>
-                        )}
-                    </View>
+                    <TaskAssignmentFeedCardBody item={item} isGrid={isGrid} />
                 )}
             </TouchableOpacity>
 
@@ -268,219 +211,5 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        backgroundColor: colors.white,
-        borderRadius: isMobile ? 12 : 16,
-        marginVertical: isMobile ? 6 : 8,
-        marginHorizontal: 0,
-        overflow: 'hidden',
-        minHeight: isMobile ? 280 : 380,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.black,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.12,
-                shadowRadius: 8
-            },
-            android: { elevation: 4 },
-            web: { boxShadow: `0 4px 16px ${colors.feedCardShadow}` }
-        })
-    },
-    containerCompletion: {
-        borderWidth: isMobile ? 1 : 2,
-        borderColor: colors.surfaceGreenTint,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.success,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8
-            },
-            android: { elevation: 4 },
-            web: { boxShadow: `0 4px 16px ${colors.overlayGreenAccent10}` }
-        })
-    },
-    gridContainer: {
-        minHeight: isMobile ? 180 : 250
-    },
-    header: {
-        padding: isMobile ? 10 : 16,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary
-    },
-    headerCompletion: {
-        backgroundColor: colors.surfaceElevated
-    },
-    headerRight: {
-        alignItems: 'center',
-        gap: 8
-    },
-    moreButton: { padding: 4 },
-    userInfo: {
-        alignItems: 'center',
-        gap: 12,
-        flex: 1
-    },
-    avatar: {
-        width: isMobile ? 36 : 44,
-        height: isMobile ? 36 : 44,
-        borderRadius: isMobile ? 18 : 22,
-        backgroundColor: colors.backgroundTertiary
-    },
-    avatarPlaceholder: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colors.primary
-    },
-    userTextContainer: { gap: 2, flex: 1 },
-    userName: {
-        fontSize: isMobile ? FontSizes.small : FontSizes.body,
-        fontWeight: '700',
-        color: colors.textPrimary
-    },
-    timestamp: {
-        fontSize: isMobile ? 10 : FontSizes.small,
-        color: colors.textSecondary
-    },
-    taskBadge: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colors.primary,
-        padding: isMobile ? 6 : 8,
-        borderRadius: isMobile ? 16 : 20
-    },
-    completedTaskBadge: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: colors.success,
-        padding: isMobile ? 6 : 8,
-        borderRadius: isMobile ? 16 : 20
-    },
-    cardContent: {
-        flex: 1
-    },
-    cardContentGridFill: {
-        flexGrow: 1,
-        flexShrink: 1,
-        minHeight: 0
-    },
-    cardContentAssignment: {
-        backgroundColor: colors.surfaceGrayBlue
-    },
-    cardContentCompletion: {
-        backgroundColor: colors.surfaceGreenPale
-    },
-    contentContainer: {
-        padding: isMobile ? 16 : 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: isMobile ? 10 : 16,
-        flex: 1
-    },
-    contentContainerGrid: {
-        padding: isMobile ? 12 : 16
-    },
-    iconContainer: {
-        width: isMobile ? 60 : 80,
-        height: isMobile ? 60 : 80,
-        borderRadius: isMobile ? 30 : 40,
-        backgroundColor: colors.surfaceGrayBlueBorder,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    textContainer: {
-        gap: 8,
-        alignItems: 'center'
-    },
-    titleAssignment: {
-        fontSize: isMobile ? 18 : 22,
-        fontWeight: '700',
-        color: colors.textPrimary
-    },
-    description: {
-        fontSize: isMobile ? FontSizes.small : FontSizes.body,
-        color: colors.textSecondary,
-        lineHeight: isMobile ? 16 : 22
-    },
-    detailsSection: {
-        width: '100%',
-        marginTop: isMobile ? 10 : 16,
-        paddingTop: isMobile ? 10 : 16,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-        gap: isMobile ? 6 : 8
-    },
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: isMobile ? 6 : 8
-    },
-    detailText: {
-        fontSize: isMobile ? FontSizes.small : FontSizes.body,
-        color: colors.textSecondary
-    },
-    celebrationContainer: {
-        position: 'relative',
-        marginBottom: 10
-    },
-    starsContainer: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    textContainerCompletion: {
-        gap: 16,
-        alignItems: 'center',
-        width: '100%'
-    },
-    titleCompletion: {
-        fontSize: isMobile ? 18 : 24,
-        fontWeight: '700',
-        color: colors.success
-    },
-    taskReference: {
-        backgroundColor: colors.overlayWhite80,
-        padding: isMobile ? 12 : 16,
-        borderRadius: isMobile ? 10 : 12,
-        width: '100%',
-        borderWidth: 1,
-        borderColor: colors.overlayGreenAccent10
-    },
-    taskReferenceText: {
-        fontSize: isMobile ? FontSizes.small : 16,
-        color: colors.textPrimary,
-        fontWeight: '500',
-        lineHeight: isMobile ? 18 : 24
-    },
-    actionsBar: {
-        padding: isMobile ? 10 : 16,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: colors.backgroundSecondary,
-        backgroundColor: colors.white
-    },
-    actionsLeft: { alignItems: 'center' },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6
-    },
-    actionCount: {
-        fontSize: isMobile ? FontSizes.small : FontSizes.body,
-        fontWeight: '600',
-        color: colors.textSecondary
-    },
-    likedCount: { color: colors.error },
-    actionsRight: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    }
-});
 
 export default React.memo(TaskFeedCard);
