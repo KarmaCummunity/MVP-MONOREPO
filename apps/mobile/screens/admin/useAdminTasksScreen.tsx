@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { View, Text, ActivityIndicator, Platform, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../../hooks/useSafeBottomTabBarHeight';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import colors from '../../globals/colors';
@@ -15,6 +16,7 @@ import type { AdminTask, TaskPriority, TaskStatus, TasksListSort, User, Persiste
 import {
   ADMIN_TASKS_FILTER_STORAGE_KEY,
   getAdminTasksFilterStorageKey,
+  TASK_LIST_CATEGORY_VALUES,
   TASK_LIST_SORT_OPTIONS,
   TASK_STATUSES_EXCLUDING_DONE,
 } from './adminTasksScreen.constants';
@@ -34,6 +36,49 @@ import { AdminTaskListRow } from './AdminTaskListRow';
 import { logger } from '../../utils/loggerService';
 
 const ADMIN_TASKS_LOG = 'useAdminTasksScreen';
+
+const DEFAULT_TASK_CATEGORY = TASK_LIST_CATEGORY_VALUES[0];
+
+async function readAdminTasksFilterRawWithLegacyMigrate(keyed: string): Promise<string | null> {
+  const raw = await AsyncStorage.getItem(keyed);
+  if (raw?.trim()) {
+    return raw;
+  }
+  const legacy = await AsyncStorage.getItem(ADMIN_TASKS_FILTER_STORAGE_KEY);
+  if (!legacy?.trim()) {
+    return null;
+  }
+  await AsyncStorage.setItem(keyed, legacy).catch(() => {});
+  await AsyncStorage.removeItem(ADMIN_TASKS_FILTER_STORAGE_KEY).catch(() => {});
+  return legacy;
+}
+
+function applyPersistedAdminTasksHeaderSnapshot(
+  data: Partial<PersistedAdminTasksHeader>,
+  setters: {
+    setQuery: Dispatch<SetStateAction<string>>;
+    setFilterAssignee: Dispatch<SetStateAction<'all' | 'me'>>;
+    setFilterStatuses: Dispatch<SetStateAction<TaskStatus[]>>;
+    setFilterPriorities: Dispatch<SetStateAction<TaskPriority[]>>;
+    setFilterCategories: Dispatch<SetStateAction<string[]>>;
+    setListSort: Dispatch<SetStateAction<TasksListSort>>;
+  },
+): void {
+  if (typeof data.query === 'string') {
+    setters.setQuery(data.query);
+  }
+  const parsed = parseAdminTaskHeaderFilters(
+    Array.isArray(data.filterKeys) ? data.filterKeys : undefined,
+  );
+  setters.setFilterAssignee(parsed.assignee);
+  setters.setFilterStatuses([...new Set(parsed.statuses)]);
+  setters.setFilterPriorities([...new Set(parsed.priorities)]);
+  setters.setFilterCategories([...new Set(parsed.categories)]);
+  const sortOption = TASK_LIST_SORT_OPTIONS.find((o) => o.value === data.sortKey);
+  if (sortOption) {
+    setters.setListSort(sortOption.value);
+  }
+}
 
 export function useAdminTasksScreen() {
   const route = useRoute();
@@ -59,7 +104,7 @@ export function useAdminTasksScreen() {
   const [tasks, setTasks] = useState<AdminTask[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [, setCreating] = useState<boolean>(false);
+  const [creating, setCreating] = useState<boolean>(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -70,7 +115,7 @@ export function useAdminTasksScreen() {
     description: '',
     priority: 'medium' as TaskPriority,
     status: 'open' as TaskStatus,
-    category: 'פיתוח',
+    category: DEFAULT_TASK_CATEGORY,
     due_date: '',
     assignees: [] as User[],
     tagsText: '' as string,
@@ -96,7 +141,7 @@ export function useAdminTasksScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [subtasks, setSubtasks] = useState<Record<string, AdminTask[]>>({});
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const [headerHeight, setHeaderHeight] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
   const maxListHeightRaw =
@@ -193,15 +238,7 @@ export function useAdminTasksScreen() {
       const keyed = filterStorageKey;
       let hadSnapshot = false;
       try {
-        let raw = await AsyncStorage.getItem(keyed);
-        if (!raw?.trim()) {
-          const legacy = await AsyncStorage.getItem(ADMIN_TASKS_FILTER_STORAGE_KEY);
-          if (legacy?.trim()) {
-            raw = legacy;
-            await AsyncStorage.setItem(keyed, legacy).catch(() => {});
-            await AsyncStorage.removeItem(ADMIN_TASKS_FILTER_STORAGE_KEY).catch(() => {});
-          }
-        }
+        const raw = await readAdminTasksFilterRawWithLegacyMigrate(keyed);
         if (cancelled) {
           return;
         }
@@ -212,19 +249,14 @@ export function useAdminTasksScreen() {
         }
         hadSnapshot = true;
         const data = JSON.parse(raw) as Partial<PersistedAdminTasksHeader>;
-        if (typeof data.query === 'string') {
-          setQuery(data.query);
-        }
-        const parsed = parseAdminTaskHeaderFilters(
-          Array.isArray(data.filterKeys) ? data.filterKeys : undefined,
-        );
-        setFilterAssignee(parsed.assignee);
-        setFilterStatuses([...new Set(parsed.statuses)]);
-        setFilterPriorities([...new Set(parsed.priorities)]);
-        setFilterCategories([...new Set(parsed.categories)]);
-        if (data.sortKey && TASK_LIST_SORT_OPTIONS.some((o) => o.value === data.sortKey)) {
-          setListSort(data.sortKey as TasksListSort);
-        }
+        applyPersistedAdminTasksHeaderSnapshot(data, {
+          setQuery,
+          setFilterAssignee,
+          setFilterStatuses,
+          setFilterPriorities,
+          setFilterCategories,
+          setListSort,
+        });
       } catch {
         // ignore corrupt storage
       } finally {
@@ -307,22 +339,22 @@ export function useAdminTasksScreen() {
         success: res.success,
         count: res.data?.length,
       });
-      if (!res.success) {
-        setError(res.error || 'שגיאה בטעינת משימות');
-      } else {
+      if (res.success) {
         setTasks((res.data || []).map(normalizeAdminTaskFromApi));
+      } else {
+        setError(res.error || t('admin:tasks.errLoadTasks'));
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);
       if (seq === fetchTasksSeqRef.current) {
-        setError('שגיאה בטעינת משימות - נסה שוב');
+        setError(t('admin:tasks.errLoadTasksRetry'));
       }
     } finally {
       if (seq === fetchTasksSeqRef.current) {
         setLoading(false);
       }
     }
-  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser, t]);
 
   useEffect(() => {
     if (!persistedHydrated) {
@@ -343,7 +375,7 @@ export function useAdminTasksScreen() {
       description: '',
       priority: 'medium',
       status: 'open',
-      category: 'פיתוח',
+      category: DEFAULT_TASK_CATEGORY,
       due_date: '',
       assignees: [],
       tagsText: '',
@@ -413,7 +445,7 @@ export function useAdminTasksScreen() {
       description: '',
       priority: parent.priority,
       status: 'open',
-      category: canonicalTaskCategory(parent.category) || 'פיתוח',
+      category: canonicalTaskCategory(parent.category) || DEFAULT_TASK_CATEGORY,
       due_date: '',
       assignees: parent.assignees_details || [],
       tagsText: '',
@@ -426,14 +458,14 @@ export function useAdminTasksScreen() {
 
   const createTask = async () => {
     if (!formData.title.trim()) {
-      const msg = 'נא להזין כותרת למשימה';
+      const msg = t('admin:tasks.validationTitleRequired');
       toastService.showError(msg);
       return;
     }
 
     // Validate created_by is available
     if (!selectedUser?.id) {
-      const msg = 'שגיאה: לא ניתן לזהות את המשתמש הנוכחי. נסה להתחבר מחדש.';
+      const msg = t('admin:tasks.errCurrentUserUnknown');
       setError(msg);
       toastService.showError(msg);
       return;
@@ -466,11 +498,11 @@ export function useAdminTasksScreen() {
         await fetchTasks();
         resetForm();
         setShowForm(false);
-        toastService.showSuccess('המשימה נוצרה בהצלחה');
+        toastService.showSuccess(t('admin:tasks.createSuccessComposer'));
       }
     } catch (err) {
       console.error('Error creating task:', err);
-      const msg = 'שגיאה ביצירת משימה - נסה שוב';
+      const msg = t('admin:tasks.errCreateTaskRetry');
       setError(msg);
       toastService.showError(msg);
     } finally {
@@ -495,25 +527,25 @@ export function useAdminTasksScreen() {
       const res: ApiResponse<AdminTask> = await apiService.updateTask(task.id, { status: 'open' });
       if (res.success && res.data) {
         await fetchTasks();
-        toastService.showSuccess('סטטוס המשימה עודכן');
+        toastService.showSuccess(t('admin:tasks.toastStatusUpdated'));
       } else {
-        const msg = res.error || 'שגיאה בעדכון סטטוס המשימה';
+        const msg = res.error || t('admin:tasks.errUpdateStatus');
         setError(msg);
         toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error toggling task status:', err);
-      const msg = 'שגיאה בעדכון סטטוס המשימה - נסה שוב';
+      const msg = t('admin:tasks.errUpdateStatusRetry');
       setError(msg);
       toastService.showError(msg);
     } finally {
       setUpdating(null);
     }
-  }, [fetchTasks]);
+  }, [fetchTasks, t]);
 
   const handleSaveHours = async (hours: number) => {
     if (!pendingTaskId || !selectedUser?.id) {
-      const msg = 'משתמש לא זוהה';
+      const msg = t('admin:tasks.errUserNotIdentified');
       toastService.showError(msg);
       throw new Error(msg);
     }
@@ -521,7 +553,7 @@ export function useAdminTasksScreen() {
     // Log hours first
     const logRes = await apiService.logTaskHours(pendingTaskId, hours, selectedUser.id);
     if (!logRes.success) {
-      const msg = logRes.error || 'שגיאה ברישום שעות';
+      const msg = logRes.error || t('admin:tasks.errLogHours');
       toastService.showError(msg);
       throw new Error(msg);
     }
@@ -529,7 +561,7 @@ export function useAdminTasksScreen() {
     // Then update status to done
     const updateRes = await apiService.updateTask(pendingTaskId, { status: 'done' });
     if (!updateRes.success) {
-      const msg = updateRes.error || 'שגיאה בעדכון סטטוס המשימה';
+      const msg = updateRes.error || t('admin:tasks.errUpdateStatus');
       toastService.showError(msg);
       throw new Error(msg);
     }
@@ -541,7 +573,7 @@ export function useAdminTasksScreen() {
     setShowHoursModal(false);
     setPendingTaskId(null);
     setPendingTask(null);
-    toastService.showSuccess('המשימה סומנה כבוצעה והשעות נרשמו');
+    toastService.showSuccess(t('admin:tasks.toastDoneWithHours'));
   };
 
   const openEdit = useCallback((task: AdminTask) => {
@@ -551,7 +583,7 @@ export function useAdminTasksScreen() {
       description: normalized.description || '',
       priority: normalized.priority,
       status: normalized.status,
-      category: canonicalTaskCategory(normalized.category) || 'פיתוח',
+      category: canonicalTaskCategory(normalized.category) || DEFAULT_TASK_CATEGORY,
       due_date: normalized.due_date ? new Date(normalized.due_date).toISOString().slice(0, 10) : '',
       assignees: normalized.assignees_details || [],
       tagsText: (normalized.tags || []).join(', '),
@@ -571,7 +603,7 @@ export function useAdminTasksScreen() {
       if (formData.due_date.trim()) {
         const date = new Date(formData.due_date);
         if (Number.isNaN(date.getTime())) {
-          const msg = 'תאריך לא תקין - אנא השתמש בפורמט YYYY-MM-DD';
+          const msg = t('admin:tasks.validationDueDateInvalid');
           setError(msg);
           toastService.showError(msg);
           setUpdating(null);
@@ -582,7 +614,7 @@ export function useAdminTasksScreen() {
 
       // Parse estimated_hours
       let parsedEstimatedHours = null;
-      if (formData.estimated_hours && formData.estimated_hours.trim()) {
+      if (formData.estimated_hours?.trim()) {
         const hours = Number.parseFloat(formData.estimated_hours.trim());
         if (!Number.isNaN(hours) && hours > 0) {
           parsedEstimatedHours = hours;
@@ -607,19 +639,19 @@ export function useAdminTasksScreen() {
         setShowForm(false);
         resetForm();
         setEditingId(null);
-        toastService.showSuccess('המשימה עודכנה בהצלחה');
+        toastService.showSuccess(t('admin:tasks.toastTaskUpdated'));
       } else if (res.error?.includes('הרשאה')) {
-        const msg = 'אין לך הרשאה להקצות משימה למשתמשים אלה. ניתן להקצות משימות רק לעובדים שלך.';
+        const msg = t('admin:tasks.errAssignPermission');
         setError(msg);
         toastService.showError(msg);
       } else {
-        const msg = res.error || 'שגיאה בעדכון משימה';
+        const msg = res.error || t('admin:tasks.errUpdateTask');
         setError(msg);
         toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error updating task:', err);
-      const msg = 'שגיאה בעדכון משימה - נסה שוב';
+      const msg = t('admin:tasks.errUpdateTaskRetry');
       setError(msg);
       toastService.showError(msg);
     } finally {
@@ -634,21 +666,21 @@ export function useAdminTasksScreen() {
       const res = await apiService.deleteTask(taskId);
       if (res.success) {
         await fetchTasks();
-        toastService.showSuccess('המשימה נמחקה בהצלחה');
+        toastService.showSuccess(t('admin:tasks.toastTaskDeleted'));
       } else {
-        const msg = res.error || 'שגיאה במחיקת משימה';
+        const msg = res.error || t('admin:tasks.errDeleteTask');
         setError(msg);
         toastService.showError(msg);
       }
     } catch (err) {
       console.error('Error deleting task:', err);
-      const msg = 'שגיאה במחיקת משימה - נסה שוב';
+      const msg = t('admin:tasks.errDeleteTaskRetry');
       setError(msg);
       toastService.showError(msg);
     } finally {
       setDeleting(null);
     }
-  }, [fetchTasks]);
+  }, [fetchTasks, t]);
 
   const renderItem = useCallback(
     ({ item }: { item: AdminTask }) => (
@@ -687,11 +719,11 @@ export function useAdminTasksScreen() {
   const listHeaderBelowSearch = useMemo(
     () => (
       <View>
-        <Text style={styles.header}>ניהול משימות וצוות</Text>
+        <Text style={styles.header}>{t('admin:tasks.screenTitle')}</Text>
         {listLoading ? (
           <View style={[styles.loadingBanner, { flexDirection: rowDirection('row') }]}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.loadingBannerText}>טוען משימות…</Text>
+            <Text style={styles.loadingBannerText}>{t('admin:tasks.loadingTasks')}</Text>
           </View>
         ) : null}
         {error ? (
@@ -699,7 +731,7 @@ export function useAdminTasksScreen() {
         ) : null}
       </View>
     ),
-    [listLoading, error],
+    [listLoading, error, t],
   );
 
   const closeHoursModal = () => {
@@ -707,6 +739,8 @@ export function useAdminTasksScreen() {
     setPendingTaskId(null);
     setPendingTask(null);
   };
+
+  const isModalSubmitBusy = creating || (!!editingId && updating === editingId);
 
   return {
     navigation,
@@ -735,6 +769,7 @@ export function useAdminTasksScreen() {
     formData,
     setFormData,
     editingId,
+    isModalSubmitBusy,
     saveEdit,
     createTask,
     resetForm,
