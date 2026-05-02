@@ -63,8 +63,13 @@ function displayFromPlainObject(o: Record<string, unknown>): string | undefined 
 /** Small stable key for list items without using array index alone (Sonar). */
 function subLineKey(rowIndex: number, text: string): string {
   let h = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+  for (let i = 0; i < text.length; ) {
+    const cp = text.codePointAt(i);
+    if (cp === undefined) {
+      break;
+    }
+    h = Math.trunc(Math.imul(31, h) + cp);
+    i += cp > 0xffff ? 2 : 1;
   }
   return `row-${rowIndex}-h${String(h)}`;
 }

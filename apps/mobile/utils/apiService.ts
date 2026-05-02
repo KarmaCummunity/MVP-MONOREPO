@@ -18,6 +18,7 @@
 import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
+import { isAllowedStatDetailType } from './statDetailPathAllowlist';
 
 const ApiService_LOG = 'apiService';
 /** Admin tasks endpoints can run heavier SQL; allow longer than default fetch abort */
@@ -761,8 +762,10 @@ class ApiService {
   }
 
   async getStatDetails(statType: string): Promise<ApiResponse> {
-    const segment = encodeURIComponent(statType);
-    return this.request(`/api/stats/details/${segment}`);
+    if (!isAllowedStatDetailType(statType)) {
+      return { success: false, error: 'Invalid stat type' };
+    }
+    return this.request(`/api/stats/details/${statType}`);
   }
 
   // Posts APIs
