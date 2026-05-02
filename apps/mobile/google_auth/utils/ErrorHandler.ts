@@ -28,7 +28,6 @@
 
 import { Alert, Platform } from 'react-native';
 import { logger } from '../../utils/loggerService';
-import i18n from '../../app/i18n';
 
 // ========================================
 // ERROR TYPE DEFINITIONS
@@ -92,7 +91,7 @@ export interface AuthError {
   readonly technicalDetails?: string;
   
   /** Original error object that caused this */
-  readonly originalError?: unknown;
+  readonly originalError?: any;
   
   /** Error timestamp */
   readonly timestamp: string;
@@ -126,14 +125,132 @@ export interface AuthError {
   };
   
   /** Additional metadata */
-  readonly metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, any>;
 }
 
-/** Helper to safely access error-like object properties */
-function asErrorLike(e: unknown): Record<string, unknown> | null {
-  if (e == null || typeof e !== 'object') return null;
-  return e as Record<string, unknown>;
-}
+// ========================================
+// ERROR MESSAGES
+// ========================================
+
+/**
+ * Localized error messages in Hebrew and English
+ */
+const ERROR_MESSAGES = {
+  [AuthErrorCategory.OAUTH]: {
+    CANCELLED: {
+      he: 'ההתחברות בוטלה על ידי המשתמש.',
+      en: 'Authentication was cancelled by the user.',
+    },
+    INVALID_TOKEN: {
+      he: 'אסימון Google לא תקף. אנא נסה שוב.',
+      en: 'Invalid Google token. Please try again.',
+    },
+    EXPIRED_TOKEN: {
+      he: 'אסימון Google פג תוקף. אנא התחבר מחדש.',
+      en: 'Google token has expired. Please login again.',
+    },
+    FLOW_ERROR: {
+      he: 'שגיאה בתהליך ההתחברות עם Google.',
+      en: 'Error in Google authentication flow.',
+    },
+  },
+  [AuthErrorCategory.NETWORK]: {
+    CONNECTION_FAILED: {
+      he: 'לא ניתן להתחבר לשרת. אנא בדוק את החיבור לאינטרנט.',
+      en: 'Cannot connect to server. Please check your internet connection.',
+    },
+    TIMEOUT: {
+      he: 'הבקשה נמשכה יותר מדי זמן. אנא נסה שוב.',
+      en: 'Request timed out. Please try again.',
+    },
+    DNS_ERROR: {
+      he: 'לא ניתן למצוא את השרת. אנא בדוק את החיבור.',
+      en: 'Cannot find server. Please check your connection.',
+    },
+  },
+  [AuthErrorCategory.SERVER]: {
+    INTERNAL_ERROR: {
+      he: 'שגיאה פנימית בשרת. אנא נסה שוב מאוחר יותר.',
+      en: 'Internal server error. Please try again later.',
+    },
+    MAINTENANCE: {
+      he: 'השרת במצב תחזוקה. אנא נסה שוב מאוחר יותר.',
+      en: 'Server is under maintenance. Please try again later.',
+    },
+    OVERLOADED: {
+      he: 'השרת עמוס. אנא נסה שוב בעוד מספר דקות.',
+      en: 'Server is overloaded. Please try again in a few minutes.',
+    },
+  },
+  [AuthErrorCategory.STORAGE]: {
+    ACCESS_DENIED: {
+      he: 'לא ניתן לגשת לאחסון המאובטח. אנא בדוק הרשאות האפליקציה.',
+      en: 'Cannot access secure storage. Please check app permissions.',
+    },
+    CORRUPTED_DATA: {
+      he: 'נתוני האימות נפגמו. אנא התחבר מחדש.',
+      en: 'Authentication data corrupted. Please login again.',
+    },
+    STORAGE_FULL: {
+      he: 'אחסון המכשיר מלא. אנא פנה מקום ונסה שוב.',
+      en: 'Device storage is full. Please free up space and try again.',
+    },
+  },
+  [AuthErrorCategory.CONFIG]: {
+    MISSING_CLIENT_ID: {
+      he: 'הגדרות Google OAuth חסרות. אנא פנה לתמיכה טכנית.',
+      en: 'Google OAuth configuration missing. Please contact technical support.',
+    },
+    INVALID_REDIRECT: {
+      he: 'הגדרות הפניה שגויות. אנא פנה לתמיכה טכנית.',
+      en: 'Invalid redirect configuration. Please contact technical support.',
+    },
+    UNSUPPORTED_PLATFORM: {
+      he: 'פלטפורמה לא נתמכת לאימות Google.',
+      en: 'Unsupported platform for Google authentication.',
+    },
+  },
+  [AuthErrorCategory.RATE_LIMIT]: {
+    TOO_MANY_REQUESTS: {
+      he: 'יותר מדי בקשות. אנא המתן {minutes} דקות ונסה שוב.',
+      en: 'Too many requests. Please wait {minutes} minutes and try again.',
+    },
+    AUTH_ATTEMPTS_EXCEEDED: {
+      he: 'יותר מדי ניסיונות התחברות. אנא המתן {minutes} דקות.',
+      en: 'Too many authentication attempts. Please wait {minutes} minutes.',
+    },
+  },
+  [AuthErrorCategory.TOKEN]: {
+    INVALID: {
+      he: 'אסימון האימות שגוי. אנא התחבר מחדש.',
+      en: 'Authentication token is invalid. Please login again.',
+    },
+    EXPIRED: {
+      he: 'אסימון האימות פג תוקף. אנא התחבר מחדש.',
+      en: 'Authentication token has expired. Please login again.',
+    },
+    CORRUPTED: {
+      he: 'אסימון האימות פגום. אנא התחבר מחדש.',
+      en: 'Authentication token is corrupted. Please login again.',
+    },
+  },
+  [AuthErrorCategory.PERMISSION]: {
+    INSUFFICIENT: {
+      he: 'אין הרשאה לביצוע הפעולה.',
+      en: 'Insufficient permissions for this operation.',
+    },
+    FORBIDDEN: {
+      he: 'הגישה נדחתה.',
+      en: 'Access denied.',
+    },
+  },
+  [AuthErrorCategory.UNKNOWN]: {
+    GENERIC: {
+      he: 'שגיאה לא צפויה. אנא נסה שוב.',
+      en: 'Unexpected error. Please try again.',
+    },
+  },
+} as const;
 
 // ========================================
 // MAIN ERROR HANDLER CLASS
@@ -180,12 +297,12 @@ class AuthErrorHandlerClass {
    * ```
    */
   public static handleError(
-    error: unknown,
+    error: any,
     context: {
       operation: string;
       userId?: string;
       sessionId?: string;
-      additionalContext?: Record<string, unknown>;
+      additionalContext?: Record<string, any>;
     }
   ): AuthError {
     const errorId = this.generateErrorId();
@@ -223,8 +340,8 @@ class AuthErrorHandlerClass {
       },
       recovery,
       metadata: {
-        errorSource: (asErrorLike(error)?.constructor as { name?: string })?.name || typeof error,
-        stackTrace: typeof (asErrorLike(error)?.stack) === 'string' ? (asErrorLike(error)!.stack as string).substring(0, 500) : undefined,
+        errorSource: error?.constructor?.name || typeof error,
+        stackTrace: error?.stack ? error.stack.substring(0, 500) : undefined,
       },
     };
 
@@ -258,17 +375,17 @@ class AuthErrorHandlerClass {
     const { showRetryButton = false, onRetry, onDismiss, autoHide = true } = options;
     
     // Determine alert buttons
-    const buttons: Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }> = [];
+    const buttons: Array<{ text: string; onPress?: () => void; style?: any }> = [];
     
     if (showRetryButton && authError.retryable && onRetry) {
       buttons.push({
-        text: i18n.t('auth:errors.alert.tryAgain'),
+        text: 'נסה שוב', // Try Again
         onPress: onRetry,
       });
     }
-
+    
     buttons.push({
-      text: i18n.t('auth:errors.alert.ok'),
+      text: 'אישור', // OK
       onPress: onDismiss,
       style: 'default',
     });
@@ -305,87 +422,83 @@ class AuthErrorHandlerClass {
   /**
    * Categorize error based on its characteristics
    */
-  private static categorizeError(error: unknown): AuthErrorCategory {
-    const err = asErrorLike(error);
-    if (!err) return AuthErrorCategory.UNKNOWN;
-
+  private static categorizeError(error: any): AuthErrorCategory {
+    if (!error) return AuthErrorCategory.UNKNOWN;
+    
     const errorString = String(error).toLowerCase();
-    const errorMessage = String(err.message || '').toLowerCase();
-
+    const errorMessage = error?.message?.toLowerCase() || '';
+    
     // OAuth-related errors
-    if (errorString.includes('oauth') ||
+    if (errorString.includes('oauth') || 
         errorString.includes('cancelled') ||
         errorString.includes('id_token') ||
-        err.type === 'cancel') {
+        error?.type === 'cancel') {
       return AuthErrorCategory.OAUTH;
     }
-
+    
     // Network-related errors
-    if ((error instanceof TypeError && errorMessage.includes('fetch')) ||
+    if (error instanceof TypeError && errorMessage.includes('fetch') ||
         errorMessage.includes('network') ||
         errorMessage.includes('connection') ||
         errorMessage.includes('dns') ||
-        err.name === 'NetworkError') {
+        error?.name === 'NetworkError') {
       return AuthErrorCategory.NETWORK;
     }
-
+    
     // Server errors
-    if ((typeof err.status === 'number' && err.status >= 500) ||
+    if (error?.status >= 500 ||
         errorMessage.includes('server error') ||
         errorMessage.includes('internal error')) {
       return AuthErrorCategory.SERVER;
     }
-
+    
     // Rate limiting errors
-    if (err.status === 429 ||
+    if (error?.status === 429 ||
         errorMessage.includes('rate limit') ||
         errorMessage.includes('too many')) {
       return AuthErrorCategory.RATE_LIMIT;
     }
-
-    // Token-related errors
+    
+    // Token-related errors  
     if (errorMessage.includes('token') ||
         errorMessage.includes('expired') ||
         errorMessage.includes('invalid') ||
-        err.status === 401) {
+        error?.status === 401) {
       return AuthErrorCategory.TOKEN;
     }
-
+    
     // Storage errors
     if (errorMessage.includes('storage') ||
         errorMessage.includes('keychain') ||
         errorMessage.includes('secure store')) {
       return AuthErrorCategory.STORAGE;
     }
-
+    
     // Configuration errors
     if (errorMessage.includes('client id') ||
         errorMessage.includes('configuration') ||
         errorMessage.includes('redirect uri')) {
       return AuthErrorCategory.CONFIG;
     }
-
+    
     // Permission errors
-    if (err.status === 403 ||
+    if (error?.status === 403 ||
         errorMessage.includes('permission') ||
         errorMessage.includes('unauthorized') ||
         errorMessage.includes('forbidden')) {
       return AuthErrorCategory.PERMISSION;
     }
-
+    
     return AuthErrorCategory.UNKNOWN;
   }
 
   /**
    * Determine error severity level
    */
-  private static determineSeverity(category: AuthErrorCategory, error: unknown): AuthErrorSeverity {
-    const err = asErrorLike(error);
-    const status = typeof err?.status === 'number' ? err.status : 0;
-
+  private static determineSeverity(category: AuthErrorCategory, error: any): AuthErrorSeverity {
     // Critical errors that prevent core functionality
     if (category === AuthErrorCategory.CONFIG ||
-        (category === AuthErrorCategory.SERVER && status >= 500)) {
+        (category === AuthErrorCategory.SERVER && error?.status >= 500)) {
       return AuthErrorSeverity.CRITICAL;
     }
     
@@ -408,50 +521,57 @@ class AuthErrorHandlerClass {
   }
 
   /**
-   * Generate user-friendly error message via i18n
+   * Generate user-friendly error message
    */
-  private static generateUserMessage(error: unknown, category: AuthErrorCategory): string {
+  private static generateUserMessage(error: any, category: AuthErrorCategory): string {
+    const locale = 'he'; // Default to Hebrew
     const errorType = this.getSpecificErrorType(error, category);
-    const categoryKey = category.toLowerCase();
-    const key = `auth:errors.${categoryKey}.${errorType}`;
-    const message = i18n.t(key);
-    if (message && message !== key) {
-      if (category === AuthErrorCategory.RATE_LIMIT) {
-        const err = asErrorLike(error);
-        const retryAfter = typeof err?.retryAfter === 'number' ? err.retryAfter : 60000;
-        const minutes = Math.max(1, Math.ceil(retryAfter / 60000));
-        return i18n.t(key, { minutes });
-      }
-      return message;
+    
+    // Get message from predefined messages
+    const categoryMessages = ERROR_MESSAGES[category] as any;
+    if (categoryMessages && categoryMessages[errorType]) {
+      return categoryMessages[errorType][locale] || categoryMessages[errorType].en;
     }
-    const fallbackKey = `auth:errors.fallback.${categoryKey}`;
-    return i18n.t(fallbackKey) || i18n.t('auth:errors.fallback.unknown');
+    
+    // Fallback messages by category
+    const fallbackMessages = {
+      [AuthErrorCategory.OAUTH]: 'שגיאה באימות Google. אנא נסה שוב.',
+      [AuthErrorCategory.NETWORK]: 'בעיית חיבור לרשת. אנא בדוק את החיבור שלך.',
+      [AuthErrorCategory.SERVER]: 'שגיאת שרת. אנא נסה שוב מאוחר יותר.',
+      [AuthErrorCategory.STORAGE]: 'שגיאה בשמירת נתונים. אנא נסה שוב.',
+      [AuthErrorCategory.CONFIG]: 'שגיאת הגדרה. אנא פנה לתמיכה טכנית.',
+      [AuthErrorCategory.TOKEN]: 'בעיה באימות. אנא התחבר מחדש.',
+      [AuthErrorCategory.PERMISSION]: 'אין הרשאה לביצוע הפעולה.',
+      [AuthErrorCategory.RATE_LIMIT]: 'יותר מדי בקשות. אנא המתן מספר דקות.',
+      [AuthErrorCategory.UNKNOWN]: 'שגיאה לא צפויה. אנא נסה שוב.',
+    };
+    
+    return fallbackMessages[category] || 'שגיאה לא צפויה. אנא נסה שוב.';
   }
 
   /**
    * Determine specific error type within category
    */
-  private static getSpecificErrorType(error: unknown, category: AuthErrorCategory): string {
-    const err = asErrorLike(error);
-    const errorMessage = String(err?.message || '').toLowerCase();
-
+  private static getSpecificErrorType(error: any, category: AuthErrorCategory): string {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    
     switch (category) {
       case AuthErrorCategory.OAUTH:
-        if (err?.type === 'cancel') return 'CANCELLED';
+        if (error?.type === 'cancel') return 'CANCELLED';
         if (errorMessage.includes('token')) return 'INVALID_TOKEN';
         if (errorMessage.includes('expired')) return 'EXPIRED_TOKEN';
         return 'FLOW_ERROR';
-
+        
       case AuthErrorCategory.NETWORK:
-        if (err?.name === 'AbortError') return 'TIMEOUT';
+        if (error?.name === 'AbortError') return 'TIMEOUT';
         if (errorMessage.includes('dns')) return 'DNS_ERROR';
         return 'CONNECTION_FAILED';
-
+        
       case AuthErrorCategory.SERVER:
-        if (err?.status === 503) return 'MAINTENANCE';
-        if (err?.status === 502 || err?.status === 504) return 'OVERLOADED';
+        if (error?.status === 503) return 'MAINTENANCE';
+        if (error?.status === 502 || error?.status === 504) return 'OVERLOADED';
         return 'INTERNAL_ERROR';
-
+        
       default:
         return 'GENERIC';
     }
@@ -460,14 +580,11 @@ class AuthErrorHandlerClass {
   /**
    * Determine retry strategy for error
    */
-  private static determineRetryStrategy(category: AuthErrorCategory, error: unknown): {
+  private static determineRetryStrategy(category: AuthErrorCategory, error: any): {
     retryable: boolean;
     retryDelay?: number;
     maxRetries?: number;
   } {
-    const err = asErrorLike(error);
-    const status = typeof err?.status === 'number' ? err.status : 0;
-
     switch (category) {
       case AuthErrorCategory.NETWORK:
         return {
@@ -475,10 +592,10 @@ class AuthErrorHandlerClass {
           retryDelay: 2000, // 2 seconds
           maxRetries: 3,
         };
-
+        
       case AuthErrorCategory.SERVER:
         // Don't retry 4xx errors, do retry 5xx errors
-        if (status >= 400 && status < 500) {
+        if (error?.status >= 400 && error?.status < 500) {
           return { retryable: false };
         }
         return {
@@ -486,14 +603,14 @@ class AuthErrorHandlerClass {
           retryDelay: 5000, // 5 seconds
           maxRetries: 2,
         };
-
+        
       case AuthErrorCategory.TOKEN:
         // Token errors usually need re-authentication
         return { retryable: false };
-
+        
       case AuthErrorCategory.OAUTH:
         // OAuth cancellation is not retryable, but other OAuth errors might be
-        if (err?.type === 'cancel') {
+        if (error?.type === 'cancel') {
           return { retryable: false };
         }
         return {
@@ -501,11 +618,11 @@ class AuthErrorHandlerClass {
           retryDelay: 1000, // 1 second
           maxRetries: 2,
         };
-
+        
       case AuthErrorCategory.RATE_LIMIT:
         return {
           retryable: true,
-          retryDelay: (typeof err?.retryAfter === 'number' ? err.retryAfter : undefined) || 60000, // Default 1 minute
+          retryDelay: error?.retryAfter || 60000, // Default 1 minute
           maxRetries: 1, // Only retry once for rate limits
         };
         
@@ -532,7 +649,7 @@ class AuthErrorHandlerClass {
   /**
    * Generate recovery strategy suggestions
    */
-  private static generateRecoveryStrategy(category: AuthErrorCategory, _error: unknown): AuthError['recovery'] {
+  private static generateRecoveryStrategy(category: AuthErrorCategory, _error: any): AuthError['recovery'] {
     switch (category) {
       case AuthErrorCategory.OAUTH:
         return {
@@ -586,16 +703,29 @@ class AuthErrorHandlerClass {
   /**
    * Extract technical details from error for debugging
    */
-  private static extractTechnicalDetails(error: unknown): string {
-    const err = asErrorLike(error);
-    if (!err) return 'No technical details available';
-
+  private static extractTechnicalDetails(error: any): string {
     const details: string[] = [];
-    if (err.message) details.push(`Message: ${err.message}`);
-    if (err.status !== undefined) details.push(`Status: ${err.status}`);
-    if (err.code !== undefined) details.push(`Code: ${err.code}`);
-    if (err.name) details.push(`Type: ${err.name}`);
-    if (err.url) details.push(`URL: ${err.url}`);
+    
+    if (error?.message) {
+      details.push(`Message: ${error.message}`);
+    }
+    
+    if (error?.status) {
+      details.push(`Status: ${error.status}`);
+    }
+    
+    if (error?.code) {
+      details.push(`Code: ${error.code}`);
+    }
+    
+    if (error?.name) {
+      details.push(`Type: ${error.name}`);
+    }
+    
+    if (error?.url) {
+      details.push(`URL: ${error.url}`);
+    }
+    
     return details.join(', ') || 'No technical details available';
   }
 
@@ -611,20 +741,22 @@ class AuthErrorHandlerClass {
   /**
    * Get appropriate alert title based on category and severity
    */
-private static getAlertTitle(category: AuthErrorCategory, severity: AuthErrorSeverity): string {
+  private static getAlertTitle(category: AuthErrorCategory, severity: AuthErrorSeverity): string {
     if (severity === AuthErrorSeverity.CRITICAL) {
-      return i18n.t('auth:errors.alert.criticalError');
+      return 'שגיאה קריטית'; // Critical Error
     }
+    
     if (severity === AuthErrorSeverity.HIGH) {
-      return i18n.t('auth:errors.alert.authError');
+      return 'שגיאה באימות'; // Authentication Error
     }
+    
     switch (category) {
       case AuthErrorCategory.NETWORK:
-        return i18n.t('auth:errors.alert.connectionProblem');
+        return 'בעיית חיבור'; // Connection Problem
       case AuthErrorCategory.RATE_LIMIT:
-        return i18n.t('auth:errors.alert.tooManyAttempts');
+        return 'יותר מדי ניסיונות'; // Too Many Attempts
       default:
-        return i18n.t('auth:errors.alert.error');
+        return 'שגיאה'; // Error
     }
   }
 
@@ -714,7 +846,7 @@ export const AuthErrorHandler = AuthErrorHandlerClass;
  * @param operation Operation context
  * @returns Processed AuthError
  */
-export const handleAuthError = (error: unknown, operation: string): AuthError => {
+export const handleAuthError = (error: any, operation: string): AuthError => {
   return AuthErrorHandlerClass.handleError(error, { operation });
 };
 
@@ -724,7 +856,7 @@ export const handleAuthError = (error: unknown, operation: string): AuthError =>
  * @param oauthResponse OAuth response from expo-auth-session
  * @returns Processed AuthError or null if no error
  */
-export const handleOAuthError = (oauthResponse: { type?: string; error?: unknown }): AuthError | null => {
+export const handleOAuthError = (oauthResponse: any): AuthError | null => {
   if (oauthResponse?.type === 'error') {
     return AuthErrorHandlerClass.handleError(oauthResponse.error, {
       operation: 'oauth_flow',
@@ -747,7 +879,7 @@ export const handleOAuthError = (oauthResponse: { type?: string; error?: unknown
  * @param endpoint API endpoint that failed
  * @returns Processed AuthError
  */
-export const handleNetworkError = (error: unknown, endpoint: string): AuthError => {
+export const handleNetworkError = (error: any, endpoint: string): AuthError => {
   return AuthErrorHandlerClass.handleError(error, {
     operation: `api_request_${endpoint}`,
   });
@@ -783,7 +915,7 @@ export async function withRetry<T>(
   maxAttempts: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: unknown;
+  let lastError: any;
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {

@@ -25,24 +25,27 @@ import {
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, useRoute, RouteProp, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useUser } from '../stores/userStore';
-import { getFollowing, getFollowers, getFollowSuggestions } from '../src/services/follow.service';
-import { createConversation, getAllConversations, conversationExists, sendMessage } from '../src/services/chat.service';
+import { getFollowing, getFollowers, getFollowSuggestions } from '../utils/followService';
+import { createConversation, getAllConversations, conversationExists, sendMessage } from '../utils/chatService';
 import { UserPreview as CharacterType } from '../globals/types';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
+import { logger } from '../utils/loggerService';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
+
+const NEW_CHAT_LOG = 'NewChatScreen';
 
 type FilterType = 'all' | 'online' | 'highKarma' | 'recentFollowers';
 type SortType = 'name' | 'karma' | 'followers' | 'recent';
 
-type NewChatRouteParams = Record<string, never>;
-
 export default function NewChatScreen() {
+  useLogScreenOpened('NewChatScreen');
   const { t } = useTranslation(['newChatScreen']);
   const navigation = useNavigation();
-  const _route = useRoute<RouteProp<Record<string, NewChatRouteParams>, string>>();
   const { selectedUser } = useUser();
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,7 +93,7 @@ export default function NewChatScreen() {
           friendId === '';
 
         if (isCurrentUser) {
-          console.log('🚫 NewChatScreen - Filtered out current user:', { friendId, friendEmail, name: friend.name });
+          logger.debug(NEW_CHAT_LOG, 'Filtered out current user', { friendId, friendEmail, name: friend.name });
         }
 
         return !isCurrentUser;
@@ -113,7 +116,7 @@ export default function NewChatScreen() {
             friendId === '';
 
           if (isCurrentUser) {
-            console.log('🚫 NewChatScreen - Filtered out current user from suggestions:', { friendId, friendEmail, name: friend.name });
+            logger.debug(NEW_CHAT_LOG, 'Filtered out current user from suggestions', { friendId, friendEmail, name: friend.name });
           }
 
           return !isCurrentUser;
@@ -147,7 +150,7 @@ export default function NewChatScreen() {
         friendId === '';
 
       if (isCurrentUser) {
-        console.log('🚫 NewChatScreen - Filtered out current user in applyFilters:', { friendId, friendEmail, name: friend.name });
+        logger.debug(NEW_CHAT_LOG, 'Filtered out current user in applyFilters', { friendId, friendEmail, name: friend.name });
       }
 
       return !isCurrentUser;
@@ -219,10 +222,10 @@ export default function NewChatScreen() {
       let conversationId: string;
 
       if (existingConvId) {
-        console.log('💬 Conversation already exists:', existingConvId);
+        logger.debug(NEW_CHAT_LOG, 'Conversation already exists', { conversationId: existingConvId });
         conversationId = existingConvId;
       } else {
-        console.log('💬 Creating new conversation...');
+        logger.debug(NEW_CHAT_LOG, 'Creating new conversation');
         conversationId = await createConversation([selectedUser.id, friend.id]);
 
         const welcomeMessage = {
@@ -236,10 +239,10 @@ export default function NewChatScreen() {
         };
 
         await sendMessage(welcomeMessage);
-        console.log('💬 Sent welcome message');
+        logger.debug(NEW_CHAT_LOG, 'Sent welcome message');
       }
 
-      (navigation as NavigationProp<ParamListBase>).navigate('ChatDetailScreen', {
+      navigateToChatDetail(navigation, {
         conversationId,
         userName: friend.name,
         userAvatar: friend.avatar,
@@ -265,7 +268,7 @@ export default function NewChatScreen() {
       itemId === '';
 
     if (isCurrentUser) {
-      console.log('🚫 NewChatScreen - renderFriend: Skipping current user:', { itemId, itemEmail, name: item.name });
+      logger.debug(NEW_CHAT_LOG, 'renderFriend: Skipping current user', { itemId, itemEmail, name: item.name });
       return null;
     }
 
@@ -322,7 +325,7 @@ export default function NewChatScreen() {
       </Text>
       <TouchableOpacity
         style={styles.exploreButton}
-        onPress={() => (navigation as NavigationProp<ParamListBase>).navigate('DiscoverPeopleScreen')}
+        onPress={() => (navigation as any).navigate('DiscoverPeopleScreen')}
       >
         <Text style={styles.exploreButtonText}>{t('discoverNewPeople')}</Text>
       </TouchableOpacity>
@@ -345,7 +348,7 @@ export default function NewChatScreen() {
           <Icon name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => (navigation as NavigationProp<ParamListBase>).navigate('DiscoverPeopleScreen')}
+          onPress={() => (navigation as any).navigate('DiscoverPeopleScreen')}
           style={styles.headerButton}
         >
           <Icon name="people-outline" size={24} color={colors.primary} />

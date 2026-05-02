@@ -6,8 +6,7 @@
 import * as tslibNS from 'tslib';
 export * from 'tslib';
 
-// tslib namespace polyfill - assign default when missing for Metro/Babel ESM compatibility
-const ns = tslibNS as Record<string, unknown> & { default?: unknown };
+const ns: any = tslibNS as any;
 if (ns && typeof ns === 'object' && (!('default' in ns) || !ns.default)) {
   ns.default = ns;
 }

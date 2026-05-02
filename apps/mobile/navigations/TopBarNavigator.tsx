@@ -2,14 +2,15 @@
 // - Purpose: Shared top navigation bar component for stacks; shows title and quick actions (Settings, Notifications, Chat/About).
 // - Reached from: `HomeTabStack`, `SearchTabStack`, `ProfileTabStack`, `DonationsStack` as a custom header.
 // - Inputs: Props `hideTopBar` and `showPosts`; also reads `route.params.hideTopBar`. Title resolves by current route with i18n.
-// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon.
+// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon; `isAdmin` for shield + tasks shortcuts to Admin tab.
 // - Side effects: Logs focus and state changes via `logger`; animates show/hide with Reanimated.
 import React from 'react';
 import styles from '../globals/styles'; // your styles file
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NavigationProp, ParamListBase, StackActions } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, StackActions, CommonActions } from '@react-navigation/native';
+import { navigateToAuthenticatedLandingSite } from './landingSiteNavigation';
 import { useRoute, useFocusEffect, useNavigationState } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import colors from '../globals/colors';
@@ -27,10 +28,10 @@ interface TopBarNavigatorProps {
 }
 
 function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: TopBarNavigatorProps) {
-  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile']);
+  const { t } = useTranslation(['home', 'common', 'settings', 'donations', 'notifications', 'profile', 'admin', 'postDetail']);
 
   const route = useRoute();
-  const { isGuestMode } = useUser();
+  const { isGuestMode, isAdmin } = useUser();
   const unreadCount = useUnreadNotificationsCount();
   const translateY = useSharedValue(0);
   const [measuredHeight, setMeasuredHeight] = React.useState(56);
@@ -39,8 +40,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
   const activeRouteName = useNavigationState(state => {
     if (!state) return 'HomeMain';
 
-    type RouteWithNested = { name: string; state?: { routes: RouteWithNested[]; index?: number } };
-    const findActiveRoute = (routes: RouteWithNested[], index: number): string => {
+    const findActiveRoute = (routes: any[], index: number): string => {
       const currentRoute = routes[index];
       if (currentRoute?.state?.routes) {
         // This route has nested navigation, go deeper
@@ -49,7 +49,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
       return currentRoute?.name || 'HomeMain';
     };
 
-    return findActiveRoute(state.routes as RouteWithNested[], state.index || 0);
+    return findActiveRoute(state.routes, state.index || 0);
   });
 
   // List of top bar screens that should be mutually exclusive
@@ -57,6 +57,32 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
 
   // Handler for toggling screens (open if closed, close if open)
   // Only one top bar screen can be open at a time
+  const navigateToAdminTab = React.useCallback(() => {
+    const tabNav = navigation.getParent?.();
+    if (!tabNav) return;
+    tabNav.dispatch(
+      CommonActions.navigate({
+        name: 'AdminTab',
+        params: {
+          state: { routes: [{ name: 'AdminDashboard' }], index: 0 },
+        },
+      } as never)
+    );
+  }, [navigation]);
+
+  const navigateToAdminTasksTab = React.useCallback(() => {
+    const tabNav = navigation.getParent?.();
+    if (!tabNav) return;
+    tabNav.dispatch(
+      CommonActions.navigate({
+        name: 'AdminTab',
+        params: {
+          state: { routes: [{ name: 'AdminTasks' }], index: 0 },
+        },
+      } as never)
+    );
+  }, [navigation]);
+
   const handleScreenToggle = (screenName: string) => {
     // Get current route name for comparison
     const currentRoute = activeRouteName || route.name;
@@ -72,6 +98,13 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
         screen => screen !== screenName && currentRoute === screen
       );
 
+      if (screenName === 'LandingSiteScreen') {
+        navigateToAuthenticatedLandingSite(navigation, {
+          replaceFromTopBar: !!otherTopBarScreenOpen,
+        });
+        return;
+      }
+
       if (otherTopBarScreenOpen) {
         // Another top bar screen is open, replace it with the new screen
         // This ensures only one top bar screen is open at a time
@@ -85,45 +118,41 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     }
   };
 
-  // Log render for debugging
+  // Log render for debugging (marked periodic — high frequency when parent re-renders)
   React.useEffect(() => {
-    logger.debug('TopBarNavigator', 'Component rendered', {
-      routeName: route.name,
-      isGuestMode,
-    });
+    logger.debug(
+      'TopBarNavigator',
+      'Component rendered',
+      { routeName: route.name, isGuestMode },
+      { periodic: true },
+    );
   }, [route.name, isGuestMode]);
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('TopBarNavigator', 'Navigator focused', { routeName: route.name });
-    }, [route.name])
+      logger.debug(
+        'TopBarNavigator',
+        'Navigator focused',
+        { routeName: route.name },
+        { periodic: true },
+      );
+    }, [route.name]),
   );
 
-  ////console.log('🔝 TopBarNavigator - hideTopBar prop:', hideTopBar);
+  const shouldHideTopBar = hideTopBar || (route?.params as any)?.hideTopBar === true;
 
-  const shouldHideTopBar = hideTopBar || (route?.params as { hideTopBar?: boolean } | undefined)?.hideTopBar === true;
-
-  // translateY is a Reanimated shared value (ref-like); including it in deps is unnecessary
   React.useEffect(() => {
     translateY.value = withTiming(shouldHideTopBar ? -measuredHeight : 0, { duration: 200 });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- translateY is stable shared value
-  }, [shouldHideTopBar, measuredHeight]);
+  }, [measuredHeight, shouldHideTopBar, translateY]);
 
 
 
   const animatedStyle = useAnimatedStyle(() => {
-    //console.log('🔝 TopBarNavigator - translateY value:', translateY.value);
     return {
       transform: [{ translateY: translateY.value }],
     };
   });
-
-  // Debug logs
-  //console.log('🔍 TopBarNavigator - Current route name:', route.name);
-  //console.log('🔍 TopBarNavigator - Route params:', route.params);
-  //console.log('🔍 TopBarNavigator - Route key:', route.key);
-  //console.log('🔍 TopBarNavigator - Full route object:', JSON.stringify(route, null, 2));
 
   // Map route names to titles using translations
   const routeTitles: Record<string, string> = {
@@ -132,36 +161,15 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     DonationsTab: t('donations:title'),
     DonationsScreen: t('donations:title'),
     ProfileScreen: t('profile:title'),
-    LandingSiteScreen: 'אודות הקהילה',
+    LandingSiteScreen: t('common:landingSiteTopBar'),
 
-    MoneyScreen: t('donations:categories.money.title'),
     TrumpScreen: t('donations:categories.trump.title'),
-    KnowledgeScreen: t('donations:categories.knowledge.title'),
-    TimeScreen: t('donations:categories.time.title'),
-    CategoryScreen: t('donations:categoriesTitle'),
     ItemsScreen: t('donations:categories.items.title'),
-    FoodScreen: t('donations:categories.food.title'),
-    ClothesScreen: t('donations:categories.clothes.title'),
-    BooksScreen: t('donations:categories.books.title'),
-    FurnitureScreen: t('donations:categories.furniture.title'),
-    MedicalScreen: t('donations:categories.medical.title'),
-    AnimalsScreen: t('donations:categories.animals.title'),
-    HousingScreen: t('donations:categories.housing.title'),
-    SupportScreen: t('donations:categories.support.title'),
-    EducationScreen: t('donations:categories.education.title'),
-    EnvironmentScreen: t('donations:categories.environment.title'),
-    TechnologyScreen: t('donations:categories.technology.title'),
-    MusicScreen: t('donations:categories.music.title'),
-    GamesScreen: t('donations:categories.games.title'),
-    RiddlesScreen: t('donations:categories.riddles.title'),
-    RecipesScreen: t('donations:categories.recipes.title'),
-    PlantsScreen: t('donations:categories.plants.title'),
-    WasteScreen: t('donations:categories.waste.title'),
-    ArtScreen: t('donations:categories.art.title'),
-    SportsScreen: t('donations:categories.sports.title'),
-    DreamsScreen: t('donations:categories.dreams.title'),
-    FertilityScreen: t('donations:categories.fertility.title'),
-    JobsScreen: t('donations:categories.jobs.title'),
+    MyChallengesScreen: t('donations:categories.challenges.title'),
+    CommunityChallengesScreen: t('donations:categories.challenges.title'),
+    ChallengeDetailsScreen: t('donations:categories.challenges.title'),
+    ChallengeStatisticsScreen: t('donations:categories.challenges.title'),
+    MyCreatedChallengesScreen: t('donations:categories.challenges.title'),
     DiscoverPeopleScreen: t('profile:discover'),
     NewChatScreen: t('common:newChat'),
     SettingsScreen: t('settings:title'),
@@ -174,9 +182,11 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     ChatDetailScreen: t('common:chat'),
     BookmarksScreen: t('common:favorites'),
     PostsReelsScreen: t('common:posts'),
+    PostDetailScreen: t('postDetail:title'),
     InactiveScreen: t('common:inactive'),
     WebViewScreen: t('common:web'),
     LoginScreen: t('auth:login'),
+    AdminTasks: t('admin:topBarAdminTasks'),
   };
 
   // Get current route name
@@ -192,16 +202,21 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
     title = routeTitles[currentRouteName] ?? 'KC';
   }
 
-  // Log important state changes
+  // Route/title updates (debug + periodic — avoid filling stored logs on every bar state tick)
   React.useEffect(() => {
-    logger.logUserAction('state-change', 'TopBarNavigator', {
-      currentRouteName,
-      activeRouteName,
-      title,
-      isGuestMode,
-      hideTopBar,
-      showPosts
-    });
+    logger.debug(
+      'TopBarNavigator',
+      'Route title state',
+      {
+        currentRouteName,
+        activeRouteName,
+        title,
+        isGuestMode,
+        hideTopBar,
+        showPosts,
+      },
+      { periodic: true },
+    );
   }, [title, currentRouteName, activeRouteName, showPosts, hideTopBar, isGuestMode]);
 
 
@@ -213,6 +228,26 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
       >
 
         <View style={styles.topBarIconsRow as StyleProp<ViewStyle>}>
+          {isAdmin && (
+            <>
+              <TouchableOpacity
+                onPress={navigateToAdminTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdmin')}
+              >
+                <Icon name="shield-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={navigateToAdminTasksTab}
+                style={styles.topBarIconButton as StyleProp<ViewStyle>}
+                accessibilityRole="button"
+                accessibilityLabel={t('admin:topBarAdminTasks')}
+              >
+                <Icon name="checkmark-done-outline" size={24} color={colors.black} />
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity onPress={() => handleScreenToggle('SettingsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
             <Icon name="settings-outline" size={24} color={colors.black} />
           </TouchableOpacity>
@@ -220,8 +255,8 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
             <View style={{ position: 'relative' }}>
               <Icon name="notifications-circle-outline" size={24} color={colors.black} />
               {unreadCount > 0 && (
-                <View style={(styles as { notificationBadge?: ViewStyle }).notificationBadge as StyleProp<ViewStyle>}>
-                  <Text style={(styles as { notificationBadgeText?: TextStyle }).notificationBadgeText as StyleProp<TextStyle>}>
+                <View style={(styles as any).notificationBadge as StyleProp<ViewStyle>}>
+                  <Text style={(styles as any).notificationBadgeText as StyleProp<TextStyle>}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Text>
                 </View>

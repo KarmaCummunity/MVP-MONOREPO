@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Share } from 'react-native';
-import { postsService } from '../src/services/posts.service';
+import { postsService } from '../utils/postsService';
 import { isBookmarked, addBookmark, removeBookmark } from '../utils/bookmarksService';
 import { toastService } from '../utils/toastService';
 import { logger } from '../utils/loggerService';
@@ -84,7 +84,7 @@ export const usePostInteractions = (item: FeedItem) => {
                 setIsBookmarkedState(false);
                 toastService.show('Removed from bookmarks');
             } else {
-                await addBookmark(user.id, item as unknown as Parameters<typeof addBookmark>[1]);
+                await addBookmark(user.id, item);
                 setIsBookmarkedState(true);
                 toastService.show('Added to bookmarks');
             }

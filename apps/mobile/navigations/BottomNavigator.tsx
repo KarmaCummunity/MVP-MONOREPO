@@ -2,52 +2,77 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()` used on Home tab press.
-// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack`, `ProfileTabStack`.
-// - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
-// - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants.
+// - Reads from context: `useUser()` -> `isGuestMode`; tab re-press resets the active tab's nested stack via `buildBottomTabBarResetPreservingOtherTabs` (preserves all tabs — same UX as native bottom bar). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
+// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
+// - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar.
+// - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
 // BottomNavigator.tsx
 
-// TODO: Extract complex animation logic to custom hooks (usePulseAnimation, useTabBarAnimation)
-// TODO: Add comprehensive TypeScript interfaces for all navigation types
-// TODO: Implement proper accessibility for tab navigation
-// TODO: Add comprehensive error handling for navigation failures  
-// TODO: Remove hardcoded animation values and use constants
-// TODO: Implement proper tab badge system for notifications/updates
-// TODO: Add comprehensive performance optimization with React.memo
-// TODO: Remove 'use strict' directive - not needed in modern JavaScript
-// TODO: Add comprehensive unit tests for all navigation logic
-// TODO: Implement proper deep linking support for tab navigation
-'use strict';
+/**
+ * BottomNavigator
+ *
+ * Bottom tab navigator mounted as the 'HomeStack' route inside MainNavigator.
+ * It owns the five visible tabs (Profile, Donations, +Post, Search, Home) plus
+ * a hidden Admin tab that is unlocked from the top bar.
+ *
+ * Tab order in the bar (left → right):
+ *   Profile  |  Donations (pulse anim)  |  + (composer)  |  Search  |  Home
+ * Note: Profile is hidden in guest mode.
+ *
+ * Role refresh strategy
+ * ─────────────────────
+ * `refreshUserRoles()` is intentionally NOT called inside `useFocusEffect`.
+ * Calling it on every tab-bar focus triggered frequent re-renders and, in
+ * combination with the (now-removed) loading gate in MainNavigator, caused the
+ * Home screen to flash white. Roles are refreshed by userStore internally
+ * (e.g. on login / token refresh) and do not need a periodic navigator-level poll.
+ *
+ * Tab re-press behaviour
+ * ──────────────────────
+ * Pressing the currently-active tab resets its nested stack back to the initial
+ * route while preserving the other tabs' state — same UX as iOS / Android native
+ * tab bars. Implemented via `buildBottomTabBarResetPreservingOtherTabs`.
+ *
+ * Tab bar positioning
+ * ───────────────────
+ * On mobile-web the bar sits at the bottom with safe-area inset padding.
+ * On desktop / tablet it is centered with proportional horizontal margins.
+ * The bar is hidden (`display: 'none'`) when a nested screen sets
+ * `route.params.hideBottomBar = true`, or when in site-mode on web.
+ */
 import React from "react";
-import { Animated, Easing, View, StyleSheet } from "react-native";
-import { createBottomTabNavigator, BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+import { Animated, Easing, View, StyleSheet, Platform, Pressable, useWindowDimensions } from "react-native";
+import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation, CommonActions } from "@react-navigation/native";
+import { useFocusEffect, CommonActions, useNavigationState } from "@react-navigation/native";
+import type { NavigationState } from "@react-navigation/native";
 import HomeTabStack from "./HomeTabStack";
 import SearchTabStack from "./SearchTabStack";
 import ProfileTabStack from "./ProfileTabStack";
 import DonationsStack from "./DonationsStack";
 import AdminStack from "./AdminStack";
 import colors from "../globals/colors"; // Adjust path if needed
-import { vw, getScreenInfo, isLandscape } from "../globals/responsive";
+import { vw, getScreenInfo, isLandscape, isMobileWeb } from "../globals/responsive";
 import { LAYOUT_CONSTANTS } from "../globals/constants";
 import { useUser } from "../stores/userStore";
 import { useWebMode } from "../stores/webModeStore";
 import { logger } from "../utils/loggerService";
-
-// Define the type for your bottom tab navigator's route names and their parameters.
-export type BottomTabNavigatorParamList = {
-  DonationsTab: undefined;
-  HomeScreen: undefined;
-  SearchTab: undefined;
-  ProfileScreen: undefined;
-  AdminTab: undefined;
-  SettingsScreen: undefined;
-  ChatListScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  NotificationsScreen: undefined;
-};
+import CreatePostComposerModal from "../components/CreatePostComposerModal";
+import { usePostComposerStore } from "../stores/postComposerStore";
+import {
+  getDonationsStackLeafScreenName,
+  mapDonationScreenRouteToComposerCategory,
+} from "./mapDonationScreenToComposerCategory";
+import {
+  getActiveNestedParams,
+  buildBottomTabBarResetPreservingOtherTabs,
+  isTabNavigatorFocusedOnRoute,
+  TAB_INITIAL_ROUTES,
+  type NestedRouteLike,
+} from "./bottomTabNavigationUtils";
+import { findBottomTabNavigator, type NavLike } from "./landingSiteNavigation";
+import type { BottomTabNavigatorParamList } from "../globals/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Create an instance of the Bottom Tab Navigator with its parameter list type
 const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
@@ -58,9 +83,9 @@ const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
 // TODO: Implement proper animation performance optimization
 // TODO: Add proper accessibility for animated elements
 const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, size }) => {
-  const [ring1] = React.useState(() => new Animated.Value(0));
-  const [ring2] = React.useState(() => new Animated.Value(0));
-  const [ring3] = React.useState(() => new Animated.Value(0));
+  const ring1 = React.useRef(new Animated.Value(0)).current;
+  const ring2 = React.useRef(new Animated.Value(0)).current;
+  const ring3 = React.useRef(new Animated.Value(0)).current;
 
   const runPulse = React.useCallback((anim: Animated.Value, delayMs: number) => {
     return Animated.loop(
@@ -113,8 +138,11 @@ const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, 
   });
 
   return (
-    <View style={[styles.pulseContainer, { width: containerSize, height: containerSize }]}
-      pointerEvents="none"
+    <View
+      style={[
+        styles.pulseContainer,
+        { width: containerSize, height: containerSize, pointerEvents: 'none' },
+      ]}
       accessibilityElementsHidden>
       <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring1)]} />
       <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring2)]} />
@@ -123,6 +151,11 @@ const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, 
     </View>
   );
 };
+
+/** Middle tab never renders a scene (composer opens from tab bar); avoids a second DonationsStack instance. */
+function CreatePostTabPlaceholder(): null {
+  return null;
+}
 
 const styles = StyleSheet.create({
   pulseContainer: {
@@ -145,28 +178,25 @@ const styles = StyleSheet.create({
  *
  * @returns {React.FC} A React component rendering the Bottom Tab Navigator.
  */
-const REFRESH_ROLES_DEBOUNCE_MS = 3000;
-
 export default function BottomNavigator(): React.ReactElement {
-  const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
+  const { isGuestMode, isAdmin } = useUser();
   const { mode } = useWebMode();
-  const _navigation = useNavigation();
-  const lastRefreshRef = React.useRef<number>(0);
+  /** Re-subscribe on viewport resize so mobile-web tab bar insets stay correct when rotating / chrome hides. */
+  useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { openComposer } = usePostComposerStore();
+  const composerCategory = useNavigationState((rootState) =>
+    mapDonationScreenRouteToComposerCategory(
+      getDonationsStackLeafScreenName(rootState as unknown as NavigationState | undefined),
+    ),
+  );
 
-  // Refresh data when navigator comes into focus (debounced to prevent update loops)
+  // Log when the navigator receives focus (periodic to avoid log spam).
+  // NOTE: refreshUserRoles() is intentionally NOT called here — see file header.
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('BottomNavigator', 'Navigator focused');
-      if (!isAuthenticated || isGuestMode) return;
-
-      const now = Date.now();
-      if (now - lastRefreshRef.current < REFRESH_ROLES_DEBOUNCE_MS) {
-        logger.debug('BottomNavigator', 'Skipping refreshUserRoles (debounced)');
-        return;
-      }
-      lastRefreshRef.current = now;
-      refreshUserRoles();
-    }, [isAuthenticated, isGuestMode, refreshUserRoles])
+      logger.debug('BottomNavigator', 'Navigator focused', undefined, { periodic: true });
+    }, []),
   );
 
 
@@ -181,6 +211,8 @@ export default function BottomNavigator(): React.ReactElement {
     switch (routeName) {
       case "HomeScreen":
         return focused ? "home" : "home-outline";
+      case "CreatePostTab":
+        return "add-circle";
       case "SearchTab":
         return focused ? "search" : "search-outline";
       case "DonationsTab":
@@ -194,58 +226,49 @@ export default function BottomNavigator(): React.ReactElement {
     }
   };
 
-  type NestedRouteLike = { state?: { routes?: NestedRouteLike[]; index?: number }; params?: Record<string, unknown> };
-  const getActiveNestedParams = (route: NestedRouteLike): Record<string, unknown> | undefined => {
-    const state = route.state ?? (route.params as { state?: NestedRouteLike['state'] } | undefined)?.state;
-    if (!state) return route.params as Record<string, unknown> | undefined;
-    const nestedRoute = state.routes?.[state.index ?? 0];
-    if (nestedRoute) return getActiveNestedParams(nestedRoute);
-    return route.params as Record<string, unknown> | undefined;
-  };
+  const handleTabPress = (e: any, navigation: any, routeName: string) => {
+    const initialRoute = TAB_INITIAL_ROUTES[routeName];
+    if (!initialRoute) return;
 
-  // Map tab route names to their initial stack route names
-  const TAB_INITIAL_ROUTES: Record<string, string> = {
-    HomeScreen: 'HomeMain',
-    SearchTab: 'SearchScreen',
-    DonationsTab: 'DonationsScreen',
-    ProfileScreen: 'ProfileMain',
-    AdminTab: 'AdminDashboard',
-  };
+    // `getParent()` alone can be the root stack (route `HomeStack`) on some RN/web versions — then
+    // dispatching `navigate('HomeScreen')` fails ("was not handled by any navigator"). Walk parents.
+    const tabNavigation =
+      findBottomTabNavigator(navigation as NavLike) ?? navigation.getParent?.();
+    const isThisTabSelected =
+      typeof tabNavigation?.getState === "function"
+        ? isTabNavigatorFocusedOnRoute(tabNavigation, routeName)
+        : navigation.isFocused();
 
-  const handleTabPress = (
-    e: { preventDefault: () => void },
-    navigation: import('@react-navigation/bottom-tabs').BottomTabNavigationProp<BottomTabNavigatorParamList, keyof BottomTabNavigatorParamList>,
-    routeName: string
-  ) => {
-    // Only act if the tab is already focused
-    if (navigation.isFocused()) {
-      const initialRoute = TAB_INITIAL_ROUTES[routeName];
-      if (initialRoute) {
-        logger.debug('BottomNavigator', `Tab ${routeName} pressed while focused - resetting stack to ${initialRoute}`);
-
-        e.preventDefault();
-
-        // Special handling for Home logic (refresh/reset via store)
-        if (routeName === 'HomeScreen') {
-          resetHomeScreen();
-        }
-
-        // Perform a deep reset of the tab's stack
-        // This resets the Tab Navigator history to just this tab, with the stack reset to initial route
-        navigation.dispatch(CommonActions.reset({
-          index: 0,
-          routes: [{
-            name: routeName,
-            state: {
-              routes: [{ name: initialRoute }]
-            }
-          }]
-        }));
+    if (isThisTabSelected) {
+      if (!tabNavigation?.getState || typeof tabNavigation.dispatch !== 'function') {
+        logger.warn(
+          'BottomNavigator',
+          'nav: same tab re-press — no tab navigator for reset',
+          { routeName },
+          { periodic: true },
+        );
+        return;
       }
+
+      const tabBarState = tabNavigation.getState();
+      const resetPayload = buildBottomTabBarResetPreservingOtherTabs(tabBarState, routeName);
+      if (!resetPayload) return;
+
+      logger.debug(
+        'BottomNavigator',
+        'nav: same tab re-press — reset nested stack to initial route (tabs preserved)',
+        { routeName, initialRoute },
+        { periodic: true },
+      );
+
+      e.preventDefault();
+
+      tabNavigation.dispatch(CommonActions.reset(resetPayload));
     }
   };
 
   return (
+    <>
     <Tab.Navigator
       id={undefined}
       initialRouteName="HomeScreen"
@@ -258,6 +281,9 @@ export default function BottomNavigator(): React.ReactElement {
         const landscape = isLandscape();
         const horizontalInset = isDesktop ? vw(20) : isTablet ? vw(10) : LAYOUT_CONSTANTS.SPACING.MD;
         const barHeight = landscape ? 40 : (isDesktop ? 56 : isTablet ? 54 : 46);
+        const webMobile = Platform.OS === 'web' && isMobileWeb();
+        const tabBarBottomInset =
+          webMobile ? Math.max(insets.bottom, 12) : 0;
         return ({
           headerShown: false,
           tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number; }) => {
@@ -278,11 +304,21 @@ export default function BottomNavigator(): React.ReactElement {
             position: "absolute",
             left: horizontalInset,
             right: horizontalInset,
+            bottom: webMobile ? 0 : undefined,
             borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.XLARGE,
             elevation: LAYOUT_CONSTANTS.SHADOW.MEDIUM.elevation,
-            height: barHeight,
+            height: barHeight + tabBarBottomInset,
+            paddingBottom: tabBarBottomInset,
             backgroundColor: colors.cardBackground,
             display: shouldHideTabBar ? 'none' as const : 'flex' as const,
+            // Web: desktop layouts + full-bleed scrollers need a high stacking order so the + tab receives clicks
+            ...(!shouldHideTabBar ? { zIndex: Platform.OS === 'web' ? 20000 : 20 } : {}),
+            ...(Platform.OS === 'web' && !shouldHideTabBar
+              ? ({
+                  touchAction: 'manipulation' as const,
+                  WebkitTouchCallout: 'none' as const,
+                } as Record<string, unknown>)
+              : {}),
           },
         });
       }}
@@ -304,8 +340,60 @@ export default function BottomNavigator(): React.ReactElement {
         })}
       />
       <Tab.Screen
+        name="CreatePostTab"
+        component={CreatePostTabPlaceholder}
+        options={{
+          tabBarButton: (props: BottomTabBarButtonProps) => {
+            const p = props as Record<string, unknown>;
+            const delayLongPress = p.delayLongPress as number | undefined;
+            const { style: tabStyle, accessibilityState, testID } = p as BottomTabBarButtonProps;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={isAdmin ? 'Create post or admin task' : 'Create give or request post'}
+                accessibilityState={accessibilityState}
+                testID={testID}
+                delayLongPress={delayLongPress}
+                onPress={() =>
+                  openComposer(
+                    isAdmin
+                      ? { intent: 'give', category: composerCategory, mode: 'task' }
+                      : { intent: 'give', category: composerCategory },
+                  )
+                }
+                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                style={({ pressed }) => [
+                  tabStyle,
+                  {
+                    marginTop: -12,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minWidth: 56,
+                    minHeight: 56,
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer' } as const),
+                  Platform.OS === 'web' && pressed ? { opacity: 0.88 } : null,
+                ]}
+              >
+                <Ionicons name="add-circle" size={54} color={colors.primary} />
+              </Pressable>
+            );
+          },
+        }}
+        listeners={{
+          tabPress: (e) => e.preventDefault(),
+        }}
+      />
+      <Tab.Screen
         name="SearchTab"
         component={SearchTabStack}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => handleTabPress(e, navigation, route.name),
+        })}
+      />
+      <Tab.Screen
+        name="HomeScreen"
+        component={HomeTabStack}
         listeners={({ navigation, route }) => ({
           tabPress: (e) => handleTabPress(e, navigation, route.name),
         })}
@@ -314,19 +402,18 @@ export default function BottomNavigator(): React.ReactElement {
         <Tab.Screen
           name="AdminTab"
           component={AdminStack}
+          options={{ 
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' }
+          }}
           listeners={({ navigation, route }) => ({
             tabPress: (e) => handleTabPress(e, navigation, route.name),
           })}
         />
       )}
-      <Tab.Screen
-        name="HomeScreen"
-        component={HomeTabStack}
-        listeners={({ navigation, route }) => ({
-          tabPress: (e) => handleTabPress(e, navigation, route.name),
-        })}
-      />
 
     </Tab.Navigator>
+    <CreatePostComposerModal />
+    </>
   );
 }

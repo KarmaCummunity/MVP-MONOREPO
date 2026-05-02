@@ -4,7 +4,7 @@
  * @module Landing/Components
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, Animated, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ import { logger } from '../../../utils/loggerService';
 import type { HeroSectionProps } from '../types';
 import { IS_MOBILE_WEB, ANIMATION_DURATION, WHATSAPP_URL } from '../constants';
 import { styles } from '../styles';
-import logoImage from '../../../assets/images/new_logo_black.png';
+import { JoinLoginHeroButton } from './JoinLoginHeroButton';
 
 /**
  * HeroSection Component
@@ -23,14 +23,14 @@ import logoImage from '../../../assets/images/new_logo_black.png';
  * @component
  * @example
  * ```tsx
- * <HeroSection onDonate={() => setDonationModalVisible(true)} />
+ * <HeroSection onDonate={...} onJoinLogin={handleGoToApp} />
  * ```
  */
-export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate, onJoinLogin }) => {
   const { t } = useTranslation('landing');
   // Animation setup for fade-in and slide-up effect
-  const [heroAnimation] = useState(() => new Animated.Value(0));
-
+  const heroAnimation = useRef(new Animated.Value(0)).current;
+  
   useEffect(() => {
     Animated.timing(heroAnimation, {
       toValue: 1,
@@ -84,7 +84,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
           <View style={styles.logoContainer}>
             <View style={styles.logoBackground}>
               <Image 
-                source={logoImage} 
+                source={require('../../../assets/images/new_logo_black.png')} 
                 style={styles.logo} 
                 resizeMode="contain"
                 accessible={true}
@@ -94,7 +94,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
           </View>
           
           {/* App title */}
-          <Text style={styles.title}>{t('appName')}</Text>
+          <Text style={styles.title}>Karma Community</Text>
           
           {/* Core values row */}
           <View style={styles.subtitlesRow}>
@@ -149,7 +149,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onDonate }) => {
               <Text style={styles.contactButtonText}>{t('hero.whatsappButton')} </Text>
             </TouchableOpacity>
           </View>
-          
+
+          <JoinLoginHeroButton
+            onPress={() => {
+              void onJoinLogin();
+            }}
+            isMobileWeb={IS_MOBILE_WEB}
+            label={t('hero.joinLoginButton')}
+            accessibilityLabel={t('hero.accessibility.joinLogin')}
+          />
+
           {/* Donation CTA button */}
           <TouchableOpacity
             style={[styles.donationCtaButton, { backgroundColor: colors.greenBright }]}

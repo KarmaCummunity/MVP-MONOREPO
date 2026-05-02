@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, PanResponder, Platform, type ViewStyle } from 'react-native';
+import React, { useRef } from 'react';
+import { View, StyleSheet, PanResponder, Platform } from 'react-native';
 import colors from '../globals/colors';
 
 interface VerticalGridSliderProps {
     numColumns: number;
     onNumColumnsChange: (cols: number) => void;
-    style?: ViewStyle;
+    style?: any;
 }
 
 export default function VerticalGridSlider({
@@ -14,58 +14,69 @@ export default function VerticalGridSlider({
     style
 }: VerticalGridSliderProps) {
     const sliderHeight = 160;
-    const stepCount = 5;
-    const _stepHeight = sliderHeight / (stepCount - 1); // Height of one interval (40px), reserved for step layout
 
     // Calculate thumb position based on current columns (0-4 index)
     // 0 -> 0%, 4 -> 100%
     const thumbPosition = ((numColumns - 1) / 4) * sliderHeight;
 
-    const handleTouch = useCallback((y: number) => {
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderGrant: (evt, _gestureState) => {
+                // When touch starts, we could snap to the touch position immediately
+                const locationY = evt.nativeEvent.locationY;
+                // Adjust for padding (the interaction container starts at top: 10)
+                // Actually, if we put responder on the wrapper, we need to account for it.
+                // Let's simplify: Put responder on a wrapper view that exactly matches the track + padding.
+                handleTouch(locationY - 10);
+            },
+            onPanResponderMove: (evt, _gestureState) => {
+                // We use locationY from native event which is relative to the view
+                // This updates as we drag
+                const locationY = evt.nativeEvent.locationY;
+                handleTouch(locationY - 10);
+            },
+            onPanResponderRelease: (_evt, _gestureState) => {
+                // Already handled in Move
+            }
+        })
+    ).current;
+
+    const handleTouch = (y: number) => {
+        // y is relative to the top of the track (0 to 160)
+
+        // Clamp y to valid range first
         let clampedY = y;
         if (clampedY < 0) clampedY = 0;
         if (clampedY > sliderHeight) clampedY = sliderHeight;
 
-        const stepSize = sliderHeight / 4;
+        // Calculate which step we're closest to
+        // We have 5 steps (0, 1, 2, 3, 4) at positions (0, 40, 80, 120, 160)
+        const stepSize = sliderHeight / 4; // 40px per step
         const rawStep = clampedY / stepSize;
         const index = Math.round(rawStep);
+
         const newCols = index + 1;
 
+        // Only update if changed
         if (newCols !== numColumns) {
             onNumColumnsChange(newCols);
         }
-    }, [numColumns, onNumColumnsChange]);
-
-    const panResponder = useMemo(
-        () =>
-            PanResponder.create({
-                onStartShouldSetPanResponder: () => true,
-                onMoveShouldSetPanResponder: () => true,
-                onPanResponderGrant: (evt) => {
-                    handleTouch(evt.nativeEvent.locationY - 10);
-                },
-                onPanResponderMove: (evt) => {
-                    handleTouch(evt.nativeEvent.locationY - 10);
-                },
-                onPanResponderRelease: () => {},
-            }),
-        [handleTouch]
-    );
+    };
 
     return (
         <View
             style={[styles.columnSliderContainer, style]}
             collapsable={false}
-            pointerEvents="box-none"
         >
             {/* Combined Touch & Visual Area with PanResponder */}
             <View
                 style={styles.touchArea}
-                pointerEvents="auto"
                 {...panResponder.panHandlers}
             >
                 {/* Visuals Layer */}
-                <View style={styles.visualsContainer} pointerEvents="none">
+                <View style={styles.visualsContainer}>
                     {/* Continuous Track Line */}
                     <View style={styles.columnSliderTrack} />
 
@@ -103,6 +114,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         width: 40,
         height: 180,
+        pointerEvents: 'box-none',
         ...(Platform.OS === 'android' ? {
             elevation: 999,
         } : {}),
@@ -112,11 +124,13 @@ const styles = StyleSheet.create({
         height: 180, // Full height container
         alignItems: 'center',
         paddingTop: 10, // Match visual offset
+        pointerEvents: 'auto',
     },
     visualsContainer: {
         width: '100%',
         height: 160, // Track height
         alignItems: 'center',
+        pointerEvents: 'none',
     },
     columnSliderTrack: {
         width: 2,
@@ -136,10 +150,17 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
         borderWidth: 2,
         borderColor: colors.white,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 4,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+            },
+            default: {
+                shadowColor: colors.black,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 3,
+                elevation: 4,
+            },
+        }),
     },
 });

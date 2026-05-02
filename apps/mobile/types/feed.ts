@@ -6,6 +6,8 @@ export interface FeedUser {
     name?: string | null;
     avatar?: string;
     karmaPoints?: number;
+    /** When provided by the API (posts/tasks author join) */
+    emailVerified?: boolean;
 }
 
 export interface TaskAssignee {
@@ -24,6 +26,18 @@ export interface TaskData {
     assignees?: TaskAssignee[];
 }
 
+/** Snapshot for community challenge feed posts (from API join or post metadata). */
+export interface ChallengeFeedData {
+    id?: string;
+    type?: string;
+    frequency?: string;
+    difficulty?: string;
+    category?: string | null;
+    goal_value?: number | string | null;
+    deadline?: string | null;
+    image_url?: string | null;
+}
+
 export interface FeedItem {
     id: string;
     type: PostType;
@@ -33,6 +47,8 @@ export interface FeedItem {
     title: string;
     description: string;
     thumbnail: string | null; // Used for images/video thumbnails
+    /** All image URLs when provided by API (detail view / mapping). */
+    images?: string[] | null;
 
     // Metadata
     timestamp: string;
@@ -40,10 +56,13 @@ export interface FeedItem {
     // Association
     user: FeedUser;
     taskData?: TaskData;
+    /** Community group challenge linked to this post (post_type `community_challenge`). */
+    challengeData?: ChallengeFeedData;
     // IDs for updating posts
     itemId?: string;
     rideId?: string;
     taskId?: string;
+    challengeId?: string;
 
     // Stats & State
     likes: number;
@@ -61,4 +80,13 @@ export interface FeedItem {
 
     // Item specific (optional)
     category?: string;
+    intent?: 'give' | 'request';
+}
+
+/** Challenge UUID for navigation (top-level from API mapper or nested snapshot). */
+export function getFeedItemChallengeId(item: FeedItem): string | undefined {
+    const top = (item as { challengeId?: string }).challengeId;
+    if (typeof top === 'string' && top.length > 0) return top;
+    const nested = item.challengeData?.id;
+    return typeof nested === 'string' && nested.length > 0 ? nested : undefined;
 }

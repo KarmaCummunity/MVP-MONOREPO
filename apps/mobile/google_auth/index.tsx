@@ -122,7 +122,7 @@ export type { SecureGoogleAuthButtonProps as GoogleAuthButtonProps } from './Sec
  * 
  * useEffect(() => {
  *   initializeGoogleAuth().then(() => {
- *     console.log('Google Auth initialized');
+ *     logger.debug(Index_LOG, 'Google Auth initialized');
  *   });
  * }, []);
  * ```
@@ -165,18 +165,17 @@ export const initializeGoogleAuth = async (): Promise<{
  * ```typescript
  * const { isAuthenticated, user } = getAuthStatus();
  * if (isAuthenticated) {
- *   console.log('User logged in:', user.email);
+ *   logger.debug(Index_LOG, 'User logged in:', user.email);
  * }
  * ```
  */
 export const getAuthStatus = (): {
   isAuthenticated: boolean;
-  user: import('./GoogleAuthService').SecureAuthUser | null;
-  state: import('./GoogleAuthService').AuthState;
+  user: any | null;
+  state: any;
   hasValidTokens: boolean;
 } => {
   // Import services dynamically to avoid circular dependencies
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic import for circular dep avoidance
   const { googleAuthService } = require('./GoogleAuthService');
 
   return {
@@ -215,7 +214,7 @@ export const logoutUser = async (): Promise<void> => {
  * @example
  * ```typescript
  * const health = await checkAuthHealth();
- * console.log('Auth system health:', health);
+ * logger.debug(Index_LOG, 'Auth system health:', health);
  * ```
  */
 export const checkAuthHealth = async (): Promise<{

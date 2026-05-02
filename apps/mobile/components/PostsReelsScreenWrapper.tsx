@@ -4,7 +4,9 @@
 // - Params: None; props forwarded to inner component; top bar visibility controlled by this wrapper.
 import React from 'react';
 import PostsReelsScreen from './PostsReelsScreen';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 export default function PostsReelsScreenWrapper() {
+  useLogScreenOpened('PostsReelsScreen');
   return <PostsReelsScreen showTopBar={true} />;
 }

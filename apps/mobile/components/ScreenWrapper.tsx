@@ -35,7 +35,7 @@ export default function ScreenWrapper({
     };
 
     return (
-      <View style={webSafeStyle as React.ComponentProps<typeof View>['style']}>
+      <View style={webSafeStyle as any}>
         {children || null}
       </View>
     );

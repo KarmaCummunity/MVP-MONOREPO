@@ -22,7 +22,7 @@
 // TODO: Add comprehensive unit tests for all category logic
 import { logger } from '../utils/loggerService';
 // Removed console.log statements - using proper logging service
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,6 @@ import {
   Alert,
   Platform,
   Dimensions,
-  ViewStyle,
 } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -50,20 +49,13 @@ import { useTranslation } from 'react-i18next';
 import { getScreenInfo, isLandscape, responsiveSpacing, scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
 import { restAdapter } from '../utils/restAdapter';
-import { EnhancedStatsService } from '../src/services/stats.service';
+import { EnhancedStatsService } from '../utils/statsService';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Placeholder datasets (purged demo) – replace with real API data
-interface DonationRecord {
-  createdBy?: string;
-  createdAt?: number;
-}
-interface CharityRecord {
-  id?: string;
-}
-const donations: DonationRecord[] = [];
-const charities: CharityRecord[] = [];
+const donations: any[] = [];
+const charities: any[] = [];
 
 interface DonationsScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
@@ -78,45 +70,16 @@ const ANALYTICS_ITEM_PREFIX = 'category:';
 // TODO: Add internationalization for category names and descriptions
 // TODO: Create proper category icon management system
 // TODO: Add category access control and permissions
+/** Donation tab categories shown on DonationsScreen (subset per product scope). */
 const BASE_CATEGORIES = [
-  { id: 'money',      icon: 'card-outline',        color: colors.success, bgColor: colors.successLight, screen: 'MoneyScreen' },
-  { id: 'trump',      icon: 'car-outline',         color: colors.primary,    bgColor: colors.infoLight,    screen: 'TrumpScreen' },
-  { id: 'knowledge',  icon: 'school-outline',      color: colors.warning, bgColor: colors.warning, screen: 'KnowledgeScreen' },
-  { id: 'challenges', icon: 'trophy-outline',      color: colors.warning, bgColor: colors.warning, screen: 'MyChallengesScreen' },
-  { id: 'time',       icon: 'time-outline',        color: colors.secondary,  bgColor: colors.pinkLight, screen: 'TimeScreen' },
-  { id: 'food',       icon: 'restaurant-outline',  color: colors.success, bgColor: colors.successLight, screen: 'FoodScreen' },
-  { id: 'clothes',    icon: 'shirt-outline',       color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'ClothesScreen' },
-  { id: 'books',      icon: 'library-outline',     color: colors.primary, bgColor: colors.infoLight, screen: 'BooksScreen' },
   { id: 'items',      icon: 'cube-outline',        color: colors.secondary, bgColor: colors.pinkLight, screen: 'ItemsScreen' },
-  { id: 'furniture',  icon: 'bed-outline',         color: colors.secondary, bgColor: colors.pinkLight, screen: 'FurnitureScreen' },
-  { id: 'medical',    icon: 'medical-outline',     color: colors.error,   bgColor: colors.errorLight,   screen: 'MedicalScreen' },
-  { id: 'animals',    icon: 'paw-outline',         color: colors.success, bgColor: colors.successLight, screen: 'AnimalsScreen' },
-  { id: 'housing',    icon: 'home-outline',        color: colors.primary,    bgColor: colors.infoLight,    screen: 'HousingScreen' },
-  { id: 'support',    icon: 'heart-outline',       color: colors.secondary, bgColor: colors.pinkLight,   screen: 'SupportScreen' },
-  { id: 'education',  icon: 'book-outline',        color: colors.primary,    bgColor: colors.infoLight,    screen: 'EducationScreen' },
-  { id: 'environment',icon: 'leaf-outline',        color: colors.success, bgColor: colors.successLight, screen: 'EnvironmentScreen' },
-  { id: 'technology', icon: 'laptop-outline',      color: colors.primary,    bgColor: colors.infoLight,    screen: 'TechnologyScreen' },
-  { id: 'music',      icon: 'musical-notes-outline', color: colors.secondary,  bgColor: colors.pinkLight,    screen: 'MusicScreen' },
-  { id: 'games',      icon: 'game-controller-outline', color: colors.primary, bgColor: colors.infoLight, screen: 'GamesScreen' },
-  { id: 'riddles',    icon: 'help-circle-outline', color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'RiddlesScreen' },
-  { id: 'recipes',    icon: 'fast-food-outline',   color: colors.success, bgColor: colors.successLight, screen: 'RecipesScreen' },
-  { id: 'plants',     icon: 'flower-outline',      color: colors.success, bgColor: colors.successLight, screen: 'PlantsScreen' },
-  { id: 'waste',      icon: 'trash-outline',       color: colors.warning, bgColor: colors.warning, screen: 'WasteScreen' },
-  { id: 'art',        icon: 'color-palette-outline', color: colors.secondary,  bgColor: colors.pinkLight,    screen: 'ArtScreen' },
-  { id: 'sports',     icon: 'football-outline',    color: colors.primary,  bgColor: colors.infoLight,  screen: 'SportsScreen' },
-  { id: 'dreams',     icon: 'star-outline',        color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'DreamsScreen' },
-  { id: 'fertility',  icon: 'medkit-outline',      color: colors.error,   bgColor: colors.errorLight,   screen: 'FertilityScreen' },
-  { id: 'jobs',       icon: 'briefcase-outline',   color: colors.primary,    bgColor: colors.infoLight,    screen: 'JobsScreen' },
-  { id: 'matchmaking', icon: 'people-outline',     color: colors.secondary,    bgColor: colors.pinkLight,    screen: 'MatchmakingScreen' },
-  { id: 'mentalHealth', icon: 'pulse-outline',     color: colors.secondary,  bgColor: colors.pinkLight,  screen: 'MentalHealthScreen' },
-  { id: 'goldenAge',   icon: 'person-outline',     color: colors.warning, bgColor: colors.warning, screen: 'GoldenAgeScreen' },
-  { id: 'languages',   icon: 'language-outline',   color: colors.primary,    bgColor: colors.infoLight,    screen: 'LanguagesScreen' },
+  { id: 'trump',      icon: 'car-outline',         color: colors.primary,    bgColor: colors.infoLight,    screen: 'TrumpScreen' },
+  { id: 'challenges', icon: 'trophy-outline',      color: colors.warning, bgColor: colors.warning, screen: 'MyChallengesScreen' },
 ] as const;
 
 type CategoryId = typeof BASE_CATEGORIES[number]['id'];
-type CategoryItem = (typeof BASE_CATEGORIES)[number];
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   // TODO: Extract state management to custom hooks (useDonationsState, useCategoryAnalytics)
@@ -129,27 +92,17 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   const { isGuestMode, isRealAuth } = useUser();
   const { t } = useTranslation(['donations','common']);
 
-  // חישוב מידות responsive 
+  // חישוב מידות responsive לכרטיסים
   const { isTablet: isTabletScreen, isDesktop: isDesktopScreen } = getScreenInfo();
   const landscapeMode = isLandscape();
   
   // Simplified responsive sizing for mobile web
   const availableHeight = SCREEN_HEIGHT - (insets?.top ?? 0) - (insets?.bottom ?? 0) - (tabBarHeight ?? 0) - (headerHeight ?? 0);
-  const _isMobileWebView = Platform.OS === 'web' && SCREEN_WIDTH <= 768;
   const isCompact = availableHeight < 600;
-
-  const [now, setNow] = useState<number>(0);
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60000);
-    const tick = () => setNow(Date.now());
-    setTimeout(tick, 0);
-    return () => clearInterval(id);
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      // Analytics tracking if needed
-      logger.info('DonationsScreen', 'Screen focused');
+      logger.logScreenOpened('DonationsScreen');
     }, [])
   );
 
@@ -167,7 +120,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
       } else {
         // Fallback to legacy analytics
         const itemId = `${ANALYTICS_ITEM_PREFIX}${categoryId}`;
-        const existing = await restAdapter.read<Record<string, unknown>>(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId).catch(() => null);
+        const existing = await restAdapter.read<any>(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId).catch(() => null);
         const next = { id: itemId, categoryId, count: Number(existing?.count ?? 0) + 1, updatedAt: new Date().toISOString() };
         if (!existing) {
           await restAdapter.create(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId, next);
@@ -180,7 +133,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleCategoryPress = (category: CategoryItem) => {
+  const handleCategoryPress = (category: { id: CategoryId; screen?: string }) => {
     // Fire-and-forget analytics increment  
     incrementCategoryCounter(category.id).catch(() => {});
     
@@ -191,7 +144,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     });
 
     if (category.screen) {
-      (navigation.navigate as (name: keyof DonationsStackParamList) => void)(category.screen);
+      (navigation as any).navigate(category.screen);
     } else {
       Alert.alert(
         t('donations:comingSoonTitle'),
@@ -201,13 +154,11 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     }
   };
 
-  // קביעת הקטגוריות לסעיף הראשון - 4 קטגוריות מועדפות
-  const primaryCategoryIds: CategoryId[] = ['money', 'items', 'trump', 'knowledge'];
+  const primaryCategoryIds: CategoryId[] = ['items', 'trump', 'challenges'];
   const primaryCategories = primaryCategoryIds
     .map((id) => BASE_CATEGORIES.find((c) => c.id === id))
     .filter((c): c is typeof BASE_CATEGORIES[number] => Boolean(c));
 
-  // כל הקטגוריות האחרות לסעיף השני
   const otherCategories = BASE_CATEGORIES.filter(
     (c) => !primaryCategoryIds.includes(c.id as CategoryId)
   );
@@ -218,7 +169,6 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
   });
 
   // חישוב מידות responsive לכרטיסים
-  const _cardPadding = responsiveSpacing(12, 16, 20);
   const iconSize = responsiveSpacing(48, 56, 64);
   const iconInnerSize = responsiveSpacing(32, 40, 48);
   const cardGap = responsiveSpacing(12, 16, 24);
@@ -284,7 +234,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       ]}
                     >
                       <Ionicons 
-                        name={category.icon as React.ComponentProps<typeof Ionicons>['name']} 
+                        name={category.icon as any} 
                         size={iconInnerSize * 0.6} 
                         color="white" 
                       />
@@ -304,15 +254,14 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* סעיף שני - כל הקטגוריות הנוספות */}
+        {otherCategories.length > 0 ? (
         <View style={[styles.modernSection, { padding: sectionPadding }]}>
           <Text style={styles.modernSectionTitle}>
-            מסכים בבניה, כרגע מכילים קישורים רלוונטים
+            {t('donations:others')}
           </Text>
           <View style={[styles.modernOtherGrid, { gap: otherCategoriesGap }]}>
             {otherCategories.map((category) => {
               const { title, subtitle } = getCategoryText(category.id as CategoryId);
-              // חישוב רוחב responsive לכרטיס קטן - 3 בשורה
               const smallCardWidth = "25%";
               return (
                 <TouchableOpacity
@@ -323,12 +272,12 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       width: smallCardWidth,
                       minWidth: smallCardWidth,
                       maxWidth: smallCardWidth,
-                      backgroundColor: colors.infoLight, // רקע אחיד כמו הטרמפים
+                      backgroundColor: colors.infoLight,
                       paddingVertical: responsiveSpacing(12, 14, 16),
                       paddingHorizontal: responsiveSpacing(8, 10, 12),
                     },
                   ]}
-                  onPress={() => handleCategoryPress(category)}
+                  onPress={() => handleCategoryPress(category as any)}
                   activeOpacity={0.8}
                 >
                   <View
@@ -344,7 +293,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                     ]}
                   >
                     <Ionicons 
-                      name={category.icon as React.ComponentProps<typeof Ionicons>['name']} 
+                      name={category.icon as any} 
                       size={iconInnerSize * 0.4} 
                       color="white" 
                     />
@@ -375,15 +324,17 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
             })}
           </View>
         </View>
+        ) : null}
 
       {/* Stats Section */}
-      {now > 0 && (() => {
+      {(() => {
+        const now = Date.now();
         const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-        const weeklyDonations = donations.filter((d: DonationRecord) => {
-          const ts = new Date(d.createdAt ?? now).getTime();
-          return ts >= weekAgo;
+        const weeklyDonations = donations.filter((d: any) => {
+          const t = new Date(d.createdAt || Date.now()).getTime();
+          return t >= weekAgo;
         }).length;
-        const activeDonors = new Set(donations.map((d: DonationRecord) => d.createdBy).filter(Boolean)).size;
+        const activeDonors = new Set(donations.map((d: any) => d.createdBy).filter(Boolean)).size;
         const activeCharities = charities.length;
         return (
             <DonationStatsFooter
@@ -413,16 +364,19 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  // Web-specific scroll wrappers (web-only keys typed as ViewStyle extension)
+  // Web-specific scroll wrappers
   webScrollContainer: {
     flex: 1,
-    ...(Platform.OS === 'web' && ({
-      overflow: 'auto',
-      height: SCREEN_HEIGHT,
-      maxHeight: SCREEN_HEIGHT,
-      width: '100%',
-    } as unknown as ViewStyle)),
-  } as ViewStyle,
+    ...(Platform.OS === 'web' && { 
+      overflow: 'auto' as any,
+      WebkitOverflowScrolling: 'touch' as any,
+      overscrollBehavior: 'contain' as any,
+      height: SCREEN_HEIGHT as any,
+      maxHeight: SCREEN_HEIGHT as any,
+      width: '100%' as any,
+      touchAction: 'auto' as any,
+    }),
+  } as any,
   webScrollContent: {
     minHeight: SCREEN_HEIGHT * 1.2,
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
@@ -532,10 +486,12 @@ const styles = StyleSheet.create({
   horizontalScrollView: {
     flex: 1,
     height: '100%',
-    ...(Platform.OS === 'web' && ({
-      overflow: 'hidden',
-    } as ViewStyle)),
-  } as ViewStyle,
+    ...(Platform.OS === 'web' && {
+      overflowX: 'auto' as any,
+      overflowY: 'hidden' as any,
+      WebkitOverflowScrolling: 'touch' as any,
+    }),
+  } as any,
   horizontalScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -546,9 +502,10 @@ const styles = StyleSheet.create({
     paddingVertical: LAYOUT_CONSTANTS.SPACING.XS,
     paddingHorizontal: LAYOUT_CONSTANTS.SPACING.XS,
     flexDirection: 'row',
-    ...(Platform.OS === 'web' && ({
-      flexWrap: 'nowrap',
-    } as ViewStyle)),
+    ...(Platform.OS === 'web' && {
+      display: 'flex' as any,
+      flexWrap: 'nowrap' as any,
+    }),
   },
   othersSection: {
     alignSelf: 'stretch',

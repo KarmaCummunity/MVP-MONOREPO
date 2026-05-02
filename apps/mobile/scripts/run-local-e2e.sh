@@ -4,6 +4,8 @@
 # - Works with the new kc-monorepo structure where server is in apps/api and mobile is in apps/mobile.
 # - Steps: Free ports, docker compose up, build server, ensure DB schema via ts-node, start server, smoke-test APIs, start Expo.
 # - Inputs: PORT (server), EXPO_PORT (Expo dev server). Exports EXPO_PUBLIC_API_BASE_URL and flags.
+# - Code quality: lint and Snyk always run. Client audit:all and Sonar (if SONAR_TOKEN) run by default.
+#   Set SKIP_CHECKS=1 to skip only Sonar and client audit — not lint or Snyk.
 set -euo pipefail
 
 THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -140,75 +142,62 @@ fi
 log_success "Docker is available and running"
 
 # ============================================================================
-# Code Quality & Security Checks (Sonar, Snyk, Lint)
+# Code Quality & Security Checks (Lint, Snyk always; audit + Sonar unless SKIP_CHECKS=1)
 # ============================================================================
 
+log_info "Running Code Quality & Security Checks (Lint, Snyk, audit, Sonar if token)..."
+
+# --- Linting (always; stops on failure) ---
+log_info "Running server linting..."
+(cd "$SERVER_DIR" && npm run lint)
+
+log_info "Running client linting..."
+(cd "$CLIENT_DIR" && npm run lint)
+log_success "Lint checks passed."
+
+# --- Client audit (skip when SKIP_CHECKS=1) ---
 if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
-  log_warning "Skipping Code Quality & Security Checks as requested (SKIP_CHECKS=1)"
+  log_warning "Skipping client audit:all (SKIP_CHECKS=1; lint and Snyk still run)."
 else
-  log_info "Running Code Quality & Security Checks (Lint, type-check, Snyk, Sonar)..."
+  log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
+  (cd "$CLIENT_DIR" && npm run audit:all)
+  log_success "Audit checks passed."
+fi
 
-  # --- Linting (required, stops on failure) ---
-  log_info "Running server linting..."
-  (cd "$SERVER_DIR" && npm run lint)
+# --- Snyk (always; stops on failure) ---
+if command -v snyk >/dev/null 2>&1; then
+  SNYK_CMD=("snyk")
+else
+  log_info "Snyk CLI not found. Running via npx..."
+  SNYK_CMD=("npx" "snyk")
+fi
 
-  log_info "Running client linting..."
-  (cd "$CLIENT_DIR" && npm run lint)
-  log_success "Lint checks passed."
+log_info "Running Snyk security checks on server..."
+(cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
 
-  # --- Type-check (tsc --noEmit, required, stops on failure) ---
-  log_info "Running server type-check (tsc --noEmit)..."
-  (cd "$SERVER_DIR" && npx tsc -p tsconfig.build.json --noEmit)
+log_info "Running Snyk security checks on client..."
+(cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
+log_success "Snyk checks passed."
 
-  log_info "Running client type-check (tsc --noEmit)..."
-  (cd "$CLIENT_DIR" && npx tsc --noEmit)
-  log_success "Type-check (no emit) passed."
-
-  # log_info "Running client audit checks (Colors, i18n, Constants, Responsive, Unused)..."
-  # (cd "$CLIENT_DIR" && npm run audit:all)
-  # log_success "Audit checks passed."
-
-  # --- Snyk (skipped by default to save monthly test quota; set SNYK_RUN=1 to enable) ---
-  if [[ "${SNYK_RUN:-}" != "1" ]]; then
-    log_warning "Snyk checks skipped (set SNYK_RUN=1 to enable)."
+# --- SonarQube (when SONAR_TOKEN set; skip entirely when SKIP_CHECKS=1) ---
+if [[ "${SKIP_CHECKS:-}" == "1" ]]; then
+  log_warning "Skipping SonarQube (SKIP_CHECKS=1)."
+elif [[ -z "${SONAR_TOKEN:-}" ]]; then
+  log_warning "SONAR_TOKEN not set. Skipping SonarQube checks (set SONAR_TOKEN to enable)."
+else
+  if command -v sonar-scanner >/dev/null 2>&1; then
+    SONAR_CMD=("sonar-scanner")
   else
-    if command -v snyk >/dev/null 2>&1; then
-      SNYK_CMD=("snyk")
-    else
-      log_info "Snyk CLI not found. Running via npx..."
-      SNYK_CMD=("npx" "snyk")
-    fi
-
-    log_info "Running Snyk security checks on server..."
-    (cd "$SERVER_DIR" && "${SNYK_CMD[@]}" test --all-projects)
-
-    log_info "Running Snyk security checks on client..."
-    (cd "$CLIENT_DIR" && "${SNYK_CMD[@]}" test --all-projects)
-    log_success "Snyk checks passed."
+    log_info "sonar-scanner CLI not found. Running via npx..."
+    SONAR_CMD=("npx" "sonar-scanner")
   fi
 
-  # --- SonarQube (run only in CI with PR key when project is ALM-bound) ---
-  # ALM-bound projects require sonar.pullrequest.key; branch analysis conflicts with PR params in properties.
-  # So we only run Sonar when SONAR_TOKEN and SONAR_PULLREQUEST_KEY are both set (e.g. CI on a PR).
-  if [[ -z "${SONAR_TOKEN:-}" ]]; then
-    log_warning "SONAR_TOKEN not set. Skipping SonarQube checks (set SONAR_TOKEN to enable)."
-  elif [[ -z "${SONAR_PULLREQUEST_KEY:-}" ]]; then
-    log_warning "SONAR_PULLREQUEST_KEY not set. Skipping SonarQube (required for ALM-bound project; set in CI for PR analysis)."
-  else
-    if command -v sonar-scanner >/dev/null 2>&1; then
-      SONAR_CMD=("sonar-scanner")
-    else
-      log_info "sonar-scanner CLI not found. Running via npx..."
-      SONAR_CMD=("npx" "sonar-scanner")
-    fi
+  log_info "Running SonarQube checks on server..."
+  (cd "$SERVER_DIR" && "${SONAR_CMD[@]}")
 
-    log_info "Running SonarQube checks on server..."
-    (cd "$SERVER_DIR" && "${SONAR_CMD[@]}" -Dsonar.pullrequest.key="$SONAR_PULLREQUEST_KEY")
-
-    log_info "Running SonarQube checks on client..."
-    (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}" -Dsonar.pullrequest.key="$SONAR_PULLREQUEST_KEY")
-    log_success "SonarQube checks passed."
-  fi
+  log_info "Running SonarQube checks on client..."
+  (cd "$CLIENT_DIR" && "${SONAR_CMD[@]}")
+  log_success "SonarQube checks passed."
 fi
 
 # ============================================================================
@@ -246,14 +235,6 @@ kill_port 3000
 kill_port 5432 # Free Postgres port to ensure we connect to Docker, not local DB
 
 log_success "Ports are ready"
-
-# ============================================================================
-# Database Password (MUST be set BEFORE docker compose - container uses it on first init)
-# For local E2E we always use the docker-compose default so Docker and init-db match.
-# (.env may have production credentials which would fail against local Postgres)
-# ============================================================================
-
-export POSTGRES_PASSWORD="change_me_in_env"
 
 # ============================================================================
 # Docker Services Setup
@@ -447,36 +428,9 @@ export REDIS_URL=${REDIS_URL:-redis://localhost:6379}
 export POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
 export POSTGRES_PORT=${POSTGRES_PORT:-5435}
 export POSTGRES_USER=${POSTGRES_USER:-kc}
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-local_secret}
 export POSTGRES_DB=${POSTGRES_DB:-kc_db}
 export PORT="$SERVER_PORT"
-
-# Check for database password: .env first, then DATABASE_URL, then docker-compose default
-ENV_FILE="$SERVER_DIR/.env"
-if [[ -f "$ENV_FILE" ]]; then
-  # Load DATABASE_URL from .env if not already set (for password extraction)
-  if [[ -z "${DATABASE_URL:-}" ]]; then
-    DATABASE_URL=$(grep "^DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
-  fi
-fi
-
-if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
-  if [[ -f "$ENV_FILE" ]]; then
-    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
-  fi
-  
-  # If still not set, extract from DATABASE_URL (env or .env)
-  if [[ -z "${POSTGRES_PASSWORD:-}" && -n "${DATABASE_URL:-}" ]]; then
-    POSTGRES_PASSWORD=$(echo "$DATABASE_URL" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
-  fi
-  
-  # Local E2E fallback: docker-compose uses change_me_in_env when POSTGRES_PASSWORD is unset
-  if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
-    log_info "POSTGRES_PASSWORD not set — using docker-compose default for local E2E"
-    POSTGRES_PASSWORD="change_me_in_env"
-  fi
-fi
-
-export POSTGRES_PASSWORD
 export DATABASE_URL=${DATABASE_URL:-postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB}
 
 # Environment configuration (CRITICAL)

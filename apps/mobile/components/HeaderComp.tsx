@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import SearchBar, { SearchableItem } from "../components/SearchBar";
+import SearchBar from "../components/SearchBar";
 import MenuComp from "../components/MenuComp";
 import ModeToggleButton from "../components/ModeToggleButton";
 import GuestModeNotice from "../components/GuestModeNotice";
@@ -37,9 +37,17 @@ interface HeaderSectionProps {
   // New props for search functionality
   filterOptions: string[]; // Filter options specific to each screen
   sortOptions: string[]; // Sort options specific to each screen
-  searchData: SearchableItem[]; // Data array to search through (charities, rides, etc.)
-  onSearch: (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => void;
+  searchData: any[]; // Data array to search through (charities, rides, etc.) - TODO: Replace any[] with proper types
+  onSearch: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void; // Search handler function - TODO: Improve typing
   hideSortButton?: boolean;
+  /** When true, the offer/search mode toggle is not shown (e.g. admin-only screens). */
+  hideModeToggle?: boolean;
+  /** Bump to remount SearchBar with new initial filter/sort snapshot (e.g. after AsyncStorage hydrate). */
+  searchBarRemountKey?: number;
+  initialSearchText?: string;
+  initialSelectedFilters?: string[];
+  initialSelectedSorts?: string[];
+  sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -53,6 +61,12 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   searchData,
   onSearch,
   hideSortButton = false,
+  hideModeToggle = false,
+  searchBarRemountKey = 0,
+  initialSearchText,
+  initialSelectedFilters,
+  initialSelectedSorts,
+  sanitizeSelectedFilters,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -96,7 +110,6 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
         marginHorizontal: marginHorizontal / 2,
       }
     ]}>
-      {/* מציג את הבאנר במצב אורח אם המשתמש במצב אורח */}
       {isGuestMode && (
         <GuestModeNotice variant="compact" showLoginButton={true} />
       )}
@@ -107,22 +120,29 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
         </View>
         <View style={headerStyles.searchBarWrapper}>
           <SearchBar
+            key={`header-search-${searchBarRemountKey}`}
             placeholder={placeholder}
             filterOptions={filterOptions}
             sortOptions={sortOptions}
             searchData={searchData}
             onSearch={onSearch}
+            initialSearchText={initialSearchText}
+            initialSelectedFilters={initialSelectedFilters}
+            initialSelectedSorts={initialSelectedSorts}
             onFiltersChange={handleFiltersChange}
             onSortsChange={handleSortsChange}
             onRemoveFilterRequested={(fn) => { removeFilterRef.current = fn; }}
             onRemoveSortRequested={(fn) => { removeSortRef.current = fn; }}
             renderSelectedRow={false}
             hideSortButton={hideSortButton}
+            sanitizeSelectedFilters={sanitizeSelectedFilters}
           />
         </View>
-        <View style={headerStyles.toggleWrapper}>
-          <ModeToggleButton mode={mode} onToggle={onToggleMode} />
-        </View>
+        {!hideModeToggle && (
+          <View style={headerStyles.toggleWrapper}>
+            <ModeToggleButton mode={mode} onToggle={onToggleMode} />
+          </View>
+        )}
       </View>
 
       {/* Selected Filters & Sorts Row - Full width scrollable */}

@@ -24,21 +24,24 @@ import {
   Dimensions,
   Modal,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../src/services/chat.service';
+import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../utils/chatService';
 import { pickImage, pickVideo, takePhoto, pickDocument, validateFile, FileData } from '../utils/fileService';
-import { uploadFileWithProgress, buildChatFilePath } from '../src/infrastructure/storage.service';
-import { apiService } from '../src/api/api.service';
-import { USE_BACKEND } from '../src/infrastructure/config';
+import { uploadFileWithProgress, buildChatFilePath } from '../utils/storageService';
+import { apiService } from '../utils/apiService';
+import { USE_BACKEND } from '../utils/config.constants';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { logger } from '../utils/loggerService';
 
 type ChatDetailRouteParams = {
   conversationId: string;
@@ -48,6 +51,7 @@ type ChatDetailRouteParams = {
 };
 
 export default function ChatDetailScreen() {
+  useLogScreenOpened('ChatDetailScreen');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<Record<string, ChatDetailRouteParams>, string>>();
   const routeParams = route.params || {};
@@ -83,19 +87,18 @@ export default function ChatDetailScreen() {
     setIsLoadingProfile(true);
     try {
       const response = await apiService.getUserById(otherUserId);
-      const data = response.data as Record<string, unknown>;
-      if (response.success && data) {
-        const userData = data;
+      if (response.success && response.data) {
+        const userData = response.data;
         // Only update if we got valid data and the initial name was "unknown user"
-        const newName = (userData.name as string) || initialUserName || t('chat:unknownUser');
-        const newAvatar = (userData.avatar_url as string) || (userData.avatar as string) || initialUserAvatar || '';
+        const newName = userData.name || initialUserName || t('chat:unknownUser');
+        const newAvatar = userData.avatar_url || userData.avatar || initialUserAvatar || '';
 
         // Always update, but prioritize loaded data
         setUserName(newName);
         setUserAvatar(newAvatar);
       } else {
         // If user not found, keep initial values but log warning
-        logger.warn('ChatDetailScreen', 'User not found', { otherUserId });
+        console.warn('User not found:', otherUserId);
         if (initialUserName && initialUserName !== t('chat:unknownUser')) {
           // Keep the initial name if it's not "unknown user"
           setUserName(initialUserName);
@@ -103,7 +106,7 @@ export default function ChatDetailScreen() {
         }
       }
     } catch (error) {
-      logger.warn('ChatDetailScreen', 'Failed to load user profile', { error });
+      console.warn('Failed to load user profile:', error);
       // Keep the initial values if loading fails, but only if they're not "unknown user"
       if (initialUserName && initialUserName !== t('chat:unknownUser')) {
         setUserName(initialUserName);
@@ -112,7 +115,9 @@ export default function ChatDetailScreen() {
     } finally {
       setIsLoadingProfile(false);
     }
-  }, [otherUserId, initialUserName, initialUserAvatar, t, isLoadingProfile]);
+    // isLoadingProfile is read for a guard only; omitting from deps avoids re-running load after each completion
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard is synchronous; listing isLoadingProfile retriggers fetch
+  }, [otherUserId, initialUserName, initialUserAvatar, t]);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -124,7 +129,7 @@ export default function ChatDetailScreen() {
         await markMessagesAsRead(conversationId, selectedUser.id);
       }
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Load messages error', { error });
+      console.error('❌ Load messages error:', error);
       Alert.alert('שגיאה', 'שגיאה בטעינת ההודעות');
     } finally {
       setIsLoading(false);
@@ -171,8 +176,8 @@ export default function ChatDetailScreen() {
         setMessages(newMessages);
 
         // Mark messages as read when they arrive
-        markMessagesAsRead(conversationId, selectedUser.id).catch((err) => logger.error('ChatDetailScreen', 'Mark messages read failed', { err }));
-      });
+        markMessagesAsRead(conversationId, selectedUser.id).catch(console.error);
+      }, getMessages);
     }
 
     return () => {
@@ -181,31 +186,6 @@ export default function ChatDetailScreen() {
       }
     };
   }, [conversationId, selectedUser, loadMessages]);
-
-  const _generateFakeResponse = async () => {
-    const responses = [
-      'תודה על המידע! מתי אפשר לבוא לקחת?',
-      'האם אפשר לקבל תמונה של הספה?',
-      'מה המידות של הספה?',
-      'האם יש אפשרות למשלוח?',
-    ];
-
-    const responseText = responses[Math.floor(Math.random() * responses.length)];
-
-    try {
-      await sendMessage({
-        conversationId,
-        senderId: otherUserId,
-        text: responseText,
-        timestamp: new Date().toISOString(),
-        read: false,
-        type: 'text',
-        status: 'sent',
-      });
-    } catch (error) {
-      logger.error('ChatDetailScreen', 'Send fake response error', { error });
-    }
-  };
 
   const handleSendMessage = async () => {
     if (inputText.trim() === '' || !selectedUser || isSending) return;
@@ -258,7 +238,7 @@ export default function ChatDetailScreen() {
       ));
 
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Send message error', { error });
+      console.error('❌ Send message error:', error);
 
       // Remove the temp message and restore the text
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
@@ -311,16 +291,16 @@ export default function ChatDetailScreen() {
           }
         );
         uploadedUrl = uploadResult.url;
-      } catch (err: unknown) {
-        const uploadError = err as { message?: string; code?: string };
-        logger.error('ChatDetailScreen', 'Upload file error', {
+      } catch (uploadError: any) {
+        console.error('❌ Upload file error:', uploadError);
+        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
+        console.error('❌ Upload error details:', {
           error: uploadError,
           fullPath,
           fileName: fileData.name,
           fileSize: fileData.size,
           mimeType: fileData.mimeType,
         });
-        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
@@ -354,13 +334,13 @@ export default function ChatDetailScreen() {
         fileData: updatedFileData,
       }, [selectedUser.id, otherUserId]);
 
-      logger.info('ChatDetailScreen', 'File message sent');
+      logger.debug(ChatDetailScreen_LOG, '✅ File message sent');
 
       // Reload messages to show the new message
       await loadMessages();
 
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Send file error', { error });
+      console.error('❌ Send file error:', error);
       setShowUploadModal(false);
       setUploadingFile(null);
       setUploadProgress(0);
@@ -528,12 +508,13 @@ export default function ChatDetailScreen() {
                 return { paddingBottom };
               })()
             ]}
-            onContentSizeChange={(_contentWidth, _contentHeight) => {
+            onContentSizeChange={() => {
+              // Use setTimeout to ensure scroll happens after layout
               setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
               }, 100);
             }}
-            onLayout={(_event) => {
+            onLayout={() => {
               flatListRef.current?.scrollToEnd({ animated: true });
             }}
             showsVerticalScrollIndicator={false}
@@ -575,7 +556,7 @@ export default function ChatDetailScreen() {
         <View
           style={(() => {
             const inputStyle = {
-              position: 'fixed' as never,
+              position: 'fixed' as any,
               left: 0,
               right: 0,
               bottom: tabBarHeight,
@@ -607,9 +588,9 @@ export default function ChatDetailScreen() {
             right: 0,
             bottom: tabBarHeight,
             zIndex: 999,
-            backgroundColor: 'transparent'
+            backgroundColor: 'transparent',
+            pointerEvents: 'box-none',
           }}
-          pointerEvents="box-none"
         >
           <View style={styles.inputContainer}>
             <InputChildren />

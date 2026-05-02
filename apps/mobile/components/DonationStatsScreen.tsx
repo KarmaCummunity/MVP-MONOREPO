@@ -25,11 +25,8 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 import { FontSizes } from "../globals/constants";
-
-interface StatItem { id: string; name: string; value: number; icon: string; category: string; color: string }
-interface CharityData { id: string; name: string; statistics: StatItem[]; motivationalQuotes: string[] }
 // Initial data - replace with real data from API
-const charities: CharityData[] = [{
+const charities: any[] = [{
   id: 'kc',
   name: 'KarmaCommunity',
   statistics: [
@@ -44,6 +41,7 @@ const charities: CharityData[] = [{
 import { TouchableOpacity } from "react-native";
 import colors from "../globals/colors";
 import { useTranslation } from "react-i18next";
+import { logger } from "../utils/loggerService";
 
 // Get the dimensions of the device window for responsive sizing
 const { width, height } = Dimensions.get("window");
@@ -55,8 +53,8 @@ const MIN_SIZE = 60;
 const MAX_SIZE = 160;
 const BACKGROUND_MIN_SIZE = 30;
 const BACKGROUND_MAX_SIZE = 80;
-const MIN_VALUE = kcStats.length > 0 ? Math.min(...kcStats.map((s: StatItem) => s.value)) : 0;
-const MAX_VALUE = kcStats.length > 0 ? Math.max(...kcStats.map((s: StatItem) => s.value)) : 100;
+const MIN_VALUE = kcStats.length > 0 ? Math.min(...kcStats.map((s: any) => s.value)) : 0;
+const MAX_VALUE = kcStats.length > 0 ? Math.max(...kcStats.map((s: any) => s.value)) : 100;
 
 /**
  * ממיר מספר לערך גודל בועה בטווח המוגדר
@@ -75,13 +73,11 @@ const scaleNumberToSize = (num: number): number => {
 /**
  * בודק אם בועה חדשה תחפוף עם בועות קיימות
  */
-interface BubbleLayout { id: string; size: number; x: number; y: number; value: number; name: string; icon: string; category: string; color: string; directionX: number; directionY: number; delay: number; isBackground?: boolean }
-
 const isOverlapping = (
   x: number,
   y: number,
   size: number,
-  bubbles: BubbleLayout[]
+  bubbles: any[]
 ): boolean => {
   const overlapThreshold = 1.8;
   for (const b of bubbles) {
@@ -95,8 +91,9 @@ const isOverlapping = (
   return false;
 };
 
-const generateStatsLayout = (): BubbleLayout[] => {
-  const bubbles: BubbleLayout[] = [];
+const generateStatsLayout = () => {
+  logger.debug('DonationStatsScreen', 'Generating donation stats bubbles');
+  const bubbles: any[] = [];
   let attempts = 0;
   const maxAttempts = 3000;
 
@@ -171,6 +168,7 @@ const generateStatsLayout = (): BubbleLayout[] => {
     }
   }
 
+  logger.debug('DonationStatsScreen', 'Generated stats bubbles', { count: bubbles.length });
   return bubbles;
 };
 
@@ -179,7 +177,7 @@ const generateStatsLayout = (): BubbleLayout[] => {
  */
 const DonationStatsScreen: React.FC = () => {
   const { t } = useTranslation(["donations", "common"]);
-  const bubbles = useMemo(() => generateStatsLayout(), []);
+  const bubbles = useMemo(generateStatsLayout, []);
   const [selectedBubbleId, setSelectedBubbleId] = useState<string | null>(null);
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
 
@@ -266,64 +264,7 @@ interface AnimatedStatsBubbleProps {
 }
 
 /**
- * Hook that creates and drives float/pulse shared values (satisfies immutability: values are modified in same hook that constructs them).
- */
-function useFloatPulseAnimation(delay: number) {
-  const floatOffset = useSharedValue(0);
-  const pulseScale = useSharedValue(1);
-  useEffect(() => {
-    /* Reanimated shared values are mutable by design; driving them in effect is the standard API. */
-    /* eslint-disable react-hooks/immutability, react-hooks/exhaustive-deps */
-    floatOffset.value = withRepeat(
-      withDelay(
-        delay,
-        withTiming(1, {
-          duration: 4000 + Math.random() * 2000,
-          easing: Easing.inOut(Easing.sin),
-        })
-      ),
-      -1,
-      true
-    );
-    pulseScale.value = withRepeat(
-      withDelay(
-        delay + 500,
-        withTiming(1.08, {
-          duration: 2500 + Math.random() * 1500,
-          easing: Easing.inOut(Easing.quad),
-        })
-      ),
-      -1,
-      true
-    );
-    /* eslint-enable react-hooks/immutability, react-hooks/exhaustive-deps */
-  }, [delay, floatOffset, pulseScale]);
-  return { floatOffset, pulseScale };
-}
-
-/**
- * Hook that creates and drives selection opacity/scale shared values.
- */
-function useSelectionAnimation(isSelected: boolean) {
-  const animatedOpacity = useSharedValue(0.85);
-  const animatedScale = useSharedValue(1);
-  useEffect(() => {
-    /* Reanimated shared values are mutable by design; driving them in effect is the standard API. */
-    /* eslint-disable react-hooks/immutability, react-hooks/exhaustive-deps */
-    animatedOpacity.value = withTiming(isSelected ? 1 : 0.85, {
-      duration: 300,
-    });
-    animatedScale.value = withSpring(isSelected ? 1.15 : 1, {
-      damping: 12,
-      stiffness: 150,
-    });
-    /* eslint-enable react-hooks/immutability, react-hooks/exhaustive-deps */
-  }, [isSelected, animatedOpacity, animatedScale]);
-  return { animatedOpacity, animatedScale };
-}
-
-/**
- * Single bubble component with subtle float/pulse and selection animations
+ * קומפוננטת בועה בודדת עם אנימציות עדינות
  */
 const AnimatedStatsBubble: React.FC<AnimatedStatsBubbleProps> = ({
   id,
@@ -342,8 +283,48 @@ const AnimatedStatsBubble: React.FC<AnimatedStatsBubbleProps> = ({
   onPress,
   isBackground = false,
 }) => {
-  const { floatOffset, pulseScale } = useFloatPulseAnimation(delay);
-  const { animatedOpacity, animatedScale } = useSelectionAnimation(isSelected);
+  const floatOffset = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
+  const animatedOpacity = useSharedValue(0.85);
+  const animatedScale = useSharedValue(1);
+
+  useEffect(() => {
+    floatOffset.value = withRepeat(
+      withDelay(
+        delay,
+        withTiming(1, {
+          duration: 4000 + Math.random() * 2000,
+          easing: Easing.inOut(Easing.sin),
+        })
+      ),
+      -1,
+      true
+    );
+  }, [delay, floatOffset]);
+
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withDelay(
+        delay + 500,
+        withTiming(1.08, {
+          duration: 2500 + Math.random() * 1500,
+          easing: Easing.inOut(Easing.quad),
+        })
+      ),
+      -1,
+      true
+    );
+  }, [delay, pulseScale]);
+
+  useEffect(() => {
+    animatedOpacity.value = withTiming(isSelected ? 1 : 0.85, {
+      duration: 300,
+    });
+    animatedScale.value = withSpring(isSelected ? 1.15 : 1, {
+      damping: 12,
+      stiffness: 150,
+    });
+  }, [isSelected, animatedOpacity, animatedScale]);
 
   const handleInternalPress = useCallback(
     (_event: GestureResponderEvent) => {
@@ -389,7 +370,7 @@ const AnimatedStatsBubble: React.FC<AnimatedStatsBubbleProps> = ({
         { translateX: x + floatX },
         { translateY: y + floatY },
         { scale: animatedScale.value * pulseScale.value },
-      ],
+      ] as any,
       backgroundColor,
       borderColor,
       shadowColor,

@@ -6,13 +6,12 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
 import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../src/infrastructure/config';
+import { API_BASE_URL } from '../utils/config.constants';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
@@ -22,7 +21,6 @@ import { logger } from '../utils/loggerService';
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
   const { setSelectedUserWithMode } = useUser();
-  const _navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -86,11 +84,12 @@ export default function FirebaseGoogleButton() {
 
       // Send Google tokens and Firebase UID to server
       // Firebase UID is different from Google ID - we need to send it separately
+      // This handler is web-only (see early return above). Do not set User-Agent: CORS preflight
+      // requires it in Access-Control-Allow-Headers; server omits it and the request fails.
       const response = await fetch(`${API_BASE_URL}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': `KarmaCommunity-${Platform.OS}`,
         },
         body: JSON.stringify({
           idToken: googleIdToken,
@@ -121,15 +120,14 @@ export default function FirebaseGoogleButton() {
         hasTokens: !!serverResponse.tokens,
       });
 
-      // Save JWT tokens if provided
+      // Save JWT tokens through the central tokenManager (SSOT)
       if (serverResponse.tokens) {
-        const AsyncStorage = await import('@react-native-async-storage/async-storage');
-        await AsyncStorage.default.setItem('jwt_access_token', serverResponse.tokens.accessToken);
-        await AsyncStorage.default.setItem('jwt_refresh_token', serverResponse.tokens.refreshToken);
-        await AsyncStorage.default.setItem('jwt_token_expires_at', 
-          String(Date.now() + (serverResponse.tokens.expiresIn * 1000))
+        const { tokenManager } = await import('../auth/services/tokenManager');
+        await tokenManager.setTokens(
+          serverResponse.tokens.accessToken,
+          serverResponse.tokens.refreshToken
         );
-        logger.debug('FirebaseGoogleButton', 'JWT tokens saved to storage');
+        logger.debug('FirebaseGoogleButton', 'JWT tokens saved via tokenManager');
       }
 
       // Use server-verified user data
@@ -228,29 +226,23 @@ export default function FirebaseGoogleButton() {
       // Reset loading state after navigation
       setLoading(false);
 
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      const code = error && typeof error === 'object' && 'code' in error
-        ? (error as { code: string }).code
-        : undefined;
-      const stack = error instanceof Error ? error.stack : undefined;
-
+    } catch (error: any) {
       logger.error('FirebaseGoogleButton', 'Google login error', {
-        error: message,
-        code,
-        stack,
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
       });
 
       let errorMessage = '';
-      if (code === 'auth/popup-closed-by-user') {
+      if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = 'ההתחברות בוטלה';
         logger.debug('FirebaseGoogleButton', 'User closed the popup');
-      } else if (code === 'auth/popup-blocked') {
+      } else if (error.code === 'auth/popup-blocked') {
         errorMessage = 'הדפדפן חסם את חלון ההתחברות. אנא אפשר pop-ups.';
         logger.warn('FirebaseGoogleButton', 'Popup was blocked by browser');
       } else {
         errorMessage = 'שגיאה בהתחברות. נסה שוב.';
-        logger.warn('FirebaseGoogleButton', 'Unknown error', { code });
+        logger.warn('FirebaseGoogleButton', 'Unknown error', { code: error.code });
       }
 
       setError(errorMessage);
@@ -293,7 +285,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    ...createShadowStyle('colors.black', { width: 0, height: 2 }, 0.1, 4),
+    ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.1, 4),
     elevation: 3,
     width: '100%',
   },

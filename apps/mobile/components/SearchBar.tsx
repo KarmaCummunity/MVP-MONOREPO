@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -7,8 +7,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Platform,
-  type DimensionValue,
+  Platform, // Use Alert for messages instead of alert()
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // Ensure @expo/vector-icons is installed
 import colors from "../globals/colors"; // Ensure this path is correct
@@ -17,22 +16,18 @@ import { useTranslation } from 'react-i18next';
 import { createShadowStyle } from "../globals/styles";
 import { biDiTextAlign, rowDirection, getResponsiveModalStyles, responsiveSpacing, responsiveFontSize, getScreenInfo, BREAKPOINTS, scaleSize } from "../globals/responsive";
 
-/** Minimal shape for searchable items (name, description, location) used in search/filter. */
-export interface SearchableItem {
-  name?: string;
-  description?: string;
-  location?: string;
-  [key: string]: unknown;
-}
-
 interface SearchBarProps {
   onHasActiveConditionsChange?: (isActive: boolean) => void;
-  onSearch?: (query: string, filters?: string[], sorts?: string[], results?: SearchableItem[]) => void;
+  onSearch?: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void;
   placeholder?: string;
   // New props for dynamic filter/sort options and search data (optional for backward compatibility)
   filterOptions?: string[];
   sortOptions?: string[];
-  searchData?: SearchableItem[];
+  searchData?: any[];
+  /** When provided after mount, restores search text and selections once (e.g. persisted admin filters). */
+  initialSearchText?: string;
+  initialSelectedFilters?: string[];
+  initialSelectedSorts?: string[];
   // Props to expose selected filters/sorts to parent
   onFiltersChange?: (filters: string[]) => void;
   onSortsChange?: (sorts: string[]) => void;
@@ -43,6 +38,8 @@ interface SearchBarProps {
   renderSelectedRow?: boolean;
   // Whether to hide the sort button explicitly
   hideSortButton?: boolean;
+  /** Optional post-process for filter keys (e.g. admin tasks: drop show-completed when status chips are on). */
+  sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
 
 const SearchBar = ({
@@ -52,28 +49,53 @@ const SearchBar = ({
   filterOptions = defaultFilterOptions,
   sortOptions = defaultSortOptions,
   searchData = [],
+  initialSearchText,
+  initialSelectedFilters,
+  initialSelectedSorts,
   onFiltersChange,
   onSortsChange,
   onRemoveFilterRequested,
   onRemoveSortRequested,
   renderSelectedRow = true,
   hideSortButton = false,
+  sanitizeSelectedFilters,
 }: SearchBarProps) => {
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
   const { t } = useTranslation(['search', 'common', 'trump']);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(() => {
+    const raw = initialSelectedFilters ?? [];
+    return sanitizeSelectedFilters ? sanitizeSelectedFilters(raw) : raw;
+  });
+  const [selectedSorts, setSelectedSorts] = useState<string[]>(
+    () => initialSelectedSorts ?? [],
+  );
+  // Sync parent (chips + list) once on mount when initial props were provided (e.g. persisted admin filters).
+  React.useLayoutEffect(() => {
+    if (
+      initialSearchText === undefined
+      && initialSelectedFilters === undefined
+      && initialSelectedSorts === undefined
+    ) {
+      return;
+    }
+    onFiltersChange?.(selectedFilters);
+    onSortsChange?.(selectedSorts);
+    if (searchData.length === 0) {
+      onSearch?.(searchText, selectedFilters, selectedSorts, []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot hydrate
+  }, []);
 
-  // Derive active conditions and notify parent when they change (no local state to avoid setState-in-effect)
-  const hasActiveConditions = selectedFilters.length > 0 || selectedSorts.length > 0;
+  // Effect to inform parent about active conditions
   useEffect(() => {
-    onHasActiveConditionsChange?.(hasActiveConditions);
-  }, [hasActiveConditions, onHasActiveConditionsChange]);
+    const hasActive = selectedFilters.length > 0 || selectedSorts.length > 0;
+    onHasActiveConditionsChange?.(hasActive);
+  }, [selectedFilters, selectedSorts, onHasActiveConditionsChange]);
 
   // Function to perform search with given parameters
-  const performSearch = useCallback((query: string, filters: string[], sorts: string[]) => {
+  const performSearch = (query: string, filters: string[], sorts: string[]) => {
     // For backward compatibility, if no searchData is provided, just call onSearch with basic parameters
     if (searchData.length === 0) {
       onSearch?.(query, filters, sorts, []);
@@ -85,32 +107,53 @@ const SearchBar = ({
 
     // Filter by search text if provided
     if (query.trim() !== "") {
-      const q = query.toLowerCase();
       results = results.filter(item => {
         // Enhanced search for charities - check specific fields first
-        if (String(item.name ?? '').toLowerCase().includes(q)) return true;
-        if (String(item.description ?? '').toLowerCase().includes(q)) return true;
-        if (String(item.location ?? '').toLowerCase().includes(q)) return true;
-        if (String(item.category ?? '').toLowerCase().includes(q)) return true;
-        if (String(item.organization ?? '').toLowerCase().includes(q)) return true;
-        if (String(item.title ?? '').toLowerCase().includes(q)) return true;
+        if (item.name && item.name.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+        if (item.description && item.description.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+        if (item.location && item.location.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+        if (item.category && item.category.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+        if (item.organization && item.organization.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+        if (item.title && item.title.toLowerCase().includes(query.toLowerCase())) {
+          return true;
+        }
+
+        // Fallback to generic search for other properties
         const itemStr = JSON.stringify(item).toLowerCase();
-        return itemStr.includes(q);
+        return itemStr.includes(query.toLowerCase());
       });
     }
 
     // Apply filters if any are selected
     if (filters.length > 0) {
       results = results.filter(item => {
+        // Enhanced filter logic for charities
         return filters.some(filter => {
-          const f = filter.toLowerCase();
-          if (String(item.category ?? '').toLowerCase().includes(f)) return true;
-          if (item.tags && Array.isArray(item.tags)) {
-            return item.tags.some((tag: unknown) => String(tag ?? '').toLowerCase().includes(f));
+          // Check category field first
+          if (item.category && item.category.toLowerCase().includes(filter.toLowerCase())) {
+            return true;
           }
-          if (String(item.organization ?? '').toLowerCase().includes(f)) return true;
+          // Check tags field if it exists
+          if (item.tags && Array.isArray(item.tags)) {
+            return item.tags.some((tag: string) => tag.toLowerCase().includes(filter.toLowerCase()));
+          }
+          // Check organization field
+          if (item.organization && item.organization.toLowerCase().includes(filter.toLowerCase())) {
+            return true;
+          }
+          // Fallback to generic search
           const itemStr = JSON.stringify(item).toLowerCase();
-          return itemStr.includes(f);
+          return itemStr.includes(filter.toLowerCase());
         });
       });
     }
@@ -122,32 +165,39 @@ const SearchBar = ({
       // Enhanced sorting logic for charities
       if (sortOption === 'alphabetical') {
         results.sort((a, b) => {
-          const aName = String(a.name ?? a.title ?? a.organization ?? '').toLowerCase();
-          const bName = String(b.name ?? b.title ?? b.organization ?? '').toLowerCase();
+          const aName = (a.name || a.title || a.organization || '').toLowerCase();
+          const bName = (b.name || b.title || b.organization || '').toLowerCase();
           return aName.localeCompare(bName, 'he');
         });
       } else if (sortOption === 'byLocation') {
         results.sort((a, b) => {
-          const aLocation = String(a.location ?? '').toLowerCase();
-          const bLocation = String(b.location ?? '').toLowerCase();
+          const aLocation = (a.location || '').toLowerCase();
+          const bLocation = (b.location || '').toLowerCase();
           return aLocation.localeCompare(bLocation, 'he');
         });
       } else if (sortOption === 'byCategory') {
         results.sort((a, b) => {
-          const aCategory = String(a.category ?? '').toLowerCase();
-          const bCategory = String(b.category ?? '').toLowerCase();
+          const aCategory = (a.category || '').toLowerCase();
+          const bCategory = (b.category || '').toLowerCase();
           return aCategory.localeCompare(bCategory, 'he');
         });
       } else if (sortOption === 'byDonors') {
         results.sort((a, b) => {
-          const aDonors = Number(a.donors ?? a.volunteers ?? 0);
-          const bDonors = Number(b.donors ?? b.volunteers ?? 0);
+          const aDonors = a.donors || a.volunteers || 0;
+          const bDonors = b.donors || b.volunteers || 0;
           return bDonors - aDonors; // Descending order
         });
-      } else if (sortOption === 'byRating' || sortOption === 'byRelevance') {
+      } else if (sortOption === 'byRating') {
         results.sort((a, b) => {
-          const aRating = Number(a.rating ?? 0);
-          const bRating = Number(b.rating ?? 0);
+          const aRating = a.rating || 0;
+          const bRating = b.rating || 0;
+          return bRating - aRating; // Descending order
+        });
+      } else if (sortOption === 'byRelevance') {
+        // Default - by rating
+        results.sort((a, b) => {
+          const aRating = a.rating || 0;
+          const bRating = b.rating || 0;
           return bRating - aRating; // Descending order
         });
       }
@@ -155,7 +205,7 @@ const SearchBar = ({
 
     // Call the parent's search handler with all the parameters
     onSearch?.(query, filters, sorts, results);
-  }, [searchData, onSearch]);
+  };
 
   const handleSearch = () => {
     performSearch(searchText, selectedFilters, selectedSorts);
@@ -163,9 +213,10 @@ const SearchBar = ({
 
   const handleFilterSelection = (option: string) => {
     setSelectedFilters((prevFilters) => {
-      const newFilters = prevFilters.includes(option)
+      const toggled = prevFilters.includes(option)
         ? prevFilters.filter((item) => item !== option)
         : [...prevFilters, option];
+      const newFilters = sanitizeSelectedFilters ? sanitizeSelectedFilters(toggled) : toggled;
 
       // Notify parent of filter changes
       onFiltersChange?.(newFilters);
@@ -191,7 +242,7 @@ const SearchBar = ({
     });
   };
 
-  const removeFilter = useCallback((filterToRemove: string) => {
+  const removeFilter = (filterToRemove: string) => {
     setSelectedFilters((prevFilters) => {
       const newFilters = prevFilters.filter((filter) => filter !== filterToRemove);
 
@@ -203,9 +254,9 @@ const SearchBar = ({
 
       return newFilters;
     });
-  }, [searchText, selectedSorts, onFiltersChange, performSearch]);
+  };
 
-  const removeSort = useCallback((_sortToRemove: string) => {
+  const removeSort = (_sortToRemove: string) => {
     setSelectedSorts([]); // Remove all sorts, as typically only one can be active
 
     // Notify parent of sort changes
@@ -213,7 +264,7 @@ const SearchBar = ({
 
     // Perform real-time search with updated sorts
     performSearch(searchText, selectedFilters, []);
-  }, [searchText, selectedFilters, onSortsChange, performSearch]);
+  };
 
   const isFilterSelected = (option: string) => selectedFilters.includes(option);
   const isSortSelected = (option: string) => selectedSorts.includes(option);
@@ -233,7 +284,7 @@ const SearchBar = ({
 
   // Get responsive styles
   const modalStyles = getResponsiveModalStyles();
-  const { isTablet, isDesktop: _isDesktop, isLargeDesktop, width } = getScreenInfo();
+  const { isTablet, isLargeDesktop, width } = getScreenInfo();
   const isDesktopWeb = Platform.OS === 'web' && width > BREAKPOINTS.TABLET;
   const isMobileWeb = Platform.OS === 'web' && width <= BREAKPOINTS.TABLET;
   // Icon size optimized for mobile web - smaller for better proportions
@@ -245,7 +296,8 @@ const SearchBar = ({
   React.useEffect(() => {
     onRemoveFilterRequested?.(removeFilter);
     onRemoveSortRequested?.(() => removeSort(''));
-  }, [selectedFilters, selectedSorts, onRemoveFilterRequested, onRemoveSortRequested, removeFilter, removeSort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parent receives latest handlers; listing handlers causes redundant effect churn
+  }, [selectedFilters, selectedSorts]);
 
   return (
     <View style={localStyles.container}>
@@ -304,9 +356,9 @@ const SearchBar = ({
             <View style={[
               localStyles.modalContent,
               {
-                width: modalStyles.width as DimensionValue,
+                width: modalStyles.width,
                 maxWidth: modalStyles.maxWidth,
-                maxHeight: modalStyles.maxHeight as DimensionValue,
+                maxHeight: modalStyles.maxHeight,
                 padding: modalStyles.padding,
                 borderRadius: modalStyles.borderRadius,
               }
@@ -367,9 +419,9 @@ const SearchBar = ({
             <View style={[
               localStyles.modalContent,
               {
-                width: modalStyles.width as DimensionValue,
+                width: modalStyles.width,
                 maxWidth: modalStyles.maxWidth,
-                maxHeight: modalStyles.maxHeight as DimensionValue,
+                maxHeight: modalStyles.maxHeight,
                 padding: modalStyles.padding,
                 borderRadius: modalStyles.borderRadius,
               }
@@ -476,7 +528,7 @@ const SearchBar = ({
 
 const localStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.transparent,
+    backgroundColor: "transparent",
     flex: 1, // Take available space instead of fixed 60%
     minWidth: 0, // Allow shrinking below content size
   },
@@ -537,7 +589,7 @@ const localStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.overlayDark,
+    backgroundColor: colors.overlayBlack50,
   },
   modalContent: {
     backgroundColor: colors.white,

@@ -22,10 +22,5 @@
   "unknownUser": "משתמש לא ידוע",
   "noChats": "אין שיחות",
   "startNewOrClearSearch": "התחל שיחה חדשה או נקה חיפוש",
-  "loadConversationsError": "שגיאה בטעינת השיחות",
-  "errors": {
-    "createConversation": "יצירת השיחה בשרת נכשלה",
-    "conversationNotFound": "השיחה לא נמצאה או שאין משתתפים. אנא צור שיחה חדשה.",
-    "sendMessage": "שליחת ההודעה לשרת נכשלה"
-  }
+  "loadConversationsError": "שגיאה בטעינת השיחות"
 }

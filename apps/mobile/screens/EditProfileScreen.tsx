@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Platform, Image, ActivityIndicator } from 'react-native';
 import { logger } from '../utils/loggerService';
 import ScrollContainer from '../components/ScrollContainer';
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
-import { useUser, type User } from '../stores/userStore';
+import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import { pickImage, takePhoto } from '../utils/fileService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
 
 export default function EditProfileScreen() {
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const navigation = useNavigation<any>();
   const { selectedUser, setSelectedUserWithMode } = useUser();
   const { t } = useTranslation(['profile', 'common']);
 
@@ -35,7 +35,7 @@ export default function EditProfileScreen() {
   const [linkedin, setLinkedin] = useState('');
   const [facebook, setFacebook] = useState('');
   const [instagram, setInstagram] = useState('');
-  const [language, setLanguage] = useState<'he'|'en'|''>((selectedUser?.settings?.language as 'he' | 'en' | undefined) ?? '');
+  const [language, setLanguage] = useState<'he'|'en'|''>((selectedUser?.settings?.language as any) || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -62,7 +62,7 @@ export default function EditProfileScreen() {
         interests: interestsArray,
         settings: {
           ...(selectedUser?.settings || {}),
-          language: language || (selectedUser?.settings?.language as string | undefined) || 'he',
+          language: language || (selectedUser?.settings?.language as any) || 'he',
         },
       };
 
@@ -75,31 +75,30 @@ export default function EditProfileScreen() {
         if (response.success && response.data) {
           // Update local state with the response from server (includes all computed fields)
           // Map server response fields to client User interface
-          const data = response.data as Record<string, unknown>;
           const updatedUser = {
-            id: (data.id as string) ?? selectedUser?.id ?? '',
-            name: (data.name as string) || fullName,
+            id: response.data.id,
+            name: response.data.name || fullName,
             email: email.trim(), // Keep the email from form (not updated via API)
-            phone: (data.phone as string) || phone.trim(),
-            avatar: (data.avatar_url as string) || (data.avatar as string) || avatar.trim(),
-            bio: (data.bio as string) || bio.trim(),
-            karmaPoints: (data.karma_points as number) ?? (data.karmaPoints as number) ?? selectedUser?.karmaPoints ?? 0,
-            joinDate: (data.join_date as string) || (data.joinDate as string) || selectedUser?.joinDate || new Date().toISOString(),
-            isActive: (data.is_active as boolean) !== false,
-            lastActive: (data.last_active as string) || (data.lastActive as string) || new Date().toISOString(),
+            phone: response.data.phone || phone.trim(),
+            avatar: response.data.avatar_url || response.data.avatar || avatar.trim(),
+            bio: response.data.bio || bio.trim(),
+            karmaPoints: response.data.karma_points || response.data.karmaPoints || selectedUser?.karmaPoints || 0,
+            joinDate: response.data.join_date || response.data.joinDate || selectedUser?.joinDate || new Date().toISOString(),
+            isActive: response.data.is_active !== false,
+            lastActive: response.data.last_active || response.data.lastActive || new Date().toISOString(),
             location: {
-              city: (data.city as string) || city.trim(),
-              country: (data.country as string) || country.trim(),
+              city: response.data.city || city.trim(),
+              country: response.data.country || country.trim(),
             },
-            interests: (data.interests as string[]) || interestsArray,
-            roles: (data.roles as string[]) || selectedUser?.roles || ['user'],
-            postsCount: (data.posts_count as number) ?? (data.postsCount as number) ?? selectedUser?.postsCount ?? 0,
-            followersCount: (data.followers_count as number) ?? (data.followersCount as number) ?? selectedUser?.followersCount ?? 0,
-            followingCount: (data.following_count as number) ?? (data.followingCount as number) ?? selectedUser?.followingCount ?? 0,
+            interests: response.data.interests || interestsArray,
+            roles: response.data.roles || selectedUser?.roles || ['user'],
+            postsCount: response.data.posts_count || response.data.postsCount || selectedUser?.postsCount || 0,
+            followersCount: response.data.followers_count || response.data.followersCount || selectedUser?.followersCount || 0,
+            followingCount: response.data.following_count || response.data.followingCount || selectedUser?.followingCount || 0,
             notifications: selectedUser?.notifications || [],
-            settings: (data.settings as User['settings']) || {
+            settings: response.data.settings || {
               ...(selectedUser?.settings || {}),
-              language: language || (selectedUser?.settings?.language as string | undefined) || 'he',
+              language: language || (selectedUser?.settings?.language as any) || 'he',
             },
           };
           logger.info('EditProfileScreen', 'Updating user state', { 
@@ -108,7 +107,7 @@ export default function EditProfileScreen() {
             city: updatedUser.location.city,
             country: updatedUser.location.country 
           });
-          await setSelectedUserWithMode(updatedUser as User, 'real');
+          await setSelectedUserWithMode(updatedUser as any, 'real');
           
           // Also save to AsyncStorage with 'current_user' key (used by login flow)
           try {
@@ -150,6 +149,7 @@ export default function EditProfileScreen() {
       }
     } catch (error) {
       logger.error('EditProfileScreen', 'Save exception', { error });
+      console.error('Error saving profile:', error);
       const errorMsg = t('common:genericTryAgain', 'אירעה שגיאה בשמירת הפרופיל, נסה שוב');
       if (Platform.OS === 'web') {
         alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMsg);
@@ -294,7 +294,7 @@ export default function EditProfileScreen() {
       <View style={styles.fieldRow}>
         <View style={[styles.fieldGroup, { flex: 1 }]}>
           <Text style={styles.label}>{t('profile:edit.gender')}</Text>
-          <TextInput style={styles.input} value={gender} onChangeText={(v)=>setGender(v as 'male'|'female'|'other'|'')} placeholder={t('profile:edit.genderPlaceholder')} />
+          <TextInput style={styles.input} value={gender} onChangeText={(v)=>setGender(v as any)} placeholder={t('profile:edit.genderPlaceholder')} />
         </View>
         <View style={[styles.fieldGroup, { flex: 1, marginLeft: LAYOUT_CONSTANTS.SPACING.SM }]}>
           <Text style={styles.label}>{t('profile:edit.birthDate')}</Text>
@@ -328,7 +328,7 @@ export default function EditProfileScreen() {
       <View style={styles.fieldRow}>
         <View style={[styles.fieldGroup, { flex: 1 }]}>
           <Text style={styles.label}>{t('profile:edit.preferredLanguage')}</Text>
-          <TextInput style={styles.input} value={language} onChangeText={(v)=>setLanguage(v as 'he'|'en'|'')} placeholder={t('profile:edit.preferredLanguagePlaceholder')} autoCapitalize="none" />
+          <TextInput style={styles.input} value={language} onChangeText={(v)=>setLanguage(v as any)} placeholder={t('profile:edit.preferredLanguagePlaceholder')} autoCapitalize="none" />
         </View>
         <View style={[styles.fieldGroup, { flex: 1, marginLeft: LAYOUT_CONSTANTS.SPACING.SM }]}>
           <Text style={styles.label}>{t('profile:edit.interests')}</Text>

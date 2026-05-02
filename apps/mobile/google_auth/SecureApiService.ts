@@ -33,12 +33,35 @@
  */
 
 import { Platform } from 'react-native';
-import type { ApiResponse } from '@kc/shared-types';
 import { googleAuthService } from './GoogleAuthService';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL } from '../utils/dbConfig';
 
-export type { ApiResponse };
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
+
+/**
+ * Standard API response format
+ * Consistent across all endpoints for predictable error handling
+ */
+export interface ApiResponse<T = any> {
+  /** Whether the request was successful */
+  success: boolean;
+  /** Response data if successful */
+  data?: T;
+  /** Error message if unsuccessful */
+  error?: string;
+  /** Additional error context */
+  message?: string;
+  /** Response metadata */
+  metadata?: {
+    requestId?: string;
+    timestamp?: string;
+    duration?: number;
+    cached?: boolean;
+  };
+}
 
 /**
  * Request options for API calls
@@ -111,16 +134,16 @@ const API_CONFIG = {
  * In-memory cache for performance optimization
  */
 class ApiCache {
-  private cache: Map<string, { data: unknown; expiry: number }> = new Map();
-
-  set(key: string, data: unknown, duration: number): void {
+  private cache: Map<string, { data: any; expiry: number }> = new Map();
+  
+  set(key: string, data: any, duration: number): void {
     this.cache.set(key, {
       data,
       expiry: Date.now() + duration
     });
   }
-
-  get(key: string): unknown | null {
+  
+  get(key: string): any | null {
     const item = this.cache.get(key);
     if (!item) return null;
     
@@ -138,16 +161,6 @@ class ApiCache {
   
   size(): number {
     return this.cache.size;
-  }
-
-  /** Clear entries whose key includes the given pattern; returns count cleared */
-  clearByPattern(pattern: string): number {
-    const keysToDelete: string[] = [];
-    for (const key of this.cache.keys()) {
-      if (key.includes(pattern)) keysToDelete.push(key);
-    }
-    keysToDelete.forEach(key => this.cache.delete(key));
-    return keysToDelete.length;
   }
 }
 
@@ -297,7 +310,7 @@ class SecureApiService {
         
         return {
           success: true,
-          data: cachedResponse as T,
+          data: cachedResponse,
           metadata: {
             requestId: `${requestId}`,
             timestamp: new Date().toISOString(),
@@ -588,7 +601,7 @@ class SecureApiService {
    * @param endpoint The endpoint that failed
    * @returns Categorized error information
    */
-  private categorizeError(error: unknown, _endpoint: string): ApiError {
+  private categorizeError(error: any, _endpoint: string): ApiError {
     // Network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return {
@@ -608,8 +621,7 @@ class SecureApiService {
     }
 
     // Authentication errors
-    const err = error as { status?: number; statusCode?: number; message?: string; headers?: Record<string, string> };
-    if (err.status === 401 || err.statusCode === 401) {
+    if (error.status === 401) {
       return {
         type: 'AUTHENTICATION_ERROR',
         message: 'יש להתחבר מחדש למערכת.', // Please log in to the system again.
@@ -618,27 +630,26 @@ class SecureApiService {
     }
 
     // Rate limiting errors
-    if (err.status === 429 || err.statusCode === 429) {
+    if (error.status === 429) {
       return {
         type: 'RATE_LIMIT_ERROR',
         message: 'יותר מדי בקשות. אנא המתן מספר דקות.', // Too many requests. Please wait a few minutes.
         retryable: true,
-        retryAfter: parseInt(err.headers?.['Retry-After'] || '60', 10) * 1000
+        retryAfter: parseInt(error.headers?.['Retry-After'] || '60', 10) * 1000
       };
     }
 
     // Validation errors
-    if (err.status === 400 || err.statusCode === 400) {
+    if (error.status === 400) {
       return {
         type: 'VALIDATION_ERROR',
-        message: err.message || 'נתונים שגויים נשלחו לשרת.', // Invalid data sent to server.
+        message: error.message || 'נתונים שגויים נשלחו לשרת.', // Invalid data sent to server.
         retryable: false
       };
     }
 
     // Server errors
-    const status = err.status ?? err.statusCode ?? 0;
-    if (status >= 500) {
+    if (error.status >= 500) {
       return {
         type: 'SERVER_ERROR',
         message: 'שגיאת שרת פנימית. אנא נסה שוב מאוחר יותר.', // Internal server error. Please try again later.
@@ -682,7 +693,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async post<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -698,7 +709,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async put<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
@@ -714,7 +725,7 @@ class SecureApiService {
    * @param options Request options
    * @returns Promise resolving to API response
    */
-  async patch<T>(endpoint: string, data?: unknown, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+  async patch<T>(endpoint: string, data?: any, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
@@ -746,7 +757,7 @@ class SecureApiService {
    * 
    * @returns Promise resolving to user profile data
    */
-  async getCurrentUser(): Promise<ApiResponse<unknown>> {
+  async getCurrentUser(): Promise<ApiResponse<any>> {
     const user = googleAuthService.getCurrentUser();
     if (!user) {
       return {
@@ -765,7 +776,7 @@ class SecureApiService {
    * @param updateData Profile data to update
    * @returns Promise resolving to updated profile
    */
-  async updateCurrentUserProfile(updateData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+  async updateCurrentUserProfile(updateData: any): Promise<ApiResponse<any>> {
     const user = googleAuthService.getCurrentUser();
     if (!user) {
       return {
@@ -786,7 +797,7 @@ class SecureApiService {
    * 
    * @returns Promise resolving to list of active sessions
    */
-  async getUserSessions(): Promise<ApiResponse<unknown[]>> {
+  async getUserSessions(): Promise<ApiResponse<any[]>> {
     return this.get('/auth/sessions');
   }
 
@@ -809,7 +820,7 @@ class SecureApiService {
     limit?: number;
     offset?: number;
     search?: string;
-  } = {}): Promise<ApiResponse<unknown[]>> {
+  } = {}): Promise<ApiResponse<any[]>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -835,7 +846,7 @@ class SecureApiService {
    * @param donationData Donation details
    * @returns Promise resolving to created donation
    */
-  async createDonation(donationData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+  async createDonation(donationData: any): Promise<ApiResponse<any>> {
     // Clear donations cache since we're adding a new item
     this.clearCacheByPattern('/api/donations');
     
@@ -849,7 +860,7 @@ class SecureApiService {
    * @param donationId Donation identifier
    * @returns Promise resolving to donation details
    */
-  async getDonationById(donationId: string): Promise<ApiResponse<unknown>> {
+  async getDonationById(donationId: string): Promise<ApiResponse<any>> {
     return this.get(`/api/donations/${donationId}`, {
       authenticated: false,
       enableCache: true
@@ -874,7 +885,7 @@ class SecureApiService {
     status?: string;
     limit?: number;
     offset?: number;
-  } = {}): Promise<ApiResponse<unknown[]>> {
+  } = {}): Promise<ApiResponse<any[]>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -900,7 +911,7 @@ class SecureApiService {
    * @param rideData Ride details
    * @returns Promise resolving to created ride
    */
-  async createRide(rideData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+  async createRide(rideData: any): Promise<ApiResponse<any>> {
     // Clear rides cache since we're adding a new item
     this.clearCacheByPattern('/api/rides');
     
@@ -921,7 +932,7 @@ class SecureApiService {
   async getCommunityStats(filters: {
     city?: string;
     period?: string;
-  } = {}): Promise<ApiResponse<unknown>> {
+  } = {}): Promise<ApiResponse<any>> {
     const params = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -998,11 +1009,22 @@ class SecureApiService {
    * @param pattern URL pattern to match
    */
   private clearCacheByPattern(pattern: string): void {
-    const cleared = this.cache.clearByPattern(pattern);
-    if (cleared > 0) {
+    const keysToDelete: string[] = [];
+    
+    for (const [key] of (this.cache as any).cache) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    keysToDelete.forEach(key => {
+      (this.cache as any).cache.delete(key);
+    });
+    
+    if (keysToDelete.length > 0) {
       logger.debug('SecureApiService', 'Cache cleared by pattern', {
         pattern,
-        clearedItems: cleared
+        clearedItems: keysToDelete.length
       });
     }
   }
@@ -1059,9 +1081,9 @@ class SecureApiService {
   public getServiceInfo(): {
     baseUrl: string;
     totalRequests: number;
-    cacheStats: unknown;
+    cacheStats: any;
     isAuthenticated: boolean;
-    currentUser: unknown;
+    currentUser: any;
   } {
     return {
       baseUrl: this.baseUrl,

@@ -19,7 +19,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
 import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { useUser } from '../stores/userStore';
@@ -33,7 +33,7 @@ export default function ProfileTabStack(): React.ReactElement {
 
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('ProfileTabStack', 'Navigator focused');
+      logger.debug('ProfileTabStack', 'Navigator focused', undefined, { periodic: true });
     }, [])
   );
 
@@ -44,7 +44,7 @@ export default function ProfileTabStack(): React.ReactElement {
       detachInactiveScreens={true}
       screenOptions={({ navigation }) => ({
         headerShown: true,
-        header: () => <TopBarNavigator navigation={navigation} />,
+        header: () => <TopBarNavigator navigation={navigation as any} />,
         // Fix for aria-hidden warning: prevent focus on inactive screens
         // detachInactiveScreens already handles this, but we keep cardStyle for web compatibility
         cardStyle: Platform.OS === 'web' ? {
@@ -58,13 +58,13 @@ export default function ProfileTabStack(): React.ReactElement {
         component={ProfileScreen}
         initialParams={selectedUser?.id ? { userId: selectedUser.id } : undefined}
       />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
       <Stack.Screen name="NewChatScreen" component={NewChatScreen} />
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
-      <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
     </Stack.Navigator>

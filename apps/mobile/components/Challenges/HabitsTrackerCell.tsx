@@ -36,15 +36,15 @@ export const HabitsTrackerCell: React.FC<HabitsTrackerCellProps> = ({
   const getStatusColor = (): string => {
     switch (status) {
       case 'success':
-        return colors.success;
+        return colors.materialSuccess;
       case 'failed':
-        return colors.error;
+        return colors.materialError;
       case 'neutral':
-        return colors.textTertiary;
+        return colors.neutralWarmGray;
       case 'empty':
-        return colors.border;
+        return colors.neutralBorderStrong;
       default:
-        return colors.border;
+        return colors.neutralBorderStrong;
     }
   };
 
@@ -100,17 +100,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.neutralBorderStrong,
   },
   cellToday: {
     borderWidth: 2,
-    borderColor: colors.info,
+    borderColor: colors.materialInfoBlue,
   },
   cellText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   cellTextEmpty: {
-    color: colors.textDisabled,
+    color: colors.grayMutedStrong,
   },
 });

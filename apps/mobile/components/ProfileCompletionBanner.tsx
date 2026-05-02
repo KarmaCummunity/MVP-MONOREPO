@@ -7,8 +7,6 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { useUser } from '../stores/userStore';
 import type { User } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
-import { NavigationProp } from '@react-navigation/native';
-import { RootStackParamList } from '../globals/types';
 
 const isFullName = (name?: string): boolean => {
   if (!name) return false;
@@ -26,7 +24,7 @@ const getMissingFields = (user: User | null) => {
 };
 
 export default function ProfileCompletionBanner() {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<any>();
   const { selectedUser, isGuestMode, isAuthenticated } = useUser();
   const { t } = useTranslation(['profile']);
 

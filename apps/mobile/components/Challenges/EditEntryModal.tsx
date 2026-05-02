@@ -13,7 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { DailyTrackerChallenge } from '../../globals/types';
 import colors from '../../globals/colors';
-import { FontSizes } from '../../globals/constants';
+import { logger } from '../../utils/loggerService';
 
 interface EditEntryModalProps {
   visible: boolean;
@@ -48,7 +48,12 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
       setValue(nextValue);
       setNotes(nextNotes);
       if (__DEV__) {
-        console.log('[EditEntryModal] Opened with values:', { date, existingValue, nextValue, existingNotes: existingNotes?.slice(0, 20) });
+        logger.debug('EditEntryModal', 'Opened with values', {
+          date,
+          existingValue,
+          nextValue,
+          existingNotesPreview: existingNotes?.slice(0, 20),
+        });
       }
     }
   }, [visible, date, existingValue, existingNotes, challenge]);
@@ -56,7 +61,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   if (!challenge) return null;
 
   const handleSave = async () => {
-    if (__DEV__) console.log('[EditEntryModal] Save clicked:', { value, notes });
+    if (__DEV__) logger.debug('EditEntryModal', 'Save clicked', { value, notes });
     setSaving(true);
     try {
       await onSave(value, notes);
@@ -97,7 +102,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   };
 
   const formatDate = (dateString: string): string => {
-    const d = new Date(dateString + 'T00:00:00');
+    const d = new Date(dateString + 'T12:00:00');
     return d.toLocaleDateString('he-IL', {
       weekday: 'long',
       year: 'numeric',
@@ -118,7 +123,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
             <Switch
               value={value === 1}
               onValueChange={(val) => setValue(val ? 1 : 0)}
-              trackColor={{ false: colors.error, true: colors.success }}
+              trackColor={{ false: colors.materialError, true: colors.materialSuccess }}
               thumbColor={colors.white}
             />
           </View>
@@ -265,7 +270,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modal: {
@@ -276,15 +281,15 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   title: {
-    fontSize: FontSizes.heading2,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
     marginBottom: 8,
     textAlign: 'center',
   },
   dateText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: colors.neutralTextBody,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -292,26 +297,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: FontSizes.small,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.neutralBorderStrong,
     borderRadius: 8,
     padding: 12,
-    fontSize: FontSizes.medium,
-    backgroundColor: colors.backgroundSecondary,
-    color: colors.textPrimary,
+    fontSize: 16,
+    backgroundColor: colors.surfaceMutedPanel,
   },
   notesInput: {
     height: 80,
   },
   hint: {
-    fontSize: FontSizes.caption,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.neutralTextBody,
     marginTop: 4,
   },
   booleanContainer: {
@@ -322,13 +326,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surfaceMutedPanel,
     borderRadius: 8,
   },
   switchLabel: {
-    fontSize: FontSizes.medium,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
   },
   timeRow: {
     flexDirection: 'row',
@@ -339,15 +343,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timeLabel: {
-    fontSize: FontSizes.caption,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.neutralTextBody,
     marginBottom: 4,
     textAlign: 'center',
   },
   timeSeparator: {
-    fontSize: FontSizes.heading1,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
     marginHorizontal: 8,
   },
   buttonRow: {
@@ -363,27 +367,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonCancel: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surfaceCanvas,
   },
   buttonDelete: {
-    backgroundColor: `${colors.error}18`,
+    backgroundColor: colors.surfaceRedPale,
   },
   buttonSave: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.materialSuccess,
   },
   buttonTextCancel: {
-    color: colors.textSecondary,
-    fontSize: FontSizes.medium,
+    color: colors.neutralTextBody,
+    fontSize: 16,
     fontWeight: '600',
   },
   buttonTextDelete: {
-    color: colors.error,
-    fontSize: FontSizes.medium,
+    color: colors.materialError,
+    fontSize: 16,
     fontWeight: '600',
   },
   buttonTextSave: {
     color: colors.white,
-    fontSize: FontSizes.medium,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

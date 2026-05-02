@@ -1,55 +1,27 @@
 // File overview:
-// - Purpose: New simplified Home screen that shows only Posts and Reels feed
+// - Purpose: Home tab root screen showing placeholder copy (product request).
 // - Reached from: `HomeTabStack` -> route 'HomeMain' (initial route of the Home tab).
-// - Provides: Direct access to posts feed with friends/discovery toggle
-// - Reads from context: `useUser()` -> selectedUser, isGuestMode, isRealAuth
-// - External deps/services: `PostsReelsScreen`
-import React, { useEffect } from "react";
-import { SafeAreaView, StyleSheet, StatusBar } from "react-native";
-import { useIsFocused } from "@react-navigation/native";
-import PostsReelsScreen from "../components/PostsReelsScreen";
+// - Provides: Simple centered message; posts/reels feed remains on `PostsReelsScreen` route / modal.
+// - Reads from context: `useToast` only.
+// - External deps/services: none beyond RN primitives.
+import React from "react";
+import { SafeAreaView, StyleSheet, StatusBar, Text, View } from "react-native";
 import colors from "../globals/colors";
-import { useUser } from "../stores/userStore";
-import { logger } from "../utils/loggerService";
 import { useToast } from "../utils/toastService";
+import { useLogScreenOpened } from "../hooks/useLogScreenOpened";
 
 export default function HomeScreen() {
-  const isFocused = useIsFocused();
-  const { isGuestMode, selectedUser, isRealAuth } = useUser();
   const { ToastComponent } = useToast();
 
-  useEffect(() => {
-    logger.debug('HomeScreen', 'Component rendered', {
-      isFocused,
-      isGuestMode,
-      hasUser: !!selectedUser,
-      isRealAuth,
-    });
-  }, [isFocused, isGuestMode, selectedUser, isRealAuth]);
-
-  useEffect(() => {
-    if (isFocused) {
-      logger.debug('HomeScreen', 'Screen focused');
-    }
-  }, [isFocused]);
-
-  logger.debug('HomeScreen', 'Rendering HomeScreen', {
-    isFocused,
-    isGuestMode,
-    hasUser: !!selectedUser,
-    isRealAuth,
-  });
+  /** Stack route name is `HomeMain`; keep log label aligned with navigation state. */
+  useLogScreenOpened("HomeMain");
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <PostsReelsScreen
-        onScroll={(hide) => {
-          logger.debug('HomeScreen', 'PostsReelsScreen scroll', { hide });
-        }}
-        hideTopBar={false}
-        showTopBar={true}
-      />
+      <View style={styles.center}>
+        <Text style={styles.title}>זה המסך בית</Text>
+      </View>
       {ToastComponent}
     </SafeAreaView>
   );
@@ -59,5 +31,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 20,
+    color: colors.textPrimary,
   },
 });

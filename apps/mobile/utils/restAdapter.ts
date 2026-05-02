@@ -3,10 +3,12 @@
 // - Reached from: `DatabaseService` when `USE_BACKEND` is true, and some direct auth flows.
 // - Provides: create/read/update/delete/list for collections; auth check/register/login; generic POST helper.
 // utils/restAdapter.ts
-import { API_BASE_URL } from '../src/infrastructure/config';
+import { API_BASE_URL } from './config.constants';
 
-import { apiService } from '../src/api/api.service';
+import { apiService } from './apiService';
+import { logger } from './loggerService';
 
+const RestAdapter_LOG = 'restAdapter';
 export class RestAdapter {
   private _baseUrl: string | null = null;
 
@@ -47,7 +49,7 @@ export class RestAdapter {
     return API_BASE_URL.replace(/\/$/, '');
   }
 
-  async post<T>(path: string, body?: unknown): Promise<T> {
+  async post<T>(path: string, body?: any): Promise<T> {
     return this.http<T>(path, {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -64,7 +66,7 @@ export class RestAdapter {
 
     // High-signal client log for production debugging
      
-    console.log(`🌐 REST → ${method} ${url}`, init?.body ? { body: init?.body } : '', token ? '(authenticated)' : '(no auth)');
+    logger.debug(RestAdapter_LOG, `🌐 REST → ${method} ${url}`, init?.body ? { body: init?.body } : '', token ? '(authenticated)' : '(no auth)');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -79,7 +81,7 @@ export class RestAdapter {
     });
     const ms = Date.now() - startedAt;
      
-    console.log(`🌐 REST ← ${method} ${url} ${res.status} (${ms}ms)`);
+    logger.debug(RestAdapter_LOG, `🌐 REST ← ${method} ${url} ${res.status} (${ms}ms)`);
     if (!res.ok) {
       const text = await res.text();
        
@@ -144,14 +146,14 @@ export class RestAdapter {
     return this.http(`/auth/check-email?email=${encodeURIComponent(email)}`);
   }
 
-  async register(email: string, password: string, name?: string): Promise<{ ok?: boolean; user?: unknown; error?: string }> {
+  async register(email: string, password: string, name?: string): Promise<{ ok?: boolean; user?: any; error?: string }> {
     return this.http(`/auth/register`, {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     });
   }
 
-  async login(email: string, password: string): Promise<{ ok?: boolean; user?: unknown; error?: string }> {
+  async login(email: string, password: string): Promise<{ ok?: boolean; user?: any; error?: string }> {
     return this.http(`/auth/login`, {
       method: 'POST',
       body: JSON.stringify({ email, password }),

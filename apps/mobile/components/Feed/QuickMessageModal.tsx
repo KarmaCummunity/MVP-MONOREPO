@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
 import { useUser } from '../../stores/userStore';
-import { createConversation, conversationExists, sendMessage } from '../../src/services/chat.service';
+import { createConversation, conversationExists, sendMessage } from '../../utils/chatService';
 import { toastService } from '../../utils/toastService';
 
 interface QuickMessageModalProps {

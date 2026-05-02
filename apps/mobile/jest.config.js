@@ -1,5 +1,9 @@
 module.exports = {
+  displayName: '@kc/mobile',
   preset: 'react-native',
+  // CI runs `npm test` at repo root; without this, Jest can hang on open handles
+  // (e.g. notificationService side effects) and fail the job with timeout/non-zero exit.
+  forceExit: true,
   transformIgnorePatterns: [
     // תמיכה ב-Expo 53, React 19, React Native 0.79.5
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@shopify/react-native-skia)',
@@ -9,6 +13,7 @@ module.exports = {
     'components/**/*.{ts,tsx}',
     'utils/**/*.{ts,tsx}',
     'stores/**/*.{ts,tsx}',
+    'navigations/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/scripts/**', // scripts לא נכללים ב-coverage

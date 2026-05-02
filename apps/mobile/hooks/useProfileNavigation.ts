@@ -1,10 +1,9 @@
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import type { User } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
 
 export const useProfileNavigation = () => {
-    const navigation = useNavigation<NavigationProp<ParamListBase>>();
+    const navigation = useNavigation<any>();
     const { selectedUser: currentUser } = useUser();
 
     const navigateToProfile = (targetUserId: string, targetUserName: string, _fromScreen: string = 'Feed') => {
@@ -32,7 +31,7 @@ export const useProfileNavigation = () => {
 };
 
 // Helper: Traverse to find BottomNavigator or correct stack for Own Profile
-const _navigateToOwnProfile = (navigation: NavigationProp<ParamListBase>, currentUser: User | null) => {
+const _navigateToOwnProfile = (navigation: any, currentUser: any) => {
     try {
         logger.debug('useProfileNavigation', 'Attempting navigation to own profile (Tab)');
 
@@ -73,7 +72,7 @@ const _navigateToOwnProfile = (navigation: NavigationProp<ParamListBase>, curren
 };
 
 // Helper: Navigate to generic UserProfileScreen
-const _navigateToUserProfile = (navigation: NavigationProp<ParamListBase>, userId: string, userName: string) => {
+const _navigateToUserProfile = (navigation: any, userId: string, userName: string) => {
     try {
         // Try to navigate via HomeTabStack first to keep bottom bar
         let bottomNavigator = null;

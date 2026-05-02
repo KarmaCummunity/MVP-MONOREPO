@@ -29,7 +29,6 @@ import * as WebBrowser from 'expo-web-browser';
 import GoogleAuthService from './GoogleAuthService';
 import { createOAuthConfig } from './AuthConfiguration';
 import colors from '../globals/colors';
-import { LAYOUT_CONSTANTS } from '../globals/constants';
 import { logger } from '../utils/loggerService';
 
 // Complete the auth session if we are on web
@@ -39,9 +38,9 @@ if (Platform.OS === 'web') {
 
 export interface SecureGoogleAuthButtonProps {
     /** Callback fired on successful authentication */
-    onSuccess?: (user: unknown) => void;
+    onSuccess?: (user: any) => void;
     /** Callback fired on authentication error */
-    onError?: (error: unknown) => void;
+    onError?: (error: any) => void;
     /** Whether to show a small security indicator icon */
     showSecurityIndicator?: boolean;
     /** Custom styles for the button container */
@@ -110,8 +109,7 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
         };
 
         handleResponse();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onSuccess/onError are callbacks; parent should wrap in useCallback if needed
-    }, [response, onSuccess, onError]);
+    }, [onError, onSuccess, response]);
 
     const handlePress = async () => {
         if (disabled || isAuthenticating || !request) return;
@@ -154,7 +152,7 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
                         </Text>
                         {showSecurityIndicator && (
                             <View style={styles.securityIndicator}>
-                                <Ionicons name="shield-checkmark" size={12} color={colors.success} />
+                                <Ionicons name="shield-checkmark" size={12} color={colors.materialSuccess} />
                             </View>
                         )}
                     </>
@@ -166,16 +164,18 @@ const SecureGoogleAuthButton: React.FC<SecureGoogleAuthButtonProps> = ({
 
 const styles = StyleSheet.create({
     button: {
-        backgroundColor: colors.background,
-        borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.MEDIUM,
+        backgroundColor: colors.white,
+        borderRadius: 12,
         paddingVertical: 14,
         paddingHorizontal: 20,
         width: '100%',
-        ...LAYOUT_CONSTANTS.SHADOW.LIGHT,
         shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
         elevation: 3,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.googleButtonBorder,
     },
     contentContainer: {
         flexDirection: 'row',
@@ -187,20 +187,20 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     text: {
-        color: colors.textPrimary,
+        color: colors.googleCharcoal,
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.5,
     },
     securityIndicator: {
         marginLeft: 10,
-        backgroundColor: colors.successLight,
+        backgroundColor: colors.googleTrustHighlight,
         borderRadius: 6,
         padding: 2,
     },
     disabledButton: {
         opacity: 0.7,
-        backgroundColor: colors.offWhite,
+        backgroundColor: colors.googleButtonSurfaceHover,
     },
 });
 

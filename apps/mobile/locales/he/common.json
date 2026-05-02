@@ -16,22 +16,14 @@
   },
   "error": "שגיאה",
   "errorTitle": "שגיאה",
-  "errors": {
-    "backendEmptyStats": "השרת החזיר נתוני סטטיסטיקה ריקים",
-    "fetchStatsFailed": "טעינת סטטיסטיקות הקהילה מהשרת נכשלה",
-    "fetchStatsFailedGeneric": "טעינת סטטיסטיקות הקהילה נכשלה"
-  },
-  "success": "הצלחה",
-  "reportSent": "הדיווח נשלח בהצלחה",
-  "reportFailed": "שליחת הדיווח נכשלה",
   "time": {
     "now": "עכשיו",
     "minutesAgo": "לפני {{count}} דקות",
     "hoursAgo": "לפני {{count}} שעות",
     "daysAgo": "לפני {{count}} ימים"
   },
-  "offerer": "מציע",
-  "seeker": "מחפש",
+  "offerer": "לתת",
+  "seeker": "לקבל",
   "close": "סגור",
   "guestLoginHint": "אתה במצב אורח, מומלץ להתחבר",
   "unknownUser": "משתמש",
@@ -54,10 +46,6 @@
   "appName": "Karma Community",
   "freeAppNotice": "האפליקציה חינמית לחלוטין ללא מטרות רווח",
   "genericTryAgain": "אירעה שגיאה. נסו שוב.",
-  "versionCheck": {
-    "newVersionAvailable": "גרסה חדשה זמינה!",
-    "tapToRefresh": "לחץ כאן כדי לרענן ולקבל את העדכון האחרון"
-  },
   "labels": {
     "countryIsrael": "ישראל"
   },
@@ -65,24 +53,48 @@
     "aboutButton": "אודות",
     "aboutButtonHint": "פתח את מסך אודות קהילת קארמה"
   },
-  "devBanner": {
-    "dataIsolated": "נתונים מבודדים מהפרודקשן",
-    "tapForInfo": "לחץ למידע"
-  },
   "newChat": "שיחה חדשה",
   "chat": "שיחה",
   "favorites": "מועדפים",
   "posts": "פוסטים",
   "inactive": "לא פעיל",
+  "landingSiteTopBar": "אודות הקהילה",
   "feed": {
     "tabs": {
       "friends": "חברים",
       "discovery": "גילוי"
     },
-    "taskCreated": "משימה חדשה: {{title}}",
+    "filterAccessibility": "סינון ומיון פוסטים",
     "empty_title": "אין פוסטים עדיין",
     "empty_friends": "הוסף חברים כדי לראות פוסטים!",
-    "empty_discovery": "היה הראשון לפרסם!"
+    "empty_discovery": "היה הראשון לפרסם!",
+    "empty_filtered": "אין תוצאות לפי הסינון הנוכחי",
+    "empty_filtered_hint": "שנה את האפשרויות או לחץ איפוס בחלון הסינון",
+    "loading_more": "טוען פוסטים…",
+    "load_failed_title": "לא ניתן לטעון את הפיד",
+    "load_more_retry": "נסה שוב",
+    "filterSheet": {
+      "title": "סינון ומיון",
+      "reset": "איפוס",
+      "done": "סיום",
+      "sortSection": "מיון",
+      "sortDate": "לפי תאריך",
+      "sortDateHint": "החדשים ביותר למעלה",
+      "sortEngagement": "לפי מעורבות",
+      "sortEngagementHint": "לייקים והערות",
+      "sortRelevance": "לפי התאמה",
+      "sortRelevanceHint": "שילוב מעורבות ועדכניות",
+      "filterSection": "סינון",
+      "onlyOpen": "רק פוסטים פתוחים",
+      "onlyOpenHint": "משימות, נסיעות ופריטים שעדיין זמינים",
+      "verifiedOnly": "רק מיוצרים מאומתים",
+      "verifiedOnlyHint": "משתמשים עם אימות אימייל",
+      "contentSection": "סוג תוכן",
+      "contentSectionHint": "כשמשביתים קטגוריה, פוסטים רגילים (טקסט/תמונה) יוסתרו גם כן",
+      "includeTasks": "הצג משימות",
+      "includeRides": "הצג נסיעות",
+      "includeItems": "הצג פריטים ותרומות"
+    }
   },
   "rides": {
     "offered": "טרמפ זמין",
@@ -109,10 +121,10 @@
     "noTitle": "פוסט ללא כותרת",
     "closedSuccess": "הפוסט נסגר בהצלחה",
     "closeError": "שגיאה בסגירת הפוסט",
+    "reopenSuccess": "הפוסט נפתח מחדש בהצלחה",
+    "reopenError": "שגיאה בפתיחה מחדש של הפוסט",
     "hideSuccess": "הפוסט הוסתר בהצלחה",
-    "hideError": "שגיאה בהסתרת הפוסט",
-    "itemForDelivery": "בפריט {{title}} למסירה",
-    "itemForDeliveryWithDesc": "בפריט {{title}} למסירה - {{description}}"
+    "hideError": "שגיאה בהסתרת הפוסט"
   },
   "edit_post": {
     "title": "עריכת פוסט",
@@ -143,5 +155,27 @@
     },
     "view_details": "הצג פרטים",
     "task_completed": "משימה בוצעה!"
+  },
+  "give": "לתת",
+  "receive": "לקבל",
+  "request": "לבקש",
+  "postComposer": {
+    "giveTitle": "יצירת פוסט נתינה",
+    "requestTitle": "יצירת בקשה",
+    "title": "כותרת",
+    "description": "תיאור",
+    "city": "עיר",
+    "quantity": "כמות",
+    "amount": "סכום",
+    "publish": "פרסום",
+    "titleRequired": "נא להזין כותרת",
+    "requestPublished": "הבקשה פורסמה בהצלחה",
+    "givePublished": "הפוסט פורסם בהצלחה",
+    "rideFromPlaceholder": "נקודת מוצא",
+    "rideToPlaceholder": "כתובת יעד",
+    "rideDepartureLabel": "מתי",
+    "titleOptional": "כותרת קצרה (אופציונלי)",
+    "rideRequestFromToRequired": "נא למלא נקודת מוצא ויעד.",
+    "rideRequestTitleTemplate": "בקשת טרמפ: מ-{{from}} ל-{{to}}"
   }
 }

@@ -27,11 +27,6 @@
     "tagsAppearHere": "When people tag you, it will appear here"
   },
   "alerts": {
-    "disabledOnRealAuth": "This feature is not available in real auth mode",
-    "noUserSelected": "Please select a user",
-    "sampleDataTitle": "Sample data",
-    "sampleDataCreated": "Sample data created successfully",
-    "highlight": "Highlight",
     "post": "Post",
     "postNumber": "Post number {{number}}",
     "newUser": "New user",
@@ -76,15 +71,6 @@
     "selected": "Selected",
     "selectUserTitle": "Select a user",
     "selectUserSubtitle": "Choose a user to view the app from their perspective"
-  },
-  "hierarchy": {
-    "removeManager": "Remove manager",
-    "makeManager": "Make team manager",
-    "removeManagerConfirm": "Are you sure you want to remove this user from your management? Tasks will be transferred to you.",
-    "makeManagerConfirm": "Are you sure you want to make this user a manager under you?",
-    "success": "Success",
-    "actionFailed": "Action failed",
-    "communicationError": "Communication error"
   },
   "banner": {
     "title": "Complete your profile for the full experience",
@@ -131,75 +117,6 @@
   "recent": {
     "taskCompleted": "Task completed: {{task}}",
     "donated": "Donated {{amount}} for {{purpose}}",
-    "joinedEvent": "Joined event: {{event}}",
-    "noActivityYet": "No activities yet",
-    "startCreating": "Start creating content to see your activities here"
-  },
-  "roles": {
-    "user": "User",
-    "donor": "Donor",
-    "volunteer": "Volunteer",
-    "recipient": "Recipient",
-    "organization": "Organization",
-    "student": "Student"
-  },
-  "fallbacks": {
-    "noName": "No name",
-    "israel": "Israel",
-    "unknownUser": "Unknown user",
-    "notSpecified": "Not specified"
-  },
-  "contentTabs": {
-    "open": "Open",
-    "closed": "Closed"
-  },
-  "openContent": {
-    "loading": "Loading open content...",
-    "empty": "No open content yet",
-    "emptySubtext": "Your open content will appear here"
-  },
-  "closedContent": {
-    "loading": "Loading closed content...",
-    "empty": "No closed content yet",
-    "emptySubtext": "Your closed content will appear here"
-  },
-  "taggedComingSoon": "Tagged will be available soon",
-  "backToHome": "Back to home",
-  "verified": "Verified",
-  "message": "Message",
-  "requestTask": "Request task",
-  "content": {
-    "donationMoneyFormat": "Donation: {{amount}} ₪",
-    "volunteeringFormat": "Volunteering: {{title}}",
-    "rideFormat": "Ride: {{title}}",
-    "newPost": "New post",
-    "newItem": "New item",
-    "newDonation": "New donation",
-    "newTask": "New task",
-    "taskCompleted": "Task completed",
-    "justNow": "Just now"
-  },
-  "ride": {
-    "fromToFormat": "Ride: {{from}} → {{to}}"
-  },
-  "alertsProfile": {
-    "unfollowTitle": "Unfollow",
-    "openOptions": "Open options",
-    "loginRequired": "Please log in first",
-    "userNotFound": "User not found",
-    "unfollowSuccess": "You have successfully unfollowed",
-    "followSuccess": "You are now following",
-    "actionFailed": "An error occurred while performing the action",
-    "selectUserFirst": "Please select a user first",
-    "chatError": "Error creating chat",
-    "taskRequestTitle": "Task request",
-    "taskRequest": "Send task request to this manager?",
-    "willingToHelp": "I would be happy to help with whatever is needed"
-  },
-  "follow": {
-    "following": "Following",
-    "follow": "Follow"
-  },
-  "interestsSectionTitle": "Interests:",
-  "joinedDatePrefix": "Joined on "
+    "joinedEvent": "Joined event: {{event}}"
+  }
 }

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 
@@ -11,7 +10,6 @@ interface StatMiniChartsProps {
 }
 
 const StatMiniCharts: React.FC<StatMiniChartsProps> = ({ breakdown, trend, accentColor = colors.info }) => {
-  const { t } = useTranslation(['home']);
   const maxBreakdown = breakdown && breakdown.length > 0 ? Math.max(...breakdown.map(b => b.value)) : 0;
   const maxTrend = trend && trend.length > 0 ? Math.max(...trend) : 0;
 
@@ -19,7 +17,7 @@ const StatMiniCharts: React.FC<StatMiniChartsProps> = ({ breakdown, trend, accen
     <View style={styles.container}>
       {breakdown && breakdown.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.title}>{t('home:statsDetails.bullets.byCities')}</Text>
+          <Text style={styles.title}>{(require('i18next') as any).t('home:statsDetails.bullets.byCities')}</Text>
           <View style={styles.breakdownList}>
             {breakdown.slice(0, 5).map((b, idx) => (
               <View key={idx} style={styles.row}>
@@ -36,7 +34,7 @@ const StatMiniCharts: React.FC<StatMiniChartsProps> = ({ breakdown, trend, accen
 
       {trend && trend.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.title}>{t('home:statsDetails.bullets.trends')}</Text>
+          <Text style={styles.title}>{(require('i18next') as any).t('home:statsDetails.bullets.trends')}</Text>
           <View style={styles.trendRow}>
             {trend.map((v, idx) => (
               <View key={idx} style={styles.trendCol}>

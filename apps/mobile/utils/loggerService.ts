@@ -18,20 +18,52 @@ try {
 const isProduction = !isDevelopment;
 
 export interface LogOptions {
-  /** Mark as recurring/periodic log (e.g. polling, re-renders, nav save) - shown with [PERIODIC] in console */
+  /** Recurring noise (polling, focus handlers). Still stored for export; omitted from console by default. */
   periodic?: boolean;
 }
 
+/** Stored log levels; `routeFocus` = screen/stack gained focus (not generic info). */
+export type LogEntryLevel = 'debug' | 'routeFocus' | 'info' | 'warn' | 'error';
+
 interface LogEntry {
   timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
+  level: LogEntryLevel;
   component: string;
   message: string;
   data?: Record<string, unknown>;
   periodic?: boolean;
+  /** Legacy persisted rows (pre–routeFocus level); kept for export formatting only. */
+  screenPresentation?: boolean;
 }
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
+
+/** Single place for level → console mapping (avoids duplicated switch in addLog). */
+const CONSOLE_EMIT: Record<LogEntryLevel, (line: string) => void> = {
+  debug: (_line) => {
+    //console.debug(`🔍 ${_line}`);
+  },
+  routeFocus: (line) => {
+    console.info(`🖥️  ${line}`);
+  },
+  info: (_line) => {
+    //console.info(`ℹ️  ${_line}`);
+  },
+  warn: (line) => {
+    console.warn(`⚠️  ${line}`);
+  },
+  error: (line) => {
+    console.error(`❌ ${line}`);
+  },
+};
+
+function formatLogEntryForExport(log: LogEntry): string {
+  const periodicTag = log.periodic ? ' [PERIODIC]' : '';
+  const legacyScreenTag = log.screenPresentation && log.level !== 'routeFocus' ? ' [SCREEN_OPEN]' : '';
+  const dataSuffix = log.data ? ` ${JSON.stringify(log.data)}` : '';
+  const levelLabel = log.level === 'routeFocus' ? 'ROUTE_FOCUS' : log.level.toUpperCase();
+  return `[${log.timestamp}] ${levelLabel} ${log.component}:${periodicTag}${legacyScreenTag} ${log.message}${dataSuffix}`;
+}
 
 class LoggerService {
   private logs: LogEntry[] = [];
@@ -71,14 +103,14 @@ class LoggerService {
         if (Array.isArray(parsedLogs) && parsedLogs.length > MAX_LOGS) {
           await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
           if (this.enableConsoleOutput) {
-            console.log(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
+            console.info(`🗑️ Trimmed logs from ${parsedLogs.length} to ${this.logs.length} entries`);
           }
         }
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       // If we can't load logs (corrupted or quota exceeded), clear them
       if (this.enableConsoleOutput) {
-        console.warn('⚠️ Failed to load logs, clearing storage:', error instanceof Error ? error.message : error);
+        console.warn('⚠️ Failed to load logs, clearing storage:', error?.message || error);
       }
       this.logs = [];
       try {
@@ -103,9 +135,9 @@ class LoggerService {
       }
 
       await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
-    } catch (error: unknown) {
+    } catch (error: any) {
       // Handle QuotaExceededError by clearing old logs and retrying with fewer logs
-      if (error instanceof Error && (error.name === 'QuotaExceededError' || error.message?.includes('quota'))) {
+      if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
         try {
           // Keep only the last 100 logs instead of MAX_LOGS
           this.logs = this.logs.slice(-100);
@@ -141,13 +173,14 @@ class LoggerService {
     }, SAVE_INTERVAL);
   }
 
-  private shouldLog(level: LogLevel): boolean {
-    const levels = { debug: 0, info: 1, warn: 2, error: 3, none: 4 };
-    return levels[level] >= levels[this.logLevel];
+  /** Threshold order for filtering; `routeFocus` aligns with `info` (diagnostic, not warn/error). */
+  private shouldLog(level: LogEntryLevel): boolean {
+    const threshold = { debug: 0, routeFocus: 1, info: 1, warn: 2, error: 3, none: 4 };
+    return threshold[level] >= threshold[this.logLevel];
   }
 
   private addLog(
-    level: 'info' | 'warn' | 'error' | 'debug',
+    level: LogEntryLevel,
     component: string,
     message: string,
     data?: Record<string, unknown>,
@@ -174,31 +207,21 @@ class LoggerService {
       this.saveLogs();
     }
 
-    // Console output only if enabled (disabled in production by default)
-    if (this.enableConsoleOutput) {
-      const periodicTag = periodic ? ' [PERIODIC]' : '';
-      const prefix = `[${logEntry.timestamp}] ${component}:${periodicTag}`;
-      const fullMessage = data ? `${message} ${JSON.stringify(data)}` : message;
-
-      switch (level) {
-        case 'debug':
-          console.log(`🔍 ${prefix}`, fullMessage);
-          break;
-        case 'info':
-          console.log(`ℹ️  ${prefix}`, fullMessage);
-          break;
-        case 'warn':
-          console.warn(`⚠️  ${prefix}`, fullMessage);
-          break;
-        case 'error':
-          console.error(`❌ ${prefix}`, fullMessage);
-          break;
-      }
+    // Console: developer message only — no serialized payloads (Sonar / sensitive data).
+    // Periodic logs are intentionally not printed (nav focus, polling) to avoid console spam.
+    if (this.enableConsoleOutput && !periodic) {
+      const prefix = `[${logEntry.timestamp}] ${component}:`;
+      const consoleLine = `${prefix} ${message}`;
+      CONSOLE_EMIT[level](consoleLine);
     }
   }
 
   debug(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
     this.addLog('debug', component, message, data, options);
+  }
+
+  routeFocus(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
+    this.addLog('routeFocus', component, message, data, options);
   }
 
   info(component: string, message: string, data?: Record<string, unknown>, options?: LogOptions) {
@@ -222,7 +245,12 @@ class LoggerService {
     });
   }
 
-  logUserAction(action: string, screen: string, data?: Record<string, unknown>, userId?: string) {
+  /** Log once per navigation focus when a screen/modal is shown (use `useLogScreenOpened` at call sites). */
+  logScreenOpened(screenName: string, data?: Record<string, unknown>) {
+    this.addLog('routeFocus', screenName, 'Screen opened', data);
+  }
+
+  logUserAction(action: string, screen: string, data?: any, userId?: string) {
     this.info(screen, 'User action', {
       action,
       ...(typeof data === 'object' && data !== null ? data : { data }),
@@ -230,13 +258,13 @@ class LoggerService {
     });
   }
 
-  logError(error: unknown, context: string, screen?: string, userId?: string) {
+  logError(error: any, context: string, screen?: string, userId?: string) {
     this.error(screen || 'Error', 'Application error', {
       context,
       error: {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined,
+        message: error?.message || String(error),
+        stack: error?.stack,
+        name: error?.name,
       },
       userId,
     });
@@ -266,12 +294,7 @@ class LoggerService {
   }
 
   async exportLogs(): Promise<string> {
-    return this.logs
-      .map(log => {
-        const periodicTag = log.periodic ? ' [PERIODIC]' : '';
-        return `[${log.timestamp}] ${log.level.toUpperCase()} ${log.component}:${periodicTag} ${log.message}${log.data ? ` ${JSON.stringify(log.data)}` : ''}`;
-      })
-      .join('\n');
+    return this.logs.map(formatLogEntryForExport).join('\n');
   }
 
   async clearLogs() {
@@ -281,7 +304,7 @@ class LoggerService {
       await AsyncStorage.removeItem(LOGS_KEY);
     }
     if (this.enableConsoleOutput) {
-      console.log('🗑️ All logs cleared');
+      console.info('🗑️ All logs cleared');
     }
   }
 
@@ -300,7 +323,7 @@ class LoggerService {
       document.body.removeChild(element);
 
       if (this.enableConsoleOutput) {
-        console.log('📁 Logs downloaded');
+        console.info('📁 Logs downloaded');
       }
     }
   }
@@ -311,8 +334,8 @@ class LoggerService {
 
     const logsText = await this.exportLogs();
     if (this.enableConsoleOutput) {
-      console.log('📋 Complete logs:');
-      console.log(logsText);
+      console.info('📋 Complete logs:');
+      console.info(logsText);
     }
     return logsText;
   }
@@ -329,3 +352,24 @@ class LoggerService {
 }
 
 export const logger = new LoggerService();
+
+export interface BoundLogger {
+  debug: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  routeFocus: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  info: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  warn: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+  error: (message: string, data?: Record<string, unknown>, options?: LogOptions) => void;
+}
+
+const BOUND_LEVELS = ['debug', 'routeFocus', 'info', 'warn', 'error'] as const;
+
+/** Bound component name for shorter call sites (single implementation, no per-method duplication). */
+export function createLogger(component: string): BoundLogger {
+  const bound = {} as BoundLogger;
+  for (const level of BOUND_LEVELS) {
+    bound[level] = (message: string, data?: Record<string, unknown>, options?: LogOptions) => {
+      logger[level](component, message, data, options);
+    };
+  }
+  return bound;
+}

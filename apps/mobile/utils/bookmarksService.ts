@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from './loggerService';
 
+const BookmarksService_LOG = 'bookmarksService';
 const BOOKMARKS_KEY = 'user_bookmarks';
 
 export interface Bookmark {
@@ -19,9 +21,6 @@ export interface Bookmark {
   };
 }
 
-/** Minimal post shape required when adding a bookmark (id + fields stored in Bookmark.postData). */
-export type PostDataForBookmark = { id: string } & Bookmark['postData'];
-
 const getStoredBookmarks = async (): Promise<Bookmark[]> => {
   try {
     const data = await AsyncStorage.getItem(BOOKMARKS_KEY);
@@ -40,7 +39,7 @@ const setStoredBookmarks = async (bookmarks: Bookmark[]): Promise<void> => {
   }
 };
 
-export const addBookmark = async (userId: string, postData: PostDataForBookmark): Promise<boolean> => {
+export const addBookmark = async (userId: string, postData: any): Promise<boolean> => {
   try {
     const bookmarks = await getStoredBookmarks();
     
@@ -49,7 +48,7 @@ export const addBookmark = async (userId: string, postData: PostDataForBookmark)
     );
     
     if (existingBookmark) {
-      console.log('📖 Post already bookmarked');
+      logger.debug(BookmarksService_LOG, '📖 Post already bookmarked');
       return false;
     }
 
@@ -69,7 +68,7 @@ export const addBookmark = async (userId: string, postData: PostDataForBookmark)
     bookmarks.push(newBookmark);
     await setStoredBookmarks(bookmarks);
     
-    console.log('✅ Bookmark added:', newBookmark.id);
+    logger.debug(BookmarksService_LOG, '✅ Bookmark added:', newBookmark.id);
     return true;
   } catch (error) {
     console.error('❌ Add bookmark error:', error);
@@ -86,7 +85,7 @@ export const removeBookmark = async (userId: string, postId: string): Promise<bo
     
     await setStoredBookmarks(filteredBookmarks);
     
-    console.log('✅ Bookmark removed');
+    logger.debug(BookmarksService_LOG, '✅ Bookmark removed');
     return true;
   } catch (error) {
     console.error('❌ Remove bookmark error:', error);
@@ -123,7 +122,7 @@ export const clearAllBookmarks = async (userId: string): Promise<void> => {
     const bookmarks = await getStoredBookmarks();
     const filteredBookmarks = bookmarks.filter(bookmark => bookmark.userId !== userId);
     await setStoredBookmarks(filteredBookmarks);
-    console.log('✅ All bookmarks cleared for user:', userId);
+    logger.debug(BookmarksService_LOG, '✅ All bookmarks cleared for user:', userId);
   } catch (error) {
     console.error('❌ Clear bookmarks error:', error);
   }

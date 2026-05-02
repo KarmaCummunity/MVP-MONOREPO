@@ -37,6 +37,26 @@ export const getSectionElement = (sectionId: string): HTMLElement | null => {
   );
 };
 
+/** Walks up from `element` to find a scrollable landing container or overflow scroll parent. */
+export function findNearestScrollableParent(element: HTMLElement): HTMLElement | null {
+  if (typeof globalThis.window === 'undefined') {
+    return null;
+  }
+  let parent = element.parentElement;
+  while (parent) {
+    const style = globalThis.window.getComputedStyle(parent);
+    if (
+      parent.dataset.scrollContainer === 'true' ||
+      style.overflowY === 'auto' ||
+      style.overflowY === 'scroll'
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
 /**
  * Calculate responsive sizes for floating menu based on screen width
  * Adapts menu dimensions for mobile, tablet, and desktop viewports

@@ -12,7 +12,7 @@
 // TODO: Add bookmark categories and filtering functionality
 // TODO: Implement proper offline support with cache management
 // TODO: Add comprehensive accessibility support
-// TODO: Replace console.log with proper logging service
+// TODO: Add proper logging (uses central logger in implementation)
 // TODO: Add unit tests for all bookmark operations
 // TODO: Implement proper image loading and caching for bookmark thumbnails
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,12 +27,14 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const BookmarksScreen_LOG = 'BookmarksScreen';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { getBookmarks, removeBookmark, Bookmark } from '../utils/bookmarksService';
 import colors from '../globals/colors';
-import { logger } from '../utils/loggerService';
 import { FontSizes, IconSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +43,6 @@ export default function BookmarksScreen() {
   // TODO: Add proper TypeScript interfaces for all props and state
   // TODO: Implement proper error boundaries for crash prevention
   // TODO: Add comprehensive analytics tracking for bookmark actions
-  const _navigation = useNavigation();
   const { selectedUser } = useUser();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,6 +50,10 @@ export default function BookmarksScreen() {
   const { t } = useTranslation(['bookmarks','common']);
 
   const loadBookmarks = useCallback(async () => {
+    // TODO: Add proper loading state management
+    // TODO: Implement retry logic for failed requests
+    // TODO: Add proper error classification and handling
+    // TODO: Implement caching mechanism to reduce API calls
     if (!selectedUser) {
       Alert.alert(t('common:errorTitle'), t('bookmarks:selectUserFirst'));
       return;
@@ -58,33 +63,24 @@ export default function BookmarksScreen() {
       const userBookmarks = await getBookmarks(selectedUser.id);
       setBookmarks(userBookmarks);
     } catch (error) {
-      logger.error('BookmarksScreen', 'Load bookmarks error', { error });
+      console.error('❌ Load bookmarks error:', error);
+      // TODO: Replace Alert.alert with proper toast/snackbar notification
+      // TODO: Add error tracking and monitoring
       Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
     }
   }, [selectedUser, t]);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      if (!selectedUser) return;
-      try {
-        const userBookmarks = await getBookmarks(selectedUser.id);
-        if (!cancelled) setBookmarks(userBookmarks);
-      } catch (error) {
-        if (!cancelled) {
-          logger.error('BookmarksScreen', 'Load bookmarks error', { error });
-          Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
-        }
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [selectedUser, t]);
+    loadBookmarks();
+  }, [loadBookmarks]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('BookmarksScreen');
+      logger.debug(BookmarksScreen_LOG, '🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
       loadBookmarks();
+      // Force re-render by updating refresh key
       setRefreshKey(prev => prev + 1);
     }, [loadBookmarks])
   );
@@ -110,9 +106,9 @@ export default function BookmarksScreen() {
             try {
               await removeBookmark(selectedUser.id, bookmark.postId);
               setBookmarks(prev => prev.filter(b => b.id !== bookmark.id));
-              logger.info('BookmarksScreen', 'Bookmark removed');
+              logger.debug(BookmarksScreen_LOG, '✅ Bookmark removed');
             } catch (error) {
-              logger.error('BookmarksScreen', 'Remove bookmark error', { error });
+              console.error('❌ Remove bookmark error:', error);
               Alert.alert(t('common:errorTitle'), t('bookmarks:removeError'));
             }
           }
@@ -134,7 +130,7 @@ export default function BookmarksScreen() {
           style: 'destructive',
           onPress: () => {
             setBookmarks([]);
-            console.log('✅ All bookmarks cleared');
+            logger.debug(BookmarksScreen_LOG, '✅ All bookmarks cleared');
           }
         }
       ]

@@ -15,11 +15,10 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, ScrollView, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useWebMode } from '../stores/webModeStore';
 import { useUser } from '../stores/userStore';
-import colors from '../globals/colors';
+import colors, { SCRIM_BLACK_40, SCRIM_WHITE_95 } from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
 import { checkNavigationGuards } from '../utils/navigationGuards';
 
@@ -41,7 +40,6 @@ const WebModeToggleOverlay: React.FC = () => {
   const { t } = useTranslation('webOverlay'); // Use specific namespace
   const { mode, setMode } = useWebMode();
   const { isAuthenticated, isGuestMode, selectedUser, isAdmin } = useUser();
-  useNavigation<NavigationProp<ParamListBase>>();
 
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,11 +51,11 @@ const WebModeToggleOverlay: React.FC = () => {
     return () => subscription.remove();
   }, []);
 
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') return null as any;
 
   // Hide top bar if user is authenticated (not guest mode) - standard app user
   if (isAuthenticated && !isGuestMode && selectedUser) {
-    return null;
+    return null as any;
   }
 
   const handleToggle = async () => {
@@ -153,7 +151,7 @@ const WebModeToggleOverlay: React.FC = () => {
           {/* Left Side: Logo */}
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/images/new_logo_black.png')} // eslint-disable-line @typescript-eslint/no-require-imports -- React Native requires require() for image assets
+              source={require('../assets/images/new_logo_black.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -175,7 +173,7 @@ const WebModeToggleOverlay: React.FC = () => {
             <ScrollView style={styles.mobileMenuItems}>
               {MENU_ITEMS.map((item) => (
                 <TouchableOpacity key={item.id} onPress={() => scrollToSection(item.id)} style={styles.mobileMenuItem}>
-                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={20} color={colors.textSecondary} style={{ marginLeft: 10 }} />
+                  <Ionicons name={item.icon as any} size={20} color={colors.textSecondary} style={{ marginLeft: 10 }} />
                   <Text style={styles.mobileMenuText}>{t(item.id)}</Text>
                 </TouchableOpacity>
               ))}
@@ -194,19 +192,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: SCRIM_WHITE_95,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     zIndex: 9999,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+      },
+      default: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
+      },
+    }),
     justifyContent: 'center',
     paddingHorizontal: 16,
-    // Add backdrop filter for glass effect if supported (web)
-    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(10px)' as const } : {}),
+    // Add backdrop filter for glass effect if supported
+    ...((Platform.OS === 'web') ? { backdropFilter: 'blur(10px)' } : {}) as any,
   },
   topBarContent: {
     flexDirection: 'row',
@@ -259,11 +264,18 @@ const styles = StyleSheet.create({
   },
   toggleSelected: {
     backgroundColor: colors.white,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+      },
+      default: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+      },
+    }),
   },
   toggleUnselected: {
     backgroundColor: 'transparent',
@@ -300,20 +312,27 @@ const styles = StyleSheet.create({
   // Mobile Menu Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: SCRIM_BLACK_40,
     justifyContent: 'flex-start',
     alignItems: 'flex-end', // Slide from right or just align right
   },
   mobileMenuContainer: {
     width: 280,
     height: '100%',
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     paddingTop: 0,
-    shadowColor: colors.black,
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 10,
+    ...Platform.select({
+      web: {
+        boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.2)',
+      },
+      default: {
+        shadowColor: colors.black,
+        shadowOffset: { width: -2, height: 0 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 10,
+      },
+    }),
   },
   mobileMenuHeader: {
     flexDirection: 'row-reverse',

@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
-import { logger } from '../utils/loggerService';
-
 export const usePostDeletion = () => {
     const { selectedUser } = useUser();
     const [isDeleting, setIsDeleting] = useState(false);
@@ -98,7 +96,7 @@ export const usePostDeletion = () => {
 
             if (result.success) {
                 toastService.showSuccess(
-                    (result.data as { message?: string })?.message || 'הפוסט נמחק בהצלחה'
+                    result.data?.message || 'הפוסט נמחק בהצלחה'
                 );
 
                 // Call success callback
@@ -114,7 +112,7 @@ export const usePostDeletion = () => {
                 return false;
             }
         } catch (error) {
-            logger.error('usePostDeletion', 'Error deleting post', { error });
+            console.error('Error deleting post:', error);
             toastService.showError('שגיאה במחיקת הפוסט');
             return false;
         } finally {

@@ -1,8 +1,3 @@
-/**
- * Background bubble layout data for FloatingBubbles overlay.
- * Numeric values (size, x, y, delay) are intentional design coordinates and
- * are not replaced with globals/constants to preserve layout fidelity.
- */
 import { BubbleData } from "../globals/types";
 
 export const background_Bubbles: BubbleData[] = [

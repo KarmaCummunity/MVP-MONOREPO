@@ -309,8 +309,32 @@ export interface UserMetadata {
 // TOKEN AND SESSION TYPES
 // ========================================
 
-import type { AuthTokens } from '@kc/shared-types';
-export type { AuthTokens } from '@kc/shared-types';
+/**
+ * JWT token pair received from authentication server
+ * Both tokens are cryptographically signed and cannot be forged
+ */
+export interface AuthTokens {
+  /** JWT access token for API requests (short-lived) */
+  readonly accessToken: string;
+  
+  /** JWT refresh token for obtaining new access tokens (long-lived) */
+  readonly refreshToken: string;
+  
+  /** Access token expiration time in seconds from now */
+  readonly expiresIn: number;
+  
+  /** Refresh token expiration time in seconds from now */
+  readonly refreshExpiresIn: number;
+  
+  /** Token type (always 'Bearer') */
+  readonly tokenType: 'Bearer';
+  
+  /** Server-assigned session identifier */
+  readonly sessionId?: string;
+  
+  /** Token issuance timestamp */
+  readonly issuedAt: number; // Unix timestamp
+}
 
 /**
  * JWT token payload structure
@@ -565,11 +589,56 @@ export interface GoogleIdTokenPayload {
 }
 
 // ========================================
-// API RESPONSE TYPES (from @kc/shared-types)
+// API RESPONSE TYPES
 // ========================================
 
-import type { ApiResponse, ResponseMetadata } from '@kc/shared-types';
-export type { ApiResponse, ResponseMetadata } from '@kc/shared-types';
+/**
+ * Standard API response wrapper
+ * Consistent response format across all API endpoints
+ */
+export interface ApiResponse<TData = any> {
+  /** Whether the operation was successful */
+  success: boolean;
+  
+  /** Response data (only present if success is true) */
+  data?: TData;
+  
+  /** Error message (only present if success is false) */
+  error?: string;
+  
+  /** Additional message or context */
+  message?: string;
+  
+  /** Response metadata */
+  metadata?: ResponseMetadata;
+}
+
+/**
+ * Response metadata for debugging and monitoring
+ */
+export interface ResponseMetadata {
+  /** Unique request identifier */
+  requestId?: string;
+  
+  /** Response timestamp */
+  timestamp: string;
+  
+  /** Request duration in milliseconds */
+  duration?: number;
+  
+  /** Whether response was served from cache */
+  cached?: boolean;
+  
+  /** API version that handled the request */
+  apiVersion?: string;
+  
+  /** Rate limiting information */
+  rateLimitInfo?: {
+    remaining: number;
+    resetTime: number;
+    limit: number;
+  };
+}
 
 /**
  * Authentication response from server OAuth verification
@@ -699,7 +768,7 @@ export interface AuthEventData {
   context?: {
     sessionId?: string;
     operation?: string;
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, any>;
   };
 }
 
@@ -947,7 +1016,7 @@ export type { SecureAuthUser as AuthUser };
 /**
  * Type guard to check if a value is a valid user ID
  */
-export function isValidUserId(value: unknown): value is UserId {
+export function isValidUserId(value: any): value is UserId {
   return typeof value === 'string' && 
          value.length > 0 && 
          value.length <= 100 &&
@@ -957,7 +1026,7 @@ export function isValidUserId(value: unknown): value is UserId {
 /**
  * Type guard to check if a value is a valid email
  */
-export function isValidEmail(value: unknown): value is VerifiedEmail {
+export function isValidEmail(value: any): value is VerifiedEmail {
   return typeof value === 'string' && 
          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) &&
          value.length <= 320; // RFC 5321 limit
@@ -966,12 +1035,12 @@ export function isValidEmail(value: unknown): value is VerifiedEmail {
 /**
  * Type guard to check if a value is a valid auth state
  */
-export function isValidAuthState(value: unknown): value is AuthState {
+export function isValidAuthState(value: any): value is AuthState {
   const validStates: AuthState[] = [
     'initializing', 'unauthenticated', 'authenticating', 'verifying',
     'authenticated', 'refreshing', 'error', 'expired', 'logout'
   ];
-  return (validStates as unknown[]).includes(value);
+  return validStates.includes(value);
 }
 
 /**
@@ -1061,7 +1130,7 @@ export function createNonce(nonce: string): Nonce {
  * // API requests
  * const response: ApiResponse<UserProfile> = await api.getProfile();
  * if (isSuccessResponse(response)) {
- *   console.log('Profile:', response.data);
+ *   // logger.debug('AuthTypes', 'Profile loaded');
  * }
  * 
  * // Error handling
@@ -1074,6 +1143,6 @@ export function createNonce(nonce: string): Nonce {
  * 
  * // Event handling
  * const listener: AuthEventListener = (state, user, error) => {
- *   console.log('Auth state:', state);
+ *   // logger.debug('AuthTypes', 'Auth state changed');
  * };
  */

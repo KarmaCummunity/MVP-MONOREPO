@@ -33,7 +33,6 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: 'how', icon: 'help-circle-outline' },
   { id: 'who', icon: 'people-outline' },
   { id: 'values', icon: 'heart-outline' },
-  { id: 'core-mottos', icon: 'sparkles-outline' },
   { id: 'hierarchy', icon: 'git-network-outline' },
   { id: 'roadmap', icon: 'map-outline' },
   { id: 'contact', icon: 'mail-outline' },
@@ -51,29 +50,24 @@ export const WHATSAPP_CONTACT = '972528616878';
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_CONTACT}`;
 
 /**
- * Instagram profile URL
+ * Instagram handle (no @). Override at build time: EXPO_PUBLIC_INSTAGRAM_USERNAME
  */
-export const INSTAGRAM_URL = 'https://www.instagram.com/karmacommunity.il';
+function resolveInstagramUsername(): string {
+  const raw =
+    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_INSTAGRAM_USERNAME) ||
+    'karma_community_';
+  return raw.trim().replace(/^@/, '').replace(/\/+$/, '');
+}
+
+export const INSTAGRAM_USERNAME = resolveInstagramUsername();
+
+/** Public profile URL (native + web CTA) */
+export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/`;
 
 /**
- * Instagram karma community URL (alternate handle)
+ * iframe src for web embed (Meta). Not used on iOS/Android — use INSTAGRAM_URL + Linking.
  */
-export const INSTAGRAM_KARMA_URL = 'https://www.instagram.com/karma_community_/';
-
-/**
- * GitHub organization URL
- */
-export const GITHUB_ORG_URL = 'https://github.com/KarmaCummunity';
-
-/**
- * WhatsApp group invite URL
- */
-export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Hi2TpFcO5huKVKarvecz00';
-
-/**
- * Contact email address
- */
-export const CONTACT_EMAIL = 'navesarussi@gmail.com';
+export const INSTAGRAM_EMBED_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/embed`;
 
 /**
  * Default statistics fallback values

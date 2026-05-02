@@ -12,12 +12,16 @@ import {
   Alert,
   TextInput,
   Modal,
+  Switch,
 } from 'react-native';
+import { logger } from '../utils/loggerService';
+
+const ChallengeDetailsScreen_LOG = 'ChallengeDetailsScreen';
 import { NavigationProp, ParamListBase, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +32,6 @@ import {
   DonationsStackParamList,
 } from '../globals/types';
 import CommentsModal from '../components/CommentsModal';
-import { logger } from '../utils/loggerService';
 
 type ChallengeDetailsScreenRouteProp = RouteProp<DonationsStackParamList, 'ChallengeDetailsScreen'>;
 
@@ -46,12 +49,13 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
   const [loading, setLoading] = useState(true);
   const [challenge, setChallenge] = useState<CommunityChallenge | null>(null);
   const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
-  const [_userParticipation, setUserParticipation] = useState<ChallengeParticipant | null>(null);
+  const [, setUserParticipation] = useState<ChallengeParticipant | null>(null);
   const [recentEntries, setRecentEntries] = useState<ChallengeEntry[]>([]);
   const [isJoined, setIsJoined] = useState(false);
 
   // Entry form state
   const [entryValue, setEntryValue] = useState('');
+  const [entryBooleanValue, setEntryBooleanValue] = useState(true); // For BOOLEAN type
   const [entryNotes, setEntryNotes] = useState('');
   const [submittingEntry, setSubmittingEntry] = useState(false);
   const [showEntryModal, setShowEntryModal] = useState(false);
@@ -68,7 +72,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         setRecentEntries(response.data);
       }
     } catch (error) {
-      logger.error('ChallengeDetailsScreen', 'Error loading entries', { error });
+      console.error('Error loading entries:', error);
     }
   }, [challengeId, user?.id]);
 
@@ -82,10 +86,11 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         setParticipants(response.data.participants || []);
 
         // Get the post_id for comments (challenges auto-create posts)
+        logger.debug(ChallengeDetailsScreen_LOG, '📝 Challenge post_id:', response.data.post_id);
         if (response.data.post_id) {
           setChallengePostId(response.data.post_id);
         } else {
-          logger.warn('ChallengeDetailsScreen', 'Challenge has no post_id - comments will not be available');
+          console.warn('⚠️ Challenge has no post_id - comments will not be available');
         }
 
         // Check if user is participating
@@ -103,16 +108,16 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         }
       }
     } catch (error) {
-      logger.error('ChallengeDetailsScreen', 'Error loading challenge details', { error });
+      console.error('Error loading challenge details:', error);
       showToast(t('challenges:messages.errorLoading'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [challengeId, user?.id, t, showToast, loadUserEntries]);
+  }, [challengeId, loadUserEntries, showToast, t, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
-      loadChallengeDetails();
+      void loadChallengeDetails();
     }, [loadChallengeDetails])
   );
 
@@ -130,9 +135,9 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         showToast(t('challenges:challengeJoined'), 'success');
         await loadChallengeDetails();
       }
-    } catch (error: unknown) {
-      logger.error('ChallengeDetailsScreen', 'Error joining challenge', { error });
-      if (error instanceof Error && error.message?.includes('Already joined')) {
+    } catch (error: any) {
+      console.error('Error joining challenge:', error);
+      if (error.message?.includes('Already joined')) {
         showToast(t('challenges:alreadyJoined'), 'info');
       } else {
         showToast(t('challenges:messages.errorJoining'), 'error');
@@ -149,18 +154,18 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
     }
 
     if (!isJoined) {
-      Alert.alert(t('common:error'), t('challenges:messages.loginToJoin')); // Better than hardcoded Hebrew
+      Alert.alert(t('common:error'), 'נא להצטרף לאתגר תחילה');
       return;
     }
 
     // Validate entry value
     let value = 0;
     if (challenge?.type === 'BOOLEAN') {
-      value = 1; // Always 1 for boolean (completed)
+      value = entryBooleanValue ? 1 : 0; // Use the switch value
     } else {
       const parsedValue = parseFloat(entryValue);
       if (isNaN(parsedValue) || parsedValue < 0) {
-        Alert.alert(t('common:error'), t('challenges:fields.valuePlaceholder'));
+        Alert.alert(t('common:error'), 'נא להזין ערך חוקי');
         return;
       }
       value = parsedValue;
@@ -168,10 +173,19 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
     try {
       setSubmittingEntry(true);
+      
+      // Get today's date in local timezone (YYYY-MM-DD format)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayDate = `${year}-${month}-${day}`;
+      
       const response = await db.addChallengeEntry(challengeId, {
         user_id: user.id,
         value,
         notes: entryNotes.trim() || undefined,
+        entry_date: todayDate,
       });
 
       if (response.success) {
@@ -180,15 +194,22 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
 
         // Reset form
         setEntryValue('');
+        setEntryBooleanValue(true); // Reset to true (success)
         setEntryNotes('');
         setShowEntryModal(false);
 
         // Reload details
         await loadChallengeDetails();
+        try {
+          const { emitDailyChallengeTrackerRefresh } = await import('../utils/dailyChallengeReminder');
+          emitDailyChallengeTrackerRefresh();
+        } catch {
+          /* optional */
+        }
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Error adding entry:', error);
-      if (error instanceof Error && error.message?.includes('already exists')) {
+      if (error.message?.includes('already exists')) {
         showToast(t('challenges:messages.alreadyCompletedToday'), 'info');
       } else {
         showToast(t('challenges:messages.errorAddingEntry'), 'error');
@@ -339,12 +360,12 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
             <View style={styles.participationHeader}>
               <Ionicons name="checkmark-circle" size={24} color={colors.success} />
               <Text style={styles.participationText}>
-                {t('challenges:messages.youAreParticipating')}
+                {t('challenges:messages.youAreParticipating', 'אתה משתתף באתגר זה')}
               </Text>
             </View>
             <TouchableOpacity
               style={styles.viewStatsButton}
-              onPress={() => (navigation as NavigationProp<DonationsStackParamList>).navigate('ChallengeStatisticsScreen')}
+              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
             >
               <Ionicons name="stats-chart-outline" size={20} color={colors.primary} />
               <Text style={styles.viewStatsText}>{t('challenges:viewStatistics')}</Text>
@@ -368,7 +389,22 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
                 </TouchableOpacity>
               </View>
 
-              {challenge.type !== 'BOOLEAN' && (
+              {challenge.type === 'BOOLEAN' ? (
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>{t('challenges:fields.value')} *</Text>
+                  <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>
+                      {entryBooleanValue ? '✓ הצלחתי' : '✗ לא הצלחתי'}
+                    </Text>
+                    <Switch
+                      value={entryBooleanValue}
+                      onValueChange={setEntryBooleanValue}
+                      trackColor={{ false: colors.materialError, true: colors.materialSuccess }}
+                      thumbColor={colors.white}
+                    />
+                  </View>
+                </View>
+              ) : (
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>{t('challenges:fields.value')} *</Text>
                   <TextInput
@@ -418,9 +454,9 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
         {/* Recent Activity (Anonymous - shows activity without personal data) */}
         {isJoined && (
           <View style={styles.activityCard}>
-            <Text style={styles.sectionTitle}>{t('challenges:details.recentActivity')}</Text>
+            <Text style={styles.sectionTitle}>{t('challenges:details.recentActivity', 'פעילות אחרונה')}</Text>
             <Text style={styles.activitySubtitle}>
-              {t('challenges:messages.anonymousActivity')}
+              {t('challenges:messages.anonymousActivity', 'הביצועים שלך פרטיים ואנונימיים')}
             </Text>
             {recentEntries.length > 0 ? (
               recentEntries.slice(0, 5).map((entry) => (
@@ -495,7 +531,7 @@ export default function ChallengeDetailsScreen({ navigation }: ChallengeDetailsS
           postTitle={challenge.title || 'אתגר'}
           postUser={{
             id: challenge.creator_id || '',
-            name: challenge.creator_name || t('common:unknownUser'),
+            name: challenge.creator_name || 'משתמש',
             avatar: 'https://picsum.photos/seed/user/100/100',
           }}
           onClose={() => setShowCommentsModal(false)}
@@ -686,6 +722,21 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top' as const,
   },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+  },
+  switchLabel: {
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
   addEntryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -791,7 +842,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -829,7 +880,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end' as const,
   },
   modalContent: {

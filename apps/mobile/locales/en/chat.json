@@ -22,10 +22,5 @@
   "unknownUser": "Unknown user",
   "noChats": "No conversations",
   "startNewOrClearSearch": "Start a new chat or clear search",
-  "loadConversationsError": "Failed to load conversations",
-  "errors": {
-    "createConversation": "Failed to create conversation on backend",
-    "conversationNotFound": "Conversation not found or has no participants. Please create a new conversation.",
-    "sendMessage": "Failed to send message to backend"
-  }
+  "loadConversationsError": "Failed to load conversations"
 }

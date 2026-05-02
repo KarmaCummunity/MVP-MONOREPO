@@ -1,6 +1,6 @@
 // Challenge Statistics Screen
 // Shows user's personal statistics across all community challenges with interactive charts
-import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,13 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart, ProgressChart, PieChart } from 'react-native-chart-kit';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
@@ -27,8 +27,8 @@ const screenWidth = Dimensions.get('window').width;
 
 // Animated Card Component
 const AnimatedCard: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
-  const [fadeAnim] = useState(() => new Animated.Value(0));
-  const [slideAnim] = useState(() => new Animated.Value(30));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -59,13 +59,8 @@ const AnimatedCard: React.FC<{ children: React.ReactNode; delay?: number }> = ({
   );
 };
 
-type ChallengesNavParamList = {
-  MyChallengesScreen: undefined;
-  CommunityChallengesScreen: { mode?: string } | undefined;
-  MyCreatedChallengesScreen: undefined;
-};
 interface ChallengeStatisticsScreenProps {
-  navigation: NavigationProp<ChallengesNavParamList>;
+  navigation: NavigationProp<ParamListBase>;
 }
 
 export default function ChallengeStatisticsScreen({ navigation }: ChallengeStatisticsScreenProps) {
@@ -104,9 +99,10 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
   );
 
   const overall = statistics?.overall;
+  const challengesFromStats = statistics?.challenges;
   const challenges = useMemo(
-    () => statistics?.challenges ?? [],
-    [statistics?.challenges]
+    () => challengesFromStats ?? [],
+    [challengesFromStats],
   );
 
   // Chart configuration
@@ -244,11 +240,11 @@ export default function ChallengeStatisticsScreen({ navigation }: ChallengeStati
         onToggleMode={() => navigation.goBack()}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:myChallenges', 'האתגרים שלי')) {
-            navigation.navigate('MyChallengesScreen');
+            (navigation as any).navigate('MyChallengesScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
+            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')) {
-            navigation.navigate('MyCreatedChallengesScreen');
+            (navigation as any).navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('challenges:statistics')}
@@ -542,7 +538,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -555,7 +551,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -632,7 +628,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

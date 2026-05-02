@@ -1,22 +1,16 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-    Dimensions,
-} from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FeedItem } from '../../types/feed';
 import { usePostInteractions } from '../../hooks/usePostInteractions';
 import { useProfileNavigation } from '../../hooks/useProfileNavigation';
 import { useUser } from '../../stores/userStore';
-import DonationItemCard from './PostCard/DonationItemCard';
-import RegularItemCard from './PostCard/RegularItemCard';
-import ItemDeliveredCard from './PostCard/ItemDeliveredCard';
-import RideOfferedCard from './PostCard/RideOfferedCard';
-import RideCompletedCard from './PostCard/RideCompletedCard';
-import TaskAssignmentCard from './PostCard/TaskAssignmentCard';
-import TaskCompletionCard from './PostCard/TaskCompletionCard';
+import ItemFeedCard from './PostCard/ItemFeedCard';
+import RideCard from './PostCard/RideCard';
+import TaskFeedCard from './PostCard/TaskFeedCard';
+import CommunityChallengeFeedCard from './PostCard/CommunityChallengeFeedCard';
 import QuickMessageModal from './QuickMessageModal';
-
-const { width } = Dimensions.get('window');
+import { logger } from '../../utils/loggerService';
 
 interface PostReelItemProps {
     item: FeedItem;
@@ -30,13 +24,17 @@ interface PostReelItemProps {
 
 const PostReelItem: React.FC<PostReelItemProps> = ({
     item,
-    cardWidth = width,
+    cardWidth: cardWidthProp,
     numColumns = 1,
     onPress,
     onCommentPress,
     onMorePress,
     onPostClosed
 }) => {
+    const { width: windowWidth } = useWindowDimensions();
+    /** On web, initial Dimensions can be 0 before layout — avoid negative/zero card widths. */
+    const cardWidth = cardWidthProp ?? Math.max(1, windowWidth);
+
     const {
         isLiked,
         likesCount,
@@ -70,7 +68,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (onCommentPress) onCommentPress(item);
     }, [onCommentPress, item]);
 
-    const handleMorePressInternal = useCallback((itemOrMeasure?: unknown, _measure?: unknown) => {
+    const handleMorePressInternal = useCallback((itemOrMeasure?: any, _measure?: any) => {
         // Handle both (item) and (item, measure) signatures if cards call differently
         // But since we control call sites, we expect cards to call onMorePress(item, measure)?
         // Wait, BaseCardProps says onMorePress: (measure) => void.
@@ -80,7 +78,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         // `commonProps` passes user of `onMorePress: handleMorePressInternal`.
         // So `handleMorePressInternal` is what the card calls.
         // The card calls it like: `onMorePress(measurements)`.
-        const measurements = itemOrMeasure as { x: number, y: number } | undefined;
+        const measurements = itemOrMeasure;
         if (onMorePress) onMorePress(item, measurements);
     }, [onMorePress, item]);
 
@@ -105,6 +103,11 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
             // If no status, assume it's active (new rides are usually active)
             if (!rideStatus) return true;
             return rideStatus === 'active' || rideStatus === 'full';
+        }
+
+        // Community challenge posts: not item/ride/task quick-message flows
+        if (item.subtype === 'community_challenge') {
+            return false;
         }
 
         // Items: always open unless explicitly closed by owner
@@ -162,10 +165,10 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         if (!selectedUser || !isPostOwner) return;
 
         try {
-            const { apiService } = await import('../../src/api/api.service');
+            const { apiService } = await import('../../utils/apiService');
             const { toastService } = await import('../../utils/toastService');
 
-            let updateResult: { success: boolean; error?: string } = { success: false };
+            let updateResult: any = { success: false };
 
             // Helper to validate UUID format (for tasks and rides)
             const isValidUUID = (id: string | undefined): boolean => {
@@ -207,16 +210,16 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                 // CRITICAL: item.itemId should come from item_data.id (from JOIN) or metadata.item_id
                 // If both are missing or are timestamps, we can't update the item
                 const itemId = item.itemId;
-
+                
                 if (!itemId) {
                     console.error('❌ Cannot close post - item ID is missing:', {
                         postId: item.id,
                         subtype: item.subtype,
                         fullItem: JSON.stringify(item, null, 2)
                     });
-                    updateResult = {
-                        success: false,
-                        error: 'לא ניתן לסגור את הפוסט - ID של הפריט לא נמצא. אנא רענן את הפיד ונסה שוב.'
+                    updateResult = { 
+                        success: false, 
+                        error: 'לא ניתן לסגור את הפוסט - ID של הפריט לא נמצא. אנא רענן את הפיד ונסה שוב.' 
                     };
                 } else if (/^\d{10,13}$/.test(itemId)) {
                     // itemId is a timestamp - this means the post was created incorrectly
@@ -227,18 +230,18 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
                         subtype: item.subtype,
                         message: 'This post was created before the fix. Please create a new item.'
                     });
-                    updateResult = {
-                        success: false,
-                        error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.'
+                    updateResult = { 
+                        success: false, 
+                        error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.' 
                     };
                 } else if (isValidItemId(itemId)) {
-                    console.log('✅ Valid item ID, calling updateItem:', itemId);
+                    logger.debug('PostReelItem', 'Valid item ID, calling updateItem', { itemId });
                     updateResult = await apiService.updateItem(itemId, { status: 'delivered' });
                 } else {
                     console.warn('❌ Invalid item ID format:', itemId);
-                    updateResult = {
-                        success: false,
-                        error: 'ID של הפריט לא תקין. אנא רענן את הפיד ונסה שוב.'
+                    updateResult = { 
+                        success: false, 
+                        error: 'ID של הפריט לא תקין. אנא רענן את הפיד ונסה שוב.' 
                     };
                 }
             }
@@ -320,7 +323,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.type === 'task_post' && item.subtype === 'task_completion') {
         return (
             <>
-                <TaskCompletionCard {...commonProps} />
+                <TaskFeedCard {...commonProps} variant="completion" />
                 {renderModal()}
             </>
         );
@@ -330,80 +333,60 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     if (item.type === 'task_post' || item.subtype === 'task_assignment') {
         return (
             <>
-                <TaskAssignmentCard {...commonProps} />
+                <TaskFeedCard {...commonProps} variant="assignment" />
                 {renderModal()}
             </>
         );
     }
 
-    // 3. Donation - Distinguish available vs delivered (same logic as items)
+    // 3. Donation - open vs delivered (give/request via item.intent on card)
     if (item.subtype === 'donation') {
-        // Check if donation is delivered/completed/expired/cancelled
-        const isDonationDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-
-        if (isDonationDelivered) {
-            return (
-                <>
-                    <ItemDeliveredCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
-
+        const isDonationDelivered =
+            item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
         return (
             <>
-                <DonationItemCard {...commonProps} />
+                <ItemFeedCard {...commonProps} cardKind="donation" isDelivered={!!isDonationDelivered} />
                 {renderModal()}
             </>
         );
     }
 
-    // 4. Ride
+    // 4. Community challenge (distinct from items — metadata may include category)
+    if (item.subtype === 'community_challenge') {
+        return (
+            <>
+                <CommunityChallengeFeedCard {...commonProps} />
+                {renderModal()}
+            </>
+        );
+    }
+
+    // 5. Ride (active vs completed inside RideCard)
     if (item.subtype === 'ride') {
-        // Distinguish completed vs offered
-        if (item.status === 'completed') {
-            return (
-                <>
-                    <RideCompletedCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
         return (
             <>
-                <RideOfferedCard {...commonProps} />
+                <RideCard {...commonProps} />
                 {renderModal()}
             </>
         );
     }
 
-    // 5. Item (Regular) - Distinguish available vs delivered
-    // Check both subtype === 'item' OR if item has a price OR itemId or category (matching isPostOpen logic)
+    // 6. Item — open vs delivered; give vs request via item.intent
     if (item.subtype === 'item' || item.price !== undefined || item.itemId || item.category) {
-        // Check if item is delivered/completed/expired/cancelled
-        const isItemDelivered = item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
-
-        if (isItemDelivered) {
-            return (
-                <>
-                    <ItemDeliveredCard {...commonProps} />
-                    {renderModal()}
-                </>
-            );
-        }
-
+        const isItemDelivered =
+            item.status && ['delivered', 'completed', 'expired', 'cancelled'].includes(item.status);
         return (
             <>
-                <RegularItemCard {...commonProps} />
+                <ItemFeedCard {...commonProps} cardKind="item" isDelivered={!!isItemDelivered} />
                 {renderModal()}
             </>
         );
     }
 
-    // 6. Generic/Unknown Post Type
+    // 7. Generic/Unknown Post Type
     return (
         <>
-            <RegularItemCard {...commonProps} />
+            <ItemFeedCard {...commonProps} cardKind="item" isDelivered={false} />
             {renderModal()}
         </>
     );

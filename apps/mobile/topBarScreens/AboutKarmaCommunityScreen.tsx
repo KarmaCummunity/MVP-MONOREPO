@@ -10,9 +10,11 @@ import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
 import ScreenWrapper from '../components/ScreenWrapper';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 // Changed this line to use const and wrap with memo
 const AboutKarmaCommunityScreen = memo(() => {
+  useLogScreenOpened('AboutKarmaCommunityScreen');
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   return (

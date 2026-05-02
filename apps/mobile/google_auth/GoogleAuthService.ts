@@ -25,14 +25,32 @@
  * LAST UPDATED: 2024
  */
 
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../auth/secureStoreModule';
 import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AuthTokens } from '@kc/shared-types';
 import { logger } from '../utils/loggerService';
 import { API_BASE_URL as GLOBAL_API_BASE_URL } from '../utils/dbConfig';
 
-export type { AuthTokens };
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
+
+/**
+ * Authentication tokens received from the server after successful OAuth verification
+ * These tokens are cryptographically signed by the server and cannot be forged
+ */
+export interface AuthTokens {
+  /** JWT access token for API requests (short-lived, typically 1 hour) */
+  accessToken: string;
+  /** JWT refresh token for obtaining new access tokens (long-lived, typically 30 days) */
+  refreshToken: string;
+  /** Access token expiration time in seconds from now */
+  expiresIn: number;
+  /** Refresh token expiration time in seconds from now */
+  refreshExpiresIn: number;
+  /** Server-assigned session ID for tracking and security */
+  sessionId?: string;
+}
 
 /**
  * User profile data verified and enriched by the server
@@ -54,7 +72,7 @@ export interface SecureAuthUser {
     language: string;
     darkMode: boolean;
     notificationsEnabled: boolean;
-    [key: string]: unknown;
+    [key: string]: any;
   };
   /** Account verification status from Google */
   emailVerified?: boolean;
@@ -70,7 +88,7 @@ export interface SecureAuthUser {
  * Response format from authentication operations
  * Consistent response structure for all auth operations
  */
-export interface AuthResponse<T = unknown> {
+export interface AuthResponse<T = any> {
   /** Whether the operation was successful */
   success: boolean;
   /** Response data if successful */
@@ -265,7 +283,7 @@ class GoogleAuthService {
    * ```typescript
    * try {
    *   await GoogleAuthService.getInstance().initialize();
-   *   console.log('Auth service ready');
+   *   logger.debug(GoogleAuthService_LOG, 'Auth service ready');
    * } catch (error) {
    *   console.error('Failed to initialize auth service:', error);
    * }
@@ -343,7 +361,7 @@ class GoogleAuthService {
    * ```typescript
    * const result = await authService.authenticateWithGoogle(googleIdToken);
    * if (result.success) {
-   *   console.log('User authenticated:', result.data.user);
+   *   logger.debug(GoogleAuthService_LOG, 'User authenticated:', result.data.user);
    * } else {
    *   console.error('Authentication failed:', result.error);
    * }
@@ -387,11 +405,14 @@ class GoogleAuthService {
       const timeoutId = setTimeout(() => controller.abort(), CONFIG.AUTH_TIMEOUT);
 
       try {
+        // Web: omit User-Agent — triggers CORS preflight; server must allow it in Allow-Headers.
         const response = await fetch(`${CONFIG.API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': `KarmaCommunity-${Platform.OS}`,
+            ...(Platform.OS !== 'web'
+              ? { 'User-Agent': `KarmaCommunity-${Platform.OS}` }
+              : {}),
           },
           body: JSON.stringify(requestBody),
           signal: controller.signal,

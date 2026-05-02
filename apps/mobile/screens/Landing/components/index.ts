@@ -9,5 +9,4 @@ export { Feature } from './Feature';
 export { FloatingMenu } from './FloatingMenu';
 export { LazySection } from './LazySection';
 export { HeroSection } from './HeroSection';
-export { StatsDetailModal, DonationModal } from './modals';
-export * from './sections';
+export { JoinLoginHeroButton } from './JoinLoginHeroButton';

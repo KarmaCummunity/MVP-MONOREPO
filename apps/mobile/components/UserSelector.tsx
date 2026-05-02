@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
-import apiService from '../src/api/api.service';
-import { logger } from '../utils/loggerService';
+import apiService from '../utils/apiService';
 
 interface User {
     id: string;
@@ -36,15 +35,10 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
             try {
                 const res = await apiService.getUsers({ limit: 50 });
                 if (res.success && res.data) {
-                    const data = res.data as User[];
-                    setDefaultUsers(data);
-                    // If no query, show defaults immediately
-                    if (!query) {
-                        setResults(data);
-                    }
+                    setDefaultUsers(res.data);
                 }
             } catch (err) {
-                logger.error('UserSelector', 'Failed to fetch default users', { error: err });
+                console.error('Failed to fetch default users', err);
             } finally {
                 setLoading(false);
             }
@@ -56,7 +50,7 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
             // For now, let's fetch always to ensure fresh data
             fetchDefaultUsers();
         }
-    }, [useModal, modalVisible, query]);
+    }, [useModal, modalVisible]);
 
     useEffect(() => {
         if (!query || query.length < 2) {
@@ -70,17 +64,16 @@ export default function UserSelector({ selectedUsers, onSelect, onRemove, single
             try {
                 const res = await apiService.searchUsers(query);
                 if (res.success && res.data) {
-                    setResults(res.data as User[]);
+                    setResults(res.data);
                 }
             } catch (err) {
-                logger.error('UserSelector', 'Search failed', { error: err });
+                console.error('Search failed', err);
             } finally {
                 setLoading(false);
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- query intentionally triggers debounce; defaultUsers is sufficient for reset
     }, [query, defaultUsers]);
 
     // Handle initial selection in modal mode: clear query for fresh search next time

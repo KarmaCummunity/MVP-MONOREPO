@@ -12,24 +12,26 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
-import { db } from '../src/infrastructure/database.service';
-import { logger } from '../utils/loggerService';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
 import EditChallengeModal from '../components/Challenges/EditChallengeModal';
-import type { RouteProp } from '@react-navigation/native';
+import { createLogger } from '../utils/loggerService';
+
+const log = createLogger('MyCreatedChallengesScreen');
 
 export interface MyCreatedChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: RouteProp<DonationsStackParamList, 'MyCreatedChallengesScreen'>;
+  route?: any;
 }
 
 const CHALLENGE_TYPE_OPTIONS = [
@@ -45,11 +47,11 @@ const CHALLENGE_DIFFICULTY_OPTIONS = [
   { id: 'expert', icon: 'trophy-outline', color: colors.primary },
 ];
 
-export default function MyCreatedChallengesScreen({ navigation, route: _route }: MyCreatedChallengesScreenProps) {
+export default function MyCreatedChallengesScreen({ navigation }: MyCreatedChallengesScreenProps) {
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
-
+  
   const [challenges, setChallenges] = useState<CommunityChallenge[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<CommunityChallenge[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,14 +83,15 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
         setChallenges([]);
       }
     } catch (error) {
-      logger.error('MyCreatedChallengesScreen', 'Error loading challenges', { error });
+      console.error('Error loading challenges:', error);
       showToast(t('messages.errorLoading'), 'error');
       setChallenges([]);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, t, showToast]);
+  }, [showToast, t, user?.id]);
 
+  // Load challenges when screen focuses
   useFocusEffect(
     useCallback(() => {
       void loadChallenges();
@@ -128,40 +131,53 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
   };
 
   const handleDeleteChallenge = (challenge: CommunityChallenge) => {
-    Alert.alert(
-      t('deleteChallenge'),
-      t('deleteChallengeConfirm', { title: challenge.title }),
-      [
-        {
-          text: t('common:cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('common:delete'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!user?.id) return;
+    const doDelete = async () => {
+      if (!user?.id) return;
+      try {
+        setLoading(true);
+        const response = await db.deleteCommunityChallenge(challenge.id, user.id);
+        if (response.success) {
+          showToast(t('challengeDeleted'), 'success');
+          await loadChallenges();
+        } else {
+          showToast(t('messages.errorDeleting'), 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting challenge:', error);
+        showToast(t('messages.errorDeleting'), 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-            try {
-              setLoading(true);
-              const response = await db.deleteCommunityChallenge(challenge.id, user.id);
+    log.debug('Attempting to delete challenge', {
+      challengeId: challenge.id,
+      titleLen: challenge.title?.length ?? 0,
+    });
 
-              if (response.success) {
-                showToast(t('challengeDeleted'), 'success');
-                await loadChallenges();
-              } else {
-                showToast(t('messages.errorDeleting'), 'error');
-              }
-            } catch (error) {
-              console.error('Error deleting challenge:', error);
-              showToast(t('messages.errorDeleting'), 'error');
-            } finally {
-              setLoading(false);
-            }
+    // Alert.alert is a no-op on Web — use window.confirm instead
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `${t('deleteChallenge')}\n${t('deleteChallengeConfirm', { title: challenge.title })}`
+      );
+      if (confirmed) {
+        log.debug('✅ Delete confirmed on web');
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        t('deleteChallenge'),
+        t('deleteChallengeConfirm', { title: challenge.title }),
+        [
+          { text: t('common:cancel'), style: 'cancel', onPress: () => log.debug('❌ Delete cancelled') },
+          { text: t('common:delete'), style: 'destructive', onPress: () => {
+              log.debug('✅ Delete confirmed on native');
+              doDelete();
+            } 
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const renderChallengeCard = ({ item }: { item: CommunityChallenge }) => {
@@ -173,7 +189,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
             <Ionicons
-              name={(typeOption?.icon ?? 'trophy-outline') as keyof typeof Ionicons.glyphMap}
+              name={typeOption?.icon as any || 'trophy-outline'}
               size={24}
               color={difficultyOption?.color || colors.primary}
             />
@@ -220,7 +236,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
             <Ionicons name="pencil-outline" size={18} color={colors.white} />
             <Text style={styles.actionButtonText}>{t('edit')}</Text>
           </TouchableOpacity>
-
+          
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDeleteChallenge(item)}
@@ -240,7 +256,7 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
       <Text style={styles.emptySubtitle}>{t('messages.noCreatedChallengesSubtitle')}</Text>
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('CommunityChallengesScreen', { mode: 'offer' })}
+        onPress={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'offer' })}
       >
         <Ionicons name="add-circle-outline" size={24} color={colors.white} />
         <Text style={styles.createButtonText}>{t('createNewChallenge')}</Text>
@@ -257,30 +273,30 @@ export default function MyCreatedChallengesScreen({ navigation, route: _route }:
           t('challenges:browseChallenges', 'עיון באתגרים'),
           t('challenges:myChallenges', 'האתגרים שלי'),
         ]}
-        onToggleMode={() => navigation.navigate('CommunityChallengesScreen', { mode: 'offer' })}
+        onToggleMode={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'offer' })}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            navigation.navigate('ChallengeStatisticsScreen');
+            (navigation as any).navigate('ChallengeStatisticsScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
+            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myChallenges', 'האתגרים שלי')) {
-            navigation.navigate('MyChallengesScreen');
+            (navigation as any).navigate('MyChallengesScreen');
           }
         }}
         title={t('myCreatedChallenges')}
         placeholder={t('common:search')}
         filterOptions={[]}
         sortOptions={[]}
-        searchData={filteredChallenges as unknown as Record<string, unknown>[]}
+        searchData={filteredChallenges}
         onSearch={(query) => setSearchQuery(query)}
         hideSortButton={true}
       />
-
+      
       {/* Screen Title */}
       <View style={styles.titleContainer}>
         <Text style={styles.screenTitle}>{t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')}</Text>
       </View>
-
+      
       <FlatList
         data={filteredChallenges}
         renderItem={renderChallengeCard}

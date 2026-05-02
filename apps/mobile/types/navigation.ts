@@ -11,20 +11,20 @@ export type NavigationActionType = 'navigate' | 'reset' | 'replace' | 'goBack' |
 export interface NavigateAction {
   type: 'navigate';
   routeName: string;
-  params?: Record<string, unknown>;
+  params?: Record<string, any>;
   key?: string;
 }
 
 export interface ResetAction {
   type: 'reset';
   index: number;
-  routes: Array<{ name: string; params?: Record<string, unknown>; key?: string }>;
+  routes: Array<{ name: string; params?: Record<string, any>; key?: string }>;
 }
 
 export interface ReplaceAction {
   type: 'replace';
   routeName: string;
-  params?: Record<string, unknown>;
+  params?: Record<string, any>;
   key?: string;
 }
 
@@ -35,7 +35,7 @@ export interface GoBackAction {
 
 export interface SetParamsAction {
   type: 'setParams';
-  params: Record<string, unknown>;
+  params: Record<string, any>;
   key?: string;
 }
 
@@ -47,7 +47,7 @@ export interface NavigationQueueItem {
   priority: number; // Higher priority = executed first
   timestamp: number;
   resolve: (value: void | PromiseLike<void>) => void;
-  reject: (reason?: unknown) => void;
+  reject: (reason?: any) => void;
 }
 
 // Navigation Guard Types
@@ -106,9 +106,6 @@ export const VALID_ROOT_ROUTES: string[] = [
   'ChatDetailScreen',
   'NotificationsScreen',
   'AboutKarmaCommunityScreen',
-  'OrgOnboardingScreen',
-  'AdminOrgApprovalsScreen',
-  'OrgDashboardScreen',
   'EditProfileScreen',
   'InactiveScreen',
 ];
@@ -123,6 +120,7 @@ export const VALID_BOTTOM_TAB_ROUTES: string[] = [
 
 export const VALID_HOME_TAB_STACK_ROUTES: string[] = [
   'HomeMain',
+  'PostDetailScreen',
   'LandingSiteScreen',
   'ChatListScreen',
   'ChatDetailScreen',
@@ -140,6 +138,7 @@ export const VALID_HOME_TAB_STACK_ROUTES: string[] = [
 
 export const VALID_SEARCH_TAB_STACK_ROUTES: string[] = [
   'SearchScreen',
+  'PostDetailScreen',
   'UserProfileScreen',
   'FollowersScreen',
   'DiscoverPeopleScreen',
@@ -152,7 +151,8 @@ export const VALID_SEARCH_TAB_STACK_ROUTES: string[] = [
 ];
 
 export const VALID_PROFILE_TAB_STACK_ROUTES: string[] = [
-  'ProfileScreen',
+  'ProfileMain',
+  'PostDetailScreen',
   'SettingsScreen',
   'ChatListScreen',
   'ChatDetailScreen',
@@ -170,38 +170,9 @@ export const VALID_DONATIONS_STACK_ROUTES: string[] = [
   'ChallengeDetailsScreen',
   'ChallengeStatisticsScreen',
   'MyCreatedChallengesScreen',
-  'MoneyScreen',
   'ItemsScreen',
-  'TimeScreen',
-  'KnowledgeScreen',
+  'PostDetailScreen',
   'TrumpScreen',
-  'CategoryScreen',
-  'DreamsScreen',
-  'FertilityScreen',
-  'JobsScreen',
-  'MatchmakingScreen',
-  'MentalHealthScreen',
-  'GoldenAgeScreen',
-  'LanguagesScreen',
-  'FoodScreen',
-  'ClothesScreen',
-  'BooksScreen',
-  'FurnitureScreen',
-  'MedicalScreen',
-  'AnimalsScreen',
-  'HousingScreen',
-  'SupportScreen',
-  'EducationScreen',
-  'EnvironmentScreen',
-  'TechnologyScreen',
-  'MusicScreen',
-  'GamesScreen',
-  'RiddlesScreen',
-  'RecipesScreen',
-  'PlantsScreen',
-  'WasteScreen',
-  'ArtScreen',
-  'SportsScreen',
   'ChatListScreen',
   'ChatDetailScreen',
   'NewChatScreen',

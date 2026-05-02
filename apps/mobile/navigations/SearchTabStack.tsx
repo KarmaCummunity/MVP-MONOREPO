@@ -20,7 +20,7 @@ import NewChatScreen from '../screens/NewChatScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
 import SettingsScreen from '../topBarScreens/SettingsScreen';
-import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import TopBarNavigator from './TopBarNavigator';
 import { logger } from '../utils/loggerService';
 import { SearchTabStackParamList } from '../globals/types';
@@ -31,7 +31,7 @@ const Stack = createStackNavigator<SearchTabStackParamList>();
 export default function SearchTabStack(): React.ReactElement {
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('SearchTabStack', 'Navigator focused');
+      logger.debug('SearchTabStack', 'Navigator focused', undefined, { periodic: true });
     }, [])
   );
 
@@ -42,7 +42,7 @@ export default function SearchTabStack(): React.ReactElement {
       detachInactiveScreens={true}
       screenOptions={({ navigation }) => ({
         headerShown: true,
-        header: () => <TopBarNavigator navigation={navigation} />,
+        header: () => <TopBarNavigator navigation={navigation as any} />,
         // Fix for aria-hidden warning: prevent focus on inactive screens
         // detachInactiveScreens already handles this, but we keep cardStyle for web compatibility
         cardStyle: Platform.OS === 'web' ? {
@@ -52,6 +52,7 @@ export default function SearchTabStack(): React.ReactElement {
       })}
     >
       <Stack.Screen name="SearchScreen" component={SearchScreen} />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="UserProfileScreen" component={UserProfileScreen} />
       <Stack.Screen name="FollowersScreen" component={FollowersScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
@@ -60,7 +61,6 @@ export default function SearchTabStack(): React.ReactElement {
       <Stack.Screen name="NewChatScreen" component={NewChatScreen} />
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
-      <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
     </Stack.Navigator>
   );

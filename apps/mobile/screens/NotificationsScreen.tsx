@@ -3,7 +3,7 @@
 // - Reached from: Top bar routes and deep links; route name 'NotificationsScreen'.
 // - Provides: List with swipe/press actions: mark read, mark all read, delete, clear all; badge for unread count; real-time updates via in-app events and polling.
 // - Reads from context: `useUser()` -> selectedUser.
-// - Navigation side-effects: On tapping a 'message' notification with `conversationId`, navigates to 'ChatDetailScreen'.
+// - Navigation side-effects: On tapping a 'message' notification with `conversationId`, navigates to 'ChatDetailScreen'. Daily challenge reminder navigates to My Challenges (daily tracker).
 // - External deps/services: `notificationService` (CRUD + subscribe), i18n.
 // screens/NotificationsScreen.tsx
 import React, { useState, useCallback } from 'react';
@@ -21,6 +21,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useUser } from '../stores/userStore';
 import {
@@ -32,12 +33,19 @@ import {
   NotificationData,
   getUnreadNotificationCount,
   subscribeToNotificationEvents,
-} from '../src/services/notification.service';
+} from '../utils/notificationService';
+import {
+  getPendingDailyReportCount,
+  subscribeDailyChallengeTrackerRefresh,
+} from '../utils/dailyChallengeReminder';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/loggerService';
+
+const DAILY_CHALLENGE_SYNTHETIC_ID = '__daily_challenge_reminder__';
+const NS_LOG = 'NotificationsScreen';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -47,20 +55,20 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [_showSettings, _setShowSettings] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [pendingDailyReports, setPendingDailyReports] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
   const maxListHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0
     ? screenHeight - tabBarHeight - headerHeight
     : undefined;
 
-  logger.debug('NotificationsScreen', 'Component rendered', { selectedUserName: selectedUser?.name ?? 'null' });
+  logger.debug(NS_LOG, 'Component rendered', { selectedUserName: selectedUser?.name ?? null }, { periodic: true });
 
   const loadNotifications = useCallback(async () => {
-    logger.debug('NotificationsScreen', 'loadNotifications', { selectedUserName: selectedUser?.name ?? 'null' });
+    logger.debug(NS_LOG, 'loadNotifications', { selectedUserName: selectedUser?.name ?? null });
 
     if (!selectedUser) {
-      logger.debug('NotificationsScreen', 'No selected user, cannot load notifications');
+      logger.debug(NS_LOG, 'No selected user, cannot load notifications');
       return;
     }
 
@@ -68,27 +76,37 @@ export default function NotificationsScreen() {
       const userNotifications = await getNotifications(selectedUser.id);
       setNotifications(userNotifications);
 
+      const pending = await getPendingDailyReportCount(selectedUser.id);
+      setPendingDailyReports(pending);
+
       const count = await getUnreadNotificationCount(selectedUser.id);
       setUnreadCount(count);
     } catch (error) {
-      logger.error('NotificationsScreen', 'Load notifications error', { error: String(error) });
+      console.error('❌ Load notifications error:', error);
       Alert.alert(t('common:errorTitle'), t('notifications:loadError'));
     }
   }, [selectedUser, t]);
 
   useFocusEffect(
     useCallback(() => {
-      logger.debug('NotificationsScreen', 'Screen focused, loading notifications', { selectedUserName: selectedUser?.name ?? 'null' });
+      logger.logScreenOpened('NotificationsScreen');
+      logger.debug(NS_LOG, 'Screen focused, loading notifications');
+      logger.debug(NS_LOG, 'selectedUser in useFocusEffect', { selectedUserName: selectedUser?.name ?? null });
       loadNotifications();
 
       // Subscribe to in-app notification events for real-time updates
       const unsubscribe = subscribeToNotificationEvents((notification) => {
         if (!selectedUser) return;
         if (notification.userId !== selectedUser.id) return;
-        logger.debug('NotificationsScreen', 'Realtime notification received');
+        logger.debug(NS_LOG, 'Realtime notification received');
         // Prepend the new notification and update unread counter
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + (notification.read ? 0 : 1));
+      });
+
+      const unsubscribeTracker = subscribeDailyChallengeTrackerRefresh(() => {
+        if (!selectedUser) return;
+        getPendingDailyReportCount(selectedUser.id).then(setPendingDailyReports).catch(() => {});
       });
 
       // Lightweight polling fallback to ensure UI stays in sync
@@ -97,15 +115,18 @@ export default function NotificationsScreen() {
         try {
           const userNotifications = await getNotifications(selectedUser.id);
           setNotifications(userNotifications);
-          const count = userNotifications.filter(n => !n.read).length;
+          const pending = await getPendingDailyReportCount(selectedUser.id);
+          setPendingDailyReports(pending);
+          const count = await getUnreadNotificationCount(selectedUser.id);
           setUnreadCount(count);
         } catch (e) {
-          logger.warn('NotificationsScreen', 'Polling error', { error: String(e) });
+          console.warn('⚠️ NotificationsScreen - polling error', e);
         }
       }, 3000);
 
       return () => {
         unsubscribe?.();
+        unsubscribeTracker?.();
         clearInterval(interval);
       };
     }, [loadNotifications, selectedUser])
@@ -116,17 +137,6 @@ export default function NotificationsScreen() {
     loadNotifications().finally(() => setRefreshing(false));
   }, [loadNotifications]);
 
-  const _handleMarkAsRead = async (notificationId: string) => {
-    if (!selectedUser) return;
-
-    try {
-      await markNotificationAsRead(notificationId, selectedUser.id);
-      await loadNotifications();
-    } catch (error) {
-      logger.error('NotificationsScreen', 'Mark as read error', { error: String(error) });
-    }
-  };
-
   const handleMarkAllAsRead = async () => {
     if (!selectedUser) return;
 
@@ -135,7 +145,7 @@ export default function NotificationsScreen() {
       await loadNotifications();
       Alert.alert(t('notifications:markAllDoneTitle'), t('notifications:markAllDoneBody'));
     } catch (error) {
-      logger.error('NotificationsScreen', 'Mark all as read error', { error: String(error) });
+      console.error('❌ Mark all as read error:', error);
       Alert.alert(t('common:errorTitle'), t('notifications:markAllError'));
     }
   };
@@ -147,16 +157,16 @@ export default function NotificationsScreen() {
       await deleteNotification(notificationId, selectedUser.id);
       await loadNotifications();
     } catch (error) {
-      logger.error('NotificationsScreen', 'Delete notification error', { error: String(error) });
+      console.error('❌ Delete notification error:', error);
     }
   };
 
   const handleClearAllNotifications = async () => {
-    logger.debug('NotificationsScreen', 'Clear all pressed');
+    logger.debug(NS_LOG, 'Clear all pressed');
     if (!selectedUser) return;
 
-    if (notifications.length === 0) {
-      logger.debug('NotificationsScreen', 'No notifications to clear');
+    if (mergedNotifications.length === 0) {
+      logger.debug(NS_LOG, 'No notifications to clear');
       return;
     }
 
@@ -164,8 +174,12 @@ export default function NotificationsScreen() {
       try {
         await clearAllNotifications(selectedUser.id);
         await loadNotifications();
+        const pending = await getPendingDailyReportCount(selectedUser.id);
+        setPendingDailyReports(pending);
+        // Optional: Show success message or just let the list clear
+        // Alert.alert(t('notifications:clearAllDoneTitle'), t('notifications:clearAllDoneBody'));
       } catch (error) {
-        logger.error('NotificationsScreen', 'Clear all notifications error', { error: String(error) });
+        console.error('❌ Clear all notifications error:', error);
         Alert.alert(t('common:errorTitle'), t('notifications:clearAllError'));
       }
     };
@@ -200,6 +214,8 @@ export default function NotificationsScreen() {
         return 'heart-outline';
       case 'comment':
         return 'chatbubble-ellipses-outline';
+      case 'daily_challenge_reminder':
+        return 'calendar-outline';
       case 'system':
         return 'notifications-outline';
       default:
@@ -216,6 +232,8 @@ export default function NotificationsScreen() {
       case 'like':
         return colors.error;
       case 'comment':
+        return colors.warning;
+      case 'daily_challenge_reminder':
         return colors.warning;
       case 'system':
         return colors.info;
@@ -248,14 +266,44 @@ export default function NotificationsScreen() {
   const handleOpen = async (item: NotificationData) => {
     if (!selectedUser) return;
     try {
-      await markNotificationAsRead(item.id, selectedUser.id);
+      if (item.id !== DAILY_CHALLENGE_SYNTHETIC_ID) {
+        await markNotificationAsRead(item.id, selectedUser.id);
+      }
       if (item.type === 'message' && item.data?.conversationId) {
-        (navigation as NavigationProp<ParamListBase>).navigate('ChatDetailScreen', { conversationId: item.data.conversationId });
+        navigateToChatDetail(navigation, { conversationId: item.data.conversationId });
+      } else if (item.type === 'daily_challenge_reminder') {
+        (navigation as any).navigate('HomeStack', {
+          screen: 'DonationsTab',
+          params: {
+            screen: 'MyChallengesScreen',
+            params: { scrollToDailyTracker: true },
+          },
+        });
       }
     } catch (error) {
       console.error('❌ Open notification error:', error);
     }
   };
+
+  const mergedNotifications = React.useMemo(() => {
+    const list = [...notifications];
+    if (pendingDailyReports > 0 && selectedUser) {
+      const anchor = new Date();
+      anchor.setHours(12, 0, 0, 0);
+      const synthetic: NotificationData = {
+        id: DAILY_CHALLENGE_SYNTHETIC_ID,
+        userId: selectedUser.id,
+        type: 'daily_challenge_reminder',
+        read: false,
+        timestamp: anchor.toISOString(),
+        title: t('notifications:dailyChallengeReminder.title', { count: pendingDailyReports }),
+        body: t('notifications:dailyChallengeReminder.body', { count: pendingDailyReports }),
+        data: { scrollToDailyTracker: true },
+      };
+      list.push(synthetic);
+    }
+    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [notifications, pendingDailyReports, selectedUser, t]);
 
   const renderNotification = ({ item }: { item: NotificationData }) => (
     <TouchableOpacity
@@ -278,12 +326,14 @@ export default function NotificationsScreen() {
           <Text style={styles.notificationBody}>{item.body}</Text>
           <Text style={styles.notificationTime}>{formatTime(item.timestamp)}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDeleteNotification(item.id)}
-        >
-          <Icon name="close" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
+        {item.id !== DAILY_CHALLENGE_SYNTHETIC_ID && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeleteNotification(item.id)}
+          >
+            <Icon name="close" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
       {!item.read && <View style={styles.unreadIndicator} />}
     </TouchableOpacity>
@@ -315,18 +365,18 @@ export default function NotificationsScreen() {
         <View style={styles.additionalHeaderSection}>
           {[
             unreadCount > 0 && (
-              <TouchableOpacity
+              <TouchableOpacity 
                 key="mark-all-read"
-                onPress={handleMarkAllAsRead}
+                onPress={handleMarkAllAsRead} 
                 style={styles.headerButton}
               >
                 <Icon name="checkmark-done" size={24} color={colors.primary} />
               </TouchableOpacity>
             ),
-            notifications.length > 0 && (
-              <TouchableOpacity
+            mergedNotifications.length > 0 && (
+              <TouchableOpacity 
                 key="clear-all"
-                onPress={handleClearAllNotifications}
+                onPress={handleClearAllNotifications} 
                 style={styles.headerButton}
               >
                 <Icon name="trash-outline" size={24} color={colors.error} />
@@ -350,7 +400,7 @@ export default function NotificationsScreen() {
         } : undefined
       ]}>
         <FlatList
-          data={notifications}
+          data={mergedNotifications}
           keyExtractor={(item) => item.id}
           renderItem={renderNotification}
           contentContainerStyle={styles.listContent}

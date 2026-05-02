@@ -10,6 +10,17 @@
   "viewStatistics": "צפה בסטטיסטיקות",
   "searchChallenges": "חפש אתגרים",
   "createNewChallenge": "צור אתגר קהילתי חדש",
+  "feedCard": {
+    "badge": "אתגר קהילתי",
+    "headline": "אתגר חדש בקהילה",
+    "tapToJoin": "הקש לפרטים והצטרפות"
+  },
+  "visibility": {
+    "label": "מי יכול לראות את האתגר?",
+    "community": "קהילה (ציבורי)",
+    "private": "פרטי",
+    "hint": "אתגר ציבורי מופיע ברשימה ויכול להופיע בפיד. אתגר פרטי מוצג רק כשמסננים לפי האתגרים שיצרת."
+  },
   "challengeCreated": "אתגר נוצר בהצלחה! 🎉",
   "challengeJoined": "הצטרפת לאתגר בהצלחה! 💪",
   "entryAdded": "הביצוע נוסף בהצלחה! 🎯",

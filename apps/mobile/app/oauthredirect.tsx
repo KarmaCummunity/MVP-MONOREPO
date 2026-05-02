@@ -9,6 +9,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
+
+const Oauthredirect_LOG = 'oauthredirect';
 
 // Parse JWT token
 const parseJWT = (token: string) => {
@@ -37,7 +40,7 @@ export default function OAuthRedirect() {
     const processAuth = async () => {
       try {
         const hash = window.location.hash;
-        console.log('🔍 [OAuthRedirect] Hash:', hash);
+        logger.debug(Oauthredirect_LOG, 'OAuth redirect hash', { hash });
 
         if (!hash || !hash.includes('id_token=')) {
           console.error('❌ [OAuthRedirect] No id_token found');
@@ -53,16 +56,16 @@ export default function OAuthRedirect() {
           throw new Error('No ID token');
         }
 
-        console.log('✅ [OAuthRedirect] Found token');
+        logger.debug(Oauthredirect_LOG, '✅ [OAuthRedirect] Found token');
         const profile = parseJWT(idToken);
-        console.log('👤 [OAuthRedirect] Profile:', profile);
+        logger.debug(Oauthredirect_LOG, 'OAuth redirect profile', { profile });
 
         if (!profile) {
           throw new Error('Failed to parse token');
         }
 
         // Send idToken to server to get UUID
-        const { API_BASE_URL } = await import('../src/infrastructure/config');
+        const { API_BASE_URL } = await import('../utils/config.constants');
         const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
@@ -111,16 +114,16 @@ export default function OAuthRedirect() {
           }
         };
 
-        console.log('💾 [OAuthRedirect] Saving user with UUID:', userData.id);
+        logger.debug(Oauthredirect_LOG, 'Saving user with UUID', { userId: userData.id });
         await setSelectedUserWithMode(userData, 'real');
         await AsyncStorage.setItem('current_user', JSON.stringify(userData));
         await AsyncStorage.setItem('auth_mode', 'real');
-        console.log('✅ [OAuthRedirect] User saved!');
+        logger.debug(Oauthredirect_LOG, '✅ [OAuthRedirect] User saved!');
 
         setStatus('success');
 
         // Navigate to home
-        console.log('🏠 [OAuthRedirect] Navigating to home...');
+        logger.debug(Oauthredirect_LOG, '🏠 [OAuthRedirect] Navigating to home...');
         setTimeout(() => {
           router.replace('/(tabs)');
         }, 1000);

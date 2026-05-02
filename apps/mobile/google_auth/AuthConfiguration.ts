@@ -52,8 +52,7 @@ const validateEnvironmentConfiguration = (): {
     'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', 
     'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID',
   ];
-  type ExpoConfigExtra = { extra?: Record<string, string | undefined> };
-  const extra = (Constants?.expoConfig as ExpoConfigExtra)?.extra || {};
+  const extra = (Constants?.expoConfig as any)?.extra || {};
   const getVar = (varName: string) => process.env[varName] ?? extra[varName];
 
   const missingRequired = requiredVars.filter(varName => !getVar(varName));
@@ -92,8 +91,7 @@ const validateEnvironmentConfiguration = (): {
  * but they should still be properly configured per environment
  */
 export const getGoogleClientIds = () => {
-  type ExpoConfigExtra = { extra?: Record<string, string | undefined> };
-  const extra = (Constants?.expoConfig as ExpoConfigExtra)?.extra ?? {};
+  const extra = (Constants?.expoConfig as any)?.extra ?? {};
   
   const clientIds = {
     /** iOS client ID from Google Cloud Console */
@@ -419,14 +417,13 @@ export const ERROR_MESSAGES = {
  */
 export const getRedirectUri = (): string => {
   switch (Platform.OS) {
-    case 'web': {
+    case 'web':
       // Web: Use current domain or configured production domain
-      const webDomain = typeof window !== 'undefined'
-        ? window.location.origin
+      const webDomain = typeof window !== 'undefined' 
+        ? window.location.origin 
         : (process.env.EXPO_PUBLIC_WEB_DOMAIN || 'https://karma-community-kc.com');
-
+      
       return `${webDomain}/oauthredirect`;
-    }
     
     case 'ios':
     case 'android':
