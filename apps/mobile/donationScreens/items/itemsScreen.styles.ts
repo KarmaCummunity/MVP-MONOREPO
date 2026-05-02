@@ -5,7 +5,7 @@ import { biDiTextAlign, rowDirection, marginStartEnd } from '../../globals/respo
 
 export const itemsScreenStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.backgroundTertiary },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 4 },
+  container: { flex: 1, paddingHorizontal: 0, paddingTop: 4 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120, flexGrow: 1 },
   formContainer: { padding: 5, alignItems: 'center', borderRadius: 15, marginBottom: 15 },
   row: { flexDirection: rowDirection('row-reverse'), gap: 10, width: '100%', paddingHorizontal: 8 },

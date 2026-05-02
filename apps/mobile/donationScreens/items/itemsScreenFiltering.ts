@@ -35,7 +35,8 @@ export function buildItemsFilterOptionLabels(t: ItemsScreenTranslate, itemType: 
   }
   const typeSpecific = typeSpecificKeys.map((k) => t(`donationScreen.${k}`, ns));
   const base = FILTER_BASE_KEYS.map((k) => t(`donationScreen.filters.${k}`, ns));
-  return [...cats, ...typeSpecific, ...base];
+  const includeRequests = t('donationScreen.filters.includeRequests', ns);
+  return [...cats, ...typeSpecific, ...base, includeRequests];
 }
 
 export type ItemsScreenSortLabels = Record<(typeof SORT_KEYS)[number], string>;
@@ -110,6 +111,11 @@ export function getFilteredItemsForItemsScreen(params: {
           (p.description || '').toLowerCase().includes(q) ||
           (p.user?.name || '').toLowerCase().includes(q),
       );
+    }
+
+    const includeRequestsLabel = t('donationScreen.filters.includeRequests', { ns: 'items' });
+    if (!selectedFilters.includes(includeRequestsLabel)) {
+      filtered = filtered.filter((p) => p.intent !== 'request');
     }
 
     if (selectedFilters.length > 0) {

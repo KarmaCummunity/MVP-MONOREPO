@@ -53,7 +53,8 @@
       "forParts": "For parts",
       "pickup": "Self pickup",
       "paidDelivery": "Paid delivery",
-      "accessibility": "Accessibility"
+      "accessibility": "Accessibility",
+      "includeRequests": "Show requests"
     },
     "sorts": {
       "alphabetical": "Alphabetical",

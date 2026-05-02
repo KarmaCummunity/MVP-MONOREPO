@@ -72,7 +72,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   sanitizeSelectedFilters,
 }) => {
   const { isGuestMode } = useUser();
-  const { t } = useTranslation(['search', 'common', 'trump']);
+  const { t } = useTranslation(['search', 'common', 'trump', 'items']);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
   const removeFilterRef = React.useRef<((filter: string) => void) | null>(null);
@@ -192,7 +192,11 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
                   >
                     <Text style={headerStyles.selectedFilterSortButtonText}>
                       {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${filter}`, { defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }) })}
+                      {t(`trump:filters.${filter}`, {
+                        defaultValue: t(`items:donationScreen.filters.${filter}`, {
+                          defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }),
+                        }),
+                      })}
                     </Text>
                     <Ionicons name="close-circle" size={scaleSize(12)} color={colors.black} style={headerStyles.removeIcon} />
                   </TouchableOpacity>

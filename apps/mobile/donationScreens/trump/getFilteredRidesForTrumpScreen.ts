@@ -27,10 +27,18 @@ function filterPostsBySearchQuery(posts: FeedItem[], searchQuery: string): FeedI
   );
 }
 
+/** Filter modal key: when absent, search mode shows ride offers only; when present, requests are included. */
+export const TRUMP_INCLUDE_REQUESTS_FILTER_KEY = 'includeRequests';
+
 function applyPostModeFilters(posts: FeedItem[], selectedFilters: string[]): FeedItem[] {
-  if (selectedFilters.length === 0) return posts;
-  if (!selectedFilters.includes('noCostSharing')) return posts;
-  return posts.filter((p) => (p.price ?? 0) === 0);
+  let out = posts;
+  if (!selectedFilters.includes(TRUMP_INCLUDE_REQUESTS_FILTER_KEY)) {
+    out = out.filter((p) => p.intent !== 'request');
+  }
+  if (selectedFilters.includes('noCostSharing')) {
+    out = out.filter((p) => (p.price ?? 0) === 0);
+  }
+  return out;
 }
 
 function sortPostsInPlace(posts: FeedItem[], selectedSort: string | undefined, t: TFunction): void {

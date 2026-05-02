@@ -64,7 +64,7 @@ const SearchBar = ({
   sanitizeSelectedFilters,
 }: SearchBarProps) => {
   const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
-  const { t } = useTranslation(['search', 'common', 'trump']);
+  const { t } = useTranslation(['search', 'common', 'trump', 'items']);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>(() => {
@@ -400,7 +400,11 @@ const SearchBar = ({
                       ]}
                     >
                       {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${option}`, { defaultValue: t(`search:filters.${option}`, { defaultValue: option }) })}
+                      {t(`trump:filters.${option}`, {
+                        defaultValue: t(`items:donationScreen.filters.${option}`, {
+                          defaultValue: t(`search:filters.${option}`, { defaultValue: option }),
+                        }),
+                      })}
                     </Text>
                     {isFilterSelected(option) && (
                       <Ionicons
@@ -529,7 +533,11 @@ const SearchBar = ({
                   >
                     <Text style={localStyles.selectedFilterSortButtonText}>
                       {/* Try trump:filters first (for trump screen), then search:filters */}
-                      {t(`trump:filters.${filter}`, { defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }) })}
+                      {t(`trump:filters.${filter}`, {
+                        defaultValue: t(`items:donationScreen.filters.${filter}`, {
+                          defaultValue: t(`search:filters.${filter}`, { defaultValue: filter }),
+                        }),
+                      })}
                     </Text>
                     <Ionicons name="close-circle" size={12} color={colors.black} style={localStyles.removeIcon} />
                   </TouchableOpacity>

@@ -32,7 +32,7 @@ export const trumpScreenStyles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingTop: 8,
   },
   resultsHeader: {
