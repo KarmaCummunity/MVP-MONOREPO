@@ -52,25 +52,51 @@ export function isTabNavigatorFocusedOnRoute(
   return route?.name === routeName;
 }
 
+/** Single route entry inside a tab navigator's `routes` array (minimal shape for reset). */
+export type TabNavigatorRouteState = {
+  name: string;
+  key?: string;
+  params?: Record<string, unknown>;
+  state?: { index?: number; routes?: Array<{ name: string; key?: string }> };
+};
+
 /**
- * Returns the `CommonActions.reset` payload for popping a tab's stack to its initial route
- * when the user re-taps the same tab. Returns null if the tab has no reset mapping.
+ * Builds a **bottom tab navigator** `CommonActions.reset` payload that resets **one** tab's
+ * nested stack to its initial screen while **preserving all other tabs** and the active tab index.
+ *
+ * Important: resetting with only one route (see previous `buildTabStackResetPayload`) removes every
+ * other tab from state → blank web views and “lost” Donations/Search tabs.
  */
-export function buildTabStackResetPayload(tabRouteName: string): {
-  index: 0;
-  routes: Array<{ name: string; state: { routes: Array<{ name: string }> } }>;
-} | null {
+export function buildBottomTabBarResetPreservingOtherTabs(
+  tabBarState: { index?: number; routes?: TabNavigatorRouteState[] },
+  tabRouteName: string,
+): { index: number; routes: TabNavigatorRouteState[] } | null {
   const initialRoute = TAB_INITIAL_ROUTES[tabRouteName];
   if (!initialRoute) return null;
-  return {
-    index: 0,
-    routes: [
-      {
-        name: tabRouteName,
-        state: {
-          routes: [{ name: initialRoute }],
-        },
+
+  const routes = tabBarState.routes;
+  if (!Array.isArray(routes) || routes.length === 0) return null;
+
+  const targetNames = new Set(routes.map((r) => r.name));
+  if (!targetNames.has(tabRouteName)) return null;
+
+  const nextRoutes = routes.map((r) => {
+    if (r.name !== tabRouteName) return r;
+    return {
+      ...r,
+      state: {
+        index: 0,
+        routes: [{ name: initialRoute }],
       },
-    ],
-  };
+    };
+  });
+
+  const idx =
+    typeof tabBarState.index === 'number' &&
+    tabBarState.index >= 0 &&
+    tabBarState.index < nextRoutes.length
+      ? tabBarState.index
+      : 0;
+
+  return { index: idx, routes: nextRoutes };
 }
