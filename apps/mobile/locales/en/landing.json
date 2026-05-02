@@ -158,6 +158,14 @@
     "q4": "First orgs and dashboard",
     "q1": "Nationwide scale and partnerships"
   },
+  "donationModal": {
+    "title": "Donate to us",
+    "subtitle": "Every donation helps us grow",
+    "paymentInfo": "You can transfer to 0528616878 for founder Nave — Bit / PayBox",
+    "nonprofitNotice": "We are not yet a registered nonprofit. Donated funds are kept separately and will not be used for operations until the relevant approvals are in place.",
+    "whatsappButton": "WhatsApp",
+    "thankYouNote": "Thank you for your support! Every donation helps us keep building the community."
+  },
   "contact": {
     "title": "Contact",
     "subtitle": "We'd love to chat, collaborate or welcome you",

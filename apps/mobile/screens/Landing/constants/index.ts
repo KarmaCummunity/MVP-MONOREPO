@@ -45,9 +45,26 @@ export const MENU_ITEMS: MenuItem[] = [
 export const WHATSAPP_CONTACT = '972528616878';
 
 /**
- * WhatsApp contact URL
+ * Pre-filled body for direct WhatsApp links from the landing page (Hebrew).
  */
-export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_CONTACT}`;
+export const WHATSAPP_DEFAULT_MESSAGE =
+  'שלום נוה אשמח שנדבר על הפרויקט, אשמח לקחת חלק!';
+
+/**
+ * Builds a wa.me URL for the landing contact, with optional pre-filled message.
+ */
+export function buildWhatsAppDirectUrl(message?: string): string {
+  const base = `https://wa.me/${WHATSAPP_CONTACT}`;
+  if (!message) {
+    return base;
+  }
+  return `${base}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * WhatsApp contact URL (includes default pre-filled message)
+ */
+export const WHATSAPP_URL = buildWhatsAppDirectUrl(WHATSAPP_DEFAULT_MESSAGE);
 
 /**
  * Instagram handle (no @). Override at build time: EXPO_PUBLIC_INSTAGRAM_USERNAME
