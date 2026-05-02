@@ -181,6 +181,21 @@
     "q3": "האם האפליקציה זמינה לאנדרואיד/iOS?",
     "a3": "בוודאי. יש גרסאות ל-Android ול-iOS, וגם גרסת ווב נוחה."
   },
+  "liveStats": {
+    "sectionTitle": "הכוח של הקהילה שלנו",
+    "sectionSubtitle": "השפעה אמיתית, במספרים",
+    "loading": "טוען נתונים...",
+    "cards": {
+      "siteVisits": { "label": "ביקורים באתר", "modalTitle": "ביקורים באתר — פירוט" },
+      "totalMoneyDonated": { "label": "ש\"ח שנתרמו ישירות", "modalTitle": "תרומות כספיות" },
+      "totalUsers": { "label": "חברי קהילה רשומים", "modalTitle": "חברי קהילה" },
+      "itemDonations": { "label": "פריטים שפורסמו", "modalTitle": "פירוט פריטים" },
+      "completedRides": { "label": "נסיעות קהילתיות", "modalTitle": "פירוט נסיעות" },
+      "recurringDonationsAmount": { "label": "תרומות קבועות פעילות", "modalTitle": "תרומות קבועות" },
+      "uniqueDonors": { "label": "תורמים פעילים", "modalTitle": "תורמים פעילים" },
+      "completedTasks": { "label": "משימות שבוצעו", "modalTitle": "משימות שבוצעו" }
+    }
+  },
   "stats": {
     "title": "במספרים",
     "subtitle": "השפעה שגדלה מיום ליום",

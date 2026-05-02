@@ -6,6 +6,7 @@ import buttons from './buttons.json';
 import challenges from './challenges.json';
 import chat from './chat.json';
 import comments from './comments.json';
+import communityStats from './communityStats.json';
 import common from './common.json';
 import donations from './donations.json';
 import errors from './errors.json';
@@ -31,6 +32,7 @@ export default {
   challenges,
   chat,
   comments,
+  communityStats,
   common,
   donations,
   errors,

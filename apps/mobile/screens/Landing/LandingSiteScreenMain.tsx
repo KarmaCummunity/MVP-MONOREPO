@@ -160,7 +160,10 @@ function mapCommunityStatsToLandingStats(communityStats: Record<string, unknown>
     completedRides: extractStatNumber(communityStats.completedRides) || 0,
     recurringDonationsAmount: extractStatNumber(communityStats.recurringDonationsAmount) || 0,
     uniqueDonors: extractStatNumber(communityStats.uniqueDonors) || 0,
-    completedTasks: extractStatNumber(communityStats.completed_tasks) || 0,
+    completedTasks:
+      extractStatNumber(communityStats.completedTasks) ||
+      extractStatNumber(communityStats.completed_tasks) ||
+      0,
   };
 }
 

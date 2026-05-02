@@ -181,6 +181,21 @@
     "q3": "Is the app available for Android/iOS?",
     "a3": "Yes. We have Android and iOS versions, and a convenient web version."
   },
+  "liveStats": {
+    "sectionTitle": "Our community in numbers",
+    "sectionSubtitle": "Real impact, in numbers",
+    "loading": "Loading data...",
+    "cards": {
+      "siteVisits": { "label": "Site visits", "modalTitle": "Site visits — details" },
+      "totalMoneyDonated": { "label": "Direct donations (ILS)", "modalTitle": "Money donations" },
+      "totalUsers": { "label": "Registered members", "modalTitle": "Community members" },
+      "itemDonations": { "label": "Items posted", "modalTitle": "Item details" },
+      "completedRides": { "label": "Community rides", "modalTitle": "Ride details" },
+      "recurringDonationsAmount": { "label": "Active recurring donations", "modalTitle": "Recurring donations" },
+      "uniqueDonors": { "label": "Active donors", "modalTitle": "Active donors" },
+      "completedTasks": { "label": "Tasks completed", "modalTitle": "Completed tasks" }
+    }
+  },
   "stats": {
     "title": "In numbers",
     "subtitle": "Impact growing day by day",
