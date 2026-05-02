@@ -61,3 +61,14 @@ waitForPort = 8080
 deploymentTarget = "static"
 build = ["bash", "-c", "cd packages/shared-types && npm run build && cd ../../apps/mobile && npx expo export --platform web"]
 publicDir = "apps/mobile/dist"
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_FIREBASE_API_KEY = "AIzaSyCDwgAVr5IbjXe2vqSEacn_p-ruATfvqIU"
+EXPO_PUBLIC_FIREBASE_APP_ID = "1:1074950569654:web:490bfd5ab95d10b577f017"
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET = "karma-community-app.firebasestorage.app"
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "1074950569654"
+EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID = "G-20MFNZQS4R"
+EXPO_PUBLIC_FIREBASE_PROJECT_ID = "karma-community-app"
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = "karma-community-app.firebaseapp.com"
