@@ -8,23 +8,14 @@
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
 // BottomNavigator.tsx
 
-// TODO: Extract complex animation logic to custom hooks (usePulseAnimation, useTabBarAnimation)
-// TODO: Add comprehensive TypeScript interfaces for all navigation types
-// TODO: Implement proper accessibility for tab navigation
-// TODO: Add comprehensive error handling for navigation failures  
-// TODO: Remove hardcoded animation values and use constants
-// TODO: Implement proper tab badge system for notifications/updates
-// TODO: Add comprehensive performance optimization with React.memo
-// TODO: Remove 'use strict' directive - not needed in modern JavaScript
-// TODO: Add comprehensive unit tests for all navigation logic
-// TODO: Implement proper deep linking support for tab navigation
-'use strict';
 import React from "react";
 import { Animated, Easing, View, StyleSheet, Platform, Pressable, useWindowDimensions } from "react-native";
 import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import { PlatformPressable } from "@react-navigation/elements";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, CommonActions, useNavigationState } from "@react-navigation/native";
 import type { NavigationState } from "@react-navigation/native";
+import type { EdgeInsets } from "react-native-safe-area-context";
 import HomeTabStack from "./HomeTabStack";
 import SearchTabStack from "./SearchTabStack";
 import ProfileTabStack from "./ProfileTabStack";
@@ -37,7 +28,11 @@ import { useUser } from "../stores/userStore";
 import { useWebMode } from "../stores/webModeStore";
 import { logger } from "../utils/loggerService";
 import CreatePostComposerModal from "../components/CreatePostComposerModal";
-import { usePostComposerStore } from "../stores/postComposerStore";
+import {
+  usePostComposerStore,
+  type PostIntent,
+  type ComposerContentMode,
+} from "../stores/postComposerStore";
 import {
   getDonationsStackLeafScreenName,
   mapDonationScreenRouteToComposerCategory,
@@ -56,11 +51,40 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Create an instance of the Bottom Tab Navigator with its parameter list type
 const Tab = createBottomTabNavigator<BottomTabNavigatorParamList>();
 
+function getTabBarIconName(
+  routeName: keyof BottomTabNavigatorParamList,
+  focused: boolean,
+): keyof typeof Ionicons.glyphMap {
+  switch (routeName) {
+    case "HomeScreen":
+      return focused ? "home" : "home-outline";
+    case "CreatePostTab":
+      return "add-circle";
+    case "SearchTab":
+      return focused ? "search" : "search-outline";
+    case "DonationsTab":
+      return focused ? "heart" : "heart-outline";
+    case "ProfileScreen":
+      return focused ? "person" : "person-outline";
+    case "AdminTab":
+      return focused ? "shield" : "shield-outline";
+    default:
+      return "help-circle-outline";
+  }
+}
+
+const pulseStyles = StyleSheet.create({
+  pulseContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ring: {
+    position: "absolute",
+    borderWidth: 1,
+  },
+});
+
 // Animated icon for Donations tab when not focused
-// TODO: Extract this component to separate file (components/AnimatedTabIcon.tsx)
-// TODO: Add proper cleanup for animations on unmount
-// TODO: Implement proper animation performance optimization
-// TODO: Add proper accessibility for animated elements
 const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, size }) => {
   const ring1 = React.useRef(new Animated.Value(0)).current;
   const ring2 = React.useRef(new Animated.Value(0)).current;
@@ -119,13 +143,13 @@ const DonationsPulseIcon: React.FC<{ color: string; size: number }> = ({ color, 
   return (
     <View
       style={[
-        styles.pulseContainer,
+        pulseStyles.pulseContainer,
         { width: containerSize, height: containerSize, pointerEvents: 'none' },
       ]}
       accessibilityElementsHidden>
-      <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring1)]} />
-      <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring2)]} />
-      <Animated.View style={[styles.ring, ringBaseStyle, ringStyleFrom(ring3)]} />
+      <Animated.View style={[pulseStyles.ring, ringBaseStyle, ringStyleFrom(ring1)]} />
+      <Animated.View style={[pulseStyles.ring, ringBaseStyle, ringStyleFrom(ring2)]} />
+      <Animated.View style={[pulseStyles.ring, ringBaseStyle, ringStyleFrom(ring3)]} />
       <Ionicons name="heart-outline" size={size} color={color} />
     </View>
   );
@@ -136,16 +160,191 @@ function CreatePostTabPlaceholder(): null {
   return null;
 }
 
-const styles = StyleSheet.create({
-  pulseContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ring: {
-    position: "absolute",
-    borderWidth: 1,
-  },
-});
+function hideDueToSiteMode(mode: string): boolean {
+  return globalThis.window !== undefined && mode === "site";
+}
+
+function getHorizontalInset(): number {
+  const { isTablet, isDesktop } = getScreenInfo();
+  if (isDesktop) return vw(20);
+  if (isTablet) return vw(10);
+  return LAYOUT_CONSTANTS.SPACING.MD;
+}
+
+function getBottomTabBarHeight(landscape: boolean, isDesktop: boolean, isTablet: boolean): number {
+  if (landscape) return 40;
+  if (isDesktop) return 56;
+  if (isTablet) return 54;
+  return 44;
+}
+
+/** Default tab bar buttons use flex-start; align icons toward the bar bottom so the pill sits tighter to the screen edge. */
+function bottomAlignedTabBarButton(props: BottomTabBarButtonProps): React.ReactElement {
+  const { style, ...rest } = props;
+  return (
+    <PlatformPressable
+      {...rest}
+      style={[
+        style,
+        {
+          justifyContent: "flex-end",
+          paddingTop: 0,
+          paddingBottom: 2,
+        },
+      ]}
+    />
+  );
+}
+
+function tabBarZIndexWhenVisible(shouldHideTabBar: boolean): { zIndex: number } | Record<string, never> {
+  if (shouldHideTabBar) {
+    return {};
+  }
+  const zIndex = Platform.OS === "web" ? 20000 : 20;
+  return { zIndex };
+}
+
+function webTabBarPointerStyles(shouldHideTabBar: boolean): Record<string, unknown> {
+  if (Platform.OS !== "web" || shouldHideTabBar) {
+    return {};
+  }
+  return {
+    touchAction: "manipulation" as const,
+    WebkitTouchCallout: "none" as const,
+  };
+}
+
+type BottomNavigatorTabBarIconProps = Readonly<{
+  routeName: keyof BottomTabNavigatorParamList;
+  focused: boolean;
+  color: string;
+  size: number;
+}>;
+
+function BottomNavigatorTabBarIcon({
+  routeName,
+  focused,
+  color,
+  size,
+}: BottomNavigatorTabBarIconProps): React.ReactElement {
+  if (routeName === "DonationsTab") {
+    return focused ? (
+      <Ionicons name="heart" size={size} color={color} />
+    ) : (
+      <DonationsPulseIcon size={size} color={color} />
+    );
+  }
+  const iconName = getTabBarIconName(routeName, focused);
+  return <Ionicons name={iconName} size={size} color={color} />;
+}
+
+type ComposerOpenArg = {
+  intent?: PostIntent;
+  category?: string;
+  mode?: ComposerContentMode;
+};
+
+/** Maps tab press context to composer store payload (no nested ternaries). */
+function buildComposerOpenParams(isAdmin: boolean, composerCategory: string): ComposerOpenArg {
+  if (isAdmin) {
+    return { intent: "give", category: composerCategory, mode: "task" };
+  }
+  if (composerCategory === "trump") {
+    return { intent: "request", category: "trump" };
+  }
+  return { intent: "give", category: composerCategory };
+}
+
+function createPostTabBarButton(options: {
+  isAdmin: boolean;
+  composerCategory: string;
+  openComposer: (params?: ComposerOpenArg) => void;
+}) {
+  const { isAdmin, composerCategory, openComposer } = options;
+
+  return function PostTabBarButton(props: BottomTabBarButtonProps): React.ReactElement {
+    const p = props as Record<string, unknown>;
+    const delayLongPress = p.delayLongPress as number | undefined;
+    const { style: tabStyle, accessibilityState, testID } = p as BottomTabBarButtonProps;
+    const composerParams = buildComposerOpenParams(isAdmin, composerCategory);
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={isAdmin ? "Create post or admin task" : "Create give or request post"}
+        accessibilityState={accessibilityState}
+        testID={testID}
+        delayLongPress={delayLongPress}
+        onPress={() => openComposer(composerParams)}
+        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+        style={({ pressed }) => [
+          tabStyle,
+          {
+            marginTop: -10,
+            marginBottom: -2,
+            justifyContent: "flex-end",
+            alignItems: "center",
+            minWidth: 56,
+            minHeight: 52,
+            paddingBottom: 0,
+          },
+          Platform.OS === "web" && ({ cursor: "pointer" } as const),
+          Platform.OS === "web" && pressed ? { opacity: 0.88 } : null,
+        ]}
+      >
+        <Ionicons name="add-circle" size={54} color={colors.primary} />
+      </Pressable>
+    );
+  };
+}
+
+function computeBottomTabScreenOptions(
+  route: NestedRouteLike & { name: keyof BottomTabNavigatorParamList },
+  mode: string,
+  insets: EdgeInsets,
+): BottomTabNavigationOptions {
+  const activeParams = getActiveNestedParams(route) || {};
+  const hideBottomBar = activeParams.hideBottomBar === true;
+  const siteModeHidesBar = hideDueToSiteMode(mode);
+  const shouldHideTabBar = hideBottomBar || siteModeHidesBar;
+  const horizontalInset = getHorizontalInset();
+  const { isTablet, isDesktop } = getScreenInfo();
+  const landscape = isLandscape();
+  const barHeight = getBottomTabBarHeight(landscape, isDesktop, isTablet);
+  const webMobile = Platform.OS === "web" && isMobileWeb();
+  const tabBarBottomInset = webMobile ? Math.max(insets.bottom, 4) : 0;
+  const routeName = route.name;
+
+  return {
+    headerShown: false,
+    tabBarIcon: ({ focused, color, size }) => (
+      <BottomNavigatorTabBarIcon
+        routeName={routeName}
+        focused={focused}
+        color={color}
+        size={size}
+      />
+    ),
+    tabBarActiveTintColor: colors.bottomNavActive,
+    tabBarInactiveTintColor: colors.bottomNavInactive,
+    tabBarShowLabel: false,
+    tabBarButton: bottomAlignedTabBarButton,
+    tabBarStyle: {
+      position: "absolute",
+      left: horizontalInset,
+      right: horizontalInset,
+      bottom: 0,
+      borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.XLARGE,
+      elevation: LAYOUT_CONSTANTS.SHADOW.MEDIUM.elevation,
+      height: barHeight + tabBarBottomInset,
+      paddingBottom: tabBarBottomInset,
+      backgroundColor: colors.cardBackground,
+      display: shouldHideTabBar ? ("none" as const) : ("flex" as const),
+      ...tabBarZIndexWhenVisible(shouldHideTabBar),
+      ...webTabBarPointerStyles(shouldHideTabBar),
+    },
+  };
+}
 
 /**
  * BottomNavigator Component.
@@ -170,6 +369,16 @@ export default function BottomNavigator(): React.ReactElement {
     ),
   );
 
+  const createPostTabBarButtonEl = React.useMemo(
+    () =>
+      createPostTabBarButton({
+        isAdmin,
+        composerCategory,
+        openComposer,
+      }),
+    [isAdmin, composerCategory, openComposer],
+  );
+
   // Log when the navigator receives focus (periodic to avoid log spam).
   // NOTE: refreshUserRoles() removed from here — calling it on every tab focus
   // caused unnecessary re-renders and is handled elsewhere in the auth flow.
@@ -178,33 +387,6 @@ export default function BottomNavigator(): React.ReactElement {
       logger.debug('BottomNavigator', 'Navigator focused', undefined, { periodic: true });
     }, []),
   );
-
-
-
-  /**
-   * Helper function to determine the Ionicons name based on the route and focus state.
-   * @param {string} routeName - The name of the current route.
-   * @param {boolean} focused - True if the tab is currently focused.
-   * @returns {string} The Ionicons icon name (e.g., "home" or "home-outline").
-   */
-  const getTabBarIconName = (routeName: keyof BottomTabNavigatorParamList, focused: boolean): keyof typeof Ionicons.glyphMap => {
-    switch (routeName) {
-      case "HomeScreen":
-        return focused ? "home" : "home-outline";
-      case "CreatePostTab":
-        return "add-circle";
-      case "SearchTab":
-        return focused ? "search" : "search-outline";
-      case "DonationsTab":
-        return focused ? "heart" : "heart-outline";
-      case "ProfileScreen":
-        return focused ? "person" : "person-outline";
-      case "AdminTab":
-        return focused ? "shield" : "shield-outline";
-      default:
-        return "help-circle-outline";
-    }
-  };
 
   const handleTabPress = (e: any, navigation: any, routeName: string) => {
     const initialRoute = TAB_INITIAL_ROUTES[routeName];
@@ -230,8 +412,12 @@ export default function BottomNavigator(): React.ReactElement {
         return;
       }
 
-      const tabBarState = tabNavigation.getState();
-      const resetPayload = buildBottomTabBarResetPreservingOtherTabs(tabBarState, routeName);
+      // NavLike.getState is typed minimally; reset() needs full navigator fields (key, type, routeNames, stale).
+      const tabBarState = tabNavigation.getState() as NavigationState;
+      const resetPayload = buildBottomTabBarResetPreservingOtherTabs(
+        tabBarState,
+        routeName,
+      );
       if (!resetPayload) return;
 
       logger.debug(
@@ -243,7 +429,11 @@ export default function BottomNavigator(): React.ReactElement {
 
       e.preventDefault();
 
-      tabNavigation.dispatch(CommonActions.reset(resetPayload));
+      tabNavigation.dispatch(
+        CommonActions.reset(
+          resetPayload as Parameters<typeof CommonActions.reset>[0],
+        ),
+      );
     }
   };
 
@@ -252,56 +442,13 @@ export default function BottomNavigator(): React.ReactElement {
     <Tab.Navigator
       id={undefined}
       initialRouteName="HomeScreen"
-      screenOptions={({ route }): BottomTabNavigationOptions => {
-        const activeParams = getActiveNestedParams(route as NestedRouteLike) || {};
-        const hideBottomBar = activeParams.hideBottomBar === true;
-        const hideDueToSiteMode = (typeof window !== 'undefined' && mode === 'site');
-        const shouldHideTabBar = hideBottomBar || hideDueToSiteMode;
-        const { isTablet, isDesktop } = getScreenInfo();
-        const landscape = isLandscape();
-        const horizontalInset = isDesktop ? vw(20) : isTablet ? vw(10) : LAYOUT_CONSTANTS.SPACING.MD;
-        const barHeight = landscape ? 40 : (isDesktop ? 56 : isTablet ? 54 : 46);
-        const webMobile = Platform.OS === 'web' && isMobileWeb();
-        const tabBarBottomInset =
-          webMobile ? Math.max(insets.bottom, 12) : 0;
-        return ({
-          headerShown: false,
-          tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number; }) => {
-            if (route.name === "DonationsTab") {
-              return focused ? (
-                <Ionicons name="heart" size={size} color={color} />
-              ) : (
-                <DonationsPulseIcon size={size} color={color} />
-              );
-            }
-            const iconName = getTabBarIconName(route.name, focused);
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: colors.bottomNavActive,
-          tabBarInactiveTintColor: colors.bottomNavInactive,
-          tabBarShowLabel: false,
-          tabBarStyle: {
-            position: "absolute",
-            left: horizontalInset,
-            right: horizontalInset,
-            bottom: webMobile ? 0 : undefined,
-            borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.XLARGE,
-            elevation: LAYOUT_CONSTANTS.SHADOW.MEDIUM.elevation,
-            height: barHeight + tabBarBottomInset,
-            paddingBottom: tabBarBottomInset,
-            backgroundColor: colors.cardBackground,
-            display: shouldHideTabBar ? 'none' as const : 'flex' as const,
-            // Web: desktop layouts + full-bleed scrollers need a high stacking order so the + tab receives clicks
-            ...(!shouldHideTabBar ? { zIndex: Platform.OS === 'web' ? 20000 : 20 } : {}),
-            ...(Platform.OS === 'web' && !shouldHideTabBar
-              ? ({
-                  touchAction: 'manipulation' as const,
-                  WebkitTouchCallout: 'none' as const,
-                } as Record<string, unknown>)
-              : {}),
-          },
-        });
-      }}
+      screenOptions={({ route }): BottomTabNavigationOptions =>
+        computeBottomTabScreenOptions(
+          route as NestedRouteLike & { name: keyof BottomTabNavigatorParamList },
+          mode,
+          insets,
+        )
+      }
     >
       {!isGuestMode && (
         <Tab.Screen
@@ -323,42 +470,7 @@ export default function BottomNavigator(): React.ReactElement {
         name="CreatePostTab"
         component={CreatePostTabPlaceholder}
         options={{
-          tabBarButton: (props: BottomTabBarButtonProps) => {
-            const p = props as Record<string, unknown>;
-            const delayLongPress = p.delayLongPress as number | undefined;
-            const { style: tabStyle, accessibilityState, testID } = p as BottomTabBarButtonProps;
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={isAdmin ? 'Create post or admin task' : 'Create give or request post'}
-                accessibilityState={accessibilityState}
-                testID={testID}
-                delayLongPress={delayLongPress}
-                onPress={() =>
-                  openComposer(
-                    isAdmin
-                      ? { intent: 'give', category: composerCategory, mode: 'task' }
-                      : { intent: 'give', category: composerCategory },
-                  )
-                }
-                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                style={({ pressed }) => [
-                  tabStyle,
-                  {
-                    marginTop: -12,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minWidth: 56,
-                    minHeight: 56,
-                  },
-                  Platform.OS === 'web' && ({ cursor: 'pointer' } as const),
-                  Platform.OS === 'web' && pressed ? { opacity: 0.88 } : null,
-                ]}
-              >
-                <Ionicons name="add-circle" size={54} color={colors.primary} />
-              </Pressable>
-            );
-          },
+          tabBarButton: createPostTabBarButtonEl,
         }}
         listeners={{
           tabPress: (e) => e.preventDefault(),

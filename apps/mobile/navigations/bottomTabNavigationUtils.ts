@@ -3,6 +3,8 @@
  * Keeps BottomNavigator thin and enables Jest coverage without mounting navigators.
  */
 
+import type { NavigationState } from '@react-navigation/native';
+
 /** Leaf route name for each tab's stack when resetting on re-press (same mechanism for all tabs). */
 export const TAB_INITIAL_ROUTES: Readonly<Record<string, string>> = {
   HomeScreen: 'HomeMain',
@@ -12,8 +14,12 @@ export const TAB_INITIAL_ROUTES: Readonly<Record<string, string>> = {
   AdminTab: 'AdminDashboard',
 };
 
-/** Minimal route shape from react-navigation (recursive nested state). */
+/**
+ * Minimal route shape from react-navigation (recursive nested state).
+ * `name` is optional on the type because helpers only require state/params, but real routes include it.
+ */
 export type NestedRouteLike = {
+  name?: string;
   state?: { index?: number; routes?: NestedRouteLike[] };
   params?: Record<string, unknown> & {
     state?: { index?: number; routes?: NestedRouteLike[] };
@@ -31,7 +37,7 @@ export function getActiveNestedParams(
   const state = route.state ?? route.params?.state;
   if (!state) return route.params as Record<string, unknown> | undefined;
   const nestedRoute = state.routes?.[state.index ?? 0];
-  if (nestedRoute) return getActiveNestedParams(nestedRoute as NestedRouteLike);
+  if (nestedRoute) return getActiveNestedParams(nestedRoute);
   return route.params as Record<string, unknown> | undefined;
 }
 
@@ -52,11 +58,12 @@ export function isTabNavigatorFocusedOnRoute(
   return route?.name === routeName;
 }
 
-/** Single route entry inside a tab navigator's `routes` array (minimal shape for reset). */
+/** Single route entry inside a tab navigator's `routes` array (minimal shape for docs/tests). */
 export type TabNavigatorRouteState = {
   name: string;
   key?: string;
-  params?: Record<string, unknown>;
+  /** `unknown` so this stays compatible with `NavigationRoute` params typing. */
+  params?: unknown;
   state?: { index?: number; routes?: Array<{ name: string; key?: string }> };
 };
 
@@ -68,9 +75,9 @@ export type TabNavigatorRouteState = {
  * other tab from state → blank web views and “lost” Donations/Search tabs.
  */
 export function buildBottomTabBarResetPreservingOtherTabs(
-  tabBarState: { index?: number; routes?: TabNavigatorRouteState[] },
+  tabBarState: NavigationState,
   tabRouteName: string,
-): { index: number; routes: TabNavigatorRouteState[] } | null {
+): NavigationState | null {
   const initialRoute = TAB_INITIAL_ROUTES[tabRouteName];
   if (!initialRoute) return null;
 
@@ -89,7 +96,7 @@ export function buildBottomTabBarResetPreservingOtherTabs(
         routes: [{ name: initialRoute }],
       },
     };
-  });
+  }) as NavigationState['routes'];
 
   const idx =
     typeof tabBarState.index === 'number' &&
@@ -98,5 +105,9 @@ export function buildBottomTabBarResetPreservingOtherTabs(
       ? tabBarState.index
       : 0;
 
-  return { index: idx, routes: nextRoutes };
+  return {
+    ...tabBarState,
+    index: idx,
+    routes: nextRoutes,
+  };
 }

@@ -1,3 +1,4 @@
+import type { NavigationState } from '@react-navigation/native';
 import {
   TAB_INITIAL_ROUTES,
   getActiveNestedParams,
@@ -127,7 +128,10 @@ describe('bottomTabNavigationUtils', () => {
 
     it('resets one tab stack and preserves other tabs and index', () => {
       const before = sampleTabState(false);
-      const result = buildBottomTabBarResetPreservingOtherTabs(before, 'SearchTab');
+      const result = buildBottomTabBarResetPreservingOtherTabs(
+        before as unknown as NavigationState,
+        'SearchTab',
+      );
       expect(result).not.toBeNull();
       if (!result) return;
       expect(result.index).toBe(1);
@@ -143,11 +147,14 @@ describe('bottomTabNavigationUtils', () => {
 
     it('returns null for unknown tab names', () => {
       expect(
-        buildBottomTabBarResetPreservingOtherTabs({ index: 0, routes: [] }, 'SearchTab'),
+        buildBottomTabBarResetPreservingOtherTabs(
+          { index: 0, routes: [] } as unknown as NavigationState,
+          'SearchTab',
+        ),
       ).toBeNull();
       expect(
         buildBottomTabBarResetPreservingOtherTabs(
-          { index: 0, routes: [{ name: 'SearchTab' }] },
+          { index: 0, routes: [{ name: 'SearchTab' }] } as unknown as NavigationState,
           'CreatePostTab',
         ),
       ).toBeNull();
