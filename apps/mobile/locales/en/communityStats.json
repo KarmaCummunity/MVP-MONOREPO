@@ -49,6 +49,7 @@
     "suffixPeople": "people",
     "suffixVisits": "visits",
     "suffixTasks": "tasks",
-    "suffixGeneric": "total"
+    "suffixGeneric": "total",
+    "unknownRow": "Entry (no preview)"
   }
 }

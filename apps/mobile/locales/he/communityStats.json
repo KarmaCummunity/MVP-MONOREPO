@@ -49,6 +49,7 @@
     "suffixPeople": "אנשים",
     "suffixVisits": "ביקורים",
     "suffixTasks": "משימות",
-    "suffixGeneric": "סה\"כ"
+    "suffixGeneric": "סה\"כ",
+    "unknownRow": "רשומה ללא פירוט"
   }
 }

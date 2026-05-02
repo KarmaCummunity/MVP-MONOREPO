@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
@@ -12,10 +13,12 @@ import { StatsDetailModal } from '../modals/StatsDetailModal';
 
 type StatCardKey = keyof LandingStats;
 
+type IonIconName = ComponentProps<typeof Ionicons>['name'];
+
 type StatCardConfig = {
   type: StatCardKey;
   valueText: (stats: LandingStats, locale: string) => string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: IonIconName;
   color: string;
   cardStyle?: object;
 };
@@ -90,7 +93,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats, isLoadingStat
     type: StatCardKey;
     title: string;
     value: number;
-    icon: string;
+    icon: IonIconName;
     color: string;
   } | null>(null);
 
