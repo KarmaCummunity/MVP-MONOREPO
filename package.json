@@ -22,7 +22,9 @@
     "quality:sonar:compare": "node tools/quality/sonar/compare-results.js",
     "quality:sonar:stats": "node tools/quality/sonar/analyze-stats-controller.js",
     "quality:sonar:users": "node tools/quality/sonar/analyze-users-controller.js",
-    "quality:sonar:priority-doc": "node tools/quality/sonar/create-priority-doc.js"
+    "quality:sonar:priority-doc": "node tools/quality/sonar/create-priority-doc.js",
+    "android": "npm run android --workspace @kc/mobile",
+    "ios": "npm run ios --workspace @kc/mobile"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -49,7 +51,9 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
-    "react-native": "0.79.5"
+    "react-native": "0.79.5",
+    "expo": "~53.0.27",
+    "react": "19.0.0"
   },
   "devDependencies": {
     "@types/pg-format": "^1.0.5"
