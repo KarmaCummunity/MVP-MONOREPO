@@ -3,7 +3,8 @@ import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
-import { isGridFixedHeight, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import type { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { styles } from './communityChallengeFeedCard.styles';
 import { CommunityChallengeFeedCardHeader } from './CommunityChallengeFeedCardHeader';
@@ -50,15 +51,17 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
     ];
 
     const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
+    const gridFixedHeight = gridOuterFixed != null;
 
     return (
         <View
-            style={[
-                styles.container,
-                isGrid && !isGridFixedHeight(gridOuterFixed) && styles.gridContainer,
+            style={composeFeedCardContainerStyle({
+                container: styles.container,
+                gridMinHeightFallback: styles.gridContainer,
+                isGrid,
                 gridOuterFixed,
-                { width: cardWidth },
-            ]}
+                cardWidth,
+            })}
         >
             <CommunityChallengeFeedCardHeader
                 item={item}
@@ -72,14 +75,14 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[styles.cardContent, isGridFixedHeight(gridOuterFixed) && styles.cardContentGridFill]}
+                style={[styles.cardContent, gridFixedHeight && styles.cardContentGridFill]}
             >
                 {item.thumbnail ? (
                     <Image
                         source={{ uri: item.thumbnail }}
                         style={[
                             styles.heroImage,
-                            isGrid && isGridFixedHeight(gridOuterFixed) && styles.heroImageGridFlex,
+                            isGrid && gridFixedHeight && styles.heroImageGridFlex,
                         ]}
                         resizeMode="cover"
                     />

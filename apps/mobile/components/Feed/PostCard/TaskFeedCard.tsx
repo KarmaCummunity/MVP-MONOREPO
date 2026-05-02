@@ -6,7 +6,7 @@ import colors from '../../../globals/colors';
 import { TaskAssignmentFeedCardBody } from './TaskAssignmentFeedCardBody';
 import { TaskFeedVariant } from './TaskFeedCard.types';
 import { styles } from './taskFeedCard.styles';
-import { isGridFixedHeight, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 import type { BaseCardProps } from './types';
 
@@ -45,16 +45,18 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     const isCompletion = variant === 'completion';
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
+    const gridFixedHeight = gridOuterFixed != null;
 
     return (
         <View
-            style={[
-                styles.container,
-                isGrid && !isGridFixedHeight(gridOuterFixed) && styles.gridContainer,
-                isCompletion && styles.containerCompletion,
+            style={composeFeedCardContainerStyle({
+                container: styles.container,
+                gridMinHeightFallback: styles.gridContainer,
+                isGrid,
                 gridOuterFixed,
-                { width: cardWidth }
-            ]}
+                cardWidth,
+                modifiers: [isCompletion && styles.containerCompletion],
+            })}
         >
             <View style={[styles.header, isCompletion && styles.headerCompletion, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <TouchableOpacity
@@ -99,7 +101,7 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
                 style={[
                     styles.cardContent,
                     isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment,
-                    isGridFixedHeight(gridOuterFixed) && styles.cardContentGridFill
+                    gridFixedHeight && styles.cardContentGridFill
                 ]}
             >
                 {isCompletion ? (
