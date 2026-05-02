@@ -1,4 +1,4 @@
-modules = ["nodejs-18", "bash", "web"]
+modules = ["nodejs-18", "bash", "web", "python-3.11"]
 [agent]
 expertMode = true
 
