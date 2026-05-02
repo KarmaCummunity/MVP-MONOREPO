@@ -53,7 +53,12 @@
     "task_category_עיצוב": "קטגוריה: עיצוב",
     "task_category_אחר": "קטגוריה: אחר",
     "task_category_דיווח": "קטגוריה: דיווח",
-    "task_category_תרומת מידע": "קטגוריה: תרומת מידע"
+    "task_category_תרומת מידע": "קטגוריה: תרומת מידע",
+    "challenges_all": "כל הסוגים",
+    "challenges_my_created": "שיצרתי",
+    "BOOLEAN": "כן/לא",
+    "NUMERIC": "מספרי",
+    "DURATION": "משך זמן"
   },
   "sort": {
     "created_desc": "נוסף לאחרונה",
@@ -73,7 +78,11 @@
     "לפי מיקום": "לפי מיקום",
     "לפי תאריך": "לפי תאריך",
     "לפי דירוג": "לפי דירוג",
-    "לפי רלוונטיות": "לפי רלוונטיות"
+    "לפי רלוונטיות": "לפי רלוונטיות",
+    "challenge_created_desc": "החדשים ביותר",
+    "challenge_created_asc": "הישנים ביותר",
+    "challenge_participants_desc": "הכי הרבה משתתפים",
+    "challenge_title": "כותרת (א–ת)"
   },
   "popularSearches": [
     "איסוף מזון",

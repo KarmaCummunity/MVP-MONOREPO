@@ -40,6 +40,8 @@ interface HeaderSectionProps {
   searchData: any[]; // Data array to search through (charities, rides, etc.) - TODO: Replace any[] with proper types
   onSearch: (query: string, filters?: string[], sorts?: string[], results?: any[]) => void; // Search handler function - TODO: Improve typing
   hideSortButton?: boolean;
+  /** When true, the filter control in SearchBar is hidden (e.g. offer mode). */
+  hideFilterButton?: boolean;
   /** When true, the offer/search mode toggle is not shown (e.g. admin-only screens). */
   hideModeToggle?: boolean;
   /** Bump to remount SearchBar with new initial filter/sort snapshot (e.g. after AsyncStorage hydrate). */
@@ -61,6 +63,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   searchData,
   onSearch,
   hideSortButton = false,
+  hideFilterButton = false,
   hideModeToggle = false,
   searchBarRemountKey = 0,
   initialSearchText,
@@ -135,6 +138,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
             onRemoveSortRequested={(fn) => { removeSortRef.current = fn; }}
             renderSelectedRow={false}
             hideSortButton={hideSortButton}
+            hideFilterButton={hideFilterButton}
             sanitizeSelectedFilters={sanitizeSelectedFilters}
           />
         </View>
