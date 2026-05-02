@@ -1,8 +1,8 @@
 // File overview:
-// - Purpose: Shared top navigation bar component for stacks; shows title and quick actions (Settings, Notifications, Chat/About).
+// - Purpose: Shared top navigation bar component for stacks; shows title and quick actions (Settings, Notifications, Chat for signed-in users).
 // - Reached from: `HomeTabStack`, `SearchTabStack`, `ProfileTabStack`, `DonationsStack` as a custom header.
 // - Inputs: Props `hideTopBar` and `showPosts`; also reads `route.params.hideTopBar`. Title resolves by current route with i18n.
-// - Reads from context: `useUser()` for guest mode to toggle Chat/About icon; `isAdmin` for shield + tasks shortcuts to Admin tab.
+// - Reads from context: `useUser()` for guest mode (no notifications icon); `isAdmin` for shield + tasks shortcuts to Admin tab.
 // - Side effects: Logs focus and state changes via `logger`; animates show/hide with Reanimated.
 import React from 'react';
 import styles from '../globals/styles'; // your styles file
@@ -10,14 +10,12 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationProp, ParamListBase, StackActions, CommonActions } from '@react-navigation/native';
-import { navigateToAuthenticatedLandingSite } from './landingSiteNavigation';
 import { useRoute, useFocusEffect, useNavigationState } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import colors from '../globals/colors';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
 import { useTranslation } from 'react-i18next';
-import AboutButton from '../components/AboutButton';
 import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 
 
@@ -53,7 +51,7 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
   });
 
   // List of top bar screens that should be mutually exclusive
-  const topBarScreens = ['SettingsScreen', 'NotificationsScreen', 'ChatListScreen', 'LandingSiteScreen'];
+  const topBarScreens = ['SettingsScreen', 'NotificationsScreen', 'ChatListScreen'];
 
   // Handler for toggling screens (open if closed, close if open)
   // Only one top bar screen can be open at a time
@@ -97,13 +95,6 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
       const otherTopBarScreenOpen = topBarScreens.find(
         screen => screen !== screenName && currentRoute === screen
       );
-
-      if (screenName === 'LandingSiteScreen') {
-        navigateToAuthenticatedLandingSite(navigation, {
-          replaceFromTopBar: !!otherTopBarScreenOpen,
-        });
-        return;
-      }
 
       if (otherTopBarScreenOpen) {
         // Another top bar screen is open, replace it with the new screen
@@ -251,53 +242,33 @@ function TopBarNavigator({ navigation, hideTopBar = false, showPosts = false }: 
           <TouchableOpacity onPress={() => handleScreenToggle('SettingsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
             <Icon name="settings-outline" size={24} color={colors.black} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleScreenToggle('NotificationsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
-            <View style={{ position: 'relative' }}>
-              <Icon name="notifications-circle-outline" size={24} color={colors.black} />
-              {unreadCount > 0 && (
-                <View style={(styles as any).notificationBadge as StyleProp<ViewStyle>}>
-                  <Text style={(styles as any).notificationBadgeText as StyleProp<TextStyle>}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
+          {!isGuestMode && (
+            <TouchableOpacity onPress={() => handleScreenToggle('NotificationsScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
+              <View style={{ position: 'relative' }}>
+                <Icon name="notifications-circle-outline" size={24} color={colors.black} />
+                {unreadCount > 0 && (
+                  <View style={(styles as any).notificationBadge as StyleProp<ViewStyle>}>
+                    <Text style={(styles as any).notificationBadgeText as StyleProp<TextStyle>}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Title */}
+        {/* Center: title */}
         <View style={styles.topBarTitleContainer as StyleProp<ViewStyle>}>
           <Text style={styles.topBarTitle as StyleProp<TextStyle>}>{title}</Text>
         </View>
-        {/* Left Icons Group: Notifications + Settings */}
 
-        {/* Right Icons Group: Chat + About (for authenticated users) OR About only (for guests) */}
-        {/* 
-        About button is now available in both guest and authenticated modes:
-        - Guest mode: Shows only About button (replaces Chat button)
-        - Authenticated mode: Shows both Chat and About buttons
-        This provides consistent access to About information across all user states.
-      */}
+        {/* Right: chat (signed-in only) */}
         <View style={styles.topBarIconsRow as StyleProp<ViewStyle>}>
-          {isGuestMode ? (
-            // Guest mode: Show only About button
-            <AboutButton
-              style={styles.topBarIconButton as StyleProp<ViewStyle>}
-              onPress={() => handleScreenToggle('LandingSiteScreen')}
-              iconColor={colors.black}
-            />
-          ) : (
-            // Authenticated mode: Show both Chat and About buttons
-            <>
-              <TouchableOpacity onPress={() => handleScreenToggle('ChatListScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
-                <Icon name="chatbubbles-outline" size={24} color={colors.black} />
-              </TouchableOpacity>
-              <AboutButton
-                style={styles.topBarIconButton as StyleProp<ViewStyle>}
-                onPress={() => handleScreenToggle('LandingSiteScreen')}
-                iconColor={colors.black}
-              />
-            </>
+          {!isGuestMode && (
+            <TouchableOpacity onPress={() => handleScreenToggle('ChatListScreen')} style={styles.topBarIconButton as StyleProp<ViewStyle>}>
+              <Icon name="chatbubbles-outline" size={24} color={colors.black} />
+            </TouchableOpacity>
           )}
         </View>
       </Animated.View>
