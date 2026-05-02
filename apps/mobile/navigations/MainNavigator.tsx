@@ -35,6 +35,8 @@ import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { getAuth, getRedirectResult } from 'firebase/auth';
+import { getFirebase } from '../utils/firebaseClient';
 
 import BottomNavigator from './BottomNavigator';
 import WebViewScreen from '../screens/WebViewScreen';
@@ -65,9 +67,73 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default function MainNavigator() {
   // ─── Store subscriptions ────────────────────────────────────────────────────
   // `isLoading` is read for logging only. It must not gate rendering (see header).
-  const { selectedUser, isLoading, isGuestMode, isAuthenticated } = useUser();
+  const { selectedUser, isLoading, isGuestMode, isAuthenticated, setSelectedUserWithMode } = useUser();
   const { mode } = useWebMode();
   const { t } = useTranslation(['common', 'profile']);
+
+  // ─── Google redirect-result handler ─────────────────────────────────────────
+  // When the user completes Google sign-in via `signInWithRedirect`, the browser
+  // navigates back to this app. We call `getRedirectResult` once on mount to pick
+  // up the pending credential and update the auth store. This bypasses the
+  // `auth/unauthorized-domain` error that occurs with `signInWithPopup` on
+  // Replit preview domains.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { app } = getFirebase();
+        const auth = getAuth(app);
+        const result = await getRedirectResult(auth);
+
+        if (cancelled || !result?.user) return;
+
+        const firebaseUser = result.user;
+        logger.info('MainNavigator', 'Google redirect sign-in succeeded', {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+        });
+
+        const userData = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email || '',
+          phone: firebaseUser.phoneNumber || '+972500000000',
+          avatar: firebaseUser.photoURL || 'https://i.pravatar.cc/150?img=1',
+          bio: '',
+          karmaPoints: 0,
+          joinDate: new Date().toISOString(),
+          isActive: true,
+          lastActive: new Date().toISOString(),
+          location: { city: 'ישראל', country: 'IL' },
+          interests: [],
+          roles: ['user'],
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          notifications: [{ type: 'system', text: 'ברוך הבא לקרמה קומיוניטי!', date: new Date().toISOString() }],
+          settings: { language: 'he', darkMode: false, notificationsEnabled: true },
+        };
+
+        await setSelectedUserWithMode(userData, 'real');
+        // MainNavigator will automatically re-render and show HomeStack
+        // because isAuthenticated will flip to true in the store.
+      } catch (err: any) {
+        if (cancelled) return;
+        // `getRedirectResult` throws if there is no pending redirect — this is
+        // normal on every page load that did NOT follow a `signInWithRedirect`.
+        // Only log as an error if it is an unexpected code.
+        const code: string = err?.code ?? '';
+        if (code && code !== 'auth/null-user') {
+          logger.warn('MainNavigator', 'getRedirectResult error (non-fatal)', { code, message: err?.message });
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount only
 
   // ─── Debug logging ──────────────────────────────────────────────────────────
   // Periodic flag prevents flooding the log storage on tight re-render loops.

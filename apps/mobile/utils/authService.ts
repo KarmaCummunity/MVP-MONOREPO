@@ -91,39 +91,25 @@ export async function getEmailAuthSituation(normalizedEmail: string): Promise<Em
  * email/password so the same Firebase UID can use either method.
  * Web only (signInWithPopup). Caller must verify email matches the signed-in Google user.
  */
+/**
+ * Previously used `signInWithPopup` to sign in with Google and link a password
+ * credential. Popup-based Google auth fails on unlisted domains (e.g. Replit
+ * preview URLs) with `auth/unauthorized-domain`.
+ *
+ * This function now throws a user-friendly error so callers can surface a clear
+ * message: "your account only supports Google login — use the Google button."
+ * The Firebase Google button uses `signInWithRedirect` which routes through the
+ * authorized `firebaseapp.com` domain instead.
+ */
 export async function signInWithGoogleThenLinkPassword(
-  email: string,
-  password: string
+  _email: string,
+  _password: string
 ): Promise<User> {
-  if (Platform.OS !== 'web') {
-    throw new Error('GOOGLE_LINK_WEB_ONLY');
-  }
-  const auth = getAuthInstance();
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({
-    login_hint: email.trim(),
-    prompt: 'select_account',
-  });
-  const result = await signInWithPopup(auth, provider);
-  const signedEmail = result.user.email?.trim().toLowerCase();
-  const target = email.trim().toLowerCase();
-  if (signedEmail !== target) {
-    await signOut(auth);
-    const err = new Error('GOOGLE_EMAIL_MISMATCH');
-    (err as { code?: string }).code = 'auth/google-email-mismatch';
-    throw err;
-  }
-  const emailCred = EmailAuthProvider.credential(target, password);
-  try {
-    await linkWithCredential(result.user, emailCred);
-  } catch (e: unknown) {
-    const code = (e as { code?: string })?.code;
-    if (code === 'auth/provider-already-linked') {
-      return result.user;
-    }
-    throw e;
-  }
-  return result.user;
+  const err = new Error(
+    'This account is registered with Google. Please use the Google sign-in button.'
+  );
+  (err as { code?: string }).code = 'auth/use-google-button';
+  throw err;
 }
 
 export async function signUpWithEmail(email: string, password: string): Promise<User> {
