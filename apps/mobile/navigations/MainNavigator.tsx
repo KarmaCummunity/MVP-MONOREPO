@@ -12,7 +12,7 @@
 // - External deps: react-navigation stack, i18n for titles, shared colors/styles.
 
 import React, { useEffect, useMemo } from 'react';
-import { View, ActivityIndicator, Text, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { createStackNavigator } from "@react-navigation/stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -25,8 +25,6 @@ import FollowersScreen from "../screens/FollowersScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
 import LoginScreen from "../screens/LoginScreen";
 import { useUser } from '../stores/userStore';
-import colors from '../globals/colors';
-import styles from '../globals/styles';
 import NewChatScreen from '../screens/NewChatScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
 import SettingsScreen from '../topBarScreens/SettingsScreen';
@@ -79,22 +77,6 @@ export default function MainNavigator() {
     () => computeMainNavigatorStackKey(mode, isAuthenticated, isGuestMode),
     [mode, isAuthenticated, isGuestMode],
   );
-
-  useEffect(() => {
-    if (isLoading) {
-      logger.debug('MainNavigator', 'Showing loading screen', undefined, { periodic: true });
-    }
-  }, [isLoading]);
-
-  // Loading screen
-  if (isLoading) {
-    return (
-      <View style={styles.centeredScreen as any}>
-        <ActivityIndicator size="large" color={colors.info} />
-        <Text style={styles.loadingText as any}>{t('common:loading')}</Text>
-      </View>
-    );
-  }
 
   return (
     <Stack.Navigator
