@@ -11,7 +11,7 @@ import ProfileScreen from '../bottomBarScreens/ProfileScreen';
 // --- Main Component ---
 // This component is a wrapper that uses ProfileScreen
 // ProfileScreen will automatically detect that we're viewing another user's profile
-// and use tabBarHeight = 0 instead of calling useBottomTabBarHeight
+// and use useSafeBottomTabBarHeight() or tabBarHeight = 0 when outside the tab navigator
 import { useRoute } from '@react-navigation/native';
 
 export default function UserProfileScreen() {

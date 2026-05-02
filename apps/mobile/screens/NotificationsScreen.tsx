@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect, NavigationProp, ParamListBase } from '@react-navigation/native';
 import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { useUser } from '../stores/userStore';
 import {
   getNotifications,
@@ -51,7 +51,7 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { selectedUser } = useUser();
   const { t } = useTranslation(['notifications', 'common']);
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);

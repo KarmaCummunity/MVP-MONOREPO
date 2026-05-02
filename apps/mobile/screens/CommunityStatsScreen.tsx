@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import colors from '../globals/colors';
 import { useTranslation } from 'react-i18next';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
@@ -81,7 +81,7 @@ export default function CommunityStatsScreen() {
   useLogScreenOpened('CommunityStatsScreen');
   const { t } = useTranslation('communityStats');
   const { t: tCommon } = useTranslation('common');
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
 
   const [mapped, setMapped] = useState<CommunityStats>(() => ({ ...DEFAULT_STATS }));
   const [dashboard, setDashboard] = useState<DashboardSlice | null>(null);

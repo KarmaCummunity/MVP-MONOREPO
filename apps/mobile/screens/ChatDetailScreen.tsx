@@ -24,15 +24,14 @@ import {
   Modal,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { logger } from '../utils/loggerService';
 
 const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
@@ -54,14 +53,14 @@ type ChatDetailRouteParams = {
   otherUserId: string;
 };
 
-type ChatComposerProps = {
+type ChatComposerProps = Readonly<{
   inputText: string;
   onChangeText: (text: string) => void;
   placeholder: string;
   onSend: () => void;
   onToggleMedia: () => void;
   isSending: boolean;
-};
+}>;
 
 /** Module-scope composer so TextInput identity is stable across ChatDetailScreen re-renders (critical for keyboard/focus). */
 function ChatComposer({
@@ -84,7 +83,7 @@ function ChatComposer({
         placeholder={placeholder}
         placeholderTextColor={colors.textSecondary}
         multiline
-        blurOnSubmit={false}
+        submitBehavior="newline"
         editable={!isSending}
         keyboardType="default"
         textAlignVertical="top"
@@ -106,12 +105,12 @@ function ChatComposer({
   );
 }
 
-type ChatMediaRowProps = {
+type ChatMediaRowProps = Readonly<{
   onTakePhoto: () => void;
   onPickImage: () => void;
   onPickVideo: () => void;
   onPickDocument: () => void;
-};
+}>;
 
 function ChatMediaRow({ onTakePhoto, onPickImage, onPickVideo, onPickDocument }: ChatMediaRowProps) {
   return (
@@ -136,6 +135,108 @@ function ChatMediaRow({ onTakePhoto, onPickImage, onPickVideo, onPickDocument }:
   );
 }
 
+function getTabBarFallbackPixels(isWeb: boolean): number {
+  if (Platform.OS === 'ios') return 49;
+  if (Platform.OS === 'android') return 58;
+  if (isWeb) return 72;
+  return 56;
+}
+
+type ChatMainSectionProps = Readonly<{
+  isDesktopWebChat: boolean;
+  maxMessagesHeight: number | undefined;
+  isLoading: boolean;
+  messageList: React.ReactNode;
+  renderLoadingIndicator: () => React.ReactNode;
+  showMediaOptions: boolean;
+  tabBarHeight: number;
+  onTakePhoto: () => void;
+  onPickImage: () => void;
+  onPickVideo: () => void;
+  onPickDocument: () => void;
+  setInputHeight: (height: number) => void;
+  renderDesktopComposer: () => React.ReactNode;
+  renderNativeComposerColumn: () => React.ReactNode;
+  bottomReserve: number;
+  iosKeyboardOffset: number;
+}>;
+
+function ChatMainSection({
+  isDesktopWebChat,
+  maxMessagesHeight,
+  isLoading,
+  messageList,
+  renderLoadingIndicator,
+  showMediaOptions,
+  tabBarHeight,
+  onTakePhoto,
+  onPickImage,
+  onPickVideo,
+  onPickDocument,
+  setInputHeight,
+  renderDesktopComposer,
+  renderNativeComposerColumn,
+  bottomReserve,
+  iosKeyboardOffset,
+}: ChatMainSectionProps) {
+  if (isDesktopWebChat) {
+    return (
+      <>
+        <View style={[styles.messagesWrapper, maxMessagesHeight ? { maxHeight: maxMessagesHeight } : undefined]}>
+          {isLoading ? renderLoadingIndicator() : messageList}
+        </View>
+        {showMediaOptions ? (
+          <View style={[styles.mediaOptionsContainer, { bottom: tabBarHeight + 70, zIndex: 1000 }]}>
+            <ChatMediaRow
+              onTakePhoto={onTakePhoto}
+              onPickImage={onPickImage}
+              onPickVideo={onPickVideo}
+              onPickDocument={onPickDocument}
+            />
+          </View>
+        ) : null}
+        <View
+          style={{
+            position: 'fixed' as any,
+            left: 0,
+            right: 0,
+            bottom: tabBarHeight,
+            zIndex: 999,
+            backgroundColor: 'transparent',
+          }}
+          onLayout={(event) => {
+            const { height } = event.nativeEvent.layout;
+            setInputHeight(height);
+          }}
+        >
+          {renderDesktopComposer()}
+        </View>
+      </>
+    );
+  }
+
+  const messagesAndComposer = (
+    <>
+      <View style={styles.messagesWrapper}>{isLoading ? renderLoadingIndicator() : messageList}</View>
+      <View style={styles.nativeComposerColumn}>{renderNativeComposerColumn()}</View>
+    </>
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <KeyboardAvoidingView
+        style={styles.chatBodyColumn}
+        behavior="padding"
+        keyboardVerticalOffset={iosKeyboardOffset}
+      >
+        <View style={[styles.chatBodyInner, { paddingBottom: bottomReserve }]}>{messagesAndComposer}</View>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return <View style={[styles.chatBodyColumn, { paddingBottom: bottomReserve }]}>{messagesAndComposer}</View>;
+}
+
 export default function ChatDetailScreen() {
   useLogScreenOpened('ChatDetailScreen');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -144,7 +245,7 @@ export default function ChatDetailScreen() {
   const { conversationId: initialConversationId, userName: initialUserName, userAvatar: initialUserAvatar, otherUserId } = routeParams;
   const { selectedUser } = useUser();
   const { t } = useTranslation(['chat']);
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const insets = useSafeAreaInsets();
   const stackHeaderHeight = useHeaderHeight();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -164,15 +265,8 @@ export default function ChatDetailScreen() {
 
   const bottomReserve = useMemo(() => {
     if (isDesktopWebChat) return 0;
-    const measured = tabBarHeight > 0 ? tabBarHeight : 0;
-    const barFallback =
-      Platform.OS === 'ios'
-        ? 49
-        : Platform.OS === 'android'
-          ? 58
-          : isWeb
-            ? 72
-            : 56;
+    const measured = Math.max(tabBarHeight, 0);
+    const barFallback = getTabBarFallbackPixels(isWeb);
     return Math.max(measured, barFallback + insets.bottom);
   }, [tabBarHeight, insets.bottom, isDesktopWebChat, isWeb]);
 
@@ -253,13 +347,13 @@ export default function ChatDetailScreen() {
       const params = route.params;
       if (params) {
         if (params.userName) {
-          setUserName(prev => params.userName !== prev ? params.userName : prev);
+          setUserName(prev => (params.userName === prev ? prev : params.userName));
         }
         if (params.userAvatar) {
-          setUserAvatar(prev => params.userAvatar !== prev ? params.userAvatar : prev);
+          setUserAvatar(prev => (params.userAvatar === prev ? prev : params.userAvatar));
         }
         if (params.conversationId) {
-          setConversationId(prev => params.conversationId !== prev ? params.conversationId : prev);
+          setConversationId(prev => (params.conversationId === prev ? prev : params.conversationId));
         }
       }
     }, [route.params])
@@ -366,7 +460,7 @@ export default function ChatDetailScreen() {
         return;
       }
 
-      const tempMessageId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempMessageId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
       const fullPath = buildChatFilePath(conversationId, tempMessageId, fileData.name);
 
@@ -583,62 +677,33 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {isDesktopWebChat ? (
-        <>
-          <View style={[styles.messagesWrapper, maxMessagesHeight ? { maxHeight: maxMessagesHeight } : undefined]}>
-            {isLoading ? renderLoadingIndicator() : messageList}
-          </View>
-          {showMediaOptions && (
-            <View style={[styles.mediaOptionsContainer, { bottom: tabBarHeight + 70, zIndex: 1000 }]}>
-              <ChatMediaRow
-                onTakePhoto={handleTakePhoto}
-                onPickImage={handlePickImage}
-                onPickVideo={handlePickVideo}
-                onPickDocument={handlePickDocument}
-              />
-            </View>
-          )}
-          <View
-            style={{
-              position: 'fixed' as any,
-              left: 0,
-              right: 0,
-              bottom: tabBarHeight,
-              zIndex: 999,
-              backgroundColor: 'transparent',
-            }}
-            onLayout={(event) => {
-              const { height } = event.nativeEvent.layout;
-              setInputHeight(height);
-            }}
-          >
-            <ChatComposer
-              inputText={inputText}
-              onChangeText={setInputText}
-              placeholder={t('chat:placeholder')}
-              onSend={handleSendMessage}
-              onToggleMedia={() => setShowMediaOptions(v => !v)}
-              isSending={isSending}
-            />
-          </View>
-        </>
-      ) : Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView
-          style={styles.chatBodyColumn}
-          behavior="padding"
-          keyboardVerticalOffset={iosKeyboardOffset}
-        >
-          <View style={[styles.chatBodyInner, { paddingBottom: bottomReserve }]}>
-            <View style={styles.messagesWrapper}>{isLoading ? renderLoadingIndicator() : messageList}</View>
-            <View style={styles.nativeComposerColumn}>{composerBlock}</View>
-          </View>
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={[styles.chatBodyColumn, { paddingBottom: bottomReserve }]}>
-          <View style={styles.messagesWrapper}>{isLoading ? renderLoadingIndicator() : messageList}</View>
-          <View style={styles.nativeComposerColumn}>{composerBlock}</View>
-        </View>
-      )}
+      <ChatMainSection
+        isDesktopWebChat={isDesktopWebChat}
+        maxMessagesHeight={maxMessagesHeight}
+        isLoading={isLoading}
+        messageList={messageList}
+        renderLoadingIndicator={renderLoadingIndicator}
+        showMediaOptions={showMediaOptions}
+        tabBarHeight={tabBarHeight}
+        onTakePhoto={handleTakePhoto}
+        onPickImage={handlePickImage}
+        onPickVideo={handlePickVideo}
+        onPickDocument={handlePickDocument}
+        setInputHeight={setInputHeight}
+        renderDesktopComposer={() => (
+          <ChatComposer
+            inputText={inputText}
+            onChangeText={setInputText}
+            placeholder={t('chat:placeholder')}
+            onSend={handleSendMessage}
+            onToggleMedia={() => setShowMediaOptions(v => !v)}
+            isSending={isSending}
+          />
+        )}
+        renderNativeComposerColumn={() => composerBlock}
+        bottomReserve={bottomReserve}
+        iosKeyboardOffset={iosKeyboardOffset}
+      />
 
       <Modal visible={showUploadModal} transparent animationType="fade">
         <View style={styles.uploadModalOverlay}>

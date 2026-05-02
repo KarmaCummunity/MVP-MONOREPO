@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../globals/colors';
-import { FeedItem } from '../types/feed';
+import { FeedItem, type FeedRideExtended } from '../types/feed';
 import { postsService } from '../utils/postsService';
 import { mapApiPostToFeedItem } from '../utils/mapApiPostToFeedItem';
 import { useUser } from '../stores/userStore';
@@ -35,6 +35,102 @@ function formatPostedAt(iso: string, locale: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+}
+
+function recurrenceUnitLabel(t: (k: string) => string, unit: string): string {
+  if (unit === 'day') return t('postDetail:rideUnitDay');
+  if (unit === 'week') return t('postDetail:rideUnitWeek');
+  if (unit === 'month') return t('postDetail:rideUnitMonth');
+  return unit;
+}
+
+function requirementCodeLabel(t: (k: string) => string, code: string): string {
+  const key = `postDetail:rideReq.${code}`;
+  const translated = t(key);
+  return translated === key ? code : translated;
+}
+
+function RideExtendedBlock({
+  re,
+  description,
+  t,
+}: {
+  re: FeedRideExtended;
+  description: string;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}): React.ReactElement {
+  const descTrim = description.trim();
+  const showMetaNotes = Boolean(re.notes?.trim() && re.notes.trim() !== descTrim);
+  const fuel = re.fuelParticipation;
+  const smoking = re.smokingPreference;
+  const gender = re.genderPreference;
+  const p = re.preferences;
+
+  return (
+    <>
+      {showMetaNotes ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:rideNotes')} </Text>
+          {re.notes!.trim()}
+        </Text>
+      ) : null}
+      {re.requirementCodes?.map((code) => (
+        <Text key={code} style={styles.blockLine}>
+          • {requirementCodeLabel(t, code)}
+        </Text>
+      ))}
+      {re.isRecurring ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:rideRecurring')} </Text>
+          {t('postDetail:rideEvery', {
+            count: re.recurrenceFrequency ?? 1,
+            unit: recurrenceUnitLabel(t, re.recurrenceUnit || ''),
+          })}
+        </Text>
+      ) : null}
+      {fuel ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:rideFuel')} </Text>
+          {fuel === 'none'
+            ? t('postDetail:rideFuelNone')
+            : fuel === 'yes'
+              ? t('postDetail:rideFuelYes')
+              : fuel === 'up_to' && re.fuelMaxNis != null && re.fuelMaxNis > 0
+                ? t('postDetail:rideFuelUpTo', { amount: re.fuelMaxNis })
+                : t('postDetail:rideFuelUpTo', { amount: String(re.fuelMaxNis ?? '—') })}
+        </Text>
+      ) : null}
+      {smoking ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:rideSmoking')} </Text>
+          {smoking === 'no_smokers'
+            ? t('postDetail:rideSmokingNoSmokers')
+            : smoking === 'smokers_ok'
+              ? t('postDetail:rideSmokingSmokersOk')
+              : t('postDetail:rideSmokingAny')}
+        </Text>
+      ) : null}
+      {gender ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:rideGender')} </Text>
+          {gender === 'female'
+            ? t('postDetail:rideGenderFemale')
+            : gender === 'male'
+              ? t('postDetail:rideGenderMale')
+              : t('postDetail:rideGenderAny')}
+        </Text>
+      ) : null}
+      {p?.noSmoking ? (
+        <Text style={styles.blockLine}>• {t('postDetail:ridePrefNoSmoking')}</Text>
+      ) : null}
+      {p?.petsAllowed ? (
+        <Text style={styles.blockLine}>• {t('postDetail:ridePrefPets')}</Text>
+      ) : null}
+      {p?.kidsFriendly ? (
+        <Text style={styles.blockLine}>• {t('postDetail:ridePrefKids')}</Text>
+      ) : null}
+    </>
+  );
 }
 
 function PostDetailBody({
@@ -176,41 +272,63 @@ function PostDetailBody({
           ) : null}
         </View>
 
-        {item.from || item.to ? (
-          <View style={styles.detailBlock}>
-            <Text style={styles.blockTitle}>{t('postDetail:rideSection')}</Text>
-            {item.from ? (
-              <Text style={styles.blockLine}>
-                <Text style={styles.blockLabel}>{t('postDetail:from')} </Text>
-                {item.from}
-              </Text>
-            ) : null}
-            {item.to ? (
-              <Text style={styles.blockLine}>
-                <Text style={styles.blockLabel}>{t('postDetail:to')} </Text>
-                {item.to}
-              </Text>
-            ) : null}
-            {item.date || item.time ? (
-              <Text style={styles.blockLine}>
-                <Text style={styles.blockLabel}>{t('postDetail:when')} </Text>
-                {[item.date, item.time].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
-            {item.seats != null && item.seats > 0 ? (
-              <Text style={styles.blockLine}>
-                <Text style={styles.blockLabel}>{t('postDetail:seats')} </Text>
-                {item.seats}
-              </Text>
-            ) : null}
-            {item.price != null && item.price > 0 ? (
-              <Text style={styles.blockLine}>
-                <Text style={styles.blockLabel}>{t('postDetail:price')} </Text>
-                {item.price}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
+        {(() => {
+          const re = item.rideExtended;
+          const hasCore =
+            Boolean(item.from) ||
+            Boolean(item.to) ||
+            Boolean(item.date || item.time) ||
+            (item.seats != null && item.seats > 0) ||
+            (item.price != null && item.price > 0);
+          const hasExt = Boolean(
+            re &&
+              (re.notes ||
+                (re.requirementCodes && re.requirementCodes.length > 0) ||
+                re.isRecurring ||
+                re.fuelParticipation ||
+                re.smokingPreference ||
+                re.genderPreference ||
+                (re.preferences &&
+                  (re.preferences.noSmoking || re.preferences.petsAllowed || re.preferences.kidsFriendly))),
+          );
+          if (!hasCore && !hasExt) return null;
+          return (
+            <View style={styles.detailBlock}>
+              <Text style={styles.blockTitle}>{t('postDetail:rideSection')}</Text>
+              {item.from ? (
+                <Text style={styles.blockLine}>
+                  <Text style={styles.blockLabel}>{t('postDetail:from')} </Text>
+                  {item.from}
+                </Text>
+              ) : null}
+              {item.to ? (
+                <Text style={styles.blockLine}>
+                  <Text style={styles.blockLabel}>{t('postDetail:to')} </Text>
+                  {item.to}
+                </Text>
+              ) : null}
+              {item.date || item.time ? (
+                <Text style={styles.blockLine}>
+                  <Text style={styles.blockLabel}>{t('postDetail:when')} </Text>
+                  {[item.date, item.time].filter(Boolean).join(' · ')}
+                </Text>
+              ) : null}
+              {item.seats != null && item.seats > 0 ? (
+                <Text style={styles.blockLine}>
+                  <Text style={styles.blockLabel}>{t('postDetail:seats')} </Text>
+                  {item.seats}
+                </Text>
+              ) : null}
+              {item.price != null && item.price > 0 ? (
+                <Text style={styles.blockLine}>
+                  <Text style={styles.blockLabel}>{t('postDetail:price')} </Text>
+                  {item.price}
+                </Text>
+              ) : null}
+              {re ? <RideExtendedBlock re={re} description={item.description} t={t} /> : null}
+            </View>
+          );
+        })()}
 
         {item.taskData ? (
           <View style={styles.detailBlock}>

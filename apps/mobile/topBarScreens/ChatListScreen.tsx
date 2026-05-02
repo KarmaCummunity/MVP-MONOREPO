@@ -19,7 +19,7 @@ import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
@@ -29,7 +29,7 @@ export default function ChatListScreen() {
   useLogScreenOpened('ChatListScreen');
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { selectedUser } = useUser();
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -237,7 +237,7 @@ export default function ChatListScreen() {
           data={filteredSortedConversations.filter(item => item.participants && Array.isArray(item.participants) && item.participants.length > 0)}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const otherId = item.participants!.find(id => id !== selectedUser?.id);
+            const otherId = item.participants?.find(id => id !== selectedUser?.id);
             if (!otherId) {
               return null;
             }
