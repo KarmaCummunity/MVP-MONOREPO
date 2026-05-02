@@ -8,7 +8,11 @@ import { FeedItem } from '../../../types/feed';
 import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
-import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import {
+    composeFeedCardContainerStyle,
+    getFeedGridSizing,
+    withFeedGridContentFill
+} from './postCardGridLayout';
 
 export interface ItemFeedCardProps extends BaseCardProps {
     /** Donation vs generic item — drives badge colors and placeholder copy. */
@@ -62,8 +66,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     const showFullActions = !isDelivered;
     const hasThumbnail = !!item.thumbnail;
-    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
-    const gridFixedHeight = gridOuterFixed != null;
+    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
 
     const renderHeader = (overlay = false) => (
         <View
@@ -261,7 +264,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
                     <TouchableOpacity
                         onPress={onPress}
                         activeOpacity={0.95}
-                        style={[styles.cardContent, gridFixedHeight && styles.cardContentGridFill]}
+                        style={withFeedGridContentFill([styles.cardContent], gridFixedHeight)}
                     >
                     <View
                         style={[
@@ -441,12 +444,6 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1
-    },
-    /** Grid + fixed card height: middle section grows between header and actions (no gray gap). */
-    cardContentGridFill: {
-        flexGrow: 1,
-        flexShrink: 1,
-        minHeight: 0
     },
     imageContainer: {
         position: 'relative',

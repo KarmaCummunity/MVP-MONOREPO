@@ -5,7 +5,11 @@ import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
 import { BaseCardProps } from './types';
-import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import {
+    composeFeedCardContainerStyle,
+    getFeedGridSizing,
+    withFeedGridContentFill
+} from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 
 const isMobile = isMobileWeb();
@@ -37,8 +41,7 @@ const RideCard: React.FC<BaseCardProps> = ({
 
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const locations = { from: item.from || '', to: item.to || '' };
-    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
-    const gridFixedHeight = gridOuterFixed != null;
+    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
 
     return (
         <View
@@ -95,11 +98,10 @@ const RideCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[
-                    styles.cardContent,
-                    isCompleted && styles.cardContentCompleted,
-                    gridFixedHeight && styles.cardContentGridFill
-                ]}
+                style={withFeedGridContentFill(
+                    [styles.cardContent, isCompleted && styles.cardContentCompleted],
+                    gridFixedHeight
+                )}
             >
                 {isCompleted ? (
                     <View style={[styles.contentContainer, isGrid && styles.contentContainerGrid]}>
@@ -344,11 +346,6 @@ const styles = StyleSheet.create({
     cardContent: {
         flex: 1,
         backgroundColor: colors.surfaceBlueTint
-    },
-    cardContentGridFill: {
-        flexGrow: 1,
-        flexShrink: 1,
-        minHeight: 0
     },
     cardContentCompleted: {
         backgroundColor: colors.surfaceCanvas

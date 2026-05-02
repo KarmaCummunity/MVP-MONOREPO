@@ -6,48 +6,43 @@ import {
 } from '../feedLayout';
 import {
   composeFeedCardContainerStyle,
+  getFeedGridSizing,
   resolveGridFixedOuterStyle,
+  withFeedGridContentFill,
 } from '../../components/Feed/PostCard/postCardGridLayout';
 
-describe('feedLayout', () => {
-  it('exports positive grid card heights for fixed feed rows', () => {
+describe('feedLayout & grid helpers', () => {
+  it('feed exports and cell width', () => {
     expect(FEED_GRID_CARD_HEIGHT_MOBILE).toBeGreaterThan(0);
     expect(FEED_GRID_CARD_HEIGHT_DESKTOP).toBeGreaterThan(0);
+    expect(
+      computeFeedCellWidth({
+        windowWidth: 400,
+        horizontalPadding: 16,
+        numColumns: 2,
+        columnGap: 8,
+      }),
+    ).toBe(180);
   });
 
-  it('computeFeedCellWidth accounts for padding and column gap', () => {
-    const w = computeFeedCellWidth({
-      windowWidth: 400,
-      horizontalPadding: 16,
-      numColumns: 2,
-      columnGap: 8,
-    });
-    expect(w).toBe(180);
-  });
-});
-
-describe('postCardGridLayout (with feedLayout suite)', () => {
-  it('resolveGridFixedOuterStyle returns undefined when not applicable', () => {
+  it('grid sizing helpers', () => {
     expect(resolveGridFixedOuterStyle(false, 320)).toBeUndefined();
     expect(resolveGridFixedOuterStyle(true, undefined)).toBeUndefined();
-  });
-
-  it('resolveGridFixedOuterStyle returns fixed height when grid + height', () => {
     expect(resolveGridFixedOuterStyle(true, 300)).toEqual({ height: 300, minHeight: 300 });
-  });
-
-  it('composeFeedCardContainerStyle includes width and optional grid min height', () => {
+    expect(getFeedGridSizing(true, 100).gridFixedHeight).toBe(true);
+    expect(getFeedGridSizing(true, undefined).gridFixedHeight).toBe(false);
     const c: ViewStyle = { flex: 1 };
     const g: ViewStyle = { minHeight: 1 };
-    const noFixed = composeFeedCardContainerStyle({
+    const arr2 = withFeedGridContentFill([c], true) as ViewStyle[];
+    expect(arr2.length).toBe(2);
+    const arr = composeFeedCardContainerStyle({
       container: c,
       gridMinHeightFallback: g,
       isGrid: true,
       gridOuterFixed: undefined,
       cardWidth: 12,
-    });
-    const arr = noFixed as ViewStyle[];
-    expect(Array.isArray(arr)).toBe(true);
+    }) as ViewStyle[];
     expect(arr[arr.length - 1]).toEqual({ width: 12 });
   });
 });
+

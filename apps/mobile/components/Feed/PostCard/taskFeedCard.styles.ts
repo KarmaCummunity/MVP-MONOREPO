@@ -98,11 +98,6 @@ export const styles = StyleSheet.create({
     cardContent: {
         flex: 1
     },
-    cardContentGridFill: {
-        flexGrow: 1,
-        flexShrink: 1,
-        minHeight: 0
-    },
     cardContentAssignment: {
         backgroundColor: colors.surfaceGrayBlue
     },

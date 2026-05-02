@@ -6,7 +6,11 @@ import colors from '../../../globals/colors';
 import { TaskAssignmentFeedCardBody } from './TaskAssignmentFeedCardBody';
 import { TaskFeedVariant } from './TaskFeedCard.types';
 import { styles } from './taskFeedCard.styles';
-import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import {
+    composeFeedCardContainerStyle,
+    getFeedGridSizing,
+    withFeedGridContentFill
+} from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 import type { BaseCardProps } from './types';
 
@@ -44,8 +48,7 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     const isRTL = i18n.language === 'he';
     const isCompletion = variant === 'completion';
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
-    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
-    const gridFixedHeight = gridOuterFixed != null;
+    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
 
     return (
         <View
@@ -98,11 +101,13 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[
-                    styles.cardContent,
-                    isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment,
-                    gridFixedHeight && styles.cardContentGridFill
-                ]}
+                style={withFeedGridContentFill(
+                    [
+                        styles.cardContent,
+                        isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment
+                    ],
+                    gridFixedHeight
+                )}
             >
                 {isCompletion ? (
                     <View style={[styles.contentContainer, isGrid && styles.contentContainerGrid]}>

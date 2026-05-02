@@ -3,7 +3,11 @@ import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
-import { composeFeedCardContainerStyle, resolveGridFixedOuterStyle } from './postCardGridLayout';
+import {
+    composeFeedCardContainerStyle,
+    getFeedGridSizing,
+    withFeedGridContentFill
+} from './postCardGridLayout';
 import type { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { styles } from './communityChallengeFeedCard.styles';
@@ -50,8 +54,7 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
         ...(item.thumbnail ? [styles.contentInnerWithImage] : []),
     ];
 
-    const gridOuterFixed = resolveGridFixedOuterStyle(isGrid, gridCardHeight);
-    const gridFixedHeight = gridOuterFixed != null;
+    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
 
     return (
         <View
@@ -75,7 +78,7 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[styles.cardContent, gridFixedHeight && styles.cardContentGridFill]}
+                style={withFeedGridContentFill([styles.cardContent], gridFixedHeight)}
             >
                 {item.thumbnail ? (
                     <Image
