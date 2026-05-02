@@ -31,12 +31,13 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAuth, getRedirectResult } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
+import { GoogleAuthService } from '../google_auth/GoogleAuthService';
 
 import BottomNavigator from './BottomNavigator';
 import WebViewScreen from '../screens/WebViewScreen';
@@ -95,28 +96,38 @@ export default function MainNavigator() {
           email: firebaseUser.email,
         });
 
-        const userData = {
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-          email: firebaseUser.email || '',
-          phone: firebaseUser.phoneNumber || '+972500000000',
-          avatar: firebaseUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-          bio: '',
-          karmaPoints: 0,
-          joinDate: new Date().toISOString(),
-          isActive: true,
-          lastActive: new Date().toISOString(),
-          location: { city: 'ישראל', country: 'IL' },
-          interests: [],
-          roles: ['user'],
-          postsCount: 0,
-          followersCount: 0,
-          followingCount: 0,
-          notifications: [{ type: 'system', text: 'ברוך הבא לקרמה קומיוניטי!', date: new Date().toISOString() }],
-          settings: { language: 'he', darkMode: false, notificationsEnabled: true },
-        };
+        // Extract the raw Firebase ID token and send it to the backend for
+        // server-side verification. This creates a real JWT session instead
+        // of a local-only user object.
+        let idToken: string;
+        try {
+          idToken = await firebaseUser.getIdToken();
+        } catch (tokenErr: any) {
+          logger.error('MainNavigator', 'Failed to retrieve Firebase ID token', { message: tokenErr?.message });
+          Alert.alert('שגיאת התחברות', 'לא ניתן לאחזר את אסימון ההזדהות. נסה שוב.');
+          return;
+        }
 
-        await setSelectedUserWithMode(userData, 'real');
+        const authService = GoogleAuthService.getInstance();
+        const authResult = await authService.authenticateWithGoogle(idToken);
+
+        if (cancelled) return;
+
+        if (!authResult.success || !authResult.data) {
+          logger.warn('MainNavigator', 'Backend Google auth failed', {
+            error: authResult.error,
+            details: authResult.details,
+          });
+          Alert.alert(
+            'שגיאת התחברות',
+            'ההתחברות דרך גוגל נכשלה. ייתכן שהשרת אינו זמין כרגע — נסה שוב מאוחר יותר.',
+          );
+          return;
+        }
+
+        // Use the server-verified user profile (not a locally-constructed object).
+        const { user: verifiedUser } = authResult.data;
+        await setSelectedUserWithMode(verifiedUser as any, 'real');
         // MainNavigator will automatically re-render and show HomeStack
         // because isAuthenticated will flip to true in the store.
       } catch (err: any) {
