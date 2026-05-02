@@ -74,6 +74,9 @@ export default {
       }
     },
     android: {
+      // Resize the window when the keyboard opens so the chat input stays usable
+      // (avoids focus loss / layout fights with KeyboardAvoidingView).
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: "./assets/images/לוגו_חדש_שחור.png",
         backgroundColor: colors.backgroundTertiary

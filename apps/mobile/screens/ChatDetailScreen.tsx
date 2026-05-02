@@ -28,6 +28,7 @@ import { logger } from '../utils/loggerService';
 
 const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import ChatMessageBubble from '../components/ChatMessageBubble';
@@ -59,6 +60,7 @@ export default function ChatDetailScreen() {
   const { selectedUser } = useUser();
   const { t } = useTranslation(['chat']);
   const tabBarHeight = useBottomTabBarHeight() || 0;
+  const stackHeaderHeight = useHeaderHeight();
   const [headerHeight, setHeaderHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
@@ -402,6 +404,27 @@ export default function ChatDetailScreen() {
     />
   );
 
+  const renderMediaOptions = () => (
+    <>
+      <TouchableOpacity style={styles.mediaOption} onPress={handleTakePhoto}>
+        <Icon name="camera" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>צלם תמונה</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={handlePickImage}>
+        <Icon name="image" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר תמונה</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={handlePickVideo}>
+        <Icon name="videocam" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר סרטון</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={handlePickDocument}>
+        <Icon name="document" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר קובץ</Text>
+      </TouchableOpacity>
+    </>
+  );
+
   const renderLoadingIndicator = () => (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.secondary} />
@@ -481,12 +504,13 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages container - limited height on web to leave space for input */}
+      {/* Messages + composer: native uses in-flow composer + tab margin; web keeps fixed input */}
       <View style={[
         styles.messagesWrapper,
         Platform.OS === 'web' && maxMessagesHeight ? {
           maxHeight: maxMessagesHeight,
-        } : undefined
+        } : undefined,
+        Platform.OS !== 'web' ? { marginBottom: tabBarHeight } : undefined,
       ]}>
         {isLoading ? (
           renderLoadingIndicator()
@@ -499,24 +523,20 @@ export default function ChatDetailScreen() {
             contentContainerStyle={[
               styles.messagesContainer,
               (() => {
-                // For web with fixed position input, we need extra padding since fixed elements don't take space in flow
-                // Input height is approximately 70px, but we need more padding to ensure scrolling works
                 const inputHeight = 70;
                 const paddingBottom = Platform.OS === 'web'
-                  ? tabBarHeight + inputHeight + 40  // Extra 40px for web to ensure scrolling works
-                  : tabBarHeight + (showMediaOptions ? 150 : 70);
+                  ? tabBarHeight + inputHeight + 40
+                  : (showMediaOptions ? 24 : 16);
                 return { paddingBottom };
               })()
             ]}
             onContentSizeChange={() => {
-              // Use setTimeout to ensure scroll happens after layout
               setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
               }, 100);
             }}
-            onLayout={() => {
-              flatListRef.current?.scrollToEnd({ animated: true });
-            }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
             showsVerticalScrollIndicator={false}
             style={styles.messagesList}
             scrollEnabled={true}
@@ -526,76 +546,66 @@ export default function ChatDetailScreen() {
         )}
       </View>
 
-      {/* Media Options - Absolutely positioned above input */}
-      {showMediaOptions && (
-        <View style={[
-          styles.mediaOptionsContainer,
-          { bottom: tabBarHeight + 70, zIndex: 1000 }
-        ]}>
-          <TouchableOpacity style={styles.mediaOption} onPress={handleTakePhoto}>
-            <Icon name="camera" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>צלם תמונה</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickImage}>
-            <Icon name="image" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר תמונה</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickVideo}>
-            <Icon name="videocam" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר סרטון</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickDocument}>
-            <Icon name="document" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>בחר קובץ</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Input Container - Fixed positioned at bottom for web */}
       {Platform.OS === 'web' ? (
-        <View
-          style={(() => {
-            const inputStyle = {
-              position: 'fixed' as any,
-              left: 0,
-              right: 0,
-              bottom: tabBarHeight,
-              zIndex: 999,
-              backgroundColor: 'transparent'
-            };
-            return inputStyle;
-          })()}
-        >
+        <>
+          {showMediaOptions && (
+            <View style={[
+              styles.mediaOptionsContainer,
+              { bottom: tabBarHeight + 70, zIndex: 1000 }
+            ]}>
+              {renderMediaOptions()}
+            </View>
+          )}
           <View
-            style={styles.inputContainer}
-            onLayout={(event) => {
-              if (Platform.OS === 'web') {
+            style={(() => {
+              const inputStyle = {
+                position: 'fixed' as any,
+                left: 0,
+                right: 0,
+                bottom: tabBarHeight,
+                zIndex: 999,
+                backgroundColor: 'transparent'
+              };
+              return inputStyle;
+            })()}
+          >
+            <View
+              style={styles.inputContainer}
+              onLayout={(event) => {
                 const { height } = event.nativeEvent.layout;
                 setInputHeight(height);
-              }
-            }}
-          >
-            <InputChildren />
+              }}
+            >
+              <InputChildren />
+            </View>
           </View>
-        </View>
-      ) : (
+        </>
+      ) : Platform.OS === 'ios' ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: tabBarHeight,
-            zIndex: 999,
-            backgroundColor: 'transparent',
-            pointerEvents: 'box-none',
-          }}
+          behavior="padding"
+          keyboardVerticalOffset={stackHeaderHeight}
+          style={styles.nativeComposerColumn}
         >
+          {showMediaOptions && (
+            <View style={styles.mediaOptionsRow}>
+              {renderMediaOptions()}
+            </View>
+          )}
           <View style={styles.inputContainer}>
             <InputChildren />
           </View>
         </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.nativeComposerColumn}>
+          {showMediaOptions && (
+            <View style={styles.mediaOptionsRow}>
+              {renderMediaOptions()}
+            </View>
+          )}
+          <View style={styles.inputContainer}>
+            <InputChildren />
+          </View>
+        </View>
       )}
 
       {/* Upload Progress Modal */}
@@ -714,6 +724,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     paddingBottom: Platform.OS === 'android' ? 15 : 10,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  nativeComposerColumn: {
+    backgroundColor: colors.background,
+  },
+  mediaOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
