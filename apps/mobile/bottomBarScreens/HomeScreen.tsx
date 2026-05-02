@@ -1,14 +1,15 @@
 // File overview:
-// - Purpose: Home tab root screen showing placeholder copy (product request).
+// - Purpose: Home tab root — main posts feed (same UI as `PostsReelsScreen`).
 // - Reached from: `HomeTabStack` -> route 'HomeMain' (initial route of the Home tab).
-// - Provides: Simple centered message; posts/reels feed remains on `PostsReelsScreen` route / modal.
+// - Provides: Full feed via `PostsReelsScreen`; toasts overlay.
 // - Reads from context: `useToast` only.
-// - External deps/services: none beyond RN primitives.
+// - External deps: `PostsReelsScreen` (Feed UI).
 import React from "react";
-import { SafeAreaView, StyleSheet, StatusBar, Text, View } from "react-native";
+import { View, StyleSheet, StatusBar } from "react-native";
 import colors from "../globals/colors";
 import { useToast } from "../utils/toastService";
 import { useLogScreenOpened } from "../hooks/useLogScreenOpened";
+import PostsReelsScreen from "../components/PostsReelsScreen";
 
 export default function HomeScreen() {
   const { ToastComponent } = useToast();
@@ -17,13 +18,11 @@ export default function HomeScreen() {
   useLogScreenOpened("HomeMain");
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <View style={styles.center}>
-        <Text style={styles.title}>זה המסך בית</Text>
-      </View>
+      <PostsReelsScreen hideTopBar />
       {ToastComponent}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -31,14 +30,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 20,
-    color: colors.textPrimary,
   },
 });

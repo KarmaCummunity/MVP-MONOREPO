@@ -55,7 +55,11 @@ export default function HomeTabStack(): React.ReactElement {
         } : undefined,
       })}
     >
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        initialParams={{ showPosts: true }}
+      />
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />

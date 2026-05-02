@@ -81,7 +81,8 @@ export type DonationsStackParamList = {
 };
 
 export type HomeTabStackParamList = {
-  HomeMain: undefined;
+  /** `showPosts` default true for feed title in `TopBarNavigator`. */
+  HomeMain: { showPosts?: boolean; hideTopBar?: boolean } | undefined;
   PostDetailScreen: { postId: string; initialItem?: FeedItem };
   LandingSiteScreen: undefined;
   ChatListScreen: undefined;
