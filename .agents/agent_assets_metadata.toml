@@ -1,8 +1,0 @@
-uploads = []
-generated = []
-
-[[outputs]]
-id = "zCZF9PCy1LkxanXQ_W8qd"
-uri = "file://attached_assets/qr/expo-go-tunnel.png"
-type = "image"
-title = "QR code לסריקה ב-Expo Go"
