@@ -6,7 +6,7 @@
 // - Reads from context: `useUser()` -> selectedUser.
 // - External deps/services: `chatService` (get/subscribe/send/mark), `fileService` (pick/validate), i18n, responsive breakpoints for web mobile vs desktop.
 // screens/ChatDetailScreen.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {
   ActivityIndicator,
   Modal,
   useWindowDimensions,
+  Keyboard,
 } from 'react-native';
 import { logger } from '../utils/loggerService';
 
@@ -31,6 +32,7 @@ import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } fr
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
@@ -61,6 +63,7 @@ export default function ChatDetailScreen() {
   const { selectedUser } = useUser();
   const { t } = useTranslation(['chat']);
   const tabBarHeight = useBottomTabBarHeight() || 0;
+  const insets = useSafeAreaInsets();
   const stackHeaderHeight = useHeaderHeight();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -78,7 +81,25 @@ export default function ChatDetailScreen() {
     isDesktopWebChat && screenHeight && headerHeight > 0 && inputHeight > 0
       ? screenHeight - tabBarHeight - inputHeight - headerHeight
       : undefined;
-  const useNativeStyleComposer = !isWeb || isMobileWebChat;
+
+  /**
+   * Space reserved above the system home indicator / behind the floating tab bar.
+   * `useBottomTabBarHeight()` is often 0 when ChatDetail is shown from the root stack
+   * (outside the tab navigator context), so we fall back to typical tab bar + inset.
+   */
+  const bottomReserve = useMemo(() => {
+    if (isDesktopWebChat) return 0;
+    const measured = tabBarHeight > 0 ? tabBarHeight : 0;
+    const barFallback =
+      Platform.OS === 'ios'
+        ? 49
+        : Platform.OS === 'android'
+          ? 58
+          : isWeb
+            ? 72
+            : 56;
+    return Math.max(measured, barFallback + insets.bottom);
+  }, [tabBarHeight, insets.bottom, isDesktopWebChat, isWeb]);
 
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [inputText, setInputText] = useState('');
@@ -93,6 +114,23 @@ export default function ChatDetailScreen() {
   const [uploadingFile, setUploadingFile] = useState<FileData | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const scrollToEndDeferred = useCallback((animated: boolean) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isDesktopWebChat) return;
+    const event = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(event, () => {
+      scrollToEndDeferred(true);
+    });
+    return () => sub.remove();
+  }, [isDesktopWebChat, scrollToEndDeferred]);
 
   // Load user profile for the other user
   const loadUserProfile = useCallback(async () => {
@@ -516,70 +554,57 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages + composer: desktop web uses fixed input + maxHeight; native + mobile web use in-flow composer */}
-      <View style={[
-        styles.messagesWrapper,
-        isDesktopWebChat && maxMessagesHeight ? {
-          maxHeight: maxMessagesHeight,
-        } : undefined,
-        useNativeStyleComposer ? { marginBottom: tabBarHeight } : undefined,
-      ]}>
-        {isLoading ? (
-          renderLoadingIndicator()
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={[
-              styles.messagesContainer,
-              (() => {
-                const inputHeightPad = 70;
-                const paddingBottom = isDesktopWebChat
-                  ? tabBarHeight + inputHeightPad + 40
-                  : (showMediaOptions ? 24 : 16);
-                return { paddingBottom };
-              })()
-            ]}
-            onContentSizeChange={() => {
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-              }, 100);
-            }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="none"
-            showsVerticalScrollIndicator={false}
-            style={styles.messagesList}
-            scrollEnabled={true}
-            nestedScrollEnabled={isDesktopWebChat ? true : undefined}
-            scrollEventThrottle={16}
-          />
-        )}
-      </View>
-
+      {/* Desktop web: fixed composer + capped list. Native / mobile web: flex column + bottomReserve (tab bar fallback when hook returns 0). */}
       {isDesktopWebChat ? (
         <>
+          <View style={[
+            styles.messagesWrapper,
+            maxMessagesHeight ? { maxHeight: maxMessagesHeight } : undefined,
+          ]}>
+            {isLoading ? (
+              renderLoadingIndicator()
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={(item) => item.id}
+                renderItem={renderMessage}
+                contentContainerStyle={[
+                  styles.messagesContainer,
+                  {
+                    paddingBottom: tabBarHeight + 70 + 40,
+                  },
+                ]}
+                onContentSizeChange={() => {
+                  scrollToEndDeferred(true);
+                }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="none"
+                showsVerticalScrollIndicator={false}
+                style={styles.messagesList}
+                scrollEnabled
+                nestedScrollEnabled
+                scrollEventThrottle={16}
+              />
+            )}
+          </View>
           {showMediaOptions && (
             <View style={[
               styles.mediaOptionsContainer,
-              { bottom: tabBarHeight + 70, zIndex: 1000 }
+              { bottom: tabBarHeight + 70, zIndex: 1000 },
             ]}>
               {renderMediaOptions()}
             </View>
           )}
           <View
-            style={(() => {
-              const inputStyle = {
-                position: 'fixed' as any,
-                left: 0,
-                right: 0,
-                bottom: tabBarHeight,
-                zIndex: 999,
-                backgroundColor: 'transparent'
-              };
-              return inputStyle;
-            })()}
+            style={{
+              position: 'fixed' as any,
+              left: 0,
+              right: 0,
+              bottom: tabBarHeight,
+              zIndex: 999,
+              backgroundColor: 'transparent',
+            }}
           >
             <View
               style={styles.inputContainer}
@@ -592,31 +617,62 @@ export default function ChatDetailScreen() {
             </View>
           </View>
         </>
-      ) : Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView
-          behavior="padding"
-          keyboardVerticalOffset={stackHeaderHeight}
-          style={styles.nativeComposerColumn}
-        >
-          {showMediaOptions && (
-            <View style={styles.mediaOptionsRow}>
-              {renderMediaOptions()}
-            </View>
-          )}
-          <View style={styles.inputContainer}>
-            <InputChildren />
-          </View>
-        </KeyboardAvoidingView>
       ) : (
-        <View style={styles.nativeComposerColumn}>
-          {showMediaOptions && (
-            <View style={styles.mediaOptionsRow}>
-              {renderMediaOptions()}
+        <View style={[styles.chatBodyColumn, { paddingBottom: bottomReserve }]}>
+          <View style={styles.messagesWrapper}>
+            {isLoading ? (
+              renderLoadingIndicator()
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={(item) => item.id}
+                renderItem={renderMessage}
+                contentContainerStyle={[
+                  styles.messagesContainer,
+                  {
+                    paddingBottom: showMediaOptions ? 12 : 8,
+                  },
+                ]}
+                onContentSizeChange={() => {
+                  scrollToEndDeferred(false);
+                }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="none"
+                showsVerticalScrollIndicator={false}
+                style={styles.messagesList}
+                scrollEnabled
+                scrollEventThrottle={16}
+              />
+            )}
+          </View>
+          {Platform.OS === 'ios' ? (
+            <KeyboardAvoidingView
+              behavior="padding"
+              keyboardVerticalOffset={stackHeaderHeight}
+              style={styles.nativeComposerColumn}
+            >
+              {showMediaOptions && (
+                <View style={styles.mediaOptionsRow}>
+                  {renderMediaOptions()}
+                </View>
+              )}
+              <View style={styles.inputContainer}>
+                <InputChildren />
+              </View>
+            </KeyboardAvoidingView>
+          ) : (
+            <View style={styles.nativeComposerColumn}>
+              {showMediaOptions && (
+                <View style={styles.mediaOptionsRow}>
+                  {renderMediaOptions()}
+                </View>
+              )}
+              <View style={styles.inputContainer}>
+                <InputChildren />
+              </View>
             </View>
           )}
-          <View style={styles.inputContainer}>
-            <InputChildren />
-          </View>
         </View>
       )}
 
@@ -695,6 +751,7 @@ const styles = StyleSheet.create({
   // Messages wrapper - takes all available space
   messagesWrapper: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: colors.background,
   },
   // Messages list
@@ -742,6 +799,12 @@ const styles = StyleSheet.create({
   },
   nativeComposerColumn: {
     backgroundColor: colors.background,
+    flexShrink: 0,
+  },
+  chatBodyColumn: {
+    flex: 1,
+    minHeight: 0,
+    flexDirection: 'column',
   },
   mediaOptionsRow: {
     flexDirection: 'row',
