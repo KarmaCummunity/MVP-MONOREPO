@@ -2,9 +2,9 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`, `resetHomeScreen()`; on Web, Home from another tab uses explicit `navigate(HomeScreen/HomeMain)` (touch Safari). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
+// - Reads from context: `useUser()` -> `isGuestMode`; tab re-press resets nested stack via `buildTabStackResetPayload` (same for Home as Search/Donations/Profile). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
 // - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
-// - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar; Home tab press triggers reset via context.
+// - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
 // BottomNavigator.tsx
 
@@ -49,11 +49,7 @@ import {
   TAB_INITIAL_ROUTES,
   type NestedRouteLike,
 } from "./bottomTabNavigationUtils";
-import {
-  findBottomTabNavigator,
-  findRootWithHomeStackRoute,
-  type NavLike,
-} from "./landingSiteNavigation";
+import { findBottomTabNavigator, type NavLike } from "./landingSiteNavigation";
 import type { BottomTabNavigatorParamList } from "../globals/types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -162,7 +158,7 @@ const styles = StyleSheet.create({
  * @returns {React.FC} A React component rendering the Bottom Tab Navigator.
  */
 export default function BottomNavigator(): React.ReactElement {
-  const { isGuestMode, resetHomeScreen, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
+  const { isGuestMode, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
   const { mode } = useWebMode();
   /** Re-subscribe on viewport resize so mobile-web tab bar insets stay correct when rotating / chrome hides. */
   useWindowDimensions();
@@ -229,65 +225,6 @@ export default function BottomNavigator(): React.ReactElement {
       typeof tabNavigation?.getState === "function"
         ? isTabNavigatorFocusedOnRoute(tabNavigation, routeName)
         : navigation.isFocused();
-
-    if (routeName === 'HomeScreen') {
-      // Same tab re-press: pop Home stack to HomeMain via store + prevent duplicate tab action.
-      if (isThisTabSelected) {
-        resetHomeScreen();
-        e.preventDefault();
-        return;
-      }
-      // Web touch (esp. mobile Safari): default tab activation after listeners often does not run reliably.
-      // Dispatch on the real bottom-tab navigator (or root → HomeStack) so nested HomeMain resolves.
-      if (Platform.OS === 'web') {
-        const tabNav =
-          findBottomTabNavigator(navigation as NavLike) ?? tabNavigation;
-        const tabState = tabNav?.getState?.();
-        const canDispatchHomeTab =
-          typeof tabNav?.dispatch === 'function' &&
-          Array.isArray(tabState?.routeNames) &&
-          tabState.routeNames.includes('HomeScreen');
-
-        if (canDispatchHomeTab) {
-          e.preventDefault();
-          tabNav.dispatch(
-            CommonActions.navigate({
-              name: 'HomeScreen',
-              params: { screen: 'HomeMain' },
-            } as never),
-          );
-        } else {
-          const rootNav = findRootWithHomeStackRoute(navigation as NavLike);
-          if (rootNav?.dispatch) {
-            e.preventDefault();
-            rootNav.dispatch(
-              CommonActions.navigate({
-                name: 'HomeStack',
-                params: {
-                  screen: 'HomeScreen',
-                  params: { screen: 'HomeMain' },
-                },
-              } as never),
-            );
-          } else {
-            logger.warn(
-              'BottomNavigator',
-              'Home tab (web): no navigator could dispatch to HomeMain',
-              { routeName },
-              { periodic: true },
-            );
-          }
-        }
-        setTimeout(() => {
-          resetHomeScreen();
-        }, 0);
-        return;
-      }
-      setTimeout(() => {
-        resetHomeScreen();
-      }, 0);
-      return;
-    }
 
     if (isThisTabSelected) {
       const resetPayload = buildTabStackResetPayload(routeName);

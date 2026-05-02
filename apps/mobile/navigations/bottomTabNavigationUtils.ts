@@ -3,7 +3,7 @@
  * Keeps BottomNavigator thin and enables Jest coverage without mounting navigators.
  */
 
-/** Leaf route name for each tab's stack when resetting on re-press (Home uses store trigger instead). */
+/** Leaf route name for each tab's stack when resetting on re-press (same mechanism for all tabs). */
 export const TAB_INITIAL_ROUTES: Readonly<Record<string, string>> = {
   HomeScreen: 'HomeMain',
   SearchTab: 'SearchScreen',

@@ -60,7 +60,7 @@ apps/mobile/
 
 | | File | Responsibilities |
 |-------|------|------------------|
-| `userStore` | `stores/userStore.ts` | User session, authentication state, guest mode, Firebase auth listener, JWT storage (AsyncStorage), role management, `resetHomeScreen` |
+| `userStore` | `stores/userStore.ts` | User session, authentication state, guest mode, Firebase auth listener, JWT storage (AsyncStorage), role management |
 | `webModeStore` | `stores/webModeStore.ts` | Web `site` vs `app` mode toggle, persisted to `localStorage` (key: `kc_web_mode`) |
 | `appLoadingStore` | `stores/appLoadingStore.ts` | Feature-level loading states, errors, `markAppReady` |
 
