@@ -1,7 +1,7 @@
 import {
   TAB_INITIAL_ROUTES,
   getActiveNestedParams,
-  buildTabStackResetPayload,
+  buildBottomTabBarResetPreservingOtherTabs,
   isTabNavigatorFocusedOnRoute,
   type NestedRouteLike,
 } from '../bottomTabNavigationUtils';
@@ -105,34 +105,52 @@ describe('bottomTabNavigationUtils', () => {
     });
   });
 
-  describe('buildTabStackResetPayload', () => {
-    it('builds reset state for SearchTab', () => {
-      expect(buildTabStackResetPayload('SearchTab')).toEqual({
-        index: 0,
-        routes: [
-          {
-            name: 'SearchTab',
-            state: { routes: [{ name: 'SearchScreen' }] },
-          },
-        ],
-      });
+  describe('buildBottomTabBarResetPreservingOtherTabs', () => {
+    const sampleTabState = (guest: boolean) => ({
+      index: 1,
+      routes: [
+        ...(guest
+          ? []
+          : [
+              {
+                name: 'ProfileScreen' as const,
+                key: 'p1',
+                state: { index: 0, routes: [{ name: 'ProfileMain' }] },
+              },
+            ]),
+        { name: 'DonationsTab' as const, key: 'd1', state: { index: 0, routes: [{ name: 'DonationsScreen' }] } },
+        { name: 'CreatePostTab' as const, key: 'c1' },
+        { name: 'SearchTab' as const, key: 's1', state: { index: 0, routes: [{ name: 'SearchScreen' }] } },
+        { name: 'HomeScreen' as const, key: 'h1', state: { index: 0, routes: [{ name: 'HomeMain' }] } },
+      ],
     });
 
-    it('builds reset state for HomeScreen tab (same shape as other tabs)', () => {
-      expect(buildTabStackResetPayload('HomeScreen')).toEqual({
+    it('resets one tab stack and preserves other tabs and index', () => {
+      const before = sampleTabState(false);
+      const result = buildBottomTabBarResetPreservingOtherTabs(before, 'SearchTab');
+      expect(result).not.toBeNull();
+      if (!result) return;
+      expect(result.index).toBe(1);
+      expect(result.routes).toHaveLength(5);
+      const search = result.routes.find((r) => r.name === 'SearchTab');
+      expect(search?.state).toEqual({
         index: 0,
-        routes: [
-          {
-            name: 'HomeScreen',
-            state: { routes: [{ name: 'HomeMain' }] },
-          },
-        ],
+        routes: [{ name: 'SearchScreen' }],
       });
+      const donations = result.routes.find((r) => r.name === 'DonationsTab');
+      expect(donations?.key).toBe('d1');
     });
 
-    it('returns null for unknown tab route names', () => {
-      expect(buildTabStackResetPayload('CreatePostTab')).toBeNull();
-      expect(buildTabStackResetPayload('NonExistent')).toBeNull();
+    it('returns null for unknown tab names', () => {
+      expect(
+        buildBottomTabBarResetPreservingOtherTabs({ index: 0, routes: [] }, 'SearchTab'),
+      ).toBeNull();
+      expect(
+        buildBottomTabBarResetPreservingOtherTabs(
+          { index: 0, routes: [{ name: 'SearchTab' }] },
+          'CreatePostTab',
+        ),
+      ).toBeNull();
     });
   });
 });

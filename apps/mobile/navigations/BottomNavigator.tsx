@@ -2,7 +2,7 @@
 // - Purpose: Bottom tab navigator hosting main tabs: Home, Search, Donations, Profile (hidden in guest mode).
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
-// - Reads from context: `useUser()` -> `isGuestMode`; tab re-press resets nested stack via `buildTabStackResetPayload` (same for Home as Search/Donations/Profile). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
+// - Reads from context: `useUser()` -> `isGuestMode`; tab re-press resets the active tab's nested stack via `buildBottomTabBarResetPreservingOtherTabs` (preserves all tabs — same UX as native bottom bar). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
 // - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
@@ -44,7 +44,7 @@ import {
 } from "./mapDonationScreenToComposerCategory";
 import {
   getActiveNestedParams,
-  buildTabStackResetPayload,
+  buildBottomTabBarResetPreservingOtherTabs,
   isTabNavigatorFocusedOnRoute,
   TAB_INITIAL_ROUTES,
   type NestedRouteLike,
@@ -227,19 +227,30 @@ export default function BottomNavigator(): React.ReactElement {
         : navigation.isFocused();
 
     if (isThisTabSelected) {
-      const resetPayload = buildTabStackResetPayload(routeName);
+      if (!tabNavigation?.getState || typeof tabNavigation.dispatch !== 'function') {
+        logger.warn(
+          'BottomNavigator',
+          'nav: same tab re-press — no tab navigator for reset',
+          { routeName },
+          { periodic: true },
+        );
+        return;
+      }
+
+      const tabBarState = tabNavigation.getState();
+      const resetPayload = buildBottomTabBarResetPreservingOtherTabs(tabBarState, routeName);
       if (!resetPayload) return;
 
       logger.debug(
         'BottomNavigator',
-        'nav: same tab re-press — reset stack to initial route',
+        'nav: same tab re-press — reset nested stack to initial route (tabs preserved)',
         { routeName, initialRoute },
         { periodic: true },
       );
 
       e.preventDefault();
 
-      navigation.dispatch(CommonActions.reset(resetPayload));
+      tabNavigation.dispatch(CommonActions.reset(resetPayload));
     }
   };
 
