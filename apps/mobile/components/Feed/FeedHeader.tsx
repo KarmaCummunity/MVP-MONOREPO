@@ -15,6 +15,8 @@ interface FeedHeaderProps {
     onStatsPress: () => void;
     onFilterPress: () => void;
     filterActive?: boolean;
+    /** When false, friends/discovery toggle is hidden (e.g. guest mode has no friends feed). */
+    showFeedModeToggle?: boolean;
     t: (key: string) => string;
 }
 
@@ -24,12 +26,14 @@ const FeedHeader: React.FC<FeedHeaderProps> = ({
     onStatsPress,
     onFilterPress,
     filterActive = false,
+    showFeedModeToggle = true,
     t,
 }) => {
     return (
         <View style={styles.floatingHeaderContainer}>
             <View style={styles.headerContentWrapper}>
                 {/* Toggle Switch */}
+                {showFeedModeToggle ? (
                 <View style={styles.toggleBackground}>
                     <TouchableOpacity
                         style={[
@@ -63,6 +67,7 @@ const FeedHeader: React.FC<FeedHeaderProps> = ({
                         </Text>
                     </TouchableOpacity>
                 </View>
+                ) : null}
 
                 {/* Filter */}
                 <TouchableOpacity

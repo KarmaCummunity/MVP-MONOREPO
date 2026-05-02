@@ -73,7 +73,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const { selectedUser } = useUser();
+  const { selectedUser, isGuestMode } = useUser();
   const { width: windowWidth } = useWindowDimensions();
   const horizontalPadding = isMobileWeb() ? 8 : 16;
 
@@ -85,8 +85,16 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     }, [route.name]),
   );
 
-  // State
-  const [feedMode, setFeedMode] = useState<'friends' | 'discovery'>('friends');
+  // State — guests only use public discovery feed (no friends list)
+  const [feedMode, setFeedMode] = useState<'friends' | 'discovery'>(() =>
+    isGuestMode ? 'discovery' : 'friends',
+  );
+
+  useEffect(() => {
+    if (isGuestMode) {
+      setFeedMode('discovery');
+    }
+  }, [isGuestMode]);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [selectedItemForComments, setSelectedItemForComments] = useState<FeedItem | null>(null);
   // Report State
@@ -434,6 +442,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
             onStatsPress={handleStatsPress}
             onFilterPress={handleFilterPress}
             filterActive={filtersActive}
+            showFeedModeToggle={!isGuestMode}
             t={t}
           />
         )}
