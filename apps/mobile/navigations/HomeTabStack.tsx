@@ -28,19 +28,16 @@ import TopBarNavigator from './TopBarNavigator';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
 import { HomeTabStackParamList } from '../globals/types';
-import { isMobileWeb } from '../globals/responsive';
 
 
 const Stack = createStackNavigator<HomeTabStackParamList>();
 
 export default function HomeTabStack(): React.ReactElement {
-  const keepScreensMounted = Platform.OS === 'web' && isMobileWeb();
-
   return (
     <Stack.Navigator
       id="HomeTabStack"
       initialRouteName="HomeMain"
-      detachInactiveScreens={!keepScreensMounted}
+      detachInactiveScreens={true}
       screenOptions={({ navigation, route }) => ({
         headerShown: true,
         header: () => (

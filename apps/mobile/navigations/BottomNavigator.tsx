@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
  * @returns {React.FC} A React component rendering the Bottom Tab Navigator.
  */
 export default function BottomNavigator(): React.ReactElement {
-  const { isGuestMode, isAdmin, refreshUserRoles, isAuthenticated } = useUser();
+  const { isGuestMode, isAdmin } = useUser();
   const { mode } = useWebMode();
   /** Re-subscribe on viewport resize so mobile-web tab bar insets stay correct when rotating / chrome hides. */
   useWindowDimensions();
@@ -170,20 +170,13 @@ export default function BottomNavigator(): React.ReactElement {
     ),
   );
 
-  // Refresh data when navigator comes into focus
+  // Log when the navigator receives focus (periodic to avoid log spam).
+  // NOTE: refreshUserRoles() removed from here — calling it on every tab focus
+  // caused unnecessary re-renders and is handled elsewhere in the auth flow.
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug(
-        'BottomNavigator',
-        'Navigator focused',
-        undefined,
-        { periodic: true },
-      );
-      // Refresh user roles when navigator comes into focus to detect admin changes
-      if (isAuthenticated && !isGuestMode) {
-        refreshUserRoles();
-      }
-    }, [isAuthenticated, isGuestMode, refreshUserRoles])
+      logger.debug('BottomNavigator', 'Navigator focused', undefined, { periodic: true });
+    }, []),
   );
 
 
