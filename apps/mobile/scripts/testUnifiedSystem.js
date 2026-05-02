@@ -4,15 +4,18 @@
 console.info('🧪 Comprehensive Follow System Test with Unified IDs...');
 
 // Read the unified file
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
+const { parseAllUsersLiteral } = require('./parse-all-users-literal');
 
 const characterTypesPath = path.join(__dirname, '../globals/characterTypes.ts');
 const content = fs.readFileSync(characterTypesPath, 'utf8');
 
 // Extract data
-const allUsersMatch = content.match(/export const allUsers: CharacterType\[\] = (\[[\s\S]*?\]);/);
-const allUsers = allUsersMatch ? eval(allUsersMatch[1]) : [];
+const ALL_USERS_LITERAL_RE =
+  /export const allUsers: CharacterType\[\] = (\[[\s\S]*?\]);/;
+const allUsersMatch = ALL_USERS_LITERAL_RE.exec(content);
+const allUsers = allUsersMatch ? parseAllUsersLiteral(allUsersMatch[1]) : [];
 
 console.info(`📊 Total Users: ${allUsers.length}`);
 
@@ -88,29 +91,35 @@ function unfollowUser(followerId, followingId) {
 }
 
 function getFollowers(userId) {
-  const followerIds = followRelationships
-    .filter(rel => rel.followingId === userId)
-    .map(rel => rel.followerId);
+  const followerIds = new Set(
+    followRelationships
+      .filter(rel => rel.followingId === userId)
+      .map(rel => rel.followerId)
+  );
 
-  return allUsers.filter(char => followerIds.includes(char.id));
+  return allUsers.filter(char => followerIds.has(char.id));
 }
 
 function getFollowing(userId) {
-  const followingIds = followRelationships
-    .filter(rel => rel.followerId === userId)
-    .map(rel => rel.followingId);
+  const followingIds = new Set(
+    followRelationships
+      .filter(rel => rel.followerId === userId)
+      .map(rel => rel.followingId)
+  );
 
-  return allUsers.filter(char => followingIds.includes(char.id));
+  return allUsers.filter(char => followingIds.has(char.id));
 }
 
 function getFollowSuggestions(currentUserId, limit = 10) {
-  const alreadyFollowing = followRelationships
-    .filter(rel => rel.followerId === currentUserId)
-    .map(rel => rel.followingId);
+  const alreadyFollowing = new Set(
+    followRelationships
+      .filter(rel => rel.followerId === currentUserId)
+      .map(rel => rel.followingId)
+  );
 
   const suggestions = allUsers.filter(char => 
     char.id !== currentUserId && 
-    !alreadyFollowing.includes(char.id)
+    !alreadyFollowing.has(char.id)
   );
 
   suggestions.sort((a, b) => b.karmaPoints - a.karmaPoints);
@@ -123,9 +132,9 @@ function getPopularUsers(limit = 10) {
     return { ...char, followersCount: stats.followersCount };
   });
 
-  return userStats
-    .sort((a, b) => b.followersCount - a.followersCount)
-    .slice(0, limit);
+  const sorted = [...userStats];
+  sorted.sort((a, b) => b.followersCount - a.followersCount);
+  return sorted.slice(0, limit);
 }
 
 // Comprehensive tests

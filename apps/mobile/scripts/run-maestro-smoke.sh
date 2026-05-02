@@ -8,12 +8,16 @@ THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
 CLIENT_DIR="$(cd "$THIS_DIR/.." && pwd)"
 cd "$CLIENT_DIR"
 
-if ! command -v maestro >/dev/null 2>&1; then
-  if [[ "${INSTALL_MAESTRO:-}" == "1" ]]; then
-    echo "Installing Maestro CLI (official installer)..."
-    curl -fsSL "https://get.maestro.mobile.dev" | bash
-    export PATH="${PATH}:${HOME}/.maestro/bin"
-  fi
+if ! command -v maestro >/dev/null 2>&1 && [[ "${INSTALL_MAESTRO:-}" == "1" ]]; then
+  echo "Installing Maestro CLI (official installer)..."
+  tmp_install="$(mktemp)"
+  cleanup_install() { rm -f "$tmp_install"; }
+  trap cleanup_install EXIT
+  curl -fsSL "https://get.maestro.mobile.dev" -o "$tmp_install"
+  bash "$tmp_install"
+  trap - EXIT
+  cleanup_install
+  export PATH="${PATH}:${HOME}/.maestro/bin"
 fi
 
 if ! command -v maestro >/dev/null 2>&1; then

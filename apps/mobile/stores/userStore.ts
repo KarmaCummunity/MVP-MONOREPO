@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { tokenManager } from '../auth/services/tokenManager.js';
 import { getFirebase } from '../utils/firebaseClient';
 import { logger } from '../utils/loggerService';
 import { KC_ORGANIZATION_ROOT_EMAIL } from '../utils/org.constants';
@@ -177,7 +178,9 @@ const enrichUserWithOrgRoles = async (user: User): Promise<User> => {
       orgName: approved?.orgName
     };
   } catch (err) {
-    logger.debug(UserStore_LOG, '🔐 userStore - enrichUserWithOrgRoles - skipped (no backend or no data)', err);
+    logger.debug(UserStore_LOG, '🔐 userStore - enrichUserWithOrgRoles - skipped (no backend or no data)', {
+      error: err,
+    });
     return user;
   }
 };
@@ -189,7 +192,6 @@ async function migrateLegacyJwtTokensToManager(): Promise<void> {
     if (!legacyToken) {
       return;
     }
-    const { tokenManager } = await import('../auth/services/tokenManager');
     const existing = await tokenManager.getAccessToken();
     if (!existing) {
       logger.debug(UserStore_LOG, '🔄 Migrating legacy JWT tokens to tokenManager...');
@@ -312,7 +314,6 @@ async function tryRestorePersistedUser(
     }
 
     console.warn('🔐 userStore - checkAuthStatus - No valid token found, clearing session');
-    const { tokenManager } = await import('../auth/services/tokenManager');
     await tokenManager.clearTokens();
     await AsyncStorage.multiRemove([
       'current_user',
@@ -375,7 +376,6 @@ async function handleFirebaseAuthStateChanged(
   try {
       // Get UUID and JWT tokens from server using firebase_uid and google_id
       const { apiService } = await import('../utils/apiService');
-      const { tokenManager } = await import('../auth/services/tokenManager');
 
       // Extract google_id from providerData if available
       const googleProvider = firebaseUser.providerData?.find(
@@ -445,8 +445,8 @@ async function handleFirebaseAuthStateChanged(
       // from being applied on startup if the user is already cached.
       // Removing the check ensures we always sync with server.
 
-      // Use UUID from server
-      const serverUser = (resolveResponse as any).user;
+      // Use UUID from server (ApiResponse already includes optional user)
+      const serverUser = resolveResponse.user;
       const nowIso = new Date().toISOString();
       const userData: User = {
         id: serverUser.id, // UUID from database - this is the primary identifier
@@ -527,7 +527,9 @@ export const useUserStore = create<UserState>((set, get) => ({
         const { DatabaseService } = await import('../utils/databaseService');
         await DatabaseService.clearLocalCollections();
       } catch (e) {
-        logger.debug(UserStore_LOG, '⚠️ Failed to clear local collections on real auth (non-fatal):', e);
+        logger.debug(UserStore_LOG, '⚠️ Failed to clear local collections on real auth (non-fatal):', {
+          error: e,
+        });
       }
       set({
         selectedUser: enriched,
@@ -645,7 +647,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       logger.debug(UserStore_LOG, '🔐 userStore - signOut - Removing all auth data');
       // Clear JWT tokens via tokenManager (SSOT)
       try {
-        const { tokenManager } = await import('../auth/services/tokenManager');
         await tokenManager.clearTokens();
       } catch (e) {
         console.warn('Failed to clear tokens from tokenManager:', e);
