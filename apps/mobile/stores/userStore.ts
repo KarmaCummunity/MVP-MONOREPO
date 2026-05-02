@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Global user/session state management using Zustand (replaces UserContext)
 // - Reached from: Any component via `useUserStore()` hook, or services via direct import
-// - Provides: Methods to set user with mode, sign out, toggle guest/demo, and resetHomeScreen trigger
+// - Provides: Methods to set user with mode, sign out, toggle guest/demo
 // - Storage: Persists `current_user`, `guest_mode`, and `auth_mode` in AsyncStorage; clears local collections on real auth
 // - Advantage: Can be used outside React components (in services) without circular dependencies
 
@@ -47,13 +47,8 @@ interface UserState {
   isAuthenticated: boolean;
   isGuestMode: boolean;
   authMode: AuthMode;
-  resetHomeScreenTrigger: number;
   isInitialized: boolean; // Flag to track if store has been initialized
   lastHomeTabScreen: string | null; // Last screen visited in HomeTabStack before switching tabs
-
-  // Navigation–store contract: `resetHomeScreen()` increments `resetHomeScreenTrigger`. Consumer: `HomeTabStack`
-  // (useEffect) pops the Home nested stack to `HomeMain` via the tab parent. Producer: `BottomNavigator` on Home
-  // tab re-press. Do not add other consumers without revisiting detach/tab focus behavior.
 
   // Actions
   setSelectedUser: (user: User | null) => Promise<void>;
@@ -62,7 +57,6 @@ interface UserState {
   signOut: () => Promise<void>;
   setGuestMode: () => Promise<void>;
   setDemoUser: () => Promise<void>;
-  resetHomeScreen: () => void;
   setLastHomeTabScreen: (screen: string | null) => void;
   clearLastHomeTabScreen: () => void;
   checkAuthStatus: () => Promise<void>;
@@ -193,7 +187,6 @@ export const useUserStore = create<UserState>((set, get) => ({
   isAuthenticated: false,
   isGuestMode: false,
   authMode: 'guest',
-  resetHomeScreenTrigger: 0,
   isInitialized: false,
   lastHomeTabScreen: null,
 
@@ -543,11 +536,6 @@ export const useUserStore = create<UserState>((set, get) => ({
     logger.debug(UserStore_LOG, '🔐 userStore - setDemoUser called (no-op, demo removed)');
   },
 
-  resetHomeScreen: () => {
-    logger.debug(UserStore_LOG, '🏠 userStore - resetHomeScreen called');
-    set((state) => ({ resetHomeScreenTrigger: state.resetHomeScreenTrigger + 1 }));
-  },
-
   setLastHomeTabScreen: (screen: string | null) => {
     logger.debug(UserStore_LOG, '🏠 userStore - setLastHomeTabScreen called', { screen });
     set({ lastHomeTabScreen: screen });
@@ -824,8 +812,6 @@ export const useUser = () => {
     isOperator: userHasOperatorAccess(store.selectedUser),
     setGuestMode: store.setGuestMode,
     setDemoUser: store.setDemoUser,
-    resetHomeScreen: store.resetHomeScreen,
-    resetHomeScreenTrigger: store.resetHomeScreenTrigger,
     lastHomeTabScreen: store.lastHomeTabScreen,
     setLastHomeTabScreen: store.setLastHomeTabScreen,
     clearLastHomeTabScreen: store.clearLastHomeTabScreen,

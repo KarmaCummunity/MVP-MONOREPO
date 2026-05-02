@@ -118,6 +118,18 @@ describe('bottomTabNavigationUtils', () => {
       });
     });
 
+    it('builds reset state for HomeScreen tab (same shape as other tabs)', () => {
+      expect(buildTabStackResetPayload('HomeScreen')).toEqual({
+        index: 0,
+        routes: [
+          {
+            name: 'HomeScreen',
+            state: { routes: [{ name: 'HomeMain' }] },
+          },
+        ],
+      });
+    });
+
     it('returns null for unknown tab route names', () => {
       expect(buildTabStackResetPayload('CreatePostTab')).toBeNull();
       expect(buildTabStackResetPayload('NonExistent')).toBeNull();
