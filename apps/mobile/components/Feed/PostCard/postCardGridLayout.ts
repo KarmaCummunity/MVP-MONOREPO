@@ -41,28 +41,27 @@ export function withFeedGridContentFill(
     return [...baseStyles, gridFixedHeight && feedCardContentGridFillStyle];
 }
 
-/** Container + grid fallback styles present on every feed card StyleSheet. */
-export interface FeedCardGridRootStyles {
-    container: ViewStyle;
-    gridMinHeightFallback: ViewStyle;
-}
+/** Container + `gridContainer` (min-height fallback) — matches every feed card StyleSheet. */
+export type FeedCardSheetForRoot = { container: ViewStyle; gridContainer: ViewStyle };
 
 /**
- * Same root layout as `resolveFeedCardRootLayout` but folds repeated `isGrid` / `gridCardHeight` /
- * `cardWidth` + `styles.container` / `styles.gridContainer` wiring into one call site.
+ * One-liner root layout for feed cards: `props` + `styles` + optional modifier styles.
+ * Uses `styles.gridContainer` as the grid min-height band (was duplicated object per card for Sonar).
  */
-export function resolveFeedCardRootFromBaseGrid(
-    grid: Pick<BaseCardProps, 'isGrid' | 'gridCardHeight' | 'cardWidth'>,
-    cardStyles: FeedCardGridRootStyles,
-    modifiers?: (ViewStyle | false | null | undefined)[]
+export function resolveFeedGridCardRoot(
+    p: Pick<BaseCardProps, 'isGrid' | 'gridCardHeight' | 'cardWidth'>,
+    s: FeedCardSheetForRoot,
+    ...modifiers: (ViewStyle | false | null | undefined)[]
 ): { rootStyle: StyleProp<ViewStyle>; gridFixedHeight: boolean } {
     return resolveFeedCardRootLayout({
-        isGrid: grid.isGrid,
-        gridCardHeight: grid.gridCardHeight,
-        cardWidth: grid.cardWidth,
-        container: cardStyles.container,
-        gridMinHeightFallback: cardStyles.gridMinHeightFallback,
-        modifiers
+        isGrid: p.isGrid,
+        gridCardHeight: p.gridCardHeight,
+        cardWidth: p.cardWidth,
+        container: s.container,
+        gridMinHeightFallback: s.gridContainer,
+        modifiers: modifiers.length
+            ? (modifiers.filter((m) => m) as ViewStyle[])
+            : undefined
     });
 }
 

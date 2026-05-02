@@ -7,7 +7,7 @@ import { TaskAssignmentFeedCardBody } from './TaskAssignmentFeedCardBody';
 import { TaskFeedVariant } from './TaskFeedCard.types';
 import { styles } from './taskFeedCard.styles';
 import {
-    resolveFeedCardRootFromBaseGrid,
+    resolveFeedGridCardRoot,
     withFeedGridContentFill
 } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
@@ -47,10 +47,10 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     const isRTL = i18n.language === 'he';
     const isCompletion = variant === 'completion';
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
-    const { rootStyle, gridFixedHeight } = resolveFeedCardRootFromBaseGrid(
+    const { rootStyle, gridFixedHeight } = resolveFeedGridCardRoot(
         { isGrid, gridCardHeight, cardWidth },
-        { container: styles.container, gridMinHeightFallback: styles.gridContainer },
-        [isCompletion && styles.containerCompletion]
+        styles,
+        isCompletion && styles.containerCompletion
     );
 
     return (
