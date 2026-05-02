@@ -72,10 +72,20 @@ export const styles = StyleSheet.create({
         borderRadius: isMobile ? 16 : 20,
     },
     cardContent: { flex: 1, backgroundColor: '#F3F4F6' },
+    cardContentGridFill: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0,
+    },
     heroImage: {
         width: '100%',
         height: isMobile ? 140 : 180,
         backgroundColor: colors.backgroundTertiary,
+    },
+    heroImageGridFlex: {
+        flex: 1,
+        minHeight: isMobile ? 80 : 100,
+        height: undefined,
     },
     contentInner: {
         padding: isMobile ? 14 : 20,

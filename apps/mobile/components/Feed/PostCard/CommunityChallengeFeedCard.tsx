@@ -15,6 +15,7 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
     item,
     cardWidth,
     isGrid,
+    gridCardHeight,
     onPress,
     onProfilePress,
     onLike,
@@ -48,11 +49,15 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
         ...(item.thumbnail ? [styles.contentInnerWithImage] : []),
     ];
 
+    const gridFixedOuter =
+        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
+
     return (
         <View
             style={[
                 styles.container,
-                isGrid && styles.gridContainer,
+                isGrid && !gridFixedOuter && styles.gridContainer,
+                gridFixedOuter,
                 { width: cardWidth },
             ]}
         >
@@ -65,11 +70,18 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
                 onMorePress={onMorePress}
             />
 
-            <TouchableOpacity onPress={onPress} activeOpacity={0.95} style={styles.cardContent}>
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.95}
+                style={[styles.cardContent, isGrid && gridFixedOuter && styles.cardContentGridFill]}
+            >
                 {item.thumbnail ? (
                     <Image
                         source={{ uri: item.thumbnail }}
-                        style={styles.heroImage}
+                        style={[
+                            styles.heroImage,
+                            isGrid && gridFixedOuter && styles.heroImageGridFlex,
+                        ]}
                         resizeMode="cover"
                     />
                 ) : null}
@@ -91,11 +103,11 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
                             styles.challengeTitle,
                             { textAlign: isRTL ? 'right' : 'center' },
                         ]}
-                        numberOfLines={3}
+                        numberOfLines={isGrid ? 2 : 3}
                     >
                         {item.title || '—'}
                     </Text>
-                    {item.description ? (
+                    {item.description && !isGrid ? (
                         <Text
                             style={[
                                 styles.description,
@@ -107,42 +119,46 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
                         </Text>
                     ) : null}
 
-                    <View style={styles.metaRow}>
-                        {typeLabel ? (
-                            <View style={styles.metaChip}>
-                                <Ionicons
-                                    name="analytics-outline"
-                                    size={14}
-                                    color={colors.textSecondary}
-                                />
-                                <Text style={styles.metaChipText}>{typeLabel}</Text>
-                            </View>
-                        ) : null}
-                        {freqLabel ? (
-                            <View style={styles.metaChip}>
-                                <Ionicons
-                                    name="calendar-outline"
-                                    size={14}
-                                    color={colors.textSecondary}
-                                />
-                                <Text style={styles.metaChipText}>{freqLabel}</Text>
-                            </View>
-                        ) : null}
-                        {diffLabel ? (
-                            <View style={styles.metaChip}>
-                                <Ionicons
-                                    name="barbell-outline"
-                                    size={14}
-                                    color={colors.textSecondary}
-                                />
-                                <Text style={styles.metaChipText}>{diffLabel}</Text>
-                            </View>
-                        ) : null}
-                    </View>
+                    {!isGrid ? (
+                        <View style={styles.metaRow}>
+                            {typeLabel ? (
+                                <View style={styles.metaChip}>
+                                    <Ionicons
+                                        name="analytics-outline"
+                                        size={14}
+                                        color={colors.textSecondary}
+                                    />
+                                    <Text style={styles.metaChipText}>{typeLabel}</Text>
+                                </View>
+                            ) : null}
+                            {freqLabel ? (
+                                <View style={styles.metaChip}>
+                                    <Ionicons
+                                        name="calendar-outline"
+                                        size={14}
+                                        color={colors.textSecondary}
+                                    />
+                                    <Text style={styles.metaChipText}>{freqLabel}</Text>
+                                </View>
+                            ) : null}
+                            {diffLabel ? (
+                                <View style={styles.metaChip}>
+                                    <Ionicons
+                                        name="barbell-outline"
+                                        size={14}
+                                        color={colors.textSecondary}
+                                    />
+                                    <Text style={styles.metaChipText}>{diffLabel}</Text>
+                                </View>
+                            ) : null}
+                        </View>
+                    ) : null}
 
-                    <Text style={[styles.ctaHint, { textAlign: 'center' }]}>
-                        {t('challenges:feedCard.tapToJoin')}
-                    </Text>
+                    {!isGrid ? (
+                        <Text style={[styles.ctaHint, { textAlign: 'center' }]}>
+                            {t('challenges:feedCard.tapToJoin')}
+                        </Text>
+                    ) : null}
                 </View>
             </TouchableOpacity>
 

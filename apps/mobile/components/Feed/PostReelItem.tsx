@@ -16,6 +16,7 @@ interface PostReelItemProps {
     item: FeedItem;
     cardWidth?: number;
     numColumns?: number;
+    gridCardHeight?: number;
     onPress?: (item: FeedItem) => void;
     onCommentPress?: (item: FeedItem) => void;
     onMorePress?: (item: FeedItem, measurements?: { x: number, y: number }) => void; // Added prop
@@ -26,6 +27,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
     item,
     cardWidth: cardWidthProp,
     numColumns = 1,
+    gridCardHeight,
     onPress,
     onCommentPress,
     onMorePress,
@@ -285,6 +287,7 @@ const PostReelItem: React.FC<PostReelItemProps> = ({
         item,
         cardWidth,
         isGrid,
+        gridCardHeight: isGrid ? gridCardHeight : undefined,
         onPress: handleItemPress,
         onProfilePress: handleProfilePressInternal,
         onLike: handleLike,

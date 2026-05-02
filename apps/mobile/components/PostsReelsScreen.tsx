@@ -41,7 +41,11 @@ import { usePostMenu } from '../hooks/usePostMenu';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
 import { isMobileWeb } from '../globals/responsive';
-import { computeFeedCellWidth } from '../utils/feedLayout';
+import {
+  computeFeedCellWidth,
+  FEED_GRID_CARD_HEIGHT_DESKTOP,
+  FEED_GRID_CARD_HEIGHT_MOBILE,
+} from '../utils/feedLayout';
 
 const FEED_NUM_COLUMNS = 2;
 /** Horizontal gap between the two cards in a row (FlatList columnWrapper). */
@@ -347,18 +351,21 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     [windowWidth, horizontalPadding],
   );
 
+  const feedGridCardHeight = isMobileWeb() ? FEED_GRID_CARD_HEIGHT_MOBILE : FEED_GRID_CARD_HEIGHT_DESKTOP;
+
   const renderItem = useCallback(
     ({ item }: { item: FeedItem }) => (
       <PostReelItem
         item={item}
         cardWidth={feedCellWidth}
         numColumns={FEED_NUM_COLUMNS}
+        gridCardHeight={feedGridCardHeight}
         onPress={handlePostPress}
         onCommentPress={handleCommentPress}
         onMorePress={handleMorePress}
       />
     ),
-    [feedCellWidth, handlePostPress, handleCommentPress, handleMorePress],
+    [feedCellWidth, feedGridCardHeight, handlePostPress, handleCommentPress, handleMorePress],
   );
 
   const renderListFooter = useCallback(() => {

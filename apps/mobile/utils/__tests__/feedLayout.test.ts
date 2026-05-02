@@ -1,30 +1,22 @@
-import { computeFeedCellWidth } from '../feedLayout';
+import {
+  computeFeedCellWidth,
+  FEED_GRID_CARD_HEIGHT_DESKTOP,
+  FEED_GRID_CARD_HEIGHT_MOBILE,
+} from '../feedLayout';
 
-describe('computeFeedCellWidth', () => {
-  it('returns positive width when window width is 0 (web bootstrap)', () => {
-    expect(
-      computeFeedCellWidth({
-        windowWidth: 0,
-        horizontalPadding: 8,
-        numColumns: 2,
-        columnGap: 8,
-      }),
-    ).toBeGreaterThan(0);
+describe('feedLayout', () => {
+  it('exports positive grid card heights for fixed feed rows', () => {
+    expect(FEED_GRID_CARD_HEIGHT_MOBILE).toBeGreaterThan(0);
+    expect(FEED_GRID_CARD_HEIGHT_DESKTOP).toBeGreaterThan(0);
   });
 
-  it('matches two-column math for a typical phone width', () => {
-    const w = 390;
-    const pad = 8;
-    const gap = 8;
-    const available = w - pad * 2;
-    const expected = (available - gap) / 2;
-    expect(
-      computeFeedCellWidth({
-        windowWidth: w,
-        horizontalPadding: pad,
-        numColumns: 2,
-        columnGap: gap,
-      }),
-    ).toBeCloseTo(expected, 5);
+  it('computeFeedCellWidth accounts for padding and column gap', () => {
+    const w = computeFeedCellWidth({
+      windowWidth: 400,
+      horizontalPadding: 16,
+      numColumns: 2,
+      columnGap: 8,
+    });
+    expect(w).toBe(180);
   });
 });

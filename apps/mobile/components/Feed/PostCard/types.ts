@@ -4,6 +4,8 @@ export interface BaseCardProps {
     item: FeedItem;
     cardWidth: number;
     isGrid: boolean;
+    /** When set (grid mode), card uses this fixed height so all feed cells align. */
+    gridCardHeight?: number;
     onPress: () => void;
     onProfilePress: () => void;
     onLike: () => void;

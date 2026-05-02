@@ -14,6 +14,7 @@ const RideCard: React.FC<BaseCardProps> = ({
     item,
     cardWidth,
     isGrid,
+    gridCardHeight,
     onPress,
     onProfilePress,
     onLike,
@@ -35,9 +36,19 @@ const RideCard: React.FC<BaseCardProps> = ({
 
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const locations = { from: item.from || '', to: item.to || '' };
+    const gridFixedOuter =
+        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
 
     return (
-        <View style={[styles.container, isGrid && styles.gridContainer, isCompleted && styles.containerCompleted, { width: cardWidth }]}>
+        <View
+            style={[
+                styles.container,
+                isGrid && !gridFixedOuter && styles.gridContainer,
+                isCompleted && styles.containerCompleted,
+                gridFixedOuter,
+                { width: cardWidth }
+            ]}
+        >
             <View style={[styles.header, isCompleted && styles.headerCompleted, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <TouchableOpacity
                     style={[styles.userInfo, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
@@ -82,7 +93,11 @@ const RideCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[styles.cardContent, isCompleted && styles.cardContentCompleted]}
+                style={[
+                    styles.cardContent,
+                    isCompleted && styles.cardContentCompleted,
+                    isGrid && gridFixedOuter && styles.cardContentGridFill
+                ]}
             >
                 {isCompleted ? (
                     <View style={[styles.contentContainer, isGrid && styles.contentContainerGrid]}>
@@ -327,6 +342,11 @@ const styles = StyleSheet.create({
     cardContent: {
         flex: 1,
         backgroundColor: colors.surfaceBlueTint
+    },
+    cardContentGridFill: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0
     },
     cardContentCompleted: {
         backgroundColor: colors.surfaceCanvas

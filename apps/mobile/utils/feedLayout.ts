@@ -1,4 +1,12 @@
 /**
+ * Fixed outer height for post cards in the 2-column feed grid (`PostsReelsScreen`).
+ * Using one height per breakpoint avoids uneven rows (FlatList stretches the shorter cell)
+ * and removes gray gaps from `flex:1` filler inside cards.
+ */
+export const FEED_GRID_CARD_HEIGHT_MOBILE = 320;
+export const FEED_GRID_CARD_HEIGHT_DESKTOP = 420;
+
+/**
  * Feed grid cell width for multi-column lists (PostsReelsScreen).
  * On web, `Dimensions.get('window').width` can be 0 before first layout — callers must clamp.
  */

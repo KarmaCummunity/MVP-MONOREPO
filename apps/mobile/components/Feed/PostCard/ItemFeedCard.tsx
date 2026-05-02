@@ -26,6 +26,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
     item,
     cardWidth,
     isGrid,
+    gridCardHeight,
     onPress,
     onProfilePress,
     onLike,
@@ -60,6 +61,8 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     const showFullActions = !isDelivered;
     const hasThumbnail = !!item.thumbnail;
+    const gridFixedOuter =
+        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
 
     const renderHeader = (overlay = false) => (
         <View
@@ -198,9 +201,10 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
         <View
             style={[
                 styles.container,
-                isGrid && styles.gridContainer,
+                isGrid && !gridFixedOuter && styles.gridContainer,
                 hasThumbnail && styles.mediaContainer,
                 isDelivered && styles.containerDelivered,
+                gridFixedOuter,
                 { width: cardWidth }
             ]}
         >
@@ -208,7 +212,13 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
             {hasThumbnail ? (
                 <>
-                    <View style={[styles.mediaStage, isGrid && styles.mediaStageGrid, isDelivered && styles.imageContainerDelivered]}>
+                    <View
+                        style={[
+                            styles.mediaStage,
+                            isGrid && gridFixedOuter ? styles.mediaStageGridFlex : isGrid && styles.mediaStageGrid,
+                            isDelivered && styles.imageContainerDelivered
+                        ]}
+                    >
                         <Image
                             source={{ uri: item.thumbnail }}
                             style={styles.mediaBackdrop}
@@ -247,12 +257,17 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
                 </>
             ) : (
                 <>
-                    <TouchableOpacity onPress={onPress} activeOpacity={0.95} style={styles.cardContent}>
+                    <TouchableOpacity
+                        onPress={onPress}
+                        activeOpacity={0.95}
+                        style={[styles.cardContent, isGrid && gridFixedOuter && styles.cardContentGridFill]}
+                    >
                     <View
                         style={[
                             styles.placeholderContainer,
                             cardKind === 'donation' && !isDelivered && styles.placeholderDonation,
-                            isGrid && styles.imageGrid,
+                            isGrid && !gridFixedOuter && styles.imageGrid,
+                            isGrid && gridFixedOuter && styles.placeholderContainerGridFlex,
                             isDelivered && styles.placeholderDelivered
                         ]}
                     >
@@ -426,6 +441,12 @@ const styles = StyleSheet.create({
     cardContent: {
         flex: 1
     },
+    /** Grid + fixed card height: middle section grows between header and actions (no gray gap). */
+    cardContentGridFill: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0
+    },
     imageContainer: {
         position: 'relative',
         height: isMobile ? 180 : 280
@@ -446,6 +467,12 @@ const styles = StyleSheet.create({
     },
     mediaStageGrid: {
         height: isMobile ? 156 : 256
+    },
+    /** When outer card has fixed height, media area expands instead of a fixed short band + empty fill. */
+    mediaStageGridFlex: {
+        flex: 1,
+        minHeight: isMobile ? 120 : 160,
+        height: undefined
     },
     mediaBackdrop: {
         ...StyleSheet.absoluteFillObject,
@@ -544,6 +571,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: isMobile ? 16 : 24,
         gap: isMobile ? 8 : 12
+    },
+    placeholderContainerGridFlex: {
+        flex: 1,
+        minHeight: 0,
+        height: undefined
     },
     placeholderDonation: {
         backgroundColor: colors.surfaceGreenTint

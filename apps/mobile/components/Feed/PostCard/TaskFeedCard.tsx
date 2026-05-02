@@ -20,6 +20,7 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     item,
     cardWidth,
     isGrid,
+    gridCardHeight,
     onPress,
     onProfilePress,
     onLike,
@@ -40,13 +41,16 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
     const isRTL = i18n.language === 'he';
     const isCompletion = variant === 'completion';
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
+    const gridFixedOuter =
+        isGrid && gridCardHeight != null ? ({ height: gridCardHeight, minHeight: gridCardHeight } as const) : null;
 
     return (
         <View
             style={[
                 styles.container,
-                isGrid && styles.gridContainer,
+                isGrid && !gridFixedOuter && styles.gridContainer,
                 isCompletion && styles.containerCompletion,
+                gridFixedOuter,
                 { width: cardWidth }
             ]}
         >
@@ -90,7 +94,11 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={[styles.cardContent, isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment]}
+                style={[
+                    styles.cardContent,
+                    isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment,
+                    isGrid && gridFixedOuter && styles.cardContentGridFill
+                ]}
             >
                 {isCompletion ? (
                     <View style={[styles.contentContainer, isGrid && styles.contentContainerGrid]}>
@@ -135,46 +143,61 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
                         <View style={styles.iconContainer}>
                             <Ionicons name="construct-outline" size={isMobile ? 24 : 32} color={colors.primary} />
                         </View>
-                        <View style={styles.textContainer}>
-                            <Text style={[styles.titleAssignment, { textAlign: 'center' }]}>{t('tasks.status.new_for_you')}</Text>
-                            <Text
-                                style={[styles.description, { textAlign: 'center', fontWeight: 'bold', marginTop: 4 }]}
-                                numberOfLines={2}
-                            >
-                                {item.taskData?.title || item.title || t('post.noTitle')}
-                            </Text>
-                            {(item.description || item.taskData?.description) && (
-                                <Text style={[styles.description, { textAlign: 'center' }]} numberOfLines={3}>
-                                    {item.taskData?.description || item.description}
-                                </Text>
-                            )}
-                        </View>
-                        <View style={styles.detailsSection}>
-                            <View style={styles.detailRow}>
-                                <Ionicons name="person-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                <Text style={styles.detailText}>
-                                    {t('task.opened_by', 'נוצר ע"י')}: {item.user.name}
+                        {isGrid ? (
+                            <View style={styles.textContainer}>
+                                <Text
+                                    style={[styles.description, { textAlign: 'center', fontWeight: '700' }]}
+                                    numberOfLines={2}
+                                >
+                                    {item.taskData?.title || item.title || t('post.noTitle')}
                                 </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                                <Ionicons name="people-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                <Text style={styles.detailText}>
-                                    {t('task.performer', 'מבצע')}:{' '}
-                                    {item.taskData?.assignees && item.taskData.assignees.length > 0
-                                        ? item.taskData.assignees.map((a) => a.name).join(', ')
-                                        : t('task.unassigned', 'טרם שובץ')}
-                                </Text>
-                            </View>
-                            {item.taskData?.estimated_hours ? (
-                                <View style={styles.detailRow}>
-                                    <Ionicons name="time-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
-                                    <Text style={styles.detailText}>
-                                        {t('task.duration', 'משך זמן')}: {item.taskData.estimated_hours}{' '}
-                                        {t('common.hours', 'שעות')}
+                        ) : (
+                            <>
+                                <View style={styles.textContainer}>
+                                    <Text style={[styles.titleAssignment, { textAlign: 'center' }]}>
+                                        {t('tasks.status.new_for_you')}
                                     </Text>
+                                    <Text
+                                        style={[styles.description, { textAlign: 'center', fontWeight: 'bold', marginTop: 4 }]}
+                                        numberOfLines={2}
+                                    >
+                                        {item.taskData?.title || item.title || t('post.noTitle')}
+                                    </Text>
+                                    {(item.description || item.taskData?.description) && (
+                                        <Text style={[styles.description, { textAlign: 'center' }]} numberOfLines={3}>
+                                            {item.taskData?.description || item.description}
+                                        </Text>
+                                    )}
                                 </View>
-                            ) : null}
-                        </View>
+                                <View style={styles.detailsSection}>
+                                    <View style={styles.detailRow}>
+                                        <Ionicons name="person-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
+                                        <Text style={styles.detailText}>
+                                            {t('task.opened_by', 'נוצר ע"י')}: {item.user.name}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Ionicons name="people-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
+                                        <Text style={styles.detailText}>
+                                            {t('task.performer', 'מבצע')}:{' '}
+                                            {item.taskData?.assignees && item.taskData.assignees.length > 0
+                                                ? item.taskData.assignees.map((a) => a.name).join(', ')
+                                                : t('task.unassigned', 'טרם שובץ')}
+                                        </Text>
+                                    </View>
+                                    {item.taskData?.estimated_hours ? (
+                                        <View style={styles.detailRow}>
+                                            <Ionicons name="time-outline" size={isMobile ? 14 : 16} color={colors.textSecondary} />
+                                            <Text style={styles.detailText}>
+                                                {t('task.duration', 'משך זמן')}: {item.taskData.estimated_hours}{' '}
+                                                {t('common.hours', 'שעות')}
+                                            </Text>
+                                        </View>
+                                    ) : null}
+                                </View>
+                            </>
+                        )}
                     </View>
                 )}
             </TouchableOpacity>
@@ -338,6 +361,11 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1
+    },
+    cardContentGridFill: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0
     },
     cardContentAssignment: {
         backgroundColor: colors.surfaceGrayBlue
