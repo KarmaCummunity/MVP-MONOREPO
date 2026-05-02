@@ -28,6 +28,17 @@
  * ─────────
  *   App.tsx → NavigationContainer → MainNavigator → BottomNavigator → HomeTabStack …
  *                                               └──→ (protected modal screens)
+ *
+ * Google OAuth callback
+ * ─────────────────────
+ * When the backend-initiated OAuth flow completes, the backend redirects the
+ * browser back to the original app URL with a `google_auth_data` query parameter
+ * containing a base64url-encoded JSON payload:
+ *   { accessToken, refreshToken, expiresIn, refreshExpiresIn, user: PublicUser }
+ *
+ * A `useEffect` on mount reads this parameter, stores tokens, maps the server's
+ * PublicUser shape to the store's User shape (filling in sensible defaults for
+ * fields the server does not return), then calls `setSelectedUserWithMode`.
  */
 
 import React, { useEffect, useMemo } from 'react';
@@ -35,9 +46,9 @@ import { Platform, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAuth, getRedirectResult } from 'firebase/auth';
+import { getAuth, getRedirectResult, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
-import { GoogleAuthService } from '../google_auth/GoogleAuthService';
+import { GoogleAuthService, SecureAuthUser } from '../google_auth/GoogleAuthService';
 
 import BottomNavigator from './BottomNavigator';
 import WebViewScreen from '../screens/WebViewScreen';
@@ -57,13 +68,115 @@ import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import TopBarNavigator from './TopBarNavigator';
 
-import { useUser } from '../stores/userStore';
+import { useUser, User } from '../stores/userStore';
 import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import { RootStackParamList } from '../globals/types';
 import { computeMainNavigatorStackKey } from './mainNavigatorStackKey';
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+// ─── Type helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Shape returned by the backend's `POST /auth/google` (PublicUser).
+ * Only the fields the backend actually sends are listed here.
+ */
+interface BackendPublicUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  roles?: string[];
+  settings?: {
+    language?: string;
+    darkMode?: boolean;
+    notificationsEnabled?: boolean;
+    [key: string]: unknown;
+  };
+  createdAt?: string;
+  lastActive?: string;
+}
+
+/**
+ * Shape of the payload carried in the `google_auth_data` URL query parameter
+ * after the backend-initiated OAuth callback completes.
+ */
+interface GoogleAuthCallbackPayload {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  refreshExpiresIn: number;
+  user: BackendPublicUser;
+}
+
+/**
+ * Map the server's lean PublicUser to the store's full User shape.
+ * The backend only returns fields it stores; the store requires several
+ * additional fields — default values are filled in here.
+ */
+function backendUserToStoreUser(pub: BackendPublicUser): User {
+  const nowIso = new Date().toISOString();
+  return {
+    id: pub.id,
+    name: pub.name || pub.email.split('@')[0],
+    email: pub.email,
+    phone: '',
+    avatar: pub.avatar || 'https://i.pravatar.cc/150?img=1',
+    bio: '',
+    karmaPoints: 0,
+    joinDate: pub.createdAt || nowIso,
+    isActive: true,
+    lastActive: pub.lastActive || nowIso,
+    location: { city: '', country: '' },
+    interests: [],
+    roles: pub.roles || ['user'],
+    postsCount: 0,
+    followersCount: 0,
+    followingCount: 0,
+    notifications: [],
+    settings: {
+      language: pub.settings?.language || 'he',
+      darkMode: pub.settings?.darkMode ?? false,
+      notificationsEnabled: pub.settings?.notificationsEnabled ?? true,
+    },
+  };
+}
+
+/**
+ * Map GoogleAuthService's SecureAuthUser to the store's User shape.
+ * Used when the Firebase redirect flow produces a result (legacy path kept
+ * as a fallback while we transition fully to the backend-initiated flow).
+ */
+function secureAuthUserToStoreUser(src: SecureAuthUser): User {
+  const nowIso = new Date().toISOString();
+  return {
+    id: src.id,
+    name: src.name,
+    email: src.email,
+    phone: '',
+    avatar: src.avatar || 'https://i.pravatar.cc/150?img=1',
+    bio: '',
+    karmaPoints: 0,
+    joinDate: src.metadata?.accountCreatedAt || nowIso,
+    isActive: true,
+    lastActive: src.metadata?.lastLoginAt || nowIso,
+    location: { city: '', country: '' },
+    interests: [],
+    roles: src.roles || ['user'],
+    postsCount: 0,
+    followersCount: 0,
+    followingCount: 0,
+    notifications: [],
+    settings: {
+      language: src.settings?.language || 'he',
+      darkMode: src.settings?.darkMode ?? false,
+      notificationsEnabled: src.settings?.notificationsEnabled ?? true,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MainNavigator() {
   // ─── Store subscriptions ────────────────────────────────────────────────────
@@ -72,12 +185,87 @@ export default function MainNavigator() {
   const { mode } = useWebMode();
   const { t } = useTranslation(['common', 'profile']);
 
-  // ─── Google redirect-result handler ─────────────────────────────────────────
-  // When the user completes Google sign-in via `signInWithRedirect`, the browser
-  // navigates back to this app. We call `getRedirectResult` once on mount to pick
-  // up the pending credential and update the auth store. This bypasses the
-  // `auth/unauthorized-domain` error that occurs with `signInWithPopup` on
-  // Replit preview domains.
+  // ─── Backend-initiated OAuth callback handler ────────────────────────────────
+  // After the backend completes the Google OAuth dance it redirects the browser
+  // back to the original app URL with `?google_auth_data=<base64url JSON>`.
+  // We pick that up here, store the JWT tokens, map the user, and update the
+  // store — all without involving Firebase's domain-authorization check.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const rawData = params.get('google_auth_data');
+    const authError = params.get('google_auth_error');
+
+    // Clean up URL params so they don't persist across refreshes
+    if (rawData || authError) {
+      params.delete('google_auth_data');
+      params.delete('google_auth_error');
+      const newSearch = params.toString();
+      const newUrl =
+        window.location.pathname + (newSearch ? `?${newSearch}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    if (authError) {
+      logger.warn('MainNavigator', 'Google OAuth callback returned error', { authError });
+      Alert.alert(
+        'שגיאת התחברות',
+        'ההתחברות דרך גוגל נכשלה. נסה שוב מאוחר יותר.',
+      );
+      return;
+    }
+
+    if (!rawData) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const payload = JSON.parse(
+          Buffer.from(rawData, 'base64').toString('utf8'),
+        ) as GoogleAuthCallbackPayload;
+
+        if (cancelled) return;
+
+        if (!payload?.user?.id || !payload?.user?.email) {
+          throw new Error('Incomplete user payload in google_auth_data');
+        }
+
+        // Store JWT tokens using the same keys that tokenManager / GoogleAuthService
+        // use, so checkAuthStatus and token-refresh logic work on the next cold start.
+        const { tokenManager } = await import('../auth/services/tokenManager');
+        await tokenManager.setTokens(payload.accessToken, payload.refreshToken);
+
+        if (cancelled) return;
+
+        const storeUser = backendUserToStoreUser(payload.user);
+        await setSelectedUserWithMode(storeUser, 'real');
+
+        logger.info('MainNavigator', 'Google OAuth callback: user authenticated', {
+          userId: storeUser.id,
+        });
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error('MainNavigator', 'Failed to process google_auth_data', { message });
+        Alert.alert(
+          'שגיאת התחברות',
+          'לא ניתן לעבד את תגובת גוגל. נסה שוב.',
+        );
+      }
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount only
+
+  // ─── Firebase redirect-result handler (legacy fallback) ──────────────────────
+  // Kept as a fallback for environments where the backend-initiated flow is not
+  // yet wired up (e.g. native builds that use Expo Auth Session).
+  // On Replit preview domains, getRedirectResult will return null because
+  // signInWithRedirect is no longer called — this effect exits cleanly.
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     let cancelled = false;
@@ -91,19 +279,17 @@ export default function MainNavigator() {
         if (cancelled || !result?.user) return;
 
         const firebaseUser = result.user;
-        logger.info('MainNavigator', 'Google redirect sign-in succeeded', {
+        logger.info('MainNavigator', 'Firebase redirect sign-in succeeded (legacy path)', {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
         });
 
-        // Extract the raw Firebase ID token and send it to the backend for
-        // server-side verification. This creates a real JWT session instead
-        // of a local-only user object.
         let idToken: string;
         try {
           idToken = await firebaseUser.getIdToken();
-        } catch (tokenErr: any) {
-          logger.error('MainNavigator', 'Failed to retrieve Firebase ID token', { message: tokenErr?.message });
+        } catch (tokenErr: unknown) {
+          const message = tokenErr instanceof Error ? tokenErr.message : String(tokenErr);
+          logger.error('MainNavigator', 'Failed to retrieve Firebase ID token', { message });
           Alert.alert('שגיאת התחברות', 'לא ניתן לאחזר את אסימון ההזדהות. נסה שוב.');
           return;
         }
@@ -114,10 +300,12 @@ export default function MainNavigator() {
         if (cancelled) return;
 
         if (!authResult.success || !authResult.data) {
-          logger.warn('MainNavigator', 'Backend Google auth failed', {
+          logger.warn('MainNavigator', 'Backend Google auth failed (legacy path)', {
             error: authResult.error,
             details: authResult.details,
           });
+          // Sign out of Firebase so the failed credential is not cached
+          try { await firebaseSignOut(auth); } catch { /* best effort */ }
           Alert.alert(
             'שגיאת התחברות',
             'ההתחברות דרך גוגל נכשלה. ייתכן שהשרת אינו זמין כרגע — נסה שוב מאוחר יותר.',
@@ -125,19 +313,16 @@ export default function MainNavigator() {
           return;
         }
 
-        // Use the server-verified user profile (not a locally-constructed object).
-        const { user: verifiedUser } = authResult.data;
-        await setSelectedUserWithMode(verifiedUser as any, 'real');
-        // MainNavigator will automatically re-render and show HomeStack
-        // because isAuthenticated will flip to true in the store.
-      } catch (err: any) {
+        const storeUser = secureAuthUserToStoreUser(authResult.data.user);
+        await setSelectedUserWithMode(storeUser, 'real');
+      } catch (err: unknown) {
         if (cancelled) return;
-        // `getRedirectResult` throws if there is no pending redirect — this is
-        // normal on every page load that did NOT follow a `signInWithRedirect`.
-        // Only log as an error if it is an unexpected code.
-        const code: string = err?.code ?? '';
+        const code: string = (err as { code?: string })?.code ?? '';
         if (code && code !== 'auth/null-user') {
-          logger.warn('MainNavigator', 'getRedirectResult error (non-fatal)', { code, message: err?.message });
+          logger.warn('MainNavigator', 'getRedirectResult error (non-fatal)', {
+            code,
+            message: err instanceof Error ? err.message : String(err),
+          });
         }
       }
     })();
@@ -147,7 +332,6 @@ export default function MainNavigator() {
   }, []); // Run once on mount only
 
   // ─── Debug logging ──────────────────────────────────────────────────────────
-  // Periodic flag prevents flooding the log storage on tight re-render loops.
   useEffect(() => {
     logger.debug(
       'MainNavigator',
@@ -164,9 +348,6 @@ export default function MainNavigator() {
   );
 
   // ─── Stack key ──────────────────────────────────────────────────────────────
-  // Changing this key fully resets the navigator — intentional only when the user
-  // crosses an auth boundary or switches web mode. `isLoading` is deliberately
-  // excluded so transient background auth checks do NOT reset the navigator.
   const stackKey = useMemo(
     () => computeMainNavigatorStackKey(mode, isAuthenticated, isGuestMode),
     [mode, isAuthenticated, isGuestMode],
@@ -179,7 +360,6 @@ export default function MainNavigator() {
       id={undefined}
       detachInactiveScreens={true}
       screenOptions={({ navigation, route }) => ({
-        // Only AdminDashboard has a visible header (it uses the shared TopBar).
         headerShown: route.name === 'AdminDashboard',
         header:
           route.name === 'AdminDashboard'
@@ -195,40 +375,22 @@ export default function MainNavigator() {
       {isAuthenticated || isGuestMode ? (
         // ══════════════════════════════════════════════════════════════════════
         // AUTHENTICATED STACK
-        // Rendered when the user is logged in or browsing as a guest.
-        // HomeStack is always the first (initial) screen so the bottom tabs are
-        // visible immediately without an extra navigation push.
         // ══════════════════════════════════════════════════════════════════════
         <Stack.Group>
-          {/* Root: bottom tab navigator + all nested tab stacks */}
           <Stack.Screen name="HomeStack" component={BottomNavigator} />
-
-          {/* Chat flow — presented from top-bar or notification tap */}
           <Stack.Screen name="NewChatScreen" component={NewChatScreen} />
           <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
-
-          {/* In-app browser */}
           <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
-
-          {/* Full-screen posts / reels viewer — transparent modal over the tab bar */}
           <Stack.Screen
             name="PostsReelsScreen"
             component={PostsReelsScreenWrapper}
             options={{ cardStyle: { backgroundColor: 'transparent' }, presentation: 'transparentModal' }}
           />
-
-          {/* Bookmarks — shown with a header */}
           <Stack.Screen
             name="BookmarksScreen"
             component={BookmarksScreen}
             options={{ title: t('profile:menu.bookmarks'), headerTitleAlign: 'center', headerShown: true }}
           />
-
-          {/*
-           * UserProfileScreen is also registered inside HomeTabStack and SearchTabStack
-           * so the bottom/top bars remain visible during in-tab profile navigation.
-           * This root-level registration exists only to support legacy deep links.
-           */}
           <Stack.Screen
             name="UserProfileScreen"
             // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -236,34 +398,22 @@ export default function MainNavigator() {
           />
           <Stack.Screen name="FollowersScreen" component={FollowersScreen} />
           <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
-
-          {/* Top-bar screens (Settings, Chat list, Notifications, About, Edit profile) */}
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
           <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
           <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
           <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-
-          {/* Admin dashboard — header shown via screenOptions above */}
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         </Stack.Group>
       ) : (
         // ══════════════════════════════════════════════════════════════════════
         // UNAUTHENTICATED STACK
-        // Rendered when no user session exists.
-        // On web in site-mode the landing page is shown first; everywhere else
-        // (or after the landing CTA) LoginScreen is the entry point.
         // ══════════════════════════════════════════════════════════════════════
         <Stack.Group>
-          {/* Landing / marketing page — web + site-mode only */}
           {Platform.OS === 'web' && mode === 'site' ? (
             <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
           ) : null}
-
-          {/* Login / registration — app-mode or after landing CTA */}
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
-
-          {/* Legacy alias kept to avoid crashes from stale persisted navigation state */}
           <Stack.Screen name="InactiveScreen" component={LoginScreen} />
         </Stack.Group>
       )}

@@ -1,37 +1,40 @@
 /**
- * Google Sign-In button using Firebase Authentication with redirect flow.
+ * Google Sign-In button — backend-initiated OAuth flow.
  *
- * We use `signInWithRedirect` instead of `signInWithPopup` because the app is
- * served from a Replit preview domain that is NOT in Firebase's authorized-domain
- * list. With popup flow, Firebase tries to post a message back to the opener
- * window from `karma-community-app.firebaseapp.com`, and the popup itself
- * redirects to the current origin — both of which trigger an
- * `auth/unauthorized-domain` error on unlisted domains.
+ * Instead of using Firebase's `signInWithRedirect` (which checks the calling
+ * domain against Firebase's authorized-domain list before leaving the page),
+ * this button redirects the browser to the fixed Railway backend URL
+ * (`/auth/google/redirect`).  The backend owns the entire OAuth dance:
  *
- * With redirect flow, the entire browser navigates to
- * `karma-community-app.firebaseapp.com/__/auth/handler` (always authorized), and
- * after Google completes the OAuth dance, Firebase redirects back to the app URL.
- * On return, `MainNavigator` calls `getRedirectResult()` to read the signed-in user
- * and updates the auth store — no domain-authorization issues.
+ *   Browser → Railway /auth/google/redirect
+ *          → Google consent screen
+ *          → Railway /auth/google/callback  (registered redirect URI)
+ *          → App URL  ?google_auth_data=<base64url payload>
+ *
+ * Because the redirect URI is a fixed Railway hostname, it only needs to be
+ * registered in Google Cloud Console once — it never changes regardless of
+ * which Replit tunnel URL the frontend is served from.
+ *
+ * The `google_auth_data` payload is picked up by the `useEffect` in
+ * `MainNavigator` on the next page load.
  */
 
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getAuth, signInWithRedirect, GoogleAuthProvider } from 'firebase/auth';
-import { getFirebase } from '../utils/firebaseClient';
 import { useTranslation } from 'react-i18next';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { logger } from '../utils/loggerService';
+import { getApiUrl } from '../utils/config.constants';
 
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleGoogleLogin = async () => {
-    logger.info('FirebaseGoogleButton', 'Google redirect login started');
+  const handleGoogleLogin = () => {
+    logger.info('FirebaseGoogleButton', 'Backend-initiated Google OAuth started');
 
     if (Platform.OS !== 'web') {
       logger.error('FirebaseGoogleButton', 'Platform is not web', { platform: Platform.OS });
@@ -39,43 +42,31 @@ export default function FirebaseGoogleButton() {
       return;
     }
 
+    if (typeof window === 'undefined') return;
+
     try {
       setLoading(true);
       setError('');
 
-      const { app } = getFirebase();
-      const auth = getAuth(app);
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
+      const apiBase = getApiUrl();
+      const returnTo = window.location.href;
 
-      logger.debug('FirebaseGoogleButton', 'Initiating redirect to Google…');
+      const redirectUrl =
+        `${apiBase}/auth/google/redirect?return_to=${encodeURIComponent(returnTo)}`;
 
-      // `signInWithRedirect` navigates the whole page to Firebase/Google.
-      // Execution does not resume here — the result is picked up by
-      // `getRedirectResult` inside MainNavigator when the page reloads.
-      await signInWithRedirect(auth, provider);
-    } catch (err: any) {
-      logger.error('FirebaseGoogleButton', 'Google redirect error', {
-        code: err?.code,
-        message: err?.message,
+      logger.debug('FirebaseGoogleButton', 'Redirecting to backend OAuth endpoint', {
+        apiBase,
+        redirectUrl,
       });
-      setLoading(false);
 
-      const code: string = err?.code ?? '';
-      if (code === 'auth/unauthorized-domain') {
-        // The Replit preview domain is not in Firebase's authorized-domain list.
-        // A project admin must add it in Firebase Console →
-        // Authentication → Settings → Authorized domains.
-        setError(
-          `הדומיין הנוכחי לא מאושר ב-Firebase.\n` +
-          `הוסף את הדומיין הבא ב-Firebase Console → Authentication → Authorized domains:\n` +
-          `${typeof window !== 'undefined' ? window.location.hostname : 'כתובת האתר'}`
-        );
-      } else if (code === 'auth/popup-closed-by-user') {
-        setError('ההתחברות בוטלה');
-      } else {
-        setError(`שגיאה בהתחברות (${code || 'unknown'}). נסה שוב.`);
-      }
+      // Full-page navigation — execution does not resume here.
+      // The result is picked up by the `google_auth_data` handler in MainNavigator.
+      window.location.href = redirectUrl;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('FirebaseGoogleButton', 'Failed to initiate Google OAuth', { message });
+      setLoading(false);
+      setError(`שגיאה בהתחברות: ${message}`);
     }
   };
 

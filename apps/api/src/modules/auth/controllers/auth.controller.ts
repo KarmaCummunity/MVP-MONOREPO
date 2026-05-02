@@ -17,12 +17,15 @@ import {
   Get,
   Post,
   Query,
+  Res,
   Logger,
   BadRequestException,
   InternalServerErrorException,
   UseGuards,
   Inject,
 } from "@nestjs/common";
+import type { Response } from "express";
+import { createHmac, randomBytes, createHash } from "crypto";
 import { Pool } from "pg";
 import * as argon2 from "argon2";
 import { OAuth2Client } from "google-auth-library";
@@ -205,6 +208,253 @@ export class AuthController {
     this.googleClient = new OAuth2Client(clientId);
     this.logger.log("✅ Google OAuth client initialized successfully");
   }
+
+  // ─── Backend-initiated Google OAuth helpers ────────────────────────────────
+
+  /**
+   * Sign a state payload with HMAC-SHA256 so the callback can verify it was
+   * issued by this server and has not been tampered with.
+   */
+  private buildOAuthState(data: {
+    returnTo: string;
+    codeVerifier: string;
+  }): string {
+    const payload = Buffer.from(JSON.stringify(data)).toString("base64url");
+    const sig = createHmac(
+      "sha256",
+      process.env.JWT_SECRET || "fallback-secret",
+    )
+      .update(payload)
+      .digest("base64url");
+    return `${payload}.${sig}`;
+  }
+
+  private verifyOAuthState(state: string): {
+    returnTo: string;
+    codeVerifier: string;
+  } {
+    const dot = state.lastIndexOf(".");
+    if (dot < 0) throw new Error("Malformed OAuth state");
+    const payload = state.slice(0, dot);
+    const sig = state.slice(dot + 1);
+    const expected = createHmac(
+      "sha256",
+      process.env.JWT_SECRET || "fallback-secret",
+    )
+      .update(payload)
+      .digest("base64url");
+    if (sig !== expected) throw new Error("Invalid OAuth state signature");
+    return JSON.parse(
+      Buffer.from(payload, "base64url").toString(),
+    ) as { returnTo: string; codeVerifier: string };
+  }
+
+  /** The fixed redirect_uri registered in Google Cloud Console. */
+  private getOAuthCallbackUrl(): string {
+    const base =
+      process.env.GOOGLE_OAUTH_CALLBACK_BASE_URL ||
+      process.env.RAILWAY_STATIC_URL ||
+      "https://kc-mvp-server-development.up.railway.app";
+    return `${base}/auth/google/callback`;
+  }
+
+  // ─── Backend-initiated Google OAuth endpoints ──────────────────────────────
+
+  /**
+   * Step 1 – redirect the browser to Google's consent screen using PKCE.
+   *
+   * The frontend calls this instead of using Firebase's signInWithRedirect,
+   * so the redirect originates from a fixed, registered domain (Railway) rather
+   * than the ephemeral Replit tunnel URL.
+   *
+   * Required one-time setup: add the callback URL returned by
+   * `getOAuthCallbackUrl()` to the "Authorized redirect URIs" list in Google
+   * Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs.
+   */
+  @Get("google/redirect")
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async googleOAuthRedirect(
+    @Query("return_to") returnTo: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const clientId =
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+    if (!clientId) {
+      res.status(500).send("Google OAuth client ID not configured");
+      return;
+    }
+
+    const codeVerifier = randomBytes(32).toString("base64url");
+    const codeChallenge = createHash("sha256")
+      .update(codeVerifier)
+      .digest("base64url");
+
+    const state = this.buildOAuthState({
+      returnTo: returnTo || "/",
+      codeVerifier,
+    });
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: this.getOAuthCallbackUrl(),
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      state,
+      prompt: "select_account",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+    });
+
+    this.logger.log(
+      `Google OAuth redirect → callback: ${this.getOAuthCallbackUrl()}`,
+    );
+    res.redirect(
+      `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+    );
+  }
+
+  /**
+   * Step 2 – Google redirects here with an authorization code.
+   *
+   * Exchanges the code for tokens via PKCE (no client_secret required),
+   * reuses the existing `googleAuth` logic to upsert the user, then redirects
+   * the browser back to the original app URL with a base64url-encoded auth
+   * payload in the `google_auth_data` query parameter.
+   */
+  @Get("google/callback")
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async googleOAuthCallback(
+    @Query("code") code: string,
+    @Query("state") state: string,
+    @Query("error") oauthError: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    let returnTo = "/";
+    try {
+      const parsed = this.verifyOAuthState(state || "");
+      returnTo = parsed.returnTo;
+
+      if (oauthError) {
+        this.logger.warn(`Google OAuth returned error: ${oauthError}`);
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(
+          `${returnTo}${sep}google_auth_error=${encodeURIComponent(oauthError)}`,
+        );
+        return;
+      }
+
+      if (!code) {
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(`${returnTo}${sep}google_auth_error=no_code`);
+        return;
+      }
+
+      const clientId =
+        process.env.GOOGLE_CLIENT_ID ||
+        process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+      const tokenParams = new URLSearchParams({
+        code,
+        client_id: clientId!,
+        redirect_uri: this.getOAuthCallbackUrl(),
+        grant_type: "authorization_code",
+        code_verifier: parsed.codeVerifier,
+      });
+
+      // client_secret strengthens security but is not required when PKCE is used
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      if (clientSecret) {
+        tokenParams.set("client_secret", clientSecret);
+      }
+
+      const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: tokenParams.toString(),
+      });
+
+      if (!tokenResp.ok) {
+        const body = await tokenResp.text();
+        this.logger.error(
+          `Google token exchange failed: ${tokenResp.status} ${body}`,
+        );
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(`${returnTo}${sep}google_auth_error=token_exchange_failed`);
+        return;
+      }
+
+      const tokenData = (await tokenResp.json()) as {
+        access_token?: string;
+        id_token?: string;
+      };
+      const { access_token: accessToken, id_token: idToken } = tokenData;
+
+      if (!accessToken && !idToken) {
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(`${returnTo}${sep}google_auth_error=no_tokens_received`);
+        return;
+      }
+
+      // Reuse the existing handler to verify the token and upsert the user
+      const dto = Object.assign(new GoogleAuthDto(), {
+        ...(idToken ? { idToken } : {}),
+        ...(accessToken ? { accessToken } : {}),
+      });
+
+      let authResult: {
+        success?: boolean;
+        error?: string;
+        tokens?: {
+          accessToken: string;
+          refreshToken: string;
+          expiresIn: number;
+          refreshExpiresIn: number;
+        };
+        user?: PublicUser;
+      };
+
+      try {
+        authResult = await this.googleAuth(dto);
+      } catch (authErr) {
+        this.logger.error(
+          `Backend Google auth failed in callback: ${authErr instanceof Error ? authErr.message : String(authErr)}`,
+        );
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(`${returnTo}${sep}google_auth_error=auth_failed`);
+        return;
+      }
+
+      if (!authResult?.success || !authResult.tokens || !authResult.user) {
+        const sep = returnTo.includes("?") ? "&" : "?";
+        res.redirect(`${returnTo}${sep}google_auth_error=auth_failed`);
+        return;
+      }
+
+      const authData = Buffer.from(
+        JSON.stringify({
+          accessToken: authResult.tokens.accessToken,
+          refreshToken: authResult.tokens.refreshToken,
+          expiresIn: authResult.tokens.expiresIn,
+          refreshExpiresIn: authResult.tokens.refreshExpiresIn,
+          user: authResult.user,
+        }),
+      ).toString("base64url");
+
+      const sep = returnTo.includes("?") ? "&" : "?";
+      res.redirect(`${returnTo}${sep}google_auth_data=${authData}`);
+    } catch (err) {
+      this.logger.error(
+        `Google OAuth callback error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      const sep = returnTo.includes("?") ? "&" : "?";
+      res.redirect(`${returnTo}${sep}google_auth_error=internal_error`);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
 
   private async tableExists(tableName: string): Promise<boolean> {
     try {
