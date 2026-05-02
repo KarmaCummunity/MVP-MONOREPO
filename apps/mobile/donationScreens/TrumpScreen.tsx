@@ -116,6 +116,11 @@ export default function TrumpScreen({
   const trumpFilterOptions = Object.keys(filtersObj);
   const trumpSortOptions = (t('trump:sorts', { returnObjects: true }) as unknown as string[]) || [];
 
+  const formatTrumpFilterLabel = useCallback(
+    (key: string) => t(`trump:filters.${key}`),
+    [t],
+  );
+
   const handleSearch = (query: string, filters?: string[], sorts?: string[]) => {
     if (!mode) {
       offer.setToLocation(query);
@@ -198,6 +203,7 @@ export default function TrumpScreen({
         searchData={trumpData.allRides}
         onSearch={handleSearch}
         hideSortButton={!mode}
+        formatFilterLabel={formatTrumpFilterLabel}
       />
 
       {!mode ? (

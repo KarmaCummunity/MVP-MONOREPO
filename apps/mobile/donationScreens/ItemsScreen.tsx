@@ -277,6 +277,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     setSelectedItem(null);
   };
 
+  /** filterOptions are already translated labels — pass through for chips/modal. */
+  const formatItemsFilterLabel = useCallback((key: string) => key, []);
+
   const onFeedPostPress = useCallback(
     (feedItem: FeedItem) => {
       navigateToPostDetail(navigation, { postId: feedItem.id, initialItem: feedItem });
@@ -339,6 +342,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         sortOptions={sortOptions}
         searchData={data.allItems}
         onSearch={handleSearch}
+        formatFilterLabel={formatItemsFilterLabel}
       />
 
       {mode ? (
