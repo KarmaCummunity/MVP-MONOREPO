@@ -81,6 +81,9 @@ export const DEFAULT_STATS: CommunityStats = {
   groupConversations: 0,
   directConversations: 0,
 
+  // Task stats (community tasks; aligned with API completed_tasks)
+  completedTasks: 0,
+
   // Extended legacy stats
   foodKg: 0,
   clothingKg: 0,
@@ -454,6 +457,9 @@ export class EnhancedStatsService {
       'messages_this_week': 'messagesThisWeek',
       'group_conversations': 'groupConversations',
       'direct_conversations': 'directConversations',
+
+      // Task stats (API snake_case → client camelCase)
+      'completed_tasks': 'completedTasks',
 
       // Extended legacy stats
       'food_kg': 'foodKg',

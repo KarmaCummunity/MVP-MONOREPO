@@ -1,0 +1,54 @@
+{
+  "title": "Community statistics",
+  "subtitle": "Real impact, in numbers",
+  "sections": {
+    "impact": "Community impact",
+    "posts": "Posts",
+    "tasks": "Tasks",
+    "users": "Users",
+    "volunteering": "Volunteering"
+  },
+  "posts": {
+    "total": "Total posts",
+    "closed": "Closed posts",
+    "open": "Open posts",
+    "avgPerUser": "Avg. posts per user"
+  },
+  "tasks": {
+    "open": "Open tasks",
+    "inProgress": "In progress",
+    "done": "Completed tasks",
+    "total": "Total tasks"
+  },
+  "users": {
+    "admins": "Admins",
+    "regular": "Regular users",
+    "total": "Total users"
+  },
+  "volunteering": {
+    "totalHours": "Total volunteer hours",
+    "avgPerUser": "Avg. hours per user",
+    "thisMonth": "Hours this month"
+  },
+  "stats": {
+    "siteVisits": "Site visits",
+    "totalMoneyDonated": "Direct donations (ILS)",
+    "totalUsers": "Registered members",
+    "itemDonations": "Items posted",
+    "completedRides": "Community rides",
+    "recurringDonationsAmount": "Active recurring donations",
+    "uniqueDonors": "Active donors",
+    "completedTasks": "Tasks completed"
+  },
+  "statModal": {
+    "loadingDetails": "Loading details...",
+    "noData": "No data to display",
+    "suffixMoney": "ILS",
+    "suffixRides": "rides",
+    "suffixItems": "items",
+    "suffixPeople": "people",
+    "suffixVisits": "visits",
+    "suffixTasks": "tasks",
+    "suffixGeneric": "total"
+  }
+}

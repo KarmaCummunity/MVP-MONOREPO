@@ -1,690 +1,576 @@
 // screens/CommunityStatsScreen.tsx
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Dimensions, ActivityIndicator, Platform, RefreshControl, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  Dimensions,
+  ActivityIndicator,
+  Platform,
+  RefreshControl,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
-import { useUser } from '../stores/userStore';
-import { logger } from '../utils/loggerService';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
-import { db } from '../utils/databaseService';
-import { EnhancedStatsService } from '../utils/statsService';
+import { logger } from '../utils/loggerService';
+import { DEFAULT_STATS, EnhancedStatsService } from '../utils/statsService';
+import type { CommunityStats as MappedCommunityStats } from '../utils/statsService';
 import { apiService } from '../utils/apiService';
 
 const { width } = Dimensions.get('window');
 
-// Responsive breakpoints
 const isSmallScreen = width < 375;
 const isMediumScreen = width >= 375 && width < 768;
 const isLargeScreen = width >= 768;
 
-// Calculate responsive sizes
 const getResponsiveCardWidth = () => {
-    if (isLargeScreen) return (width - 64 - 24) / 3; // 3 cards per row on large screens
-    if (isMediumScreen) return (width - 48 - 16) / 2; // 2 cards per row on medium screens
-    return (width - 32 - 12) / 2; // 2 cards per row on small screens
+  if (isLargeScreen) return (width - 64 - 24) / 3;
+  if (isMediumScreen) return (width - 48 - 16) / 2;
+  return (width - 32 - 12) / 2;
 };
 
 const getResponsivePadding = () => {
-    if (isLargeScreen) return 24;
-    if (isMediumScreen) return 20;
-    return 16;
+  if (isLargeScreen) return 24;
+  if (isMediumScreen) return 20;
+  return 16;
 };
 
 const getResponsiveFontSize = (base: number) => {
-    if (isSmallScreen) return base * 0.9;
-    if (isLargeScreen) return base * 1.1;
-    return base;
+  if (isSmallScreen) return base * 0.9;
+  if (isLargeScreen) return base * 1.1;
+  return base;
 };
 
 interface StatItemProps {
-    icon: string;
-    value: string;
-    label: string;
-    color?: string;
+  icon: string;
+  value: string;
+  label: string;
+  color?: string;
+  accentBar?: string;
 }
 
-const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color = colors.info }) => (
+const StatItem: React.FC<StatItemProps> = ({
+  icon,
+  value,
+  label,
+  color = colors.info,
+  accentBar,
+}) => (
+  <View style={styles.statCardOuter}>
+    {accentBar ? <View style={[styles.statAccentBar, { backgroundColor: accentBar }]} /> : null}
     <View style={styles.statItem}>
-        <Ionicons name={icon as any} size={isSmallScreen ? 28 : 32} color={color} />
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
+      <View style={[styles.statIconWrap, { backgroundColor: `${color}18` }]}>
+        <Ionicons name={icon as any} size={isSmallScreen ? 22 : 26} color={color} />
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel} numberOfLines={3}>
+        {label}
+      </Text>
     </View>
+  </View>
 );
 
-interface CommunityStats {
-    // Community stats from landing page
-    siteVisits: number;
-    totalMoneyDonated: number;
-    totalUsers: number;
-    itemDonations: number;
-    completedRides: number;
-    recurringDonationsAmount: number;
-    uniqueDonors: number;
-    completedTasks: number;
-    
-    // Dashboard stats (tasks)
-    tasks_open: number;
-    tasks_in_progress: number;
-    tasks_done: number;
-    tasks_total: number;
-    
-    // Dashboard stats (users)
-    admins_count: number;
-    regular_users_count: number;
-    total_users: number;
-    
-    // Dashboard stats (volunteer hours)
-    total_volunteer_hours: number;
-    avg_hours_per_user: number;
-    current_month_hours: number;
+interface PostMiniProps {
+  value: string;
+  label: string;
+}
 
-    // Dashboard stats (posts) — open/closed from API match profile tabs
-    posts_total: number;
-    posts_open: number;
-    posts_closed: number;
-    avg_posts_per_user: number;
-    
-    // Legacy stats
-    totalRides: number;
-    totalItems: number;
-    totalDonations: number;
-    activeCities: number;
-    monthlyGrowth: number;
+const PostMini: React.FC<PostMiniProps> = ({ value, label }) => (
+  <View style={styles.postMini}>
+    <Text style={styles.postMiniValue}>{value}</Text>
+    <Text style={styles.postMiniLabel} numberOfLines={2}>
+      {label}
+    </Text>
+  </View>
+);
+
+interface DashboardSlice {
+  tasks_open: number;
+  tasks_in_progress: number;
+  tasks_done: number;
+  tasks_total: number;
+  admins_count: number;
+  regular_users_count: number;
+  total_users: number;
+  total_volunteer_hours: number;
+  avg_hours_per_user: number;
+  current_month_hours: number;
+  posts_total: number;
+  posts_open: number;
+  posts_closed: number;
+  avg_posts_per_user: number;
 }
 
 export default function CommunityStatsScreen() {
-    useLogScreenOpened('CommunityStatsScreen');
-    const { t } = useTranslation();
-    const { selectedUser } = useUser();
-    const tabBarHeight = useBottomTabBarHeight() || 0;
-    const [stats, setStats] = useState<CommunityStats>({
-        // Community stats from landing page
-        siteVisits: 0,
-        totalMoneyDonated: 0,
-        totalUsers: 0,
-        itemDonations: 0,
-        completedRides: 0,
-        recurringDonationsAmount: 0,
-        uniqueDonors: 0,
-        completedTasks: 0,
-        
-        // Dashboard stats (tasks)
-        tasks_open: 0,
-        tasks_in_progress: 0,
-        tasks_done: 0,
-        tasks_total: 0,
-        
-        // Dashboard stats (users)
-        admins_count: 0,
-        regular_users_count: 0,
-        total_users: 0,
-        
-        // Dashboard stats (volunteer hours)
-        total_volunteer_hours: 0,
-        avg_hours_per_user: 0,
-        current_month_hours: 0,
+  useLogScreenOpened('CommunityStatsScreen');
+  const { t } = useTranslation('communityStats');
+  const { t: tCommon } = useTranslation('common');
+  const tabBarHeight = useBottomTabBarHeight() || 0;
 
-        posts_total: 0,
-        posts_open: 0,
-        posts_closed: 0,
-        avg_posts_per_user: 0,
-        
-        // Legacy stats
-        totalRides: 0,
-        totalItems: 0,
-        totalDonations: 0,
-        activeCities: 0,
-        monthlyGrowth: 0,
-    });
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+  const [mapped, setMapped] = useState<MappedCommunityStats>(() => ({ ...DEFAULT_STATS }));
+  const [dashboard, setDashboard] = useState<DashboardSlice | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-    const loadStats = useCallback(async (forceRefresh = false) => {
-        try {
-            if (!forceRefresh) {
-                setLoading(true);
-            } else {
-                setRefreshing(true);
+  const loadStats = useCallback(async (forceRefresh = false) => {
+    try {
+      if (!forceRefresh) setLoading(true);
+      else setRefreshing(true);
+
+      const [communityStats, dashboardRes] = await Promise.all([
+        EnhancedStatsService.getCommunityStats({}, forceRefresh),
+        apiService.getDashboardStats(),
+      ]);
+      const m = dashboardRes.success && dashboardRes.data?.metrics ? dashboardRes.data.metrics : null;
+
+      setMapped(communityStats);
+      setDashboard(
+        m
+          ? {
+              tasks_open: Number(m.tasks_open) || 0,
+              tasks_in_progress: Number(m.tasks_in_progress) || 0,
+              tasks_done: Number(m.tasks_done) || 0,
+              tasks_total: Number(m.tasks_total) || 0,
+              admins_count: Number(m.admins_count) || 0,
+              regular_users_count: Number(m.regular_users_count) || 0,
+              total_users: Number(m.total_users) || 0,
+              total_volunteer_hours: Number(m.total_volunteer_hours) || 0,
+              avg_hours_per_user: Number(m.avg_hours_per_user) || 0,
+              current_month_hours: Number(m.current_month_hours) || 0,
+              posts_total: m.posts_total != null ? Number(m.posts_total) : 0,
+              posts_open: m.posts_open != null ? Number(m.posts_open) : 0,
+              posts_closed: m.posts_closed != null ? Number(m.posts_closed) : 0,
+              avg_posts_per_user: m.avg_posts_per_user != null ? Number(m.avg_posts_per_user) : 0,
             }
+          : null,
+      );
 
-            // Load community stats from landing page (EnhancedStatsService)
-            const communityStats = await EnhancedStatsService.getCommunityStats({}, forceRefresh);
-            
-            // Extract values - handle both direct values and nested value objects
-            const getValue = (stat: any): number => {
-                if (typeof stat === 'number') return stat;
-                if (stat && typeof stat === 'object' && 'value' in stat) return stat.value || 0;
-                return 0;
-            };
-
-            // Load dashboard stats (tasks, users, volunteer hours)
-            const dashboardRes = await apiService.getDashboardStats();
-            const dashboardStats = dashboardRes.success && dashboardRes.data ? dashboardRes.data : null;
-
-            // Load legacy rides stats
-            const rides = await db.listRides(selectedUser?.id || '', { includePast: true }).catch(() => []);
-            const totalRides = rides.length;
-
-            // Calculate active cities from rides
-            const cities = new Set<string>();
-            rides.forEach((ride: any) => {
-                if (ride.from) cities.add(ride.from);
-                if (ride.to) cities.add(ride.to);
-            });
-
-            // Get unique drivers from rides as a proxy for users
-            const drivers = new Set<string>();
-            rides.forEach((ride: any) => {
-                if (ride.driverId) drivers.add(ride.driverId);
-            });
-
-            // Calculate monthly growth (mock for now - would need historical data)
-            const monthlyGrowth = Math.floor(Math.random() * 30) + 10;
-
-            // For now, use rides count as a proxy for items until we have a proper API
-            const estimatedItems = Math.floor(totalRides * 1.5);
-
-            setStats({
-                // Community stats from landing page
-                siteVisits: getValue(communityStats.siteVisits) || 0,
-                totalMoneyDonated: getValue(communityStats.totalMoneyDonated) || 0,
-                totalUsers: getValue(communityStats.totalUsers) || Math.max(drivers.size, 1),
-                itemDonations: getValue(communityStats.itemDonations) || estimatedItems,
-                completedRides: getValue(communityStats.completedRides) || totalRides,
-                recurringDonationsAmount: getValue(communityStats.recurringDonationsAmount) || 0,
-                uniqueDonors: getValue(communityStats.uniqueDonors) || 0,
-                completedTasks: getValue(communityStats.completed_tasks) || 0,
-                
-                // Dashboard stats (tasks)
-                tasks_open: dashboardStats?.metrics?.tasks_open ? Number(dashboardStats.metrics.tasks_open) : 0,
-                tasks_in_progress: dashboardStats?.metrics?.tasks_in_progress ? Number(dashboardStats.metrics.tasks_in_progress) : 0,
-                tasks_done: dashboardStats?.metrics?.tasks_done ? Number(dashboardStats.metrics.tasks_done) : 0,
-                tasks_total: dashboardStats?.metrics?.tasks_total ? Number(dashboardStats.metrics.tasks_total) : 0,
-                
-                // Dashboard stats (users)
-                admins_count: dashboardStats?.metrics?.admins_count ? Number(dashboardStats.metrics.admins_count) : 0,
-                regular_users_count: dashboardStats?.metrics?.regular_users_count ? Number(dashboardStats.metrics.regular_users_count) : 0,
-                total_users: dashboardStats?.metrics?.total_users ? Number(dashboardStats.metrics.total_users) : 0,
-                
-                // Dashboard stats (volunteer hours)
-                total_volunteer_hours: dashboardStats?.metrics?.total_volunteer_hours ? Number(dashboardStats.metrics.total_volunteer_hours) : 0,
-                avg_hours_per_user: dashboardStats?.metrics?.avg_hours_per_user ? Number(dashboardStats.metrics.avg_hours_per_user) : 0,
-                current_month_hours: dashboardStats?.metrics?.current_month_hours ? Number(dashboardStats.metrics.current_month_hours) : 0,
-
-                posts_total: dashboardStats?.metrics?.posts_total != null ? Number(dashboardStats.metrics.posts_total) : 0,
-                posts_open: dashboardStats?.metrics?.posts_open != null ? Number(dashboardStats.metrics.posts_open) : 0,
-                posts_closed: dashboardStats?.metrics?.posts_closed != null ? Number(dashboardStats.metrics.posts_closed) : 0,
-                avg_posts_per_user: dashboardStats?.metrics?.avg_posts_per_user != null ? Number(dashboardStats.metrics.avg_posts_per_user) : 0,
-                
-                // Legacy stats
-                totalRides,
-                totalItems: estimatedItems,
-                totalDonations: estimatedItems + totalRides,
-                activeCities: cities.size,
-                monthlyGrowth,
-            });
-
-            logger.debug('CommunityStatsScreen', 'Stats loaded', {
-                communityStats,
-                dashboardStats,
-                totalRides,
-                activeCities: cities.size,
-            });
-        } catch (error) {
-            logger.error('CommunityStatsScreen', 'Failed to load stats', { error });
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, [selectedUser?.id]);
-
-    useFocusEffect(
-        React.useCallback(() => {
-            void loadStats();
-        }, [loadStats])
-    );
-
-    const onRefresh = React.useCallback(async () => {
-        await loadStats(true);
-    }, [loadStats]);
-
-    if (loading) {
-        return (
-            <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
-                <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>{t('common:loading')}</Text>
-                </View>
-            </SafeAreaView>
-        );
+      logger.debug('CommunityStatsScreen', 'Stats loaded', { forceRefresh });
+    } catch (error) {
+      logger.error('CommunityStatsScreen', 'Failed to load stats', { error });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadStats();
+    }, [loadStats]),
+  );
+
+  const onRefresh = React.useCallback(async () => {
+    await loadStats(true);
+  }, [loadStats]);
+
+  const fmt = (n: number, opts?: Intl.NumberFormatOptions) =>
+    n.toLocaleString(undefined, opts ?? { maximumFractionDigits: 0 });
+
+  const money = (n: number) => `${fmt(n)} ₪`;
+
+  if (loading) {
     return (
-        <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
-            <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
-            <View style={styles.listWrapper}>
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={true}
-                    bounces={true}
-                    scrollEnabled={true}
-                    nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
-                    scrollEventThrottle={16}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-                    }
-                >
-                    <View style={styles.header}>
-                    <Text style={styles.title}>סטטיסטיקות הקהילה</Text>
-                    <Text style={styles.subtitle}>השפעה אמיתית, במספרים</Text>
-                    <View style={styles.headerPostsGrid}>
-                        <View style={styles.headerPostsRow}>
-                            <View style={styles.headerPostStat}>
-                                <Text style={styles.headerPostValue}>
-                                    {stats.posts_total.toLocaleString('he-IL')}
-                                </Text>
-                                <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                    {'סה"כ פוסטים'}
-                                </Text>
-                            </View>
-                            <View style={styles.headerPostStat}>
-                                <Text style={styles.headerPostValue}>
-                                    {stats.posts_closed.toLocaleString('he-IL')}
-                                </Text>
-                                <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                    פוסטים סגורים
-                                </Text>
-                            </View>
-                        </View>
-                        <View style={styles.headerPostsRow}>
-                            <View style={styles.headerPostStat}>
-                                <Text style={styles.headerPostValue}>
-                                    {stats.posts_open.toLocaleString('he-IL')}
-                                </Text>
-                                <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                    פוסטים פתוחים
-                                </Text>
-                            </View>
-                            <View style={styles.headerPostStat}>
-                                <Text style={styles.headerPostValue}>
-                                    {stats.avg_posts_per_user.toLocaleString('he-IL', {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 2,
-                                    })}
-                                </Text>
-                                <Text style={styles.headerPostLabel} numberOfLines={2}>
-                                    ממוצע פוסטים למשתמש
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות קהילה כלליות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות קהילה</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="eye-outline"
-                            value={stats.siteVisits.toLocaleString('he-IL')}
-                            label="ביקורים באתר"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="cash-outline"
-                            value={`${stats.totalMoneyDonated.toLocaleString('he-IL')} ₪`}
-                            label={'ש"ח שנתרמו ישירות'}
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="heart-outline"
-                            value={stats.totalUsers.toLocaleString('he-IL')}
-                            label="חברי קהילה רשומים"
-                            color={colors.secondary}
-                        />
-                        <StatItem
-                            icon="cube-outline"
-                            value={stats.itemDonations.toLocaleString('he-IL')}
-                            label="פריטים שפורסמו"
-                            color={colors.accent}
-                        />
-                        <StatItem
-                            icon="car-outline"
-                            value={stats.completedRides.toLocaleString('he-IL')}
-                            label="נסיעות קהילתיות"
-                            color={colors.greenBright || colors.success}
-                        />
-                        <StatItem
-                            icon="repeat-outline"
-                            value={`${stats.recurringDonationsAmount.toLocaleString('he-IL')} ₪`}
-                            label="תרומות קבועות פעילות"
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="people-outline"
-                            value={stats.uniqueDonors.toLocaleString('he-IL')}
-                            label="תורמים פעילים"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="checkmark-done-outline"
-                            value={stats.completedTasks.toLocaleString('he-IL')}
-                            label="משימות שבוצעו"
-                            color={colors.success}
-                        />
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות משימות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות משימות</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="list-outline"
-                            value={stats.tasks_open.toLocaleString('he-IL')}
-                            label="משימות פתוחות"
-                            color={colors.primary}
-                        />
-                        <StatItem
-                            icon="hourglass-outline"
-                            value={stats.tasks_in_progress.toLocaleString('he-IL')}
-                            label="משימות בתהליך"
-                            color={colors.warning}
-                        />
-                        <StatItem
-                            icon="checkmark-done-outline"
-                            value={stats.tasks_done.toLocaleString('he-IL')}
-                            label="משימות שהושלמו"
-                            color={colors.success}
-                        />
-                        <StatItem
-                            icon="stats-chart-outline"
-                            value={stats.tasks_total.toLocaleString('he-IL')}
-                            label={'סה"כ משימות'}
-                            color={colors.info}
-                        />
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות משתמשים */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>סטטיסטיקות משתמשים</Text>
-                    <View style={styles.statsGrid}>
-                        <StatItem
-                            icon="shield-outline"
-                            value={stats.admins_count.toLocaleString('he-IL')}
-                            label="מנהלים במערכת"
-                            color={colors.secondary}
-                        />
-                        <StatItem
-                            icon="people-outline"
-                            value={stats.regular_users_count.toLocaleString('he-IL')}
-                            label="משתמשים רגילים"
-                            color={colors.info}
-                        />
-                        <StatItem
-                            icon="person-outline"
-                            value={stats.total_users.toLocaleString('he-IL')}
-                            label={'סה"כ משתמשים'}
-                            color={colors.textSecondary}
-                        />
-                    </View>
-                </View>
-
-                {/* סטטיסטיקות התנדבות */}
-                {stats.total_volunteer_hours > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>סטטיסטיקות התנדבות</Text>
-                        <View style={styles.statsGrid}>
-                            <StatItem
-                                icon="time-outline"
-                                value={stats.total_volunteer_hours.toFixed(1)}
-                                label={'סה"כ שעות התנדבות'}
-                                color={colors.accent}
-                            />
-                            {stats.avg_hours_per_user > 0 && (
-                                <StatItem
-                                    icon="stats-chart-outline"
-                                    value={stats.avg_hours_per_user.toFixed(1)}
-                                    label="ממוצע שעות למשתמש"
-                                    color={colors.info}
-                                />
-                            )}
-                            {stats.current_month_hours > 0 && (
-                                <StatItem
-                                    icon="calendar-outline"
-                                    value={stats.current_month_hours.toFixed(1)}
-                                    label="שעות החודש הנוכחי"
-                                    color={colors.warning}
-                                />
-                            )}
-                        </View>
-                    </View>
-                )}
-
-                {/* סטטיסטיקות נסיעות ופעילות */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>פעילות קהילתית</Text>
-                    <View style={styles.impactCard}>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="car" size={24} color={colors.info} />
-                            <Text style={styles.impactText}>
-                                {stats.totalRides.toLocaleString('he-IL')} נסיעות
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="gift" size={24} color={colors.secondary} />
-                            <Text style={styles.impactText}>
-                                {stats.totalItems.toLocaleString('he-IL')} פריטים שנתרמו
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="globe" size={24} color={colors.primary} />
-                            <Text style={styles.impactText}>
-                                {stats.activeCities.toLocaleString('he-IL')} ערים פעילות
-                            </Text>
-                        </View>
-                        <View style={styles.impactRow}>
-                            <Ionicons name="trending-up" size={24} color={colors.success} />
-                            <Text style={styles.impactText}>
-                                +{stats.monthlyGrowth}% צמיחה חודשית
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Bottom padding: tab bar (absolute) + safe area */}
-                <View
-                    style={{
-                        height:
-                            Platform.OS === 'ios'
-                                ? 24 + tabBarHeight + 40
-                                : Platform.OS === 'web'
-                                  ? 24 + tabBarHeight + 24
-                                  : 16 + tabBarHeight + 24,
-                    }}
-                />
-                </ScrollView>
-            </View>
-        </SafeAreaView>
+      <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
+        <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>{tCommon('loading')}</Text>
+        </View>
+      </SafeAreaView>
     );
+  }
+
+  const d = dashboard;
+  const itemCount = mapped.itemDonations ?? 0;
+  const ridesCount = mapped.completedRides ?? 0;
+  const tasksDone = mapped.completedTasks ?? 0;
+
+  return (
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
+      <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
+      <View style={styles.listWrapper}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator
+          bounces
+          nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+          }
+        >
+          <LinearGradient
+            colors={[`${colors.primary}12`, colors.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
+            <Text style={styles.heroKicker}>{t('subtitle')}</Text>
+            <Text style={styles.heroTitle}>{t('title')}</Text>
+          </LinearGradient>
+
+          {/* Impact — single source from community stats API (no duplicate rides/items block) */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionHeading}>{t('sections.impact')}</Text>
+            <View style={styles.statsGrid}>
+              <StatItem
+                icon="eye-outline"
+                value={fmt(mapped.siteVisits ?? 0)}
+                label={t('stats.siteVisits')}
+                color={colors.info}
+                accentBar={colors.info}
+              />
+              <StatItem
+                icon="cash-outline"
+                value={money(mapped.totalMoneyDonated ?? 0)}
+                label={t('stats.totalMoneyDonated')}
+                color={colors.success}
+                accentBar={colors.success}
+              />
+              <StatItem
+                icon="heart-outline"
+                value={fmt(mapped.totalUsers ?? 0)}
+                label={t('stats.totalUsers')}
+                color={colors.secondary}
+                accentBar={colors.secondary}
+              />
+              <StatItem
+                icon="cube-outline"
+                value={fmt(itemCount)}
+                label={t('stats.itemDonations')}
+                color={colors.accent}
+                accentBar={colors.accent}
+              />
+              <StatItem
+                icon="car-outline"
+                value={fmt(ridesCount)}
+                label={t('stats.completedRides')}
+                color={colors.greenBright || colors.success}
+                accentBar={colors.greenBright || colors.success}
+              />
+              <StatItem
+                icon="repeat-outline"
+                value={money(mapped.recurringDonationsAmount ?? 0)}
+                label={t('stats.recurringDonationsAmount')}
+                color={colors.success}
+                accentBar={colors.success}
+              />
+              <StatItem
+                icon="people-outline"
+                value={fmt(mapped.uniqueDonors ?? 0)}
+                label={t('stats.uniqueDonors')}
+                color={colors.info}
+                accentBar={colors.info}
+              />
+              <StatItem
+                icon="checkmark-done-outline"
+                value={fmt(tasksDone)}
+                label={t('stats.completedTasks')}
+                color={colors.success}
+                accentBar={colors.success}
+              />
+            </View>
+          </View>
+
+          {d ? (
+            <>
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionHeading}>{t('sections.posts')}</Text>
+                <View style={styles.postsPanel}>
+                  <View style={styles.postsRow}>
+                    <PostMini value={fmt(d.posts_total)} label={t('posts.total')} />
+                    <PostMini value={fmt(d.posts_closed)} label={t('posts.closed')} />
+                  </View>
+                  <View style={styles.postsRow}>
+                    <PostMini value={fmt(d.posts_open)} label={t('posts.open')} />
+                    <PostMini
+                      value={d.avg_posts_per_user.toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}
+                      label={t('posts.avgPerUser')}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionHeading}>{t('sections.tasks')}</Text>
+                <View style={styles.statsGrid}>
+                  <StatItem
+                    icon="list-outline"
+                    value={fmt(d.tasks_open)}
+                    label={t('tasks.open')}
+                    color={colors.primary}
+                    accentBar={colors.primary}
+                  />
+                  <StatItem
+                    icon="hourglass-outline"
+                    value={fmt(d.tasks_in_progress)}
+                    label={t('tasks.inProgress')}
+                    color={colors.warning}
+                    accentBar={colors.warning}
+                  />
+                  <StatItem
+                    icon="checkmark-done-outline"
+                    value={fmt(d.tasks_done)}
+                    label={t('tasks.done')}
+                    color={colors.success}
+                    accentBar={colors.success}
+                  />
+                  <StatItem
+                    icon="stats-chart-outline"
+                    value={fmt(d.tasks_total)}
+                    label={t('tasks.total')}
+                    color={colors.info}
+                    accentBar={colors.info}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionHeading}>{t('sections.users')}</Text>
+                <View style={styles.statsGrid}>
+                  <StatItem
+                    icon="shield-outline"
+                    value={fmt(d.admins_count)}
+                    label={t('users.admins')}
+                    color={colors.secondary}
+                    accentBar={colors.secondary}
+                  />
+                  <StatItem
+                    icon="people-outline"
+                    value={fmt(d.regular_users_count)}
+                    label={t('users.regular')}
+                    color={colors.info}
+                    accentBar={colors.info}
+                  />
+                  <StatItem
+                    icon="person-outline"
+                    value={fmt(d.total_users)}
+                    label={t('users.total')}
+                    color={colors.textSecondary}
+                    accentBar={colors.textSecondary}
+                  />
+                </View>
+              </View>
+
+              {(d.total_volunteer_hours > 0 || d.avg_hours_per_user > 0 || d.current_month_hours > 0) && (
+                <View style={styles.sectionBlock}>
+                  <Text style={styles.sectionHeading}>{t('sections.volunteering')}</Text>
+                  <View style={styles.statsGrid}>
+                    {d.total_volunteer_hours > 0 && (
+                      <StatItem
+                        icon="time-outline"
+                        value={d.total_volunteer_hours.toFixed(1)}
+                        label={t('volunteering.totalHours')}
+                        color={colors.accent}
+                        accentBar={colors.accent}
+                      />
+                    )}
+                    {d.avg_hours_per_user > 0 && (
+                      <StatItem
+                        icon="stats-chart-outline"
+                        value={d.avg_hours_per_user.toFixed(1)}
+                        label={t('volunteering.avgPerUser')}
+                        color={colors.info}
+                        accentBar={colors.info}
+                      />
+                    )}
+                    {d.current_month_hours > 0 && (
+                      <StatItem
+                        icon="calendar-outline"
+                        value={d.current_month_hours.toFixed(1)}
+                        label={t('volunteering.thisMonth')}
+                        color={colors.warning}
+                        accentBar={colors.warning}
+                      />
+                    )}
+                  </View>
+                </View>
+              )}
+            </>
+          ) : null}
+
+          <View
+            style={{
+              height:
+                Platform.OS === 'ios'
+                  ? 24 + tabBarHeight + 40
+                  : Platform.OS === 'web'
+                    ? 24 + tabBarHeight + 24
+                    : 16 + tabBarHeight + 24,
+            }}
+          />
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const responsivePadding = getResponsivePadding();
 const cardWidth = getResponsiveCardWidth();
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: colors.background,
-        position: 'relative',
-    },
-    listWrapper: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: getResponsiveFontSize(FontSizes.body),
-        color: colors.textSecondary,
-        textAlign: 'center',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: Platform.OS === 'ios' ? 20 : 40,
-    },
-    header: {
-        padding: responsivePadding,
-        paddingTop: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        backgroundColor: colors.background,
-    },
-    title: {
-        fontSize: getResponsiveFontSize(FontSizes.heading2),
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-        textAlign: 'right',
-    },
-    subtitle: {
-        fontSize: getResponsiveFontSize(FontSizes.body),
-        color: colors.textSecondary,
-        marginTop: 4,
-        textAlign: 'right',
-    },
-    headerPostsGrid: {
-        marginTop: 16,
-        gap: 8,
-    },
-    headerPostsRow: {
-        flexDirection: 'row-reverse',
-        justifyContent: 'space-between',
-        alignItems: 'stretch',
-        gap: 8,
-    },
-    headerPostStat: {
-        flex: 1,
-        backgroundColor: colors.white,
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-    },
-    headerPostValue: {
-        fontSize: getResponsiveFontSize(FontSizes.heading3),
-        fontWeight: '700',
-        color: colors.textPrimary,
-        textAlign: 'center',
-    },
-    headerPostLabel: {
-        fontSize: getResponsiveFontSize(FontSizes.small),
-        color: colors.textSecondary,
-        marginTop: 4,
-        textAlign: 'center',
-    },
-    section: {
-        marginBottom: 24,
-        paddingHorizontal: responsivePadding,
-    },
-    sectionTitle: {
-        fontSize: getResponsiveFontSize(FontSizes.heading3),
-        fontWeight: '600',
-        color: colors.textPrimary,
-        marginBottom: 16,
-        textAlign: 'right',
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        gap: isSmallScreen ? 8 : 12,
-    },
-    statItem: {
-        width: cardWidth,
-        backgroundColor: colors.white,
-        padding: isSmallScreen ? 12 : 16,
-        borderRadius: 16,
-        alignItems: 'center',
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: colors.border,
-        minHeight: isSmallScreen ? 100 : 120,
-        justifyContent: 'center',
-    },
-    statValue: {
-        fontSize: getResponsiveFontSize(FontSizes.heading2),
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-        marginTop: 8,
-        textAlign: 'center',
-    },
-    statLabel: {
-        fontSize: getResponsiveFontSize(FontSizes.small),
-        color: colors.textSecondary,
-        marginTop: 4,
-        textAlign: 'center',
-    },
-    impactCard: {
-        backgroundColor: colors.white,
-        padding: responsivePadding,
-        borderRadius: 16,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    impactRow: {
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        marginBottom: 16,
-        paddingVertical: 4,
-    },
-    impactText: {
-        fontSize: getResponsiveFontSize(FontSizes.body),
-        color: colors.textPrimary,
-        marginRight: 16,
-        flex: 1,
-        textAlign: 'right',
-    },
-    graphPlaceholder: {
-        height: isSmallScreen ? 150 : 200,
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: colors.border,
-        borderStyle: 'dashed',
-    },
-    graphText: {
-        color: colors.textSecondary,
-        fontSize: getResponsiveFontSize(FontSizes.body),
-        marginTop: 12,
-        textAlign: 'center',
-        paddingHorizontal: 20,
-    },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+    position: 'relative',
+  },
+  listWrapper: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: getResponsiveFontSize(FontSizes.body),
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  scrollView: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 40,
+  },
+  hero: {
+    paddingHorizontal: responsivePadding,
+    paddingTop: 20,
+    paddingBottom: 28,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  heroKicker: {
+    fontSize: getResponsiveFontSize(FontSizes.small),
+    color: colors.textSecondary,
+    textAlign: 'right',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    marginTop: 6,
+    fontSize: getResponsiveFontSize(FontSizes.heading1),
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'right',
+    letterSpacing: -0.5,
+  },
+  sectionBlock: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: responsivePadding,
+  },
+  sectionHeading: {
+    fontSize: getResponsiveFontSize(FontSizes.heading3),
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 14,
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: isSmallScreen ? 10 : 14,
+  },
+  statCardOuter: {
+    width: cardWidth,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.white,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.neutralBorderSoft || colors.border,
+  },
+  statAccentBar: {
+    height: 3,
+    width: '100%',
+  },
+  statItem: {
+    padding: isSmallScreen ? 14 : 18,
+    alignItems: 'center',
+    minHeight: isSmallScreen ? 112 : 128,
+    justifyContent: 'center',
+  },
+  statIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: getResponsiveFontSize(FontSizes.heading2),
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  statLabel: {
+    fontSize: getResponsiveFontSize(FontSizes.small),
+    color: colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  postsPanel: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.neutralBorderSoft || colors.border,
+    gap: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  postsRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+  },
+  postMini: {
+    flex: 1,
+    backgroundColor: colors.surfaceGrayBlue || colors.backgroundSecondary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceGrayBlueBorder || colors.border,
+  },
+  postMiniValue: {
+    fontSize: getResponsiveFontSize(FontSizes.heading3),
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  postMiniLabel: {
+    marginTop: 6,
+    fontSize: getResponsiveFontSize(FontSizes.small),
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
 });
