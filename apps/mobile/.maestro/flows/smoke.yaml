@@ -1,0 +1,11 @@
+# Smoke: dev client must be installed on the simulator/emulator (same appId as app.config.js).
+# Run from apps/mobile: npm run e2e:maestro
+appId: com.navesarussi1.KarmaCommunity
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "e2e-app-root"
+    timeout: 90000

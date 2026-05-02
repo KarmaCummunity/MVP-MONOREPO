@@ -1,8 +1,18 @@
 /**
  * One-off / CI helper: fetch SonarCloud issues and print English priority markdown to stdout.
  * Requires SONAR_TOKEN. Project keys must match sonar-project.properties.
+ *
+ * Optional branch filter: set SONAR_BRANCH to a SonarCloud branch name (e.g. `dev`).
+ * Many SonarCloud org/plan tiers return HTTP 403 for `branch` ≠ main on `/api/issues/search`
+ * ("Organization is not allowed to access data from non main branches."). If so, omit
+ * SONAR_BRANCH — counts follow Sonar’s default scope for your plan (typically **main**).
  */
-import https from 'https';
+import https from 'node:https';
+
+/** Only sent when set and non-empty; unset = API default (often main-only on free tier). */
+const SONAR_BRANCH = process.env.SONAR_BRANCH?.trim()
+  ? process.env.SONAR_BRANCH.trim()
+  : '';
 
 const AUTH = Buffer.from(`${process.env.SONAR_TOKEN}:`).toString('base64');
 
@@ -35,12 +45,16 @@ function sonarGet(path) {
   });
 }
 
-async function fetchAllIssues(componentKey) {
+async function fetchAllIssues(componentKey, branch) {
   const issues = [];
   let page = 1;
   const ps = 500;
+  const branchParam =
+    branch && String(branch).trim() !== ''
+      ? `&branch=${encodeURIComponent(String(branch).trim())}`
+      : '';
   for (;;) {
-    const path = `/api/issues/search?componentKeys=${encodeURIComponent(componentKey)}&ps=${ps}&p=${page}&issueStatuses=OPEN`;
+    const path = `/api/issues/search?componentKeys=${encodeURIComponent(componentKey)}&ps=${ps}&p=${page}&issueStatuses=OPEN${branchParam}`;
     const data = await sonarGet(path);
     issues.push(...(data.issues || []));
     if (!data.issues || data.issues.length < ps) break;
@@ -133,8 +147,8 @@ const API_KEY = 'KarmaCummunity_KC-MVP-server';
 const MOBILE_KEY = 'KarmaCummunity_MVP';
 
 const [apiIssues, mobileIssues] = await Promise.all([
-  fetchAllIssues(API_KEY),
-  fetchAllIssues(MOBILE_KEY),
+  fetchAllIssues(API_KEY, SONAR_BRANCH),
+  fetchAllIssues(MOBILE_KEY, SONAR_BRANCH),
 ]);
 
 const api = analyze(apiIssues);
@@ -170,10 +184,17 @@ const now = new Date();
 const dateStr = now.toISOString().slice(0, 10);
 const iso = now.toISOString();
 
+const branchNote =
+  SONAR_BRANCH
+    ? `**SonarCloud branch filter:** \`${SONAR_BRANCH}\` (\`branch=…\` on issues API).`
+    : '**SonarCloud branch filter:** *(none)* — API uses your org’s default issue scope. On many plans this is **main** only; non-main branch issue APIs may require a higher SonarCloud tier (branch-specific queries can return HTTP 403).';
+
 let md = `# SonarQube troubleshooting priority plan
 
 **Date:** ${dateStr}
 **Scan from SonarCloud:** https://sonarcloud.io
+
+${branchNote}
 
 **Issue scope:** Counts reflect **OPEN** issues only (\`issueStatuses=OPEN\`), i.e. the current SonarCloud backlog (not all-time history).
 
@@ -297,7 +318,9 @@ ${allVulns.length === 1 ? '1 open vulnerability' : `${allVulns.length} open vuln
 
 for (const v of allVulns) {
   const file = v.component.split(':').pop();
-  const proj = v.project === API_KEY ? 'api' : v.project === MOBILE_KEY ? 'mobile' : v.project;
+  let proj = v.project;
+  if (v.project === API_KEY) proj = 'api';
+  else if (v.project === MOBILE_KEY) proj = 'mobile';
   md += `- **${v.rule}** (${proj}) in file \`${file}\` line ${v.line ?? '—'}
   - Message: ${v.message}
 

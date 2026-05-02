@@ -47,7 +47,7 @@ import { RidesController } from "./controllers/rides.controller";
 import { UsersController } from "./controllers/users.controller";
 import { StatsController } from "./controllers/stats.controller";
 import { RedisTestController } from "./controllers/redis-test.controller";
-import { TasksController } from "./controllers/tasks.controller";
+import { TasksModule } from "./tasks/tasks.module";
 import { ChallengesController } from "./controllers/challenges.controller";
 import { CommunityGroupChallengesController } from "./controllers/community-group-challenges.controller";
 import { ItemsDeliveryController } from "./controllers/items-delivery.controller";
@@ -85,6 +85,7 @@ import { AdminTablesService } from "./services/admin-tables.service";
     AuthModule,
     ItemsModule,
     ServicesModule, // User resolution and other shared services
+    TasksModule,
   ],
   controllers: [
     // Core functionality
@@ -109,7 +110,6 @@ import { AdminTablesService } from "./services/admin-tables.service";
     // Analytics and monitoring
     StatsController, // Statistics and analytics
     RateLimitController, // Rate limit status endpoint
-    TasksController, // Task management
     ChallengesController, // Personal challenges/timers for admins
     CommunityGroupChallengesController, // Community group challenges
     CommunityMembersController, // Community members management

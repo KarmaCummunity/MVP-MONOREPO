@@ -1,9 +1,28 @@
 # SonarQube troubleshooting priority plan
 
-**Date:** 2026-04-29
+**Date:** 2026-05-03
 **Scan from SonarCloud:** https://sonarcloud.io
 
+**SonarCloud branch filter:** *(none)* — API uses your org’s default issue scope. On many plans this is **main** only; non-main branch issue APIs may require a higher SonarCloud tier (branch-specific queries can return HTTP 403).
+
 **Issue scope:** Counts reflect **OPEN** issues only (`issueStatuses=OPEN`), i.e. the current SonarCloud backlog (not all-time history).
+
+---
+
+## Source freshness & repo reconciliation
+
+Sections that list **file paths** come from the **last SonarCloud export** (see **Last update**). After refactors, Sonar may still show **old paths or deleted files** until the next successful analysis.
+
+| Sonar / doc path | Current repo |
+|------------------|----------------|
+| `src/controllers/tasks.controller.ts` | **Moved** → `src/tasks/tasks.controller.ts` (Nest `tasks` module). |
+| `screens/LandingSiteScreen.legacy.tsx` | **Not in tree** — use `screens/Landing/LandingSiteScreen.tsx` / `LandingSiteScreenMain.tsx`. |
+| `bottomBarScreens/HomeScreenOld.tsx` | **Not in tree** — home tab uses `bottomBarScreens/HomeScreen.tsx`. |
+
+**Security rows vs working tree**
+
+- **S2068** (`database.module.ts`): Still applies locally — fallback branch uses literal defaults (e.g. password placeholder); address via env-only secrets in deployment.
+- **S5145** (`minimal-server.ts`): **Likely stale on Sonar** — current code avoids logging user-controlled request fields; reopen if Sonar still reports after the next scan.
 
 ---
 
@@ -52,7 +71,7 @@
 - **Affected files:**
   - `src/controllers/posts.controller.ts` (6)
   - `src/services/user-hierarchy.service.ts` (4)
-  - `src/controllers/tasks.controller.ts` (3)
+  - `src/tasks/tasks.controller.ts` (3) *(Sonar label may still say `controllers/` until next scan)*
   - `src/controllers/sync.controller.ts` (2)
   - `src/controllers/items-delivery.service.ts` (2)
 
@@ -112,9 +131,9 @@
 - **typescript:S1854**: 124 problems - Dead stores - unused variables
 - **typescript:S6582**: 87 problems - Prefer template literals
 - **typescript:S125**: 52 problems - Sections of code should not be commented out
-- **typescript:S2933**: 34 problems - typescript:S2933
+- **typescript:S2933**: 34 problems - Use `readonly` for fields never reassigned after construction
 - **typescript:S6479**: 19 problems - JSX list components should not use array indexes as key
-- **typescript:S6590**: 15 problems - typescript:S6590
+- **typescript:S6590**: 15 problems - Prefer `as const` for literal / immutable values (`typescript-eslint` alignment)
 - **typescript:S6478**: 11 problems - React components should not be nested
 - **shelldre:S7682**: 11 problems - shelldre:S7682
 - **typescript:S6660**: 9 problems - typescript:S6660
@@ -126,7 +145,7 @@
 ### Top 10 files with the most problems - API
 
 1. `src/controllers/stats.controller.ts` - 67 issues
-2. `src/controllers/tasks.controller.ts` - 30 issues
+2. `src/tasks/tasks.controller.ts` - 30 issues *(path moved from `controllers/`; Sonar may lag)*
 3. `src/controllers/posts.controller.ts` - 26 issues
 4. `src/controllers/donations.controller.ts` - 24 issues
 5. `src/auth/controllers/auth.controller.ts` - 21 issues
@@ -138,13 +157,13 @@
 
 ### Top 10 files with the most problems - Mobile
 
-1. `screens/LandingSiteScreen.legacy.tsx` - 92 issues
+1. `screens/LandingSiteScreen.legacy.tsx` - 92 issues *(file not in repo — snapshot noise; see Landing screens under `screens/Landing/`)*
 2. `scripts/audit-all.ts` - 82 issues
 3. `globals/responsive.ts` - 74 issues
 4. `screens/Landing/styles/index.ts` - 51 issues
 5. `components/FloatingBubblesSkia.tsx` - 48 issues
 6. `bottomBarScreens/ProfileScreen.tsx` - 47 issues
-7. `bottomBarScreens/HomeScreenOld.tsx` - 45 issues
+7. `bottomBarScreens/HomeScreenOld.tsx` - 45 issues *(file not in repo — use `HomeScreen.tsx`)*
 8. `donationScreens/TrumpScreen.tsx` - 39 issues
 9. `utils/enhancedDatabaseService.ts` - 34 issues
 10. `donationScreens/MoneyScreen.tsx` - 33 issues
@@ -153,13 +172,13 @@
 
 ## 🔒 Security problems (VULNERABILITY)
 
-2 open vulnerabilities across analyzed projects (see below).
+2 open vulnerabilities across analyzed projects (see below). Confirm in SonarCloud UI after the next scan — line numbers and presence can drift from the table below.
 
-- **typescript:S2068** (api) in file `src/database/database.module.ts` line 57
+- **typescript:S2068** (api) in file `src/database/database.module.ts` (~lines 56–59 — fallback `POSTGRES_PASSWORD` / default literal)
   - Message: Review this potentially hard-coded password.
 
-- **tssecurity:S5145** (api) in file `src/minimal-server.ts` line 19
-  - Message: Change this code to not log user-controlled data.
+- **tssecurity:S5145** (api) in file `src/minimal-server.ts` *(likely stale — logging was sanitized; verify on Sonar after refresh)*
+  - Historical message: Change this code to not log user-controlled data.
 
 ---
 
@@ -193,8 +212,8 @@
 
 ### Step 6: Automation
 - [ ] Align ESLint rules with SonarQube where practical
-- [ ] Pre-commit hooks
-- [ ] CI/CD integration (already on SonarCloud)
+- [ ] Pre-commit hooks  
+(SonarCloud already runs on push; see workflows under `apps/api/.github` and `apps/mobile/.github`.)
 
 ---
 
@@ -225,4 +244,5 @@
 
 ---
 
-**Last update:** 2026-04-29T10:38:16.363Z
+**Last update (Sonar export):** 2026-05-02T23:05:50.477Z  
+**Doc reconciliation (manual vs repo):** 2026-05-03

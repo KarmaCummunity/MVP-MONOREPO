@@ -2,7 +2,7 @@
 # Built from monorepo root - Railway uses apps/mobile/Dockerfile
 
 # 1) Build static web with Expo
-FROM node:20-alpine as webbuild
+FROM node:20-alpine AS webbuild
 WORKDIR /app
 
 # Copy monorepo package files
@@ -65,7 +65,7 @@ RUN chmod +x scripts/fix-scroll-html.sh && sh scripts/fix-scroll-html.sh || true
 RUN chmod +x scripts/restore-build-placeholders.sh && sh scripts/restore-build-placeholders.sh || true
 
 # 2) Nginx runtime to serve static files
-FROM nginx:1.25-alpine as web
+FROM nginx:1.30.0-alpine AS web
 
 # Copy nginx config template and entrypoint to inject runtime BACKEND_BASE_URL
 ENV BACKEND_BASE_URL="http://localhost:3001"
@@ -73,10 +73,16 @@ ENV NGINX_PORT=8080
 ENV EXPO_PUBLIC_USE_BACKEND=1
 ENV EXPO_PUBLIC_USE_FIRESTORE=0
 COPY apps/mobile/web/nginx.conf /etc/nginx/templates/default.conf.template
-RUN printf '#!/bin/sh\nset -e\n: "${BACKEND_BASE_URL:=http://localhost:3001}"\n: "${PORT:=8080}"\nexport NGINX_PORT="$PORT"\n\
-  envsubst '\''$BACKEND_BASE_URL $NGINX_PORT'\'' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf\n\
-  exec nginx -g "daemon off;"\n' > /docker-entrypoint.sh \
-  && chmod +x /docker-entrypoint.sh
+RUN cat > /docker-entrypoint.sh <<'ENTRYSCRIPT' && chmod +x /docker-entrypoint.sh
+#!/bin/sh
+set -e
+: "${BACKEND_BASE_URL:=http://localhost:3001}"
+: "${PORT:=8080}"
+export NGINX_PORT="$PORT"
+envsubst '$BACKEND_BASE_URL $NGINX_PORT' \
+  < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
+exec nginx -g "daemon off;"
+ENTRYSCRIPT
 
 # Copy exported web static files from build stage
 COPY --from=webbuild /app/apps/mobile/dist /usr/share/nginx/html

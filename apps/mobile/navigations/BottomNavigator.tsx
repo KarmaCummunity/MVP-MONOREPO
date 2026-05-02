@@ -429,11 +429,7 @@ export default function BottomNavigator(): React.ReactElement {
 
       e.preventDefault();
 
-      tabNavigation.dispatch(
-        CommonActions.reset(
-          resetPayload as Parameters<typeof CommonActions.reset>[0],
-        ),
-      );
+      tabNavigation.dispatch(CommonActions.reset(resetPayload));
     }
   };
 

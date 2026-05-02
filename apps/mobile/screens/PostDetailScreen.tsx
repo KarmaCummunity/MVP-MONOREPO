@@ -50,17 +50,39 @@ function requirementCodeLabel(t: (k: string) => string, code: string): string {
   return translated === key ? code : translated;
 }
 
-function RideExtendedBlock({
-  re,
-  description,
-  t,
-}: {
+type PostDetailT = (key: string, options?: Record<string, unknown>) => string;
+
+function rideFuelLineText(t: PostDetailT, fuel: string, fuelMaxNis: number | undefined): string {
+  if (fuel === 'none') return t('postDetail:rideFuelNone');
+  if (fuel === 'yes') return t('postDetail:rideFuelYes');
+  if (fuel === 'up_to' && fuelMaxNis != null && fuelMaxNis > 0) {
+    return t('postDetail:rideFuelUpTo', { amount: fuelMaxNis });
+  }
+  return t('postDetail:rideFuelUpTo', { amount: String(fuelMaxNis ?? '—') });
+}
+
+function rideSmokingLineText(t: PostDetailT, smoking: string): string {
+  if (smoking === 'no_smokers') return t('postDetail:rideSmokingNoSmokers');
+  if (smoking === 'smokers_ok') return t('postDetail:rideSmokingSmokersOk');
+  return t('postDetail:rideSmokingAny');
+}
+
+function rideGenderLineText(t: PostDetailT, gender: string): string {
+  if (gender === 'female') return t('postDetail:rideGenderFemale');
+  if (gender === 'male') return t('postDetail:rideGenderMale');
+  return t('postDetail:rideGenderAny');
+}
+
+type RideExtendedBlockProps = Readonly<{
   re: FeedRideExtended;
   description: string;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}): React.ReactElement {
+  t: PostDetailT;
+}>;
+
+function RideExtendedBlock({ re, description, t }: RideExtendedBlockProps): React.ReactElement {
   const descTrim = description.trim();
-  const showMetaNotes = Boolean(re.notes?.trim() && re.notes.trim() !== descTrim);
+  const notesTrimmed = re.notes?.trim() ?? '';
+  const showMetaNotes = Boolean(notesTrimmed && notesTrimmed !== descTrim);
   const fuel = re.fuelParticipation;
   const smoking = re.smokingPreference;
   const gender = re.genderPreference;
@@ -71,7 +93,7 @@ function RideExtendedBlock({
       {showMetaNotes ? (
         <Text style={styles.blockLine}>
           <Text style={styles.blockLabel}>{t('postDetail:rideNotes')} </Text>
-          {re.notes!.trim()}
+          {notesTrimmed}
         </Text>
       ) : null}
       {re.requirementCodes?.map((code) => (
@@ -91,33 +113,19 @@ function RideExtendedBlock({
       {fuel ? (
         <Text style={styles.blockLine}>
           <Text style={styles.blockLabel}>{t('postDetail:rideFuel')} </Text>
-          {fuel === 'none'
-            ? t('postDetail:rideFuelNone')
-            : fuel === 'yes'
-              ? t('postDetail:rideFuelYes')
-              : fuel === 'up_to' && re.fuelMaxNis != null && re.fuelMaxNis > 0
-                ? t('postDetail:rideFuelUpTo', { amount: re.fuelMaxNis })
-                : t('postDetail:rideFuelUpTo', { amount: String(re.fuelMaxNis ?? '—') })}
+          {rideFuelLineText(t, fuel, re.fuelMaxNis)}
         </Text>
       ) : null}
       {smoking ? (
         <Text style={styles.blockLine}>
           <Text style={styles.blockLabel}>{t('postDetail:rideSmoking')} </Text>
-          {smoking === 'no_smokers'
-            ? t('postDetail:rideSmokingNoSmokers')
-            : smoking === 'smokers_ok'
-              ? t('postDetail:rideSmokingSmokersOk')
-              : t('postDetail:rideSmokingAny')}
+          {rideSmokingLineText(t, smoking)}
         </Text>
       ) : null}
       {gender ? (
         <Text style={styles.blockLine}>
           <Text style={styles.blockLabel}>{t('postDetail:rideGender')} </Text>
-          {gender === 'female'
-            ? t('postDetail:rideGenderFemale')
-            : gender === 'male'
-              ? t('postDetail:rideGenderMale')
-              : t('postDetail:rideGenderAny')}
+          {rideGenderLineText(t, gender)}
         </Text>
       ) : null}
       {p?.noSmoking ? (
@@ -133,13 +141,196 @@ function RideExtendedBlock({
   );
 }
 
-function PostDetailBody({
-  item,
-  onRefreshCounts,
-}: {
+function rideSectionHasExtended(re: FeedRideExtended | undefined): boolean {
+  if (!re) return false;
+  return Boolean(
+    re.notes ||
+      (re.requirementCodes && re.requirementCodes.length > 0) ||
+      re.isRecurring ||
+      re.fuelParticipation ||
+      re.smokingPreference ||
+      re.genderPreference ||
+      (re.preferences &&
+        (re.preferences.noSmoking || re.preferences.petsAllowed || re.preferences.kidsFriendly)),
+  );
+}
+
+function rideSectionHasCore(item: FeedItem): boolean {
+  return (
+    Boolean(item.from) ||
+    Boolean(item.to) ||
+    Boolean(item.date || item.time) ||
+    (item.seats != null && item.seats > 0) ||
+    (item.price != null && item.price > 0)
+  );
+}
+
+type RideDetailSectionProps = Readonly<{ item: FeedItem; t: PostDetailT }>;
+
+function RideDetailSection({ item, t }: RideDetailSectionProps): React.ReactElement | null {
+  const re = item.rideExtended;
+  if (!rideSectionHasCore(item) && !rideSectionHasExtended(re)) return null;
+
+  return (
+    <View style={styles.detailBlock}>
+      <Text style={styles.blockTitle}>{t('postDetail:rideSection')}</Text>
+      {item.from ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:from')} </Text>
+          {item.from}
+        </Text>
+      ) : null}
+      {item.to ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:to')} </Text>
+          {item.to}
+        </Text>
+      ) : null}
+      {item.date || item.time ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:when')} </Text>
+          {[item.date, item.time].filter(Boolean).join(' · ')}
+        </Text>
+      ) : null}
+      {item.seats != null && item.seats > 0 ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:seats')} </Text>
+          {item.seats}
+        </Text>
+      ) : null}
+      {item.price != null && item.price > 0 ? (
+        <Text style={styles.blockLine}>
+          <Text style={styles.blockLabel}>{t('postDetail:price')} </Text>
+          {item.price}
+        </Text>
+      ) : null}
+      {re ? <RideExtendedBlock re={re} description={item.description} t={t} /> : null}
+    </View>
+  );
+}
+
+type PostDetailNavigation = {
+  getParent?: () => unknown;
+  dispatch: (action: unknown) => void;
+};
+
+function openChallengeFromPostDetailNavigation(
+  navigation: PostDetailNavigation,
+  challengeId: string,
+): void {
+  const tabNav = navigation.getParent?.() as
+    | { navigate?: (name: string, p?: object) => void; getState?: () => { routeNames?: string[] } }
+    | undefined;
+  const tabState =
+    typeof tabNav?.getState === 'function' ? tabNav.getState() : undefined;
+  if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
+    tabNav.navigate('DonationsTab', {
+      screen: 'ChallengeDetailsScreen',
+      params: { challengeId },
+    });
+    return;
+  }
+  navigation.dispatch(
+    CommonActions.navigate({
+      name: 'HomeStack',
+      params: {
+        screen: 'DonationsTab',
+        params: {
+          screen: 'ChallengeDetailsScreen',
+          params: { challengeId },
+        },
+      },
+    } as never),
+  );
+}
+
+function PostDetailHeroGallery({ uris }: Readonly<{ uris: string[] }>): React.ReactElement {
+  if (uris.length === 0) {
+    return (
+      <View style={styles.heroPlaceholder}>
+        <Ionicons name="image-outline" size={56} color={colors.textSecondary} />
+      </View>
+    );
+  }
+  return (
+    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.gallery}>
+      {uris.map((uri) => (
+        <Image key={uri} source={{ uri }} style={[styles.heroImage, { width: SCREEN_W }]} resizeMode="cover" />
+      ))}
+    </ScrollView>
+  );
+}
+
+type PostDetailMetaRowProps = Readonly<{
+  typeLabel: string;
+  postedLabel: string;
+  intent?: FeedItem['intent'];
+  t: PostDetailT;
+}>;
+
+function PostDetailMetaRow({ typeLabel, postedLabel, intent, t }: PostDetailMetaRowProps): React.ReactElement {
+  return (
+    <View style={styles.metaRow}>
+      {typeLabel ? (
+        <View style={styles.chip}>
+          <Text style={styles.chipText}>{typeLabel}</Text>
+        </View>
+      ) : null}
+      {intent ? (
+        <View style={[styles.chip, intent === 'request' ? styles.chipRequest : styles.chipGive]}>
+          <Text style={styles.chipText}>
+            {intent === 'request' ? t('postDetail:intent.request') : t('postDetail:intent.give')}
+          </Text>
+        </View>
+      ) : null}
+      {postedLabel ? (
+        <View style={styles.chipMuted}>
+          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+          <Text style={styles.chipMutedText}>{postedLabel}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+type PostDetailSellerBlockProps = Readonly<{ item: FeedItem; onOpenProfile: () => void; t: PostDetailT }>;
+
+function PostDetailSellerBlock({ item, onOpenProfile, t }: PostDetailSellerBlockProps): React.ReactElement {
+  return (
+    <View style={styles.sellerRow}>
+      <TouchableOpacity style={styles.sellerLeft} onPress={onOpenProfile} activeOpacity={0.7}>
+        {item.user?.avatar ? (
+          <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarFallback]}>
+            <Ionicons name="person" size={22} color={colors.textSecondary} />
+          </View>
+        )}
+        <View style={styles.sellerText}>
+          <View style={styles.nameRow}>
+            <Text style={styles.sellerName} numberOfLines={1}>
+              {item.user?.name ?? t('common:unknownUser')}
+            </Text>
+            {item.user?.emailVerified ? (
+              <Ionicons name="checkmark-circle" size={18} color={colors.primary} style={styles.verified} />
+            ) : null}
+          </View>
+          <Text style={styles.sellerHint}>{t('postDetail:sellerHint')}</Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
+        <Text style={styles.profileBtnText}>{t('postDetail:viewProfile')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+type PostDetailBodyProps = Readonly<{
   item: FeedItem;
   onRefreshCounts: () => void;
-}): React.ReactElement {
+}>;
+
+function PostDetailBody({ item, onRefreshCounts }: PostDetailBodyProps): React.ReactElement {
   const { t, i18n } = useTranslation(['postDetail', 'common']);
   const navigation = useNavigation<any>();
   const { navigateToProfile } = useProfileNavigation();
@@ -180,155 +371,24 @@ function PostDetailBody({
   }, [item.user, navigateToProfile, t]);
 
   const openChallenge = useCallback(() => {
-    if (!item.challengeId) return;
-    const tabNav = navigation.getParent?.() as { navigate?: (name: string, p?: object) => void } | undefined;
-    const tabState =
-      tabNav && typeof (tabNav as { getState?: () => { routeNames?: string[] } }).getState === 'function'
-        ? (tabNav as { getState: () => { routeNames?: string[] } }).getState()
-        : undefined;
-    if (tabState?.routeNames?.includes('DonationsTab') && tabNav?.navigate) {
-      tabNav.navigate('DonationsTab', {
-        screen: 'ChallengeDetailsScreen',
-        params: { challengeId: item.challengeId },
-      });
-      return;
-    }
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'HomeStack',
-        params: {
-          screen: 'DonationsTab',
-          params: {
-            screen: 'ChallengeDetailsScreen',
-            params: { challengeId: item.challengeId },
-          },
-        },
-      } as never),
-    );
+    const id = item.challengeId;
+    if (!id) return;
+    openChallengeFromPostDetailNavigation(navigation as PostDetailNavigation, id);
   }, [item.challengeId, navigation]);
 
   return (
     <>
-      {galleryUris.length > 0 ? (
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.gallery}>
-          {galleryUris.map((uri) => (
-            <Image key={uri} source={{ uri }} style={[styles.heroImage, { width: SCREEN_W }]} resizeMode="cover" />
-          ))}
-        </ScrollView>
-      ) : (
-        <View style={styles.heroPlaceholder}>
-          <Ionicons name="image-outline" size={56} color={colors.textSecondary} />
-        </View>
-      )}
+      <PostDetailHeroGallery uris={galleryUris} />
 
       <View style={styles.card}>
-        <View style={styles.sellerRow}>
-          <TouchableOpacity style={styles.sellerLeft} onPress={onOpenProfile} activeOpacity={0.7}>
-            {item.user?.avatar ? (
-              <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback]}>
-                <Ionicons name="person" size={22} color={colors.textSecondary} />
-              </View>
-            )}
-            <View style={styles.sellerText}>
-              <View style={styles.nameRow}>
-                <Text style={styles.sellerName} numberOfLines={1}>
-                  {item.user?.name || t('common:unknownUser')}
-                </Text>
-                {item.user?.emailVerified ? (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} style={styles.verified} />
-                ) : null}
-              </View>
-              <Text style={styles.sellerHint}>{t('postDetail:sellerHint')}</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.profileBtn} onPress={onOpenProfile}>
-            <Text style={styles.profileBtnText}>{t('postDetail:viewProfile')}</Text>
-          </TouchableOpacity>
-        </View>
+        <PostDetailSellerBlock item={item} onOpenProfile={onOpenProfile} t={t} />
 
         <Text style={styles.title}>{item.title}</Text>
         {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
 
-        <View style={styles.metaRow}>
-          {typeLabel ? (
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>{typeLabel}</Text>
-            </View>
-          ) : null}
-          {item.intent ? (
-            <View style={[styles.chip, item.intent === 'request' ? styles.chipRequest : styles.chipGive]}>
-              <Text style={styles.chipText}>
-                {item.intent === 'request' ? t('postDetail:intent.request') : t('postDetail:intent.give')}
-              </Text>
-            </View>
-          ) : null}
-          {postedLabel ? (
-            <View style={styles.chipMuted}>
-              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.chipMutedText}>{postedLabel}</Text>
-            </View>
-          ) : null}
-        </View>
+        <PostDetailMetaRow typeLabel={typeLabel} postedLabel={postedLabel} intent={item.intent} t={t} />
 
-        {(() => {
-          const re = item.rideExtended;
-          const hasCore =
-            Boolean(item.from) ||
-            Boolean(item.to) ||
-            Boolean(item.date || item.time) ||
-            (item.seats != null && item.seats > 0) ||
-            (item.price != null && item.price > 0);
-          const hasExt = Boolean(
-            re &&
-              (re.notes ||
-                (re.requirementCodes && re.requirementCodes.length > 0) ||
-                re.isRecurring ||
-                re.fuelParticipation ||
-                re.smokingPreference ||
-                re.genderPreference ||
-                (re.preferences &&
-                  (re.preferences.noSmoking || re.preferences.petsAllowed || re.preferences.kidsFriendly))),
-          );
-          if (!hasCore && !hasExt) return null;
-          return (
-            <View style={styles.detailBlock}>
-              <Text style={styles.blockTitle}>{t('postDetail:rideSection')}</Text>
-              {item.from ? (
-                <Text style={styles.blockLine}>
-                  <Text style={styles.blockLabel}>{t('postDetail:from')} </Text>
-                  {item.from}
-                </Text>
-              ) : null}
-              {item.to ? (
-                <Text style={styles.blockLine}>
-                  <Text style={styles.blockLabel}>{t('postDetail:to')} </Text>
-                  {item.to}
-                </Text>
-              ) : null}
-              {item.date || item.time ? (
-                <Text style={styles.blockLine}>
-                  <Text style={styles.blockLabel}>{t('postDetail:when')} </Text>
-                  {[item.date, item.time].filter(Boolean).join(' · ')}
-                </Text>
-              ) : null}
-              {item.seats != null && item.seats > 0 ? (
-                <Text style={styles.blockLine}>
-                  <Text style={styles.blockLabel}>{t('postDetail:seats')} </Text>
-                  {item.seats}
-                </Text>
-              ) : null}
-              {item.price != null && item.price > 0 ? (
-                <Text style={styles.blockLine}>
-                  <Text style={styles.blockLabel}>{t('postDetail:price')} </Text>
-                  {item.price}
-                </Text>
-              ) : null}
-              {re ? <RideExtendedBlock re={re} description={item.description} t={t} /> : null}
-            </View>
-          );
-        })()}
+        <RideDetailSection item={item} t={t} />
 
         {item.taskData ? (
           <View style={styles.detailBlock}>
@@ -405,7 +465,7 @@ export default function PostDetailScreen(): React.ReactElement {
     async (isRefresh: boolean) => {
       if (!postId) return;
       if (isRefresh) setRefreshing(true);
-      else if (!(initialItem && initialItem.id === postId)) setLoading(true);
+      else if (initialItem?.id !== postId) setLoading(true);
       setFetchError(null);
       try {
         const res = await postsService.getPostById(postId, selectedUser?.id);
@@ -413,14 +473,14 @@ export default function PostDetailScreen(): React.ReactElement {
           setItem(mapApiPostToFeedItem(res.data));
         } else {
           setFetchError(res.error || t('postDetail:loadError'));
-          if (initialItem && initialItem.id === postId) {
+          if (initialItem?.id === postId) {
             setItem((prev) => prev ?? initialItem);
           }
         }
       } catch (e) {
         logger.error('PostDetailScreen', 'load failed', { e, postId });
         setFetchError(t('postDetail:loadError'));
-        if (initialItem && initialItem.id === postId) {
+        if (initialItem?.id === postId) {
           setItem((prev) => prev ?? initialItem);
         }
       } finally {
@@ -514,13 +574,13 @@ const styles = StyleSheet.create({
   errorText: { marginTop: 12, color: colors.textPrimary, fontSize: 16, textAlign: 'center' },
   retryBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },
   retryBtnText: { color: colors.white, fontWeight: '600' },
-  banner: { backgroundColor: colors.surfaceAlice, padding: 10 },
+  banner: { backgroundColor: colors.surfaceAliceBlue, padding: 10 },
   bannerText: { color: colors.textPrimary, textAlign: 'center', fontSize: 13 },
   gallery: { maxHeight: HERO_H },
-  heroImage: { height: HERO_H, backgroundColor: colors.surfaceMuted },
+  heroImage: { height: HERO_H, backgroundColor: colors.surfaceMutedPanel },
   heroPlaceholder: {
     height: HERO_H,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceMutedPanel,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -538,17 +598,23 @@ const styles = StyleSheet.create({
   },
   sellerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   sellerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, backgroundColor: colors.surfaceMuted },
+  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, backgroundColor: colors.surfaceMutedPanel },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   sellerText: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
   sellerName: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, flexShrink: 1 },
   verified: { marginLeft: 4 },
   sellerHint: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-  profileBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.borderLight },
+  profileBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.neutralBorderStrong,
+  },
   profileBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
-  description: { fontSize: 16, lineHeight: 24, color: colors.textBodyNeutral, marginBottom: 12 },
+  description: { fontSize: 16, lineHeight: 24, color: colors.neutralTextTitle, marginBottom: 12 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   chip: { backgroundColor: colors.surfaceGrayBlue, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   chipGive: { backgroundColor: colors.surfaceGreenTint },
@@ -558,13 +624,13 @@ const styles = StyleSheet.create({
   chipMutedText: { fontSize: 13, color: colors.textSecondary },
   detailBlock: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderLight,
+    borderTopColor: colors.neutralBorderStrong,
     paddingTop: 12,
     marginTop: 4,
     marginBottom: 8,
   },
   blockTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
-  blockLine: { fontSize: 15, color: colors.textBodyNeutral, marginBottom: 4 },
+  blockLine: { fontSize: 15, color: colors.neutralTextTitle, marginBottom: 4 },
   blockLabel: { fontWeight: '600', color: colors.textSecondary },
   challengeBtn: {
     flexDirection: 'row',
@@ -581,7 +647,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderLight,
+    borderTopColor: colors.neutralBorderStrong,
     paddingTop: 14,
     marginTop: 8,
   },

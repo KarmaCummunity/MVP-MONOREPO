@@ -21,6 +21,7 @@ import { AdminStackParamList } from '../../globals/types';
 import { useUser } from '../../stores/userStore';
 import { logger } from '../../utils/loggerService';
 import { apiService } from '../../utils/apiService';
+import { KC_ORGANIZATION_ROOT_EMAIL } from '../../utils/org.constants';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
 interface AdminAdminsScreenProps {
@@ -52,6 +53,8 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         isDemote: boolean;
         title: string;
         message: string;
+        /** When true, demote removes admin and assigns volunteer (RN Web Alert is unreliable). */
+        demoteAsVolunteer?: boolean;
     } | null>(null);
 
     // Store eligible users separately
@@ -98,7 +101,8 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 // Extract managers from the list (admins + super admin)
                 const managers = response.data.filter((u: any) => {
                     const roles = u.roles || [];
-                    return roles.includes('admin') || roles.includes('super_admin') || u.email === 'navesarussi@gmail.com';
+                    return roles.includes('admin') || roles.includes('super_admin') ||
+                        (u.email || '').toLowerCase() === KC_ORGANIZATION_ROOT_EMAIL.toLowerCase();
                 });
                 setAllManagers(managers);
 
@@ -227,8 +231,8 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         const currentRoles = Array.isArray(user.roles) ? user.roles : [];
         const isAdmin = currentRoles.includes('admin') || currentRoles.includes('super_admin');
-        const superAdminEmails = ['navesarussi@gmail.com', 'karmacommunity2.0@gmail.com'];
-        const isSuperAdmin = superAdminEmails.includes(user.email?.toLowerCase() || '');
+        const superAdminEmails = [KC_ORGANIZATION_ROOT_EMAIL.toLowerCase()];
+        const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
 
         logger.debug(LOG_SOURCE, 'User check', {
             isAdmin,
@@ -280,8 +284,9 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         let res;
         if (isDemote) {
-            logger.debug(LOG_SOURCE, 'Calling demoteAdmin');
-            res = await apiService.demoteAdmin(user.id, selectedUser.id);
+            const convertToVolunteer = ctx.demoteAsVolunteer === true;
+            logger.debug(LOG_SOURCE, 'Calling demoteAdmin', { convertToVolunteer });
+            res = await apiService.demoteAdmin(user.id, selectedUser.id, convertToVolunteer);
         } else {
             logger.debug(LOG_SOURCE, 'Calling promoteToAdmin');
             res = await apiService.promoteToAdmin(user.id, selectedUser.id);
@@ -446,100 +451,30 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         );
     };
 
-    const handleDemoteToVolunteer = async (targetUser: any) => {
-        logger.debug(LOG_SOURCE, 'handleDemoteToVolunteer called', {
+    const handleDemoteToVolunteer = (targetUser: any) => {
+        logger.info(LOG_SOURCE, 'handleDemoteToVolunteer called', {
             targetUserId: targetUser?.id,
             targetUserName: targetUser?.name,
             targetUserEmail: targetUser?.email,
             targetUserRoles: targetUser?.roles,
             requestingAdminId: selectedUser?.id,
-            selectedUserEmail: selectedUser?.email
-        });
-
-        logger.info(LOG_SOURCE, 'handleDemoteToVolunteer called', {
-            targetUserId: targetUser.id,
-            targetUserName: targetUser.name,
-            targetUserEmail: targetUser.email,
-            targetUserRoles: targetUser.roles,
-            requestingAdminId: selectedUser?.id
+            platform: Platform.OS,
         });
 
         if (!selectedUser?.id) {
             logger.warn(LOG_SOURCE, 'handleDemoteToVolunteer: No selectedUser.id', {});
-            console.error('[AdminAdminsScreen] ❌ No selectedUser.id');
             Alert.alert('שגיאה', 'לא ניתן לזהות את המשתמש הנוכחי');
             return;
         }
 
-        logger.debug(LOG_SOURCE, 'Showing Alert.alert for demote to volunteer');
-        
-        Alert.alert(
-            'הפוך למתנדב',
-            `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${targetUser.name || targetUser.email} ולהפוך אותו למתנדב?`,
-            [
-                { 
-                    text: 'ביטול', 
-                    style: 'cancel',
-                    onPress: () => {
-                        logger.debug(LOG_SOURCE, 'User cancelled demote to volunteer');
-                    }
-                },
-                {
-                    text: 'אישור',
-                    style: 'destructive',
-                    onPress: async () => {
-                        logger.debug(LOG_SOURCE, 'User confirmed demote to volunteer');
-                        try {
-                            logger.info(LOG_SOURCE, 'Demoting admin to volunteer - Starting process', {
-                                targetUserId: targetUser.id,
-                                requestingAdminId: selectedUser.id
-                            });
-
-                            logger.debug(LOG_SOURCE, 'Calling apiService.demoteAdmin with convertToVolunteer=true');
-                            // Demote admin and convert to volunteer in one step
-                            logger.info(LOG_SOURCE, 'Demoting admin to volunteer', {
-                                targetUserId: targetUser.id,
-                                convertToVolunteer: true
-                            });
-                            const demoteRes = await apiService.demoteAdmin(targetUser.id, selectedUser.id, true);
-                            
-                            logger.debug(LOG_SOURCE, 'demoteAdmin API Response', { demoteRes });
-                            logger.info(LOG_SOURCE, 'Demote admin to volunteer API response', {
-                                success: demoteRes.success,
-                                message: demoteRes.message,
-                                error: demoteRes.error,
-                                targetUserId: targetUser.id
-                            });
-
-                            if (demoteRes.success) {
-                                logger.info(LOG_SOURCE, 'Admin demoted to volunteer successfully', {
-                                    targetUserId: targetUser.id,
-                                    targetUserName: targetUser.name
-                                });
-                                logger.debug(LOG_SOURCE, 'Success! Reloading users');
-                                Alert.alert('הצלחה', demoteRes.message || 'המשתמש הוסר ממנהלים והפך למתנדב');
-                                await loadUsers(true);
-                            } else {
-                                logger.error(LOG_SOURCE, 'Failed to demote admin to volunteer', {
-                                    targetUserId: targetUser.id,
-                                    error: demoteRes.error
-                                });
-                                console.error('[AdminAdminsScreen] ❌ Failed:', demoteRes.error);
-                                Alert.alert('שגיאה', demoteRes.error || 'נכשל בהסרת הרשאות מנהל והפיכה למתנדב');
-                            }
-                        } catch (e: any) {
-                            logger.error(LOG_SOURCE, 'Error demoting admin to volunteer', {
-                                targetUserId: targetUser.id,
-                                error: e?.message || String(e),
-                                stack: e?.stack
-                            });
-                            console.error('[AdminAdminsScreen] ❌ Exception:', e);
-                            Alert.alert('שגיאה', 'נכשל בהסרת הרשאות מנהל');
-                        }
-                    }
-                }
-            ]
-        );
+        // Same pattern as handleToggleAdmin: Modal instead of Alert — RN Web often does not show multi-button alerts.
+        setAdminRoleConfirm({
+            user: targetUser,
+            isDemote: true,
+            demoteAsVolunteer: true,
+            title: 'הפוך למתנדב',
+            message: `האם אתה בטוח שברצונך להסיר הרשאות מנהל מ-${targetUser.name || targetUser.email} ולהפוך אותו למתנדב?`,
+        });
     };
 
     // Get managers that can be assigned (exclude the user themselves and create cycle prevention)
@@ -620,7 +555,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     const userRoles = user.roles || [];
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
-                    const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com'; // המנהל הראשי - מוגן לחלוטין
+                    const isRootAdmin = (user.email || '').toLowerCase() === KC_ORGANIZATION_ROOT_EMAIL.toLowerCase(); // המנהל הראשי - מוגן לחלוטין
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);
                     const hierarchyLevel = user.hierarchy_level;
@@ -642,7 +577,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                 <Text style={styles.userEmail}>{user.email}</Text>
                                 
                                 {/* Display hierarchy level */}
-                                {levelText && (
+                                {Boolean(levelText) && (
                                     <View style={[styles.managerBadge, { backgroundColor: colors.primary + '20', marginTop: 4 }]}>
                                         <Ionicons name="layers-outline" size={12} color={colors.primary} />
                                         <Text style={[styles.managerText, { color: colors.primary }]}>{levelText}</Text>

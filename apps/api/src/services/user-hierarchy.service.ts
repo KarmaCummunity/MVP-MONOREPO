@@ -1,9 +1,10 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Pool, type PoolClient } from "pg";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
+import { KC_ROOT_ADMIN_EMAIL_FALLBACK } from "../config/kc-root-admin.defaults";
 
 type SimpleUserProfile = {
   id: string;
@@ -75,6 +76,12 @@ export class UserHierarchyService {
     return (this.configService.get<string>("ROOT_ADMIN_EMAIL") || "")
       .toLowerCase()
       .trim();
+  }
+
+  /** Canonical root manager email: env `ROOT_ADMIN_EMAIL`, else KC default (single org identity). */
+  private resolveRootAdminEmail(): string {
+    const fromEnv = this.getRootAdminEmail();
+    return fromEnv || KC_ROOT_ADMIN_EMAIL_FALLBACK.toLowerCase().trim();
   }
 
   /**
@@ -387,10 +394,11 @@ export class UserHierarchyService {
       return [];
     }
 
+    const rootEmail = this.resolveRootAdminEmail();
     return allUsers
       .filter((user) => {
         if (level === 0) {
-          return user.email === "karmacommunity2.0@gmail.com";
+          return (user.email || "").toLowerCase().trim() === rootEmail;
         }
         return user.parent_manager_id === parentId;
       })
@@ -406,7 +414,7 @@ export class UserHierarchyService {
           email: user.email,
           avatar_url: user.avatar_url,
           level: user.level,
-          isSuperAdmin: user.is_super_admin,
+          isSuperAdmin: (user.email || "").toLowerCase().trim() === rootEmail,
           isAdmin:
             userRoles.includes("admin") || userRoles.includes("super_admin"),
           isVolunteer:
@@ -436,9 +444,11 @@ export class UserHierarchyService {
           AND column_name IN ('salary', 'seniority_start_date', 'parent_manager_id')
         `);
 
-        const existingColumns = checkResult.rows.map((r) => r.column_name);
+        const existingColumns = new Set(
+          checkResult.rows.map((r) => r.column_name as string),
+        );
 
-        if (!existingColumns.includes("salary")) {
+        if (!existingColumns.has("salary")) {
           this.logger.log("📋 Adding salary column to user_profiles...");
           await client.query(`
             ALTER TABLE user_profiles 
@@ -447,7 +457,7 @@ export class UserHierarchyService {
           this.logger.log("✅ Added salary column");
         }
 
-        if (!existingColumns.includes("seniority_start_date")) {
+        if (!existingColumns.has("seniority_start_date")) {
           this.logger.log(
             "📋 Adding seniority_start_date column to user_profiles...",
           );
@@ -458,7 +468,7 @@ export class UserHierarchyService {
           this.logger.log("✅ Added seniority_start_date column");
         }
 
-        if (!existingColumns.includes("parent_manager_id")) {
+        if (!existingColumns.has("parent_manager_id")) {
           this.logger.log(
             "📋 Adding parent_manager_id column to user_profiles...",
           );
@@ -479,6 +489,114 @@ export class UserHierarchyService {
     }
   }
 
+  private async setManagerEnsureRequesterAdminIfProvided(
+    requestingUserId: string | undefined,
+  ): Promise<{ success: false; error: string } | null> {
+    if (!requestingUserId) {
+      return null;
+    }
+    const { rows: reqUser } = await this.pool.query(
+      `SELECT id, email, roles FROM user_profiles WHERE id = $1`,
+      [requestingUserId],
+    );
+    if (reqUser.length === 0) {
+      return null;
+    }
+    const isAdmin =
+      (reqUser[0].roles || []).includes("admin") ||
+      (reqUser[0].roles || []).includes("super_admin");
+    if (!isAdmin) {
+      this.logger.log(
+        `[setManager] Permission denied for user ${requestingUserId}`,
+      );
+      return {
+        success: false,
+        error: "אין לך הרשאה לבצע פעולה זו - נדרשות הרשאות מנהל",
+      };
+    }
+    return null;
+  }
+
+  private async setManagerAssertTargetNotRoot(
+    id: string,
+    rootEmail: string | null,
+  ): Promise<{ success: false; error: string } | null> {
+    const { rows: targetUserCheck } = await this.pool.query(
+      "SELECT email FROM user_profiles WHERE id = $1",
+      [id],
+    );
+    if (
+      rootEmail &&
+      targetUserCheck.length > 0 &&
+      (targetUserCheck[0].email || "").toLowerCase().trim() === rootEmail
+    ) {
+      this.logger.log(`[setManager] ❌ BLOCKED: Attempt to modify root admin`);
+      return {
+        success: false,
+        error: "לא ניתן לשנות את המנהל הראשי - הוא המנהל הראשי",
+      };
+    }
+    return null;
+  }
+
+  private async setManagerNormalizeRootManagerIfNeeded(
+    assignManagerId: string,
+    managerEmail: string | null,
+    managerCurrentParent: string | null,
+    rootEmail: string | null,
+  ): Promise<void> {
+    if (
+      !rootEmail ||
+      (managerEmail || "").toLowerCase().trim() !== rootEmail ||
+      managerCurrentParent === null
+    ) {
+      return;
+    }
+    this.logger.log(
+      `[setManager] 🔧 FIXING: Root admin has parent_manager_id=${managerCurrentParent}, removing it...`,
+    );
+    await this.pool.query(
+      `
+          UPDATE user_profiles 
+          SET parent_manager_id = NULL, updated_at = NOW()
+          WHERE id = $1
+        `,
+      [assignManagerId],
+    );
+    await this.redisCache.delete(`user_profile_${assignManagerId}`);
+    await this.redisCache.invalidatePattern("users_list*");
+  }
+
+  private async setManagerValidateNonRootAdminRequiresManager(
+    id: string,
+    assignManagerId: string,
+    rootEmail: string | null,
+  ): Promise<{ success: false; error: string } | null> {
+    const { rows: userCheck } = await this.pool.query(
+      "SELECT roles, email FROM user_profiles WHERE id = $1",
+      [id],
+    );
+    if (userCheck.length === 0) {
+      return null;
+    }
+    const userRoles = Array.isArray(userCheck[0].roles)
+      ? userCheck[0].roles
+      : [];
+    const isAdmin =
+      userRoles.includes("admin") || userRoles.includes("super_admin");
+    const isRootAdmin =
+      rootEmail &&
+      (userCheck[0].email || "").toLowerCase().trim() === rootEmail;
+    if (isAdmin && !isRootAdmin && !assignManagerId) {
+      return {
+        success: false,
+        error:
+          "מנהל חייב להיות משויך למנהל מעליו (חוץ מהמנהל הראשי). אם ברצונך להסיר את השיוך, המשתמש יהפוך למשתמש רגיל.",
+      };
+    }
+    return null;
+  }
+
   async setManager(
     id: string,
     body: { managerId: string | null | undefined; requestingUserId?: string },
@@ -490,47 +608,19 @@ export class UserHierarchyService {
         `[setManager] Setting manager for user ${id}: managerId=${managerId} (type: ${typeof managerId}), requestingUserId=${requestingUserId}`,
       );
 
-      if (requestingUserId) {
-        const { rows: reqUser } = await this.pool.query(
-          `SELECT id, email, roles FROM user_profiles WHERE id = $1`,
-          [requestingUserId],
-        );
-
-        if (reqUser.length > 0) {
-          const isAdmin =
-            (reqUser[0].roles || []).includes("admin") ||
-            (reqUser[0].roles || []).includes("super_admin");
-
-          if (!isAdmin) {
-            this.logger.log(
-              `[setManager] Permission denied for user ${requestingUserId}`,
-            );
-            return {
-              success: false,
-              error: "אין לך הרשאה לבצע פעולה זו - נדרשות הרשאות מנהל",
-            };
-          }
-        }
+      const permissionDenied =
+        await this.setManagerEnsureRequesterAdminIfProvided(requestingUserId);
+      if (permissionDenied) {
+        return permissionDenied;
       }
 
-      const rootEmail = this.getRootAdminEmail();
-      const { rows: targetUserCheck } = await this.pool.query(
-        "SELECT email FROM user_profiles WHERE id = $1",
-        [id],
+      const rootEmail = this.resolveRootAdminEmail();
+      const rootTargetBlock = await this.setManagerAssertTargetNotRoot(
+        id,
+        rootEmail,
       );
-
-      if (
-        rootEmail &&
-        targetUserCheck.length > 0 &&
-        (targetUserCheck[0].email || "").toLowerCase().trim() === rootEmail
-      ) {
-        this.logger.log(
-          `[setManager] ❌ BLOCKED: Attempt to modify root admin`,
-        );
-        return {
-          success: false,
-          error: "לא ניתן לשנות את המנהל הראשי - הוא המנהל הראשי",
-        };
+      if (rootTargetBlock) {
+        return rootTargetBlock;
       }
 
       if (this.isManagerAssignmentCleared(managerId)) {
@@ -554,25 +644,12 @@ export class UserHierarchyService {
       const managerEmail = checkManager[0].email;
       const managerCurrentParent = checkManager[0].parent_manager_id;
 
-      if (
-        rootEmail &&
-        (managerEmail || "").toLowerCase().trim() === rootEmail &&
-        managerCurrentParent !== null
-      ) {
-        this.logger.log(
-          `[setManager] 🔧 FIXING: Root admin has parent_manager_id=${managerCurrentParent}, removing it...`,
-        );
-        await this.pool.query(
-          `
-          UPDATE user_profiles 
-          SET parent_manager_id = NULL, updated_at = NOW()
-          WHERE id = $1
-        `,
-          [assignManagerId],
-        );
-        await this.redisCache.delete(`user_profile_${assignManagerId}`);
-        await this.redisCache.invalidatePattern("users_list*");
-      }
+      await this.setManagerNormalizeRootManagerIfNeeded(
+        assignManagerId,
+        managerEmail,
+        managerCurrentParent,
+        rootEmail,
+      );
 
       const cycleCheckResult =
         await this.setManagerValidateCyclesAndReverseChain(
@@ -585,28 +662,14 @@ export class UserHierarchyService {
         return cycleCheckResult;
       }
 
-      const { rows: userCheck } = await this.pool.query(
-        "SELECT roles, email FROM user_profiles WHERE id = $1",
-        [id],
-      );
-
-      if (userCheck.length > 0) {
-        const userRoles = Array.isArray(userCheck[0].roles)
-          ? userCheck[0].roles
-          : [];
-        const isAdmin =
-          userRoles.includes("admin") || userRoles.includes("super_admin");
-        const isRootAdmin =
-          rootEmail &&
-          (userCheck[0].email || "").toLowerCase().trim() === rootEmail;
-
-        if (isAdmin && !isRootAdmin && !assignManagerId) {
-          return {
-            success: false,
-            error:
-              "מנהל חייב להיות משויך למנהל מעליו (חוץ מהמנהל הראשי). אם ברצונך להסיר את השיוך, המשתמש יהפוך למשתמש רגיל.",
-          };
-        }
+      const adminManagerRule =
+        await this.setManagerValidateNonRootAdminRequiresManager(
+          id,
+          assignManagerId,
+          rootEmail,
+        );
+      if (adminManagerRule) {
+        return adminManagerRule;
       }
 
       await this.pool.query(
@@ -819,7 +882,7 @@ export class UserHierarchyService {
       const { action, managerId } = body;
       await client.query("BEGIN");
 
-      const rootEmail = this.getRootAdminEmail();
+      const rootEmail = this.resolveRootAdminEmail();
       const { rows: subordinateCheck } = await client.query(
         "SELECT email FROM user_profiles WHERE id = $1",
         [subordinateId],
@@ -927,7 +990,7 @@ export class UserHierarchyService {
         return { success: false, error: "User not found" };
       }
 
-      const rootEmail = this.getRootAdminEmail();
+      const rootEmail = this.resolveRootAdminEmail();
       if (
         rootEmail &&
         (targetUser[0].email || "").toLowerCase().trim() === rootEmail
@@ -1005,6 +1068,55 @@ export class UserHierarchyService {
     }
   }
 
+  private async demoteAdminTargetIsSubordinateOfRequester(
+    client: PoolClient,
+    requestingAdminId: string,
+    targetUserId: string,
+  ): Promise<boolean> {
+    const { rows: subordinateCheck } = await client.query(
+      `
+          WITH RECURSIVE subordinates AS (
+            SELECT id, 1 as depth FROM user_profiles WHERE parent_manager_id = $1
+            UNION ALL
+            SELECT u.id, s.depth + 1
+            FROM user_profiles u
+            INNER JOIN subordinates s ON u.parent_manager_id = s.id
+            WHERE s.depth < 100
+          )
+          SELECT 1 FROM subordinates WHERE id = $2 LIMIT 1
+        `,
+      [requestingAdminId, targetUserId],
+    );
+    return subordinateCheck.length > 0;
+  }
+
+  private computeDemoteAdminRolesAndParent(
+    convertToVolunteer: boolean,
+    hasParentManager: boolean,
+    requestingAdminId: string,
+    currentRoles: string[],
+    targetParentManagerId: string | null,
+  ): { newRoles: string[]; newParentManagerId: string | null } {
+    let newRoles = currentRoles.filter(
+      (r: string) => r !== "admin" && r !== "super_admin",
+    );
+
+    if (convertToVolunteer) {
+      if (!newRoles.includes("volunteer")) {
+        newRoles.push("volunteer");
+      }
+      return { newRoles, newParentManagerId: requestingAdminId };
+    }
+    if (hasParentManager) {
+      if (!newRoles.includes("volunteer")) {
+        newRoles.push("volunteer");
+      }
+      return { newRoles, newParentManagerId: targetParentManagerId };
+    }
+    newRoles = newRoles.filter((r: string) => r !== "volunteer");
+    return { newRoles, newParentManagerId: null };
+  }
+
   async demoteAdmin(
     targetUserId: string,
     body: { requestingAdminId: string; convertToVolunteer?: boolean },
@@ -1053,7 +1165,7 @@ export class UserHierarchyService {
         return { success: false, error: "User not found" };
       }
 
-      const rootEmail = this.getRootAdminEmail();
+      const rootEmail = this.resolveRootAdminEmail();
       if (
         rootEmail &&
         (targetUser[0].email || "").toLowerCase().trim() === rootEmail
@@ -1066,22 +1178,13 @@ export class UserHierarchyService {
       }
 
       if (!isSuperAdmin) {
-        const { rows: subordinateCheck } = await client.query(
-          `
-          WITH RECURSIVE subordinates AS (
-            SELECT id, 1 as depth FROM user_profiles WHERE parent_manager_id = $1
-            UNION ALL
-            SELECT u.id, s.depth + 1
-            FROM user_profiles u
-            INNER JOIN subordinates s ON u.parent_manager_id = s.id
-            WHERE s.depth < 100
-          )
-          SELECT 1 FROM subordinates WHERE id = $2 LIMIT 1
-        `,
-          [requestingAdminId, targetUserId],
-        );
-
-        if (subordinateCheck.length === 0) {
+        const isSubordinate =
+          await this.demoteAdminTargetIsSubordinateOfRequester(
+            client,
+            requestingAdminId,
+            targetUserId,
+          );
+        if (!isSubordinate) {
           await client.query("ROLLBACK");
           return {
             success: false,
@@ -1095,28 +1198,14 @@ export class UserHierarchyService {
         : [];
       const hasParentManager = !!targetUser[0].parent_manager_id;
 
-      let newRoles = currentRoles.filter(
-        (r: string) => r !== "admin" && r !== "super_admin",
-      );
-
-      let newParentManagerId: string | null = null;
-
-      if (convertToVolunteer) {
-        newParentManagerId = requestingAdminId;
-        if (!newRoles.includes("volunteer")) {
-          newRoles.push("volunteer");
-        }
-      } else {
-        if (!hasParentManager) {
-          newRoles = newRoles.filter((r: string) => r !== "volunteer");
-          newParentManagerId = null;
-        } else {
-          newParentManagerId = targetUser[0].parent_manager_id;
-          if (!newRoles.includes("volunteer")) {
-            newRoles.push("volunteer");
-          }
-        }
-      }
+      const { newRoles, newParentManagerId } =
+        this.computeDemoteAdminRolesAndParent(
+          convertToVolunteer,
+          hasParentManager,
+          requestingAdminId,
+          currentRoles,
+          targetUser[0].parent_manager_id,
+        );
 
       await client.query(
         `
@@ -1263,7 +1352,7 @@ export class UserHierarchyService {
         return { success: false, error: "User not found" };
       }
 
-      const rootEmail = this.getRootAdminEmail();
+      const rootEmail = this.resolveRootAdminEmail();
       if (rootEmail && targetUser[0].email === rootEmail) {
         await client.query("ROLLBACK");
         return {
@@ -1351,6 +1440,8 @@ export class UserHierarchyService {
 
       const isSuperAdmin = (adminRows[0].roles || []).includes("super_admin");
 
+      const rootEmail = this.resolveRootAdminEmail();
+
       let query: string;
       let params: (string | number | boolean | null)[];
 
@@ -1359,14 +1450,14 @@ export class UserHierarchyService {
           SELECT id, name, email, avatar_url, roles, parent_manager_id
           FROM user_profiles
           WHERE id != $1
-          AND email NOT IN ('navesarussi@gmail.com', 'karmacommunity2.0@gmail.com')
+          AND LOWER(TRIM(email)) <> $2
           AND (
             NOT ('admin' = ANY(roles) OR 'super_admin' = ANY(roles))
             OR (('admin' = ANY(roles) OR 'super_admin' = ANY(roles)) AND parent_manager_id IS NULL)
           )
           ORDER BY name
         `;
-        params = [adminId];
+        params = [adminId, rootEmail];
       } else {
         query = `
           WITH RECURSIVE manager_chain AS (
@@ -1384,7 +1475,7 @@ export class UserHierarchyService {
           SELECT u.id, u.name, u.email, u.avatar_url, u.roles, u.parent_manager_id
           FROM user_profiles u
           WHERE u.id != $1
-          AND u.email NOT IN ('navesarussi@gmail.com', 'karmacommunity2.0@gmail.com')
+          AND LOWER(TRIM(u.email)) <> $2
           AND NOT (
             ('admin' = ANY(u.roles) OR 'super_admin' = ANY(u.roles))
             AND u.parent_manager_id IS NOT NULL
@@ -1393,7 +1484,7 @@ export class UserHierarchyService {
           AND u.id NOT IN (SELECT id FROM manager_chain)
           ORDER BY u.name
         `;
-        params = [adminId];
+        params = [adminId, rootEmail];
       }
 
       const { rows } = await this.pool.query(query, params);
@@ -1414,23 +1505,29 @@ export class UserHierarchyService {
     try {
       await this.ensureSalarySeniorityColumns();
 
-      const { rows: rootAdminRows } = await this.pool.query(`
+      const rootEmail = this.resolveRootAdminEmail();
+
+      const { rows: rootAdminRows } = await this.pool.query(
+        `
         SELECT id, name, email, avatar_url, roles
         FROM user_profiles
-        WHERE email = 'karmacommunity2.0@gmail.com'
+        WHERE LOWER(TRIM(email)) = $1
         LIMIT 1
-      `);
+      `,
+        [rootEmail],
+      );
 
       if (rootAdminRows.length === 0) {
         return {
           success: false,
-          error: "Root admin (karmacommunity2.0@gmail.com) not found",
+          error: `Root admin (${rootEmail}) not found`,
         };
       }
 
       let allUsers: HierarchyUserRow[];
       try {
-        const result = await this.pool.query(`
+        const result = await this.pool.query(
+          `
           WITH RECURSIVE hierarchy AS (
             SELECT 
               id, name, email, avatar_url, 
@@ -1439,7 +1536,7 @@ export class UserHierarchyService {
               0 as level,
               ARRAY[id] as path
             FROM user_profiles
-            WHERE email = 'karmacommunity2.0@gmail.com'
+            WHERE LOWER(TRIM(email)) = $1
             
             UNION ALL
             
@@ -1450,7 +1547,7 @@ export class UserHierarchyService {
             FROM user_profiles u
             INNER JOIN hierarchy h ON u.parent_manager_id = h.id
             WHERE h.level < 10
-              AND u.email != 'karmacommunity2.0@gmail.com'
+              AND LOWER(TRIM(u.email)) <> $1
           )
           SELECT 
             id::text as id, 
@@ -1462,17 +1559,21 @@ export class UserHierarchyService {
             level,
             COALESCE(salary, 0) as salary,
             COALESCE(seniority_start_date::text, CURRENT_DATE::text) as seniority_start_date,
-            CASE WHEN email = 'karmacommunity2.0@gmail.com' THEN true 
-                 WHEN email = 'navesarussi@gmail.com' THEN true 
-                 ELSE false END as is_super_admin
+            CASE 
+              WHEN LOWER(TRIM(email)) = $1 THEN true 
+              ELSE false 
+            END as is_super_admin
           FROM hierarchy
           ORDER BY level, name
-        `);
+        `,
+          [rootEmail],
+        );
         allUsers = result.rows as HierarchyUserRow[];
       } catch (err) {
         const error = err as Error;
-        if (error.message && error.message.includes("salary")) {
-          const result = await this.pool.query(`
+        if (error.message?.includes("salary")) {
+          const result = await this.pool.query(
+            `
             WITH RECURSIVE hierarchy AS (
               SELECT 
                 id, name, email, avatar_url, 
@@ -1483,7 +1584,7 @@ export class UserHierarchyService {
                 0 as level,
                 ARRAY[id] as path
               FROM user_profiles
-              WHERE email = 'karmacommunity2.0@gmail.com'
+              WHERE LOWER(TRIM(email)) = $1
               
               UNION ALL
               
@@ -1496,7 +1597,7 @@ export class UserHierarchyService {
               FROM user_profiles u
               INNER JOIN hierarchy h ON u.parent_manager_id = h.id
               WHERE h.level < 10
-                AND u.email != 'karmacommunity2.0@gmail.com'
+                AND LOWER(TRIM(u.email)) <> $1
             )
             SELECT 
               id::text as id, 
@@ -1508,12 +1609,15 @@ export class UserHierarchyService {
               level,
               0 as salary,
               CURRENT_DATE::text as seniority_start_date,
-              CASE WHEN email = 'karmacommunity2.0@gmail.com' THEN true 
-                   WHEN email = 'navesarussi@gmail.com' THEN true 
-                   ELSE false END as is_super_admin
+              CASE 
+                WHEN LOWER(TRIM(email)) = $1 THEN true 
+                ELSE false 
+              END as is_super_admin
             FROM hierarchy
             ORDER BY level, name
-          `);
+          `,
+            [rootEmail],
+          );
           allUsers = result.rows as HierarchyUserRow[];
         } else {
           throw error;

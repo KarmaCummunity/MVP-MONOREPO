@@ -11,6 +11,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
+import { KC_ORGANIZATION_ROOT_EMAIL } from '../utils/org.constants';
 
 // Changed this line to use const and wrap with memo
 const AboutKarmaCommunityScreen = memo(() => {
@@ -18,8 +19,7 @@ const AboutKarmaCommunityScreen = memo(() => {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   return (
-    <>
-      <ScreenWrapper navigation={navigation} style={localStyles.safeArea}>
+    <ScreenWrapper navigation={navigation} style={localStyles.safeArea}>
         <ScrollContainer style={localStyles.container}>
           {/* Header Section */}
           <Text style={localStyles.mainTitle}>
@@ -295,7 +295,7 @@ const AboutKarmaCommunityScreen = memo(() => {
           </Text>
           <View style={localStyles.contactInfo}>
             <Text style={localStyles.contactText}>
-              מייל כללי: info@karmacommunity.org
+              מייל הארגון: {KC_ORGANIZATION_ROOT_EMAIL}
             </Text>
             <Text style={localStyles.contactText}>טלפון: 123-456-7890</Text>
             <Text style={localStyles.contactText}>
@@ -303,8 +303,7 @@ const AboutKarmaCommunityScreen = memo(() => {
             </Text>
           </View>
         </ScrollContainer>
-      </ScreenWrapper>
-    </>
+    </ScreenWrapper>
   )
 }); // Closing memo parenthesis and semicolon
 

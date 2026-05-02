@@ -1,8 +1,9 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { JwtService } from "../auth/services/jwt.service";
+import { KC_ROOT_ADMIN_EMAIL_FALLBACK } from "../config/kc-root-admin.defaults";
 import * as argon2 from "argon2";
 import * as admin from "firebase-admin";
 
@@ -54,6 +55,13 @@ type FirebaseProviderInfo = {
   uid?: string | null;
 };
 
+type ResolveUserIdResponse = {
+  success: boolean;
+  error?: string;
+  tokens?: unknown;
+  user?: unknown;
+};
+
 @Injectable()
 export class UserAuthService {
   private readonly logger = new Logger(UserAuthService.name);
@@ -90,16 +98,7 @@ export class UserAuthService {
         passwordHash = await argon2.hash(userData.password);
       }
 
-      const PRE_APPROVED_ADMINS = [
-        "mahalalel100@gmail.com",
-        "matan7491@gmail.com",
-        "ichai1306@gmail.com",
-        "lianbh2004@gmail.com",
-        "navesarussi@gmail.com",
-        "karmacommunity2.0@gmail.com",
-      ];
-
-      const shouldBeAdmin = PRE_APPROVED_ADMINS.includes(normalizedEmail);
+      const shouldBeAdmin = normalizedEmail === KC_ROOT_ADMIN_EMAIL_FALLBACK;
       const initialRoles = shouldBeAdmin ? ["user", "admin"] : ["user"];
 
       const nowIso = new Date().toISOString();
@@ -210,16 +209,7 @@ export class UserAuthService {
 
       const user = rows[0];
 
-      const PRE_APPROVED_ADMINS = [
-        "mahalalel100@gmail.com",
-        "matan7491@gmail.com",
-        "ichai1306@gmail.com",
-        "lianbh2004@gmail.com",
-        "navesarussi@gmail.com",
-        "karmacommunity2.0@gmail.com",
-      ];
-
-      const shouldBeAdmin = PRE_APPROVED_ADMINS.includes(normalizedEmail);
+      const shouldBeAdmin = normalizedEmail === KC_ROOT_ADMIN_EMAIL_FALLBACK;
       const currentRoles: string[] = user.roles || [];
 
       if (shouldBeAdmin && !currentRoles.includes("admin")) {
@@ -281,12 +271,7 @@ export class UserAuthService {
     firebase_uid?: string;
     google_id?: string;
     email?: string;
-  }): Promise<{
-    success: boolean;
-    error?: string;
-    tokens?: unknown;
-    user?: unknown;
-  }> {
+  }): Promise<ResolveUserIdResponse> {
     const { firebase_uid, google_id, email } = body;
 
     this.logger.log("🔍 ResolveUserId called with:", {
@@ -306,59 +291,12 @@ export class UserAuthService {
     try {
       await client.query("BEGIN");
 
-      let query = `
-        SELECT id, email, name, avatar_url, roles, settings, created_at, last_active, firebase_uid, google_id
-        FROM user_profiles 
-        WHERE false 
-      `;
-      const params = [];
-      let paramCount = 1;
-
-      if (firebase_uid) {
-        query += ` OR firebase_uid = $${paramCount++}`;
-        params.push(firebase_uid);
-      }
-      if (google_id) {
-        query += ` OR google_id = $${paramCount++}`;
-        params.push(google_id);
-      }
-      if (email) {
-        query += ` OR LOWER(email) = LOWER($${paramCount++})`;
-        params.push(email);
-      }
-
-      query += ` LIMIT 1`;
-
-      let rows: ResolveUserRow[] = [];
-      try {
-        const result = await client.query(query, params);
-        rows = result.rows as ResolveUserRow[];
-      } catch (err) {
-        if ((err as Error).message?.includes("google_id")) {
-          this.logger.warn(
-            "⚠️ Google ID column missing in resolve-id, retrying without it",
-          );
-          let fallbackQuery = `SELECT id, email, name, avatar_url, roles, settings, created_at, last_active, firebase_uid FROM user_profiles WHERE false`;
-          const fallbackParams = [];
-          let fbCount = 1;
-          if (firebase_uid) {
-            fallbackQuery += ` OR firebase_uid = $${fbCount++}`;
-            fallbackParams.push(firebase_uid);
-          }
-          if (email) {
-            fallbackQuery += ` OR LOWER(email) = LOWER($${fbCount++})`;
-            fallbackParams.push(email);
-          }
-
-          const fallbackResult = await client.query(
-            fallbackQuery,
-            fallbackParams,
-          );
-          rows = fallbackResult.rows as ResolveUserRow[];
-        } else {
-          throw err;
-        }
-      }
+      const rows = await this.queryProfilesForResolve(
+        client,
+        firebase_uid,
+        google_id,
+        email,
+      );
 
       if (rows.length === 0) {
         this.logger.log("❌ User not found for resolution:", {
@@ -367,181 +305,12 @@ export class UserAuthService {
           email,
         });
 
-        if (firebase_uid) {
-          try {
-            if (admin.apps.length > 0) {
-              try {
-                const firebaseUser = await admin.auth().getUser(firebase_uid);
-                if (firebaseUser.email) {
-                  const normalizedEmail = firebaseUser.email
-                    .toLowerCase()
-                    .trim();
-                  const providerData = firebaseUser.providerData as
-                    | FirebaseProviderInfo[]
-                    | undefined;
-                  const googleProvider = providerData?.find(
-                    (p) => p.providerId === "google.com",
-                  );
-                  const googleId = googleProvider?.uid || null;
-
-                  const creationTime = firebaseUser.metadata.creationTime
-                    ? new Date(firebaseUser.metadata.creationTime)
-                    : new Date();
-                  const lastSignInTime = firebaseUser.metadata.lastSignInTime
-                    ? new Date(firebaseUser.metadata.lastSignInTime)
-                    : creationTime;
-
-                  try {
-                    const { rows: newUser } = await client.query(
-                      `INSERT INTO user_profiles (
-                        firebase_uid, google_id, email, name, avatar_url, bio,
-                        karma_points, join_date, is_active, last_active,
-                        city, country, interests, roles, email_verified, settings
-                      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::text[], $14::text[], $15, $16::jsonb)
-                      RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
-                      [
-                        firebaseUser.uid,
-                        googleId,
-                        normalizedEmail,
-                        firebaseUser.displayName ||
-                          normalizedEmail.split("@")[0] ||
-                          "User",
-                        firebaseUser.photoURL ||
-                          "https://i.pravatar.cc/150?img=1",
-                        "משתמש חדש בקארמה קומיוניטי",
-                        0,
-                        creationTime,
-                        true,
-                        lastSignInTime,
-                        "ישראל",
-                        "Israel",
-                        [],
-                        ["user"],
-                        firebaseUser.emailVerified || false,
-                        JSON.stringify({
-                          language: "he",
-                          dark_mode: false,
-                          notifications_enabled: true,
-                          privacy: "public",
-                        }),
-                      ],
-                    );
-                    await client.query("COMMIT");
-                    this.logger.log(
-                      `✨ Auto-created user from Firebase: ${normalizedEmail} (${firebaseUser.uid})`,
-                    );
-
-                    const tokenPair = await this.jwtService.createTokenPair({
-                      id: newUser[0].id,
-                      email: newUser[0].email,
-                      roles: newUser[0].roles || ["user"],
-                    });
-
-                    return {
-                      success: true,
-                      tokens: {
-                        accessToken: tokenPair.accessToken,
-                        refreshToken: tokenPair.refreshToken,
-                        expiresIn: tokenPair.expiresIn,
-                        refreshExpiresIn: tokenPair.refreshExpiresIn,
-                      },
-                      user: {
-                        id: newUser[0].id,
-                        email: newUser[0].email,
-                        name: newUser[0].name,
-                        avatar: newUser[0].avatar_url,
-                        roles: newUser[0].roles || ["user"],
-                        settings: newUser[0].settings || {},
-                        createdAt: newUser[0].created_at,
-                        lastActive: newUser[0].last_active,
-                      },
-                    };
-                  } catch (insertError_: unknown) {
-                    const insertError = insertError_ as Error;
-                    if (
-                      insertError.message &&
-                      insertError.message.includes("google_id")
-                    ) {
-                      const { rows: newUser } = await client.query(
-                        `INSERT INTO user_profiles (
-                          firebase_uid, email, name, avatar_url, bio,
-                          karma_points, join_date, is_active, last_active,
-                          city, country, interests, roles, email_verified, settings
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::text[], $13::text[], $14, $15::jsonb)
-                        RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
-                        [
-                          firebaseUser.uid,
-                          normalizedEmail,
-                          firebaseUser.displayName ||
-                            normalizedEmail.split("@")[0] ||
-                            "User",
-                          firebaseUser.photoURL ||
-                            "https://i.pravatar.cc/150?img=1",
-                          "משתמש חדש בקארמה קומיוניטי",
-                          0,
-                          creationTime,
-                          true,
-                          lastSignInTime,
-                          "ישראל",
-                          "Israel",
-                          [],
-                          ["user"],
-                          firebaseUser.emailVerified || false,
-                          JSON.stringify({
-                            language: "he",
-                            dark_mode: false,
-                            notifications_enabled: true,
-                            privacy: "public",
-                          }),
-                        ],
-                      );
-                      await client.query("COMMIT");
-                      this.logger.log(
-                        `✨ Auto-created user from Firebase (without google_id): ${normalizedEmail} (${firebaseUser.uid})`,
-                      );
-
-                      const tokenPair = await this.jwtService.createTokenPair({
-                        id: newUser[0].id,
-                        email: newUser[0].email,
-                        roles: newUser[0].roles || ["user"],
-                      });
-
-                      return {
-                        success: true,
-                        tokens: {
-                          accessToken: tokenPair.accessToken,
-                          refreshToken: tokenPair.refreshToken,
-                          expiresIn: tokenPair.expiresIn,
-                          refreshExpiresIn: tokenPair.refreshExpiresIn,
-                        },
-                        user: {
-                          id: newUser[0].id,
-                          email: newUser[0].email,
-                          name: newUser[0].name,
-                          avatar: newUser[0].avatar_url,
-                          roles: newUser[0].roles || ["user"],
-                          settings: newUser[0].settings || {},
-                          createdAt: newUser[0].created_at,
-                          lastActive: newUser[0].last_active,
-                        },
-                      };
-                    } else {
-                      throw insertError;
-                    }
-                  }
-                }
-              } catch (firebaseError) {
-                this.logger.warn(
-                  "⚠️ Could not fetch user from Firebase Admin SDK:",
-                  firebaseError,
-                );
-              }
-            }
-          } catch {
-            this.logger.warn(
-              "⚠️ Firebase Admin SDK not available for auto-creation",
-            );
-          }
+        const created = await this.tryAutoCreateUserFromFirebase(
+          client,
+          firebase_uid,
+        );
+        if (created) {
+          return created;
         }
 
         await client.query("ROLLBACK");
@@ -564,85 +333,13 @@ export class UserAuthService {
         id: user.id,
       });
 
-      let needsUpdate = false;
-      const updateFields: string[] = [];
-      const updateValues = [];
-      let upCount = 1;
-
-      if (firebase_uid && user.firebase_uid !== firebase_uid) {
-        if (!user.firebase_uid) {
-          this.logger.log(
-            `🔗 Linking User ${user.email} to Firebase UID: ${firebase_uid}`,
-          );
-          updateFields.push(`firebase_uid = $${upCount++}`);
-          updateValues.push(firebase_uid);
-          needsUpdate = true;
-        } else {
-          this.logger.warn(
-            `⚠️ Conflict: User ${user.email} has different Firebase UID (${user.firebase_uid}) than provided (${firebase_uid})`,
-          );
-        }
-      }
-
-      if (google_id && user.google_id !== google_id) {
-        if (!user.google_id) {
-          this.logger.log(
-            `🔗 Linking User ${user.email} to Google ID: ${google_id}`,
-          );
-          updateFields.push(`google_id = $${upCount++}`);
-          updateValues.push(google_id);
-          needsUpdate = true;
-        }
-      }
-
-      if (needsUpdate) {
-        try {
-          updateValues.push(user.id);
-          const updateQuery = `
-            UPDATE user_profiles 
-            SET ${updateFields.join(", ")}, updated_at = NOW()
-            WHERE id = $${upCount}
-          `;
-          await client.query(updateQuery, updateValues);
-          this.logger.log("✅ User linked successfully");
-        } catch (updateErr) {
-          this.logger.error("❌ Failed to link user account:", updateErr);
-        }
-      }
+      await this.linkResolveIdentifiers(client, user, firebase_uid, google_id);
 
       await client.query("COMMIT");
 
-      await this.redisCache.delete(`user_profile_${user.id}`);
-      if (user.firebase_uid)
-        await this.redisCache.delete(`user_profile_${user.firebase_uid}`);
-      if (user.email)
-        await this.redisCache.delete(`user_profile_${user.email}`);
+      await this.invalidateResolveUserCache(user);
 
-      const tokenPair = await this.jwtService.createTokenPair({
-        id: user.id,
-        email: user.email ?? "",
-        roles: user.roles || ["user"],
-      });
-
-      return {
-        success: true,
-        tokens: {
-          accessToken: tokenPair.accessToken,
-          refreshToken: tokenPair.refreshToken,
-          expiresIn: tokenPair.expiresIn,
-          refreshExpiresIn: tokenPair.refreshExpiresIn,
-        },
-        user: {
-          id: user.id,
-          email: user.email ?? "",
-          name: user.name,
-          avatar: user.avatar_url,
-          roles: user.roles || ["user"],
-          settings: user.settings || {},
-          createdAt: user.created_at,
-          lastActive: user.last_active,
-        },
-      };
+      return await this.buildResolveSuccessResponse(user);
     } catch (err) {
       const error = err as Error;
       await client.query("ROLLBACK");
@@ -654,5 +351,324 @@ export class UserAuthService {
     } finally {
       client.release();
     }
+  }
+
+  private async queryProfilesForResolve(
+    client: PoolClient,
+    firebase_uid: string | undefined,
+    google_id: string | undefined,
+    email: string | undefined,
+  ): Promise<ResolveUserRow[]> {
+    let query = `
+        SELECT id, email, name, avatar_url, roles, settings, created_at, last_active, firebase_uid, google_id
+        FROM user_profiles 
+        WHERE false 
+      `;
+    const params: string[] = [];
+    let paramCount = 1;
+
+    if (firebase_uid) {
+      query += ` OR firebase_uid = $${paramCount++}`;
+      params.push(firebase_uid);
+    }
+    if (google_id) {
+      query += ` OR google_id = $${paramCount++}`;
+      params.push(google_id);
+    }
+    if (email) {
+      query += ` OR LOWER(email) = LOWER($${paramCount++})`;
+      params.push(email);
+    }
+
+    query += ` LIMIT 1`;
+
+    try {
+      const result = await client.query(query, params);
+      return result.rows as ResolveUserRow[];
+    } catch (err) {
+      if ((err as Error).message?.includes("google_id")) {
+        this.logger.warn(
+          "⚠️ Google ID column missing in resolve-id, retrying without it",
+        );
+        let fallbackQuery = `SELECT id, email, name, avatar_url, roles, settings, created_at, last_active, firebase_uid FROM user_profiles WHERE false`;
+        const fallbackParams: string[] = [];
+        let fbCount = 1;
+        if (firebase_uid) {
+          fallbackQuery += ` OR firebase_uid = $${fbCount++}`;
+          fallbackParams.push(firebase_uid);
+        }
+        if (email) {
+          fallbackQuery += ` OR LOWER(email) = LOWER($${fbCount++})`;
+          fallbackParams.push(email);
+        }
+
+        const fallbackResult = await client.query(
+          fallbackQuery,
+          fallbackParams,
+        );
+        return fallbackResult.rows as ResolveUserRow[];
+      }
+      throw err;
+    }
+  }
+
+  private async buildSuccessForNewUserRow(
+    client: PoolClient,
+    row: ResolveUserRow,
+    logMessage: string,
+  ): Promise<ResolveUserIdResponse> {
+    await client.query("COMMIT");
+    this.logger.log(logMessage);
+
+    const tokenPair = await this.jwtService.createTokenPair({
+      id: row.id,
+      email: row.email ?? "",
+      roles: row.roles || ["user"],
+    });
+
+    return {
+      success: true,
+      tokens: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        expiresIn: tokenPair.expiresIn,
+        refreshExpiresIn: tokenPair.refreshExpiresIn,
+      },
+      user: {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+        avatar: row.avatar_url,
+        roles: row.roles || ["user"],
+        settings: row.settings || {},
+        createdAt: row.created_at,
+        lastActive: row.last_active,
+      },
+    };
+  }
+
+  private async tryAutoCreateUserFromFirebase(
+    client: PoolClient,
+    firebase_uid: string | undefined,
+  ): Promise<ResolveUserIdResponse | null> {
+    if (!firebase_uid) {
+      return null;
+    }
+
+    try {
+      if (admin.apps.length === 0) {
+        return null;
+      }
+      try {
+        const firebaseUser = await admin.auth().getUser(firebase_uid);
+        if (!firebaseUser.email) {
+          return null;
+        }
+
+        const normalizedEmail = firebaseUser.email.toLowerCase().trim();
+        const providerData = firebaseUser.providerData as
+          | FirebaseProviderInfo[]
+          | undefined;
+        const googleProvider = providerData?.find(
+          (p) => p.providerId === "google.com",
+        );
+        const googleId = googleProvider?.uid || null;
+
+        const creationTime = firebaseUser.metadata.creationTime
+          ? new Date(firebaseUser.metadata.creationTime)
+          : new Date();
+        const lastSignInTime = firebaseUser.metadata.lastSignInTime
+          ? new Date(firebaseUser.metadata.lastSignInTime)
+          : creationTime;
+
+        try {
+          const { rows: newUser } = await client.query(
+            `INSERT INTO user_profiles (
+                        firebase_uid, google_id, email, name, avatar_url, bio,
+                        karma_points, join_date, is_active, last_active,
+                        city, country, interests, roles, email_verified, settings
+                      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::text[], $14::text[], $15, $16::jsonb)
+                      RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
+            [
+              firebaseUser.uid,
+              googleId,
+              normalizedEmail,
+              firebaseUser.displayName ||
+                normalizedEmail.split("@")[0] ||
+                "User",
+              firebaseUser.photoURL || "https://i.pravatar.cc/150?img=1",
+              "משתמש חדש בקארמה קומיוניטי",
+              0,
+              creationTime,
+              true,
+              lastSignInTime,
+              "ישראל",
+              "Israel",
+              [],
+              ["user"],
+              firebaseUser.emailVerified || false,
+              JSON.stringify({
+                language: "he",
+                dark_mode: false,
+                notifications_enabled: true,
+                privacy: "public",
+              }),
+            ],
+          );
+          return await this.buildSuccessForNewUserRow(
+            client,
+            newUser[0] as ResolveUserRow,
+            `✨ Auto-created user from Firebase: ${normalizedEmail} (${firebaseUser.uid})`,
+          );
+        } catch (insertError_: unknown) {
+          const insertError = insertError_ as Error;
+          if (!insertError.message?.includes("google_id")) {
+            throw insertError;
+          }
+
+          const { rows: newUser } = await client.query(
+            `INSERT INTO user_profiles (
+                          firebase_uid, email, name, avatar_url, bio,
+                          karma_points, join_date, is_active, last_active,
+                          city, country, interests, roles, email_verified, settings
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::text[], $13::text[], $14, $15::jsonb)
+                        RETURNING id, email, name, avatar_url, roles, settings, created_at, last_active`,
+            [
+              firebaseUser.uid,
+              normalizedEmail,
+              firebaseUser.displayName ||
+                normalizedEmail.split("@")[0] ||
+                "User",
+              firebaseUser.photoURL || "https://i.pravatar.cc/150?img=1",
+              "משתמש חדש בקארמה קומיוניטי",
+              0,
+              creationTime,
+              true,
+              lastSignInTime,
+              "ישראל",
+              "Israel",
+              [],
+              ["user"],
+              firebaseUser.emailVerified || false,
+              JSON.stringify({
+                language: "he",
+                dark_mode: false,
+                notifications_enabled: true,
+                privacy: "public",
+              }),
+            ],
+          );
+          return await this.buildSuccessForNewUserRow(
+            client,
+            newUser[0] as ResolveUserRow,
+            `✨ Auto-created user from Firebase (without google_id): ${normalizedEmail} (${firebaseUser.uid})`,
+          );
+        }
+      } catch (firebaseError) {
+        this.logger.warn(
+          "⚠️ Could not fetch user from Firebase Admin SDK:",
+          firebaseError,
+        );
+      }
+    } catch {
+      this.logger.warn("⚠️ Firebase Admin SDK not available for auto-creation");
+    }
+
+    return null;
+  }
+
+  private async linkResolveIdentifiers(
+    client: PoolClient,
+    user: ResolveUserRow,
+    firebase_uid: string | undefined,
+    google_id: string | undefined,
+  ): Promise<void> {
+    let needsUpdate = false;
+    const updateFields: string[] = [];
+    const updateValues: (string | null)[] = [];
+    let upCount = 1;
+
+    if (firebase_uid && user.firebase_uid !== firebase_uid) {
+      if (user.firebase_uid) {
+        this.logger.warn(
+          `⚠️ Conflict: User ${user.email} has different Firebase UID (${user.firebase_uid}) than provided (${firebase_uid})`,
+        );
+      } else {
+        this.logger.log(
+          `🔗 Linking User ${user.email} to Firebase UID: ${firebase_uid}`,
+        );
+        updateFields.push(`firebase_uid = $${upCount++}`);
+        updateValues.push(firebase_uid);
+        needsUpdate = true;
+      }
+    }
+
+    if (google_id && user.google_id !== google_id && !user.google_id) {
+      this.logger.log(
+        `🔗 Linking User ${user.email} to Google ID: ${google_id}`,
+      );
+      updateFields.push(`google_id = $${upCount++}`);
+      updateValues.push(google_id);
+      needsUpdate = true;
+    }
+
+    if (!needsUpdate) {
+      return;
+    }
+
+    try {
+      updateValues.push(user.id);
+      const updateQuery = `
+            UPDATE user_profiles 
+            SET ${updateFields.join(", ")}, updated_at = NOW()
+            WHERE id = $${upCount}
+          `;
+      await client.query(updateQuery, updateValues);
+      this.logger.log("✅ User linked successfully");
+    } catch (updateErr) {
+      this.logger.error("❌ Failed to link user account:", updateErr);
+    }
+  }
+
+  private async invalidateResolveUserCache(
+    user: ResolveUserRow,
+  ): Promise<void> {
+    await this.redisCache.delete(`user_profile_${user.id}`);
+    if (user.firebase_uid) {
+      await this.redisCache.delete(`user_profile_${user.firebase_uid}`);
+    }
+    if (user.email) {
+      await this.redisCache.delete(`user_profile_${user.email}`);
+    }
+  }
+
+  private async buildResolveSuccessResponse(
+    user: ResolveUserRow,
+  ): Promise<ResolveUserIdResponse> {
+    const tokenPair = await this.jwtService.createTokenPair({
+      id: user.id,
+      email: user.email ?? "",
+      roles: user.roles || ["user"],
+    });
+
+    return {
+      success: true,
+      tokens: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        expiresIn: tokenPair.expiresIn,
+        refreshExpiresIn: tokenPair.refreshExpiresIn,
+      },
+      user: {
+        id: user.id,
+        email: user.email ?? "",
+        name: user.name,
+        avatar: user.avatar_url,
+        roles: user.roles || ["user"],
+        settings: user.settings || {},
+        createdAt: user.created_at,
+        lastActive: user.last_active,
+      },
+    };
   }
 }

@@ -10,7 +10,7 @@ const SAVE_INTERVAL = 5000; // Save logs every 5 seconds
 // Environment detection - safe check for __DEV__
 let isDevelopment = false;
 try {
-  isDevelopment = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+  isDevelopment = typeof __DEV__ === 'undefined' ? false : __DEV__;
 } catch {
   // If __DEV__ is not defined, assume production
   isDevelopment = false;
@@ -40,14 +40,14 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 /** Single place for level → console mapping (avoids duplicated switch in addLog). */
 const CONSOLE_EMIT: Record<LogEntryLevel, (line: string) => void> = {
-  debug: (_line) => {
-    //console.debug(`🔍 ${_line}`);
+  debug: (line) => {
+    console.debug(`🔍 ${line}`);
   },
   routeFocus: (line) => {
     console.info(`🖥️  ${line}`);
   },
-  info: (_line) => {
-    //console.info(`ℹ️  ${_line}`);
+  info: (line) => {
+    console.info(`ℹ️  ${line}`);
   },
   warn: (line) => {
     console.warn(`⚠️  ${line}`);
@@ -75,10 +75,13 @@ class LoggerService {
   private logLevel: LogLevel = isProduction ? 'warn' : 'debug';
   private enableConsoleOutput = !isProduction;
   private enableStorage = true;
+  private initRequested = false;
 
-  constructor() {
-    // Lazy initialization - don't load logs immediately
-    this.initializeAsync();
+  /** Schedules storage load + batch timer; not called from constructor (Sonar S7059). */
+  private requestInitialization(): void {
+    if (this.initRequested) return;
+    this.initRequested = true;
+    void this.initializeAsync();
   }
 
   private async initializeAsync() {
@@ -121,46 +124,62 @@ class LoggerService {
     }
   }
 
+  private mergePendingIntoLogs(): void {
+    this.logs = [...this.logs, ...this.pendingLogs];
+    this.pendingLogs = [];
+    if (this.logs.length > MAX_LOGS) {
+      this.logs = this.logs.slice(-MAX_LOGS);
+    }
+  }
+
+  private isQuotaError(error: unknown): boolean {
+    const err = error as { name?: string; message?: string } | undefined;
+    return err?.name === 'QuotaExceededError' || Boolean(err?.message?.includes('quota'));
+  }
+
+  private async persistMergedLogs(): Promise<void> {
+    await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
+  }
+
+  private async handleSaveQuotaExceeded(): Promise<void> {
+    this.logs = this.logs.slice(-100);
+    await this.persistMergedLogs();
+    if (this.enableConsoleOutput) {
+      console.warn('⚠️ Storage quota exceeded, cleared old logs and saved recent 100 entries');
+    }
+  }
+
+  private async disableStorageAfterSaveFailure(retryError: unknown): Promise<void> {
+    this.enableStorage = false;
+    this.logs = [];
+    this.pendingLogs = [];
+    try {
+      await AsyncStorage.removeItem(LOGS_KEY);
+    } catch {
+      // Ignore errors when removing
+    }
+    if (this.enableConsoleOutput) {
+      console.error('❌ Failed to save logs even after cleanup, storage disabled:', retryError);
+    }
+  }
+
   private async saveLogs() {
     if (!this.enableStorage || this.pendingLogs.length === 0) return;
 
     try {
-      // Add pending logs to main logs array
-      this.logs = [...this.logs, ...this.pendingLogs];
-      this.pendingLogs = [];
-
-      // Keep only the last MAX_LOGS entries
-      if (this.logs.length > MAX_LOGS) {
-        this.logs = this.logs.slice(-MAX_LOGS);
-      }
-
-      await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
-    } catch (error: any) {
-      // Handle QuotaExceededError by clearing old logs and retrying with fewer logs
-      if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
-        try {
-          // Keep only the last 100 logs instead of MAX_LOGS
-          this.logs = this.logs.slice(-100);
-          await AsyncStorage.setItem(LOGS_KEY, JSON.stringify(this.logs));
-          if (this.enableConsoleOutput) {
-            console.warn('⚠️ Storage quota exceeded, cleared old logs and saved recent 100 entries');
-          }
-        } catch (retryError) {
-          // If still failing, disable storage and clear everything
-          this.enableStorage = false;
-          this.logs = [];
-          this.pendingLogs = [];
-          try {
-            await AsyncStorage.removeItem(LOGS_KEY);
-          } catch {
-            // Ignore errors when removing
-          }
-          if (this.enableConsoleOutput) {
-            console.error('❌ Failed to save logs even after cleanup, storage disabled:', retryError);
-          }
+      this.mergePendingIntoLogs();
+      await this.persistMergedLogs();
+    } catch (error: unknown) {
+      if (!this.isQuotaError(error)) {
+        if (this.enableConsoleOutput) {
+          console.error('Failed to save logs:', error);
         }
-      } else if (this.enableConsoleOutput) {
-        console.error('Failed to save logs:', error);
+        return;
+      }
+      try {
+        await this.handleSaveQuotaExceeded();
+      } catch (retryError) {
+        await this.disableStorageAfterSaveFailure(retryError);
       }
     }
   }
@@ -188,6 +207,8 @@ class LoggerService {
   ) {
     // Early return if log level is not enabled
     if (!this.shouldLog(level)) return;
+
+    this.requestInitialization();
 
     const periodic = options?.periodic === true;
     const logEntry: LogEntry = {
@@ -294,10 +315,12 @@ class LoggerService {
   }
 
   async exportLogs(): Promise<string> {
+    this.requestInitialization();
     return this.logs.map(formatLogEntryForExport).join('\n');
   }
 
   async clearLogs() {
+    this.requestInitialization();
     this.logs = [];
     this.pendingLogs = [];
     if (this.enableStorage) {
@@ -309,6 +332,7 @@ class LoggerService {
   }
 
   async downloadLogs() {
+    this.requestInitialization();
     if (Platform.OS === 'web') {
       // Force save pending logs before export
       await this.saveLogs();
@@ -320,7 +344,7 @@ class LoggerService {
       element.download = `karma-community-logs-${new Date().toISOString().slice(0, 19)}.txt`;
       document.body.appendChild(element);
       element.click();
-      document.body.removeChild(element);
+      element.remove();
 
       if (this.enableConsoleOutput) {
         console.info('📁 Logs downloaded');
@@ -329,6 +353,7 @@ class LoggerService {
   }
 
   async showLogs() {
+    this.requestInitialization();
     // Force save pending logs before showing
     await this.saveLogs();
 
@@ -342,6 +367,7 @@ class LoggerService {
 
   // Cleanup method - call this when app is closing
   destroy() {
+    this.requestInitialization();
     if (this.saveTimer) {
       clearInterval(this.saveTimer);
       this.saveTimer = null;

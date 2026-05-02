@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Platform,
   useWindowDimensions,
+  type ListRenderItem,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect, CommonActions } from '@react-navigation/native';
@@ -34,6 +35,7 @@ import OptionsModal from './Feed/OptionsModal';
 import ReportPostModal from './Feed/ReportPostModal';
 import EditPostModal from './Feed/EditPostModal';
 import { apiService } from '../utils/apiService';
+import { KC_ORGANIZATION_ROOT_EMAIL } from '../utils/org.constants';
 import { postsService } from '../utils/postsService';
 import { logger } from '../utils/loggerService';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
@@ -288,7 +290,7 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
     setIsSubmittingReport(true);
     try {
-      const adminEmail = 'navesarussi@gmail.com';
+      const adminEmail = KC_ORGANIZATION_ROOT_EMAIL;
       // Resolve admin ID - try multiple methods
       let adminId: string | null = null;
       try {
@@ -355,8 +357,8 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
     [windowWidth, horizontalPadding],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: FeedItem }) => (
+  const renderItem = useCallback<ListRenderItem<FeedItem>>(
+    ({ item }) => (
       <PostReelItem
         item={item}
         cardWidth={feedCellWidth}
@@ -409,46 +411,40 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
 
   const renderEmptyComponent = () => {
     const filteredOut = !loading && feed.length > 0 && filteredFeed.length === 0;
+    let emptyTitle: string;
+    let emptySubtext: string;
+    if (filteredOut) {
+      emptyTitle = t('feed.empty_filtered') || 'אין תוצאות לפי הסינון';
+      emptySubtext =
+        t('feed.empty_filtered_hint') || 'שנה את האפשרויות או לחץ איפוס';
+    } else {
+      emptyTitle = t('feed.empty_title') || 'אין פוסטים עדיין';
+      if (feedMode === 'friends') {
+        emptySubtext =
+          t('feed.empty_friends') || 'הוסף חברים כדי לראות פוסטים!';
+      } else {
+        emptySubtext =
+          t('feed.empty_discovery') || 'היה הראשון לפרסם!';
+      }
+    }
     return (
       <View style={styles.emptyContainer}>
         {!loading && (
           <>
-            <Text style={styles.emptyText}>
-              {filteredOut
-                ? (t('feed.empty_filtered') || 'אין תוצאות לפי הסינון')
-                : (t('feed.empty_title') || 'אין פוסטים עדיין')}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {filteredOut
-                ? (t('feed.empty_filtered_hint') || 'שנה את האפשרויות או לחץ איפוס')
-                : feedMode === 'friends'
-                  ? (t('feed.empty_friends') || 'הוסף חברים כדי לראות פוסטים!')
-                  : (t('feed.empty_discovery') || 'היה הראשון לפרסם!')}
-            </Text>
+            <Text style={styles.emptyText}>{emptyTitle}</Text>
+            <Text style={styles.emptySubtext}>{emptySubtext}</Text>
           </>
         )}
       </View>
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.contentContainer}>
-        {/* Header */}
-        {!hideTopBar && (
-          <FeedHeader
-            feedMode={feedMode}
-            setFeedMode={setFeedMode}
-            onStatsPress={handleStatsPress}
-            onFilterPress={handleFilterPress}
-            filterActive={filtersActive}
-            showFeedModeToggle={!isGuestMode}
-            t={t}
-          />
-        )}
+  const showInitialError = Boolean(initialError && !loading && feed.length === 0);
+  const showInitialLoading = loading && feed.length === 0;
 
-        {/* Feed List */}
-        {initialError && !loading && feed.length === 0 ? (
+  let feedMainContent: React.ReactNode;
+  if (showInitialError) {
+    feedMainContent = (
           <View style={styles.initialErrorWrap} accessibilityRole="alert">
             <Text style={styles.initialErrorTitle}>{t('feed.load_failed_title') || 'לא ניתן לטעון את הפיד'}</Text>
             <Text style={styles.initialErrorText}>{initialError}</Text>
@@ -461,12 +457,16 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
               <Text style={styles.initialRetryText}>{t('feed.load_more_retry') || 'נסה שוב'}</Text>
             </TouchableOpacity>
           </View>
-        ) : loading && feed.length === 0 ? (
+    );
+  } else if (showInitialLoading) {
+    feedMainContent = (
           <View style={styles.initialLoadingWrap} accessibilityRole="progressbar">
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.initialLoadingHint}>{t('feed.loading_more') || 'טוען…'}</Text>
           </View>
-        ) : (
+    );
+  } else {
+    feedMainContent = (
         <FlatList
           data={filteredFeed}
           renderItem={renderItem}
@@ -511,7 +511,27 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
           removeClippedSubviews={false}
           showsVerticalScrollIndicator={false}
         />
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.contentContainer}>
+        {/* Header */}
+        {!hideTopBar && (
+          <FeedHeader
+            feedMode={feedMode}
+            setFeedMode={setFeedMode}
+            onStatsPress={handleStatsPress}
+            onFilterPress={handleFilterPress}
+            filterActive={filtersActive}
+            showFeedModeToggle={!isGuestMode}
+            t={t}
+          />
         )}
+
+        {/* Feed List */}
+        {feedMainContent}
 
         <FeedFilterSheet
           visible={filterSheetVisible}

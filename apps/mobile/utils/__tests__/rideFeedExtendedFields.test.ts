@@ -25,6 +25,17 @@ describe('rideExtendedFromRideBlock', () => {
     expect(ext?.smokingPreference).toBe('no_smokers');
     expect(ext?.genderPreference).toBe('female');
   });
+
+  it('does not coerce object recurrence_unit to a string', () => {
+    const block: Record<string, unknown> = {
+      is_recurring: true,
+      recurrence_frequency: 1,
+      recurrence_unit: { not: 'valid' },
+    };
+    const ext = rideExtendedFromRideBlock(block);
+    expect(ext?.isRecurring).toBe(true);
+    expect(ext?.recurrenceUnit).toBeUndefined();
+  });
 });
 
 describe('rideExtendedFromRideDataJoin', () => {
@@ -52,6 +63,17 @@ describe('rideExtendedFromRideDataJoin', () => {
     });
     expect(ext?.isRecurring).toBe(true);
     expect(ext?.recurrenceUnit).toBe('month');
+  });
+
+  it('ignores object recurrence_unit in metadata', () => {
+    const ext = rideExtendedFromRideDataJoin({
+      metadata: JSON.stringify({
+        is_recurring: true,
+        recurrence_unit: { bad: true },
+      }),
+    });
+    expect(ext?.isRecurring).toBe(true);
+    expect(ext?.recurrenceUnit).toBeUndefined();
   });
 });
 

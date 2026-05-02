@@ -12,6 +12,7 @@
     "dev:mobile": "npm run start --workspace @kc/mobile",
     "dev:mobile:web": "npm run web --workspace @kc/mobile",
     "e2e:local": "npm run e2e:local --workspace @kc/mobile",
+    "e2e:maestro": "npm run e2e:maestro --workspace @kc/mobile",
     "build": "npm run build --workspaces --if-present",
     "start": "npm run start --workspace @kc/api",
     "lint": "npm run lint --workspaces --if-present",

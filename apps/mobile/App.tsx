@@ -16,14 +16,15 @@
 
 // App.tsx
 
-// TODO: Add proper error handling for font loading failures with fallback fonts
-// TODO: Implement proper deep linking configuration and testing
-// TODO: Add crash reporting integration (Sentry, Bugsnag)
-// TODO: Remove magic numbers for padding (48px) - use constants file
-// TODO: Add proper accessibility support throughout the app
+// Backlog (product / infra): font-load fallbacks; deep-link test matrix; crash reporting;
+// web toggle top inset via shared layout constants; a11y audit pass.
 import React, { useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ActivityIndicator, Platform, StyleSheet, AppState } from 'react-native';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { View, Text, ActivityIndicator, Platform, StyleSheet, AppState, I18nManager } from 'react-native';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+  NavigationState,
+} from '@react-navigation/native';
 import * as Font from 'expo-font';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
@@ -34,7 +35,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from './app/i18n';
 import { useTranslation } from 'react-i18next';
-import { I18nManager } from 'react-native';
 
 import MainNavigator from './navigations/MainNavigator';
 // Ensure tslib default interop for certain vendor bundles
@@ -49,7 +49,6 @@ import { FontSizes } from "./globals/constants";
 import { logger } from './utils/loggerService';
 import ErrorBoundary from './components/ErrorBoundary';
 import { saveNavigationState, loadNavigationState, clearNavigationState } from './utils/navigationPersistence';
-import { NavigationState } from '@react-navigation/native';
 import { navigationQueue } from './utils/navigationQueue';
 import { RootStackParamList } from './globals/types';
 import { linking } from './utils/linkingConfig';
@@ -91,23 +90,41 @@ SplashScreen.preventAutoHideAsync();
 // Web mode store initializes automatically when created (synchronous)
 // No need for early initialization - it reads from localStorage on creation
 
+/** Top padding (px) under the web app-mode toggle bar */
+const WEB_APP_MODE_TOP_PADDING = 64;
+
+const STORE_INIT_TIMEOUT_MS = 10_000;
 
 const isMobileWebEnvironment = (): boolean => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  if (Platform.OS === 'web' && globalThis.window !== undefined) {
+    const win = globalThis.window;
+    const narrowViewport = win.innerWidth <= 1024;
+    let ua = '';
+    let maxTouchPoints = 0;
+    if (globalThis.navigator !== undefined) {
+      ua = globalThis.navigator.userAgent.toLowerCase();
+      maxTouchPoints = globalThis.navigator.maxTouchPoints;
+    }
+    const touchDevice = /android|iphone|ipad|ipod|mobile/.test(ua) || maxTouchPoints > 1;
 
-  const narrowViewport = window.innerWidth <= 1024;
-  const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
-  const touchDevice = /android|iphone|ipad|ipod|mobile/.test(ua) || navigator.maxTouchPoints > 1;
-
-  return narrowViewport || touchDevice;
+    return narrowViewport || touchDevice;
+  }
+  return false;
 };
 
-const shouldPersistNavigationState = (): boolean => !isMobileWebEnvironment();
+const shouldPersistNavigationState = (): boolean => {
+  if (isMobileWebEnvironment()) {
+    return false;
+  }
+  return true;
+};
 
-type AppNavigationRootProps = {
+type AppNavigationRootProps = Readonly<{
   initialState: NavigationState | undefined;
-  navigationRef: React.MutableRefObject<NavigationContainerRef<RootStackParamList> | null>;
-};
+  navigationRef: {
+    current: NavigationContainerRef<RootStackParamList> | null;
+  };
+}>;
 
 function AppNavigationRoot({ initialState, navigationRef }: AppNavigationRootProps) {
   const { mode } = useWebMode();
@@ -132,7 +149,7 @@ function AppNavigationRoot({ initialState, navigationRef }: AppNavigationRootPro
    */
   const containerStyle = useMemo(() => ({
     flex: 1,
-    paddingTop: Platform.OS === 'web' && shouldShowToggle ? 64 : 0 // Space for top bar
+    paddingTop: Platform.OS === 'web' && shouldShowToggle ? WEB_APP_MODE_TOP_PADDING : 0 // Space for top bar
   }), [shouldShowToggle]);
 
   // Wrapper style for web - full width without maxWidth constraint
@@ -220,9 +237,13 @@ function AppNavigationRoot({ initialState, navigationRef }: AppNavigationRootPro
         }
       }}
       onReady={() => {
-        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
-          navigationQueue.initialize(navigationRef.current);
+        if (!navigationRef.current?.isReady()) {
+          return;
         }
+        if (isMobileWebEnvironment()) {
+          return;
+        }
+        navigationQueue.initialize(navigationRef.current);
       }}
       linking={linking}
       initialState={initialState}
@@ -238,6 +259,81 @@ function AppNavigationRoot({ initialState, navigationRef }: AppNavigationRootPro
       </View>
     </NavigationContainer>
   );
+}
+
+async function initializeWebPlatformStores(): Promise<void> {
+  if (Platform.OS !== 'web') return;
+  try {
+    logger.info('App', 'Importing web mode store');
+    const { useWebModeStore } = await import('./stores/webModeStore');
+    logger.info('App', 'Web mode store imported, initializing');
+    useWebModeStore.getState().initialize();
+    logger.info('App', 'Web mode store initialized');
+
+    try {
+      logger.info('App', 'Importing version checker');
+      const { initVersionChecker } = await import('./utils/versionChecker');
+      initVersionChecker();
+      logger.info('App', 'Version checker initialized');
+    } catch (versionError) {
+      logger.warn('App', 'Version checker failed to initialize (non-critical)', { error: versionError });
+    }
+  } catch (webError) {
+    logger.error('App', 'Error initializing web mode store', { error: webError });
+    throw webError;
+  }
+}
+
+async function initializeUserStoreModule(): Promise<void> {
+  try {
+    logger.info('App', 'Importing user store');
+    const { useUserStore } = await import('./stores/userStore');
+    logger.info('App', 'User store imported, calling initialize');
+    await useUserStore.getState().initialize();
+    logger.info('App', 'User store initialized');
+  } catch (userStoreError) {
+    logger.error('App', 'Error initializing user store', { error: userStoreError });
+    throw userStoreError;
+  }
+}
+
+async function restoreOrSkipPersistedNavigationState(
+  setInitialNavigationState: React.Dispatch<React.SetStateAction<NavigationState | undefined>>,
+): Promise<void> {
+  try {
+    const { useWebModeStore } = await import('./stores/webModeStore');
+    const { useUserStore } = await import('./stores/userStore');
+    const mode = useWebModeStore.getState().mode;
+    const userId = useUserStore.getState().selectedUser?.id || null;
+    const shouldSkipPersistedState = isMobileWebEnvironment();
+    if (shouldSkipPersistedState) {
+      logger.info('App', 'Skipping navigation state restore on mobile web to prevent blank-screen loops', {
+        mode,
+        hasUserId: !!userId,
+      });
+      setInitialNavigationState(undefined);
+      clearNavigationState(mode, userId).catch((error) => {
+        logger.warn('App', 'Failed to clear mobile web navigation state', { error });
+      });
+      return;
+    }
+
+    logger.info('App', 'Loading navigation state', { mode, userId });
+    const savedState = await loadNavigationState(mode, userId);
+    if (savedState) {
+      setInitialNavigationState(savedState);
+      logger.info('App', 'Navigation state loaded successfully', {
+        mode,
+        hasUserId: !!userId,
+        routeNames: savedState.routes?.map((r: { name: string }) => r.name) || [],
+      });
+      return;
+    }
+
+    logger.info('App', 'No saved navigation state found', { mode, hasUserId: !!userId });
+  } catch (navError) {
+    logger.warn('App', 'Error loading navigation state, continuing anyway', { error: navError });
+  }
 }
 
 function AppContent() {
@@ -267,86 +363,16 @@ function AppContent() {
       try {
         logger.info('App', 'Initializing Zustand stores and loading navigation state');
 
-        // Set timeout to prevent infinite white screen (10 seconds max)
         timeoutId = setTimeout(() => {
           logger.warn('App', 'Initialization timeout - forcing navigation state to load');
           setIsNavigationStateLoaded(true);
-        }, 10000);
+        }, STORE_INIT_TIMEOUT_MS);
 
-        // Initialize web mode store (reads from localStorage synchronously on creation)
-        if (Platform.OS === 'web') {
-          try {
-            logger.info('App', 'Importing web mode store');
-            const { useWebModeStore } = await import('./stores/webModeStore');
-            logger.info('App', 'Web mode store imported, initializing');
-            useWebModeStore.getState().initialize();
-            logger.info('App', 'Web mode store initialized');
-
-            // Initialize version checker for web only (non-critical, can fail)
-            try {
-              logger.info('App', 'Importing version checker');
-              const { initVersionChecker } = await import('./utils/versionChecker');
-              initVersionChecker();
-              logger.info('App', 'Version checker initialized');
-            } catch (versionError) {
-              logger.warn('App', 'Version checker failed to initialize (non-critical)', { error: versionError });
-              // Continue - version checker is not critical for app functionality
-            }
-          } catch (webError) {
-            logger.error('App', 'Error initializing web mode store', { error: webError });
-            throw webError;
-          }
-        }
-
-        // Initialize user store
-        try {
-          logger.info('App', 'Importing user store');
-          const { useUserStore } = await import('./stores/userStore');
-          logger.info('App', 'User store imported, calling initialize');
-          await useUserStore.getState().initialize();
-          logger.info('App', 'User store initialized');
-        } catch (userStoreError) {
-          logger.error('App', 'Error initializing user store', { error: userStoreError });
-          throw userStoreError;
-        }
-
+        await initializeWebPlatformStores();
+        await initializeUserStoreModule();
         logger.info('App', 'Zustand stores initialized');
+        await restoreOrSkipPersistedNavigationState(setInitialNavigationState);
 
-        // Load navigation state after stores are ready
-        try {
-          const { useWebModeStore } = await import('./stores/webModeStore');
-          const { useUserStore } = await import('./stores/userStore');
-          const mode = useWebModeStore.getState().mode;
-          const userId = useUserStore.getState().selectedUser?.id || null;
-          const shouldSkipPersistedState = isMobileWebEnvironment();
-          if (shouldSkipPersistedState) {
-            logger.info('App', 'Skipping navigation state restore on mobile web to prevent blank-screen loops', {
-              mode,
-              hasUserId: !!userId,
-            });
-            setInitialNavigationState(undefined);
-            clearNavigationState(mode, userId).catch((error) => {
-              logger.warn('App', 'Failed to clear mobile web navigation state', { error });
-            });
-          } else {
-            logger.info('App', 'Loading navigation state', { mode, userId });
-            const savedState = await loadNavigationState(mode, userId);
-            if (savedState) {
-              setInitialNavigationState(savedState);
-              logger.info('App', 'Navigation state loaded successfully', {
-                mode,
-                hasUserId: !!userId,
-                routeNames: savedState.routes?.map((r: { name: string }) => r.name) || []
-              });
-            } else {
-              logger.info('App', 'No saved navigation state found', { mode, hasUserId: !!userId });
-            }
-          }
-        } catch (navError) {
-          logger.warn('App', 'Error loading navigation state, continuing anyway', { error: navError });
-        }
-
-        // Clear timeout if initialization completed successfully
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
@@ -357,23 +383,20 @@ function AppContent() {
         logger.error('App', 'Failed to initialize stores or load navigation state', {
           error,
           message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined
+          stack: error instanceof Error ? error.stack : undefined,
         });
 
-        // Clear timeout on error
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
 
-        setIsNavigationStateLoaded(true); // Continue even if loading fails
+        setIsNavigationStateLoaded(true);
       }
     };
 
-    // Initialize immediately - no delay needed
-    initializeStoresAndLoadState();
+    void initializeStoresAndLoadState();
 
-    // Cleanup timeout on unmount
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -383,10 +406,7 @@ function AppContent() {
 
   logger.info('App', 'App component mounted');
 
-  // TODO: Move notification setup to dedicated notification service/hook
-  // TODO: Add proper error handling for notification permission failures
-  // TODO: Test notification handling on all platforms (iOS/Android/Web)
-  // Setup notification response listener (iOS + Android)
+  // Backlog: notification hook/service extraction; permission error UX; cross-platform notification QA.
   useEffect(() => {
     if (!notificationService) return;
 
@@ -397,35 +417,39 @@ function AppContent() {
         const type = data?.type as string | undefined;
         const conversationId = data?.conversationId as string | undefined;
 
-        if (navigationRef.current?.isReady() && !isMobileWebEnvironment()) {
-          // Use navigation queue for deep link navigation to ensure proper sequencing
-          if (type === 'message' && conversationId) {
-            // Navigate to ChatDetailScreen - note that it requires full params according to RootStackParamList
-            // For notifications, we'll need userName, userAvatar, and otherUserId
-            // For now, we'll navigate to NotificationsScreen if we don't have full params
-          }
-          if (type === 'daily_challenge_reminder' || data?.navigateTo === 'MyChallengesScreen') {
-            navigationQueue
-              .navigate(
-                'HomeStack',
-                {
-                  screen: 'DonationsTab',
-                  params: {
-                    screen: 'MyChallengesScreen',
-                    params: { scrollToDailyTracker: data?.scrollToDailyTracker !== false },
-                  },
-                } as any,
-                1
-              )
-              .catch((error) => {
-                logger.warn('App', 'Failed to navigate to MyChallenges from notification', { error });
-              });
-          } else {
-            navigationQueue.navigate('NotificationsScreen', undefined, 1).catch((error) => {
-              logger.warn('App', 'Failed to navigate to NotificationsScreen from notification', { error });
-            });
-          }
+        if (!navigationRef.current?.isReady()) {
+          return;
         }
+        if (isMobileWebEnvironment()) {
+          return;
+        }
+        // Use navigation queue for deep link navigation to ensure proper sequencing
+        if (type === 'message' && conversationId) {
+          // Navigate to ChatDetailScreen - note that it requires full params according to RootStackParamList
+          // For notifications, we'll need userName, userAvatar, and otherUserId
+          // For now, we'll navigate to NotificationsScreen if we don't have full params
+        }
+        if (type === 'daily_challenge_reminder' || data?.navigateTo === 'MyChallengesScreen') {
+          navigationQueue
+            .navigate(
+              'HomeStack',
+              {
+                screen: 'DonationsTab',
+                params: {
+                  screen: 'MyChallengesScreen',
+                  params: { scrollToDailyTracker: data?.scrollToDailyTracker !== false },
+                },
+              } as any,
+              1
+            )
+            .catch((error) => {
+              logger.warn('App', 'Failed to navigate to MyChallenges from notification', { error });
+            });
+          return;
+        }
+        navigationQueue.navigate('NotificationsScreen', undefined, 1).catch((error) => {
+          logger.warn('App', 'Failed to navigate to NotificationsScreen from notification', { error });
+        });
       } catch (err) {
         logger.warn('App', 'Failed to handle notification response', { error: err });
       }
@@ -621,7 +645,7 @@ export default function App() {
         });
       }}
     >
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }} testID="e2e-app-root">
         <SafeAreaProvider>
           <AppContent />
         </SafeAreaProvider>

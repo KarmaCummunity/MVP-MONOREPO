@@ -19,30 +19,33 @@ const SettingsScreen_LOG = 'SettingsScreen';
  * @version 2.0.0
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useReducer } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Alert,
   Platform,
   Dimensions,
   TextInput,
   KeyboardAvoidingView,
+  I18nManager,
+  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { useUser } from '../stores/userStore';
-import { useWebMode } from '../stores/webModeStore';
+import { useUser, type User } from '../stores/userStore';
+import { useWebMode, type WebMode } from '../stores/webModeStore';
 import GuestModeNotice from '../components/GuestModeNotice';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import i18n from '../app/i18n';
-import { I18nManager, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useScrollPositionWithHandler } from '../hooks/useScrollPosition';
 import { navigationQueue } from '../utils/navigationQueue';
@@ -50,799 +53,9 @@ import { checkNavigationGuards } from '../utils/navigationGuards';
 import { navigateToAuthenticatedLandingSite } from '../navigations/landingSiteNavigation';
 import { logger } from '../utils/loggerService';
 import { apiService } from '../utils/apiService';
+import { KC_ORGANIZATION_ROOT_EMAIL } from '../utils/org.constants';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
-
-export default function SettingsScreen() {
-  const navigation = useNavigation();
-  const { signOut, isGuestMode, selectedUser, isAuthenticated } = useUser();
-  const { mode } = useWebMode();
-  const { ref: scrollRef, onScroll } = useScrollPositionWithHandler('SettingsScreen', {
-    enabled: true,
-  });
-  const scrollViewRef = scrollRef;
-  const [, setRefreshKey] = useState(0);
-  const { t } = useTranslation(['settings', 'common']);
-  const [currentLang, setCurrentLang] = useState(i18n.language || 'he');
-  const [showLangModal, setShowLangModal] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportText, setReportText] = useState('');
-  const [isSendingReport, setIsSendingReport] = useState(false);
-
-  // Refresh data when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      logger.logScreenOpened('SettingsScreen');
-      logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen focused, refreshing data...');
-      // Force re-render by updating refresh key
-      setRefreshKey(prev => prev + 1);
-    }, [])
-  );
-
-  // Listen for authentication state changes
-  useEffect(() => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Auth state changed:', {
-      isAuthenticated,
-      isGuestMode,
-      selectedUser: selectedUser?.name || 'null',
-      mode
-    });
-
-    // If user is no longer authenticated, navigate based on web mode
-    if (!isAuthenticated && !isGuestMode) {
-      const targetRoute = (Platform.OS === 'web' && mode === 'site')
-        ? 'LandingSiteScreen'
-        : 'LoginScreen';
-
-      logger.debug('SettingsScreen', 'User logged out, navigating', { targetRoute, mode });
-
-      // Check guards before navigation
-      const guardContext = {
-        isAuthenticated: false,
-        isGuestMode: false,
-        isAdmin: false,
-        mode,
-      };
-
-      checkNavigationGuards(
-        {
-          type: 'reset',
-          index: 0,
-          routes: [{ name: targetRoute }],
-        },
-        guardContext
-      ).then((guardResult) => {
-        if (!guardResult.allowed && guardResult.redirectTo) {
-          navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-        } else {
-          navigationQueue.reset(0, [{ name: targetRoute }], 2);
-        }
-      });
-    }
-  }, [isAuthenticated, isGuestMode, selectedUser, navigation, mode]);
-
-  /** Layout direction follows selected language so UI updates immediately (native RTL still needs restart for full mirror). */
-  const isRTL = currentLang === 'he';
-
-  useEffect(() => {
-    const sync = (lng: string) => {
-      const code = lng?.split('-')[0];
-      if (code === 'he' || code === 'en') {
-        setCurrentLang(code);
-      }
-    };
-    sync(i18n.language || 'he');
-    i18n.on('languageChanged', sync);
-    return () => {
-      i18n.off('languageChanged', sync);
-    };
-  }, []);
-
-  // Debug logs for development
-  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Rendered with isGuestMode:', { isGuestMode });
-  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
-  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen dimensions:', { width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
-
-  const handleAboutPress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - About pressed');
-    navigateToAuthenticatedLandingSite(navigation);
-  };
-
-  /**
- * מטפל בלחיצה על כפתור היציאה
- * לוגיקה שונה למצב אורח ולמשתמש מחובר:
- * - מצב אורח: יציאה ישירה ללא התראה (רק חזרה למסך הכניסה)
- * - משתמש מחובר: הצגת התראה לפני היציאה (פעולה מסוכנת)
- */
-  const handleLogoutPress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ 14SettingsScreen - Logout pressed');
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - isGuestMode:', { isGuestMode });
-
-    // Guest mode - direct logout without warning as it's not dangerous
-    if (isGuestMode) {
-      logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Guest mode detected, direct logout without confirmation');
-      signOut().then(() => {
-        logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Guest logout completed');
-        setTimeout(() => {
-          navigateAfterLogout();
-        }, 100);
-      });
-      return;
-    }
-
-    // Authenticated user - show warning as this is a dangerous action
-    // Use Modal for both web and native for consistent behavior
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Showing logout confirmation modal');
-    setShowLogoutModal(true);
-  };
-
-  // Helper function to navigate after logout based on web mode
-  const navigateAfterLogout = async () => {
-    const targetRoute = (Platform.OS === 'web' && mode === 'site')
-      ? 'LandingSiteScreen'
-      : 'LoginScreen';
-
-    logger.debug('SettingsScreen', 'Navigating after logout', { targetRoute, mode });
-
-    // Check guards before navigation
-    const guardContext = {
-      isAuthenticated: false,
-      isGuestMode: false,
-      isAdmin: false,
-      mode,
-    };
-
-    const guardResult = await checkNavigationGuards(
-      {
-        type: 'reset',
-        index: 0,
-        routes: [{ name: targetRoute }],
-      },
-      guardContext
-    );
-
-    if (!guardResult.allowed && guardResult.redirectTo) {
-      await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-    } else {
-      await navigationQueue.reset(0, [{ name: targetRoute }], 2);
-    }
-  };
-
-  // Helper function to handle logout confirmation
-  const handleLogoutConfirm = async () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Logout confirmed');
-    setShowLogoutModal(false);
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Calling signOut()');
-    await signOut();
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - signOut() completed');
-
-    // Short delay to ensure state is updated before navigation
-    setTimeout(() => {
-      navigateAfterLogout();
-    }, 100);
-  };
-
-  // Helper function to handle logout cancellation
-  const handleLogoutCancel = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Logout cancelled');
-    setShowLogoutModal(false);
-  };
-
-  const handleNotificationsPress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Notifications pressed');
-    if (Platform.OS === 'web') {
-      alert(t('settings:notificationsComingSoon'));
-    } else {
-      Alert.alert(t('settings:notificationsTitle'), t('settings:notificationsComingSoon'));
-    }
-  };
-
-  const handlePrivacyPress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Privacy pressed');
-    if (Platform.OS === 'web') {
-      alert(t('settings:privacyComingSoon'));
-    } else {
-      Alert.alert(t('settings:privacyTitle'), t('settings:privacyComingSoon'));
-    }
-  };
-
-  const handleThemePress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Theme pressed');
-    if (Platform.OS === 'web') {
-      alert(t('settings:themeComingSoon'));
-    } else {
-      Alert.alert(t('settings:themeTitle'), t('settings:themeComingSoon'));
-    }
-  };
-
-  const applyLanguage = async (lang: 'he' | 'en') => {
-    await AsyncStorage.setItem('app_language', lang);
-    await i18n.changeLanguage(lang);
-    setCurrentLang(lang);
-    const isRTL = lang === 'he';
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.allowRTL(isRTL);
-      I18nManager.forceRTL(isRTL);
-      if (Platform.OS !== 'web') {
-        Alert.alert(t('settings:restartRequired'), t('settings:restartDesc'));
-      }
-    }
-    setShowLangModal(false);
-  };
-
-  const handleLanguagePress = () => {
-    setShowLangModal(true);
-  };
-
-  const handleClearCachePress = () => {
-    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Clear cache pressed');
-
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(t('settings:clearCacheConfirm'));
-      if (confirmed) {
-        logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Cache cleared');
-        alert(t('settings:cacheCleared'));
-      }
-    } else {
-      Alert.alert(
-        t('settings:clearCache'),
-        t('settings:clearCacheConfirm'),
-        [
-          {
-            text: t('common:cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('settings:clear'),
-            style: 'destructive',
-            onPress: () => {
-              logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Cache cleared');
-              Alert.alert(t('common:done'), t('settings:cacheCleared'));
-            },
-          },
-        ]
-      );
-    }
-  };
-
-  const handleReportPress = () => {
-    if (!isAuthenticated) {
-      if (Platform.OS === 'web') {
-        alert(t('common:guestLoginHint'));
-      } else {
-        Alert.alert(t('common:error'), t('common:guestLoginHint'));
-      }
-      return;
-    }
-    setShowReportModal(true);
-  };
-
-  const handleSendReport = async () => {
-    if (!reportText.trim()) return;
-
-    setIsSendingReport(true);
-    try {
-      const adminEmail = 'navesarussi@gmail.com';
-
-      // Resolve admin ID - try multiple methods
-      let adminId: string | null = null;
-
-      try {
-        // Method 1: Try resolving by email directly
-        const resolveRes = await apiService.resolveUserId({ email: adminEmail });
-        if (resolveRes.success && resolveRes.data?.id) {
-          adminId = resolveRes.data.id;
-        }
-      } catch (e) {
-        console.warn('Method 1 (resolveUserId) failed', e);
-      }
-
-      if (!adminId) {
-        try {
-          // Method 2: Search for user by email
-          const searchRes = await apiService.getUsers({ search: adminEmail, limit: 1 });
-          if (searchRes.success && searchRes.data && Array.isArray(searchRes.data) && searchRes.data.length > 0) {
-            // Verify exact email match to be safe
-            const adminUser = searchRes.data.find((u: any) => u.email?.toLowerCase() === adminEmail.toLowerCase());
-            if (adminUser) {
-              adminId = adminUser.id;
-            } else {
-              // Fallback to first result if it looks close enough (or just take it as the search should be specific)
-              adminId = searchRes.data[0].id;
-            }
-          }
-        } catch (e) {
-          console.warn('Method 2 (getUsers) failed', e);
-        }
-      }
-
-      if (!adminId) {
-        console.error('Admin user not found for report via any method');
-        // Fallback for development/testing if needed, or throw
-        throw new Error('Admin not found');
-      }
-
-      // const adminId = resolveRes.data.id; // Correctly assigned above
-      const currentUserId = selectedUser?.id;
-
-      if (!currentUserId) {
-        throw new Error('User not logged in');
-      }
-
-      // Create task for admin
-      const taskData = {
-        title: `Report from ${selectedUser?.name || 'User'}`,
-        description: `User Email: ${selectedUser?.email}\nUser ID: ${currentUserId}\n\nReport Content:\n${reportText}`,
-        status: 'open',
-        priority: 'high',
-        category: 'דיווח',
-        assignees: [adminId],
-        created_by: currentUserId,
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Due in 1 week
-      };
-
-      const taskRes = await apiService.createTask(taskData);
-
-      if (!taskRes.success) {
-        throw new Error(taskRes.error || 'Failed to create report task');
-      }
-
-      setReportText('');
-      setShowReportModal(false);
-
-      if (Platform.OS === 'web') {
-        alert(t('settings:reportSuccess'));
-      } else {
-        Alert.alert(t('common:done'), t('settings:reportSuccess'));
-      }
-
-    } catch (error) {
-      console.error('Failed to send report:', error);
-      if (Platform.OS === 'web') {
-        alert(t('settings:reportError'));
-      } else {
-        Alert.alert(t('common:error'), t('settings:reportError'));
-      }
-    } finally {
-      setIsSendingReport(false);
-    }
-  };
-
-
-  // Test function for scroll functionality (development only)
-  const handleScrollTest = () => {
-    logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Testing scroll functionality');
-    if (scrollViewRef.current) {
-      logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - ScrollView ref exists, attempting to scroll');
-      if ('scrollTo' in scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 200, animated: true });
-        setTimeout(() => {
-          logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Scrolling back to top');
-          if (scrollViewRef.current && 'scrollTo' in scrollViewRef.current) {
-            scrollViewRef.current.scrollTo({ y: 0, animated: true });
-          }
-        }, 2000);
-      } else if ('scrollToOffset' in scrollViewRef.current) {
-        (scrollViewRef.current as any).scrollToOffset({ offset: 200, animated: true });
-        setTimeout(() => {
-          logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Scrolling back to top');
-          if (scrollViewRef.current && 'scrollToOffset' in scrollViewRef.current) {
-            (scrollViewRef.current as any).scrollToOffset({ offset: 0, animated: true });
-          }
-        }, 2000);
-      }
-    } else {
-      logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - ScrollView ref is null!');
-    }
-  };
-
-  const SettingsItem = ({
-    icon,
-    title,
-    subtitle,
-    onPress,
-    showArrow = true,
-    color = colors.textPrimary,
-    dangerous = false,
-  }: {
-    icon: string;
-    title: string;
-    subtitle?: string;
-    onPress: () => void;
-    showArrow?: boolean;
-    color?: string;
-    dangerous?: boolean;
-  }) => {
-    const rowFlex = isRTL ? 'row-reverse' : 'row';
-    const alignMain: 'left' | 'right' = isRTL ? 'right' : 'left';
-    return (
-      <TouchableOpacity
-        style={[styles.settingsItem, { flexDirection: rowFlex }, dangerous && styles.dangerousItem]}
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.settingsItemLeft, { flexDirection: rowFlex }]}>
-          <View
-            style={[
-              styles.iconContainer,
-              dangerous && styles.dangerousIconContainer,
-              isRTL ? styles.iconContainerRtl : styles.iconContainerLtr,
-            ]}
-          >
-            <Ionicons
-              name={icon as any}
-              size={22}
-              color={dangerous ? colors.error : colors.primary}
-            />
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color, textAlign: alignMain }]}>
-              {title}
-            </Text>
-            {subtitle && (
-              <Text style={[styles.settingsSubtitle, { textAlign: alignMain }]}>{subtitle}</Text>
-            )}
-          </View>
-        </View>
-        {showArrow && (
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={colors.textSecondary}
-            style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
-          />
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <ScreenWrapper style={styles.container}>
-      {/* Language Modal */}
-      <Modal visible={showLangModal} transparent animationType="fade" onRequestClose={() => setShowLangModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={[styles.modalTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:selectLanguage')}</Text>
-            <TouchableOpacity style={styles.modalOption} onPress={() => applyLanguage('he')}>
-              <Text style={styles.modalOptionText}>{`${t('settings:lang.he')} ${currentLang === 'he' ? '✓' : ''}`}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOption} onPress={() => applyLanguage('en')}>
-              <Text style={styles.modalOptionText}>{`${t('settings:lang.en')} ${currentLang === 'en' ? '✓' : ''}`}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalOption, { marginTop: 8 }]} onPress={() => setShowLangModal(false)}>
-              <Text style={[styles.modalOptionText, { color: colors.textSecondary }]}>{t('common:cancel')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Logout Confirmation Modal */}
-      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={handleLogoutCancel}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.logoutModalCard}>
-            <Text style={styles.logoutModalTitle}>{t('settings:logoutTitle')}</Text>
-            <Text style={styles.logoutModalMessage}>{t('settings:logoutMessage')}</Text>
-            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <TouchableOpacity
-                style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
-                onPress={handleLogoutCancel}
-              >
-                <Text style={styles.logoutModalButtonTextCancel}>{t('common:cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.logoutModalButton, styles.logoutModalButtonConfirm]}
-                onPress={handleLogoutConfirm}
-              >
-                <Text style={styles.logoutModalButtonTextConfirm}>{t('settings:logoutConfirm')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Report Modal */}
-      <Modal visible={showReportModal} transparent animationType="slide" onRequestClose={() => setShowReportModal(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
-          <View style={styles.reportModalCard}>
-            <Text style={styles.reportModalTitle}>{t('settings:reportTitle')}</Text>
-            <Text style={styles.reportModalSubtitle}>{t('settings:reportIssueDesc')}</Text>
-
-            <TextInput
-              style={styles.reportInput}
-              multiline
-              numberOfLines={4}
-              placeholder={t('settings:reportPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-              value={reportText}
-              onChangeText={setReportText}
-              textAlignVertical="top"
-              textAlign={isRTL ? 'right' : 'left'}
-            />
-
-            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <TouchableOpacity
-                style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
-                onPress={() => setShowReportModal(false)}
-                disabled={isSendingReport}
-              >
-                <Text style={styles.logoutModalButtonTextCancel}>{t('common:cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.logoutModalButton, styles.logoutModalButtonConfirm, { backgroundColor: colors.primary, opacity: isSendingReport ? 0.7 : 1 }]}
-                onPress={handleSendReport}
-                disabled={isSendingReport || !reportText.trim()}
-              >
-                <Text style={[styles.logoutModalButtonTextConfirm, { color: colors.white }]}>
-                  {isSendingReport ? t('common:loading') : t('settings:reportSend')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* User Info Section - Only for logged in users */}
-      {!isGuestMode && selectedUser && (
-        <View style={styles.userSection}>
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.name}</Text>
-            <Text style={[styles.userEmail, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.email}</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Guest Mode Notice */}
-      {isGuestMode && <GuestModeNotice variant="compact" />}
-
-      {/* Settings List - Platform-specific scroll implementation */}
-      {Platform.OS === 'web' ? (
-        // Web: Custom scrollable View with CSS overflow
-        <View style={styles.webScrollContainer}>
-          <View style={styles.webScrollContent}>
-            {/* App Settings Section — working controls */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
-
-              <SettingsItem
-                icon="language-outline"
-                title={t('settings:language')}
-                subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
-                onPress={handleLanguagePress}
-              />
-            </View>
-
-            {/* About Section */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
-
-              <SettingsItem
-                icon="information-circle-outline"
-                title={t('settings:about')}
-                subtitle={t('settings:aboutDesc')}
-                onPress={handleAboutPress}
-              />
-
-              <SettingsItem
-                icon="warning-outline"
-                title={t('settings:reportIssue')}
-                subtitle={t('settings:reportIssueDesc')}
-                onPress={handleReportPress}
-              />
-            </View>
-
-            {/* Logout Section - different behavior for guest mode and authenticated user */}
-            <View style={styles.section}>
-              <SettingsItem
-                icon={isGuestMode ? "arrow-back-outline" : "log-out-outline"}
-                title={isGuestMode ? t('settings:guestBack') : t('settings:logout')}
-                subtitle={isGuestMode ? t('settings:guestBackDesc') : t('settings:logoutDesc')}
-                onPress={handleLogoutPress}
-                showArrow={false}
-                dangerous={!isGuestMode} // Red only for authenticated user (dangerous action)
-              />
-            </View>
-
-            {/* Coming soon — not wired yet */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
-
-              <SettingsItem
-                icon="notifications-outline"
-                title={t('settings:notifications')}
-                subtitle={t('settings:notificationsDesc')}
-                onPress={handleNotificationsPress}
-              />
-
-              <SettingsItem
-                icon="color-palette-outline"
-                title={t('settings:theme')}
-                subtitle={t('settings:themeDesc')}
-                onPress={handleThemePress}
-              />
-
-              <SettingsItem
-                icon="shield-outline"
-                title={t('settings:privacy')}
-                subtitle={t('settings:privacyDesc')}
-                onPress={handlePrivacyPress}
-              />
-
-              <SettingsItem
-                icon="trash-outline"
-                title={t('settings:clearCache')}
-                subtitle={t('settings:clearCacheDesc')}
-                onPress={handleClearCachePress}
-              />
-
-              <SettingsItem
-                icon="flask-outline"
-                title={t('settings:scrollTestTitle')}
-                subtitle={t('settings:scrollTestSubtitle')}
-                onPress={handleScrollTest}
-              />
-            </View>
-          </View>
-        </View>
-      ) : (
-        // Native: Standard ScrollView for iOS/Android
-        <ScrollView
-          ref={scrollViewRef as React.RefObject<ScrollView>}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={true}
-          scrollEnabled={true}
-          bounces={Platform.OS === 'ios'}
-          overScrollMode={Platform.OS === 'android' ? 'auto' : undefined}
-          nestedScrollEnabled={true}
-          keyboardShouldPersistTaps="handled"
-          onScroll={(event) => {
-            onScroll(event);
-          }}
-          onScrollBeginDrag={() => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Scroll begin drag detected!');
-          }}
-          onScrollEndDrag={() => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Scroll end drag detected!');
-          }}
-          onMomentumScrollBegin={() => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Momentum scroll begin!');
-          }}
-          onMomentumScrollEnd={() => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Momentum scroll end!');
-          }}
-          onContentSizeChange={(contentWidth, contentHeight) => {
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Content size changed:', { contentWidth, contentHeight });
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Screen height:', { screenHeight: SCREEN_HEIGHT });
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Should scroll:', {
-              shouldScroll: contentHeight > SCREEN_HEIGHT,
-            });
-          }}
-          onLayout={(event) => {
-            const { x, y, width, height } = event.nativeEvent.layout;
-            logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - ScrollView layout:', { x, y, width, height });
-          }}
-          scrollEventThrottle={16}
-        >
-          {/* App Settings Section — working controls */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
-            {/* Org Dashboard (for org admins) */}
-            {selectedUser && selectedUser.roles?.includes('org_admin') && (
-              <SettingsItem
-                icon="briefcase-outline"
-                title={t('settings:orgDashboardTitle')}
-                subtitle={t('settings:orgDashboardSubtitle')}
-                onPress={() => navigation.navigate('OrgDashboardScreen' as never)}
-              />
-            )}
-
-            {/* Admin approvals (for admins) */}
-            {selectedUser && selectedUser.roles?.includes('admin') && (
-              <SettingsItem
-                icon="checkmark-done-outline"
-                title={t('settings:adminApprovalsTitle')}
-                subtitle={t('settings:adminApprovalsSubtitle')}
-                onPress={() => navigation.navigate('AdminOrgApprovalsScreen' as never)}
-              />
-            )}
-
-            <SettingsItem
-              icon="language-outline"
-              title={t('settings:language')}
-              subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
-              onPress={handleLanguagePress}
-            />
-          </View>
-
-          {/* My Activity Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:myActivitySection')}</Text>
-
-            <SettingsItem
-              icon="trophy-outline"
-              title={t('challenges:myChallenges')}
-              subtitle={t('settings:myChallengesDesc')}
-              onPress={() => (navigation as any).navigate('ChallengeStatisticsScreen')}
-            />
-          </View>
-
-          {/* About Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
-
-            <SettingsItem
-              icon="information-circle-outline"
-              title={t('settings:about')}
-              subtitle={t('settings:aboutDesc')}
-              onPress={handleAboutPress}
-            />
-
-            <SettingsItem
-              icon="warning-outline"
-              title={t('settings:reportIssue')}
-              subtitle={t('settings:reportIssueDesc')}
-              onPress={handleReportPress}
-            />
-          </View>
-
-          {/* Logout Section - different behavior for guest mode and authenticated user */}
-          <View style={styles.section}>
-            <SettingsItem
-              icon={isGuestMode ? "arrow-back-outline" : "log-out-outline"}
-              title={isGuestMode ? t('settings:guestBack') : t('settings:logout')}
-              subtitle={isGuestMode ? t('settings:guestBackDesc') : t('settings:logoutDesc')}
-              onPress={handleLogoutPress}
-              showArrow={false}
-              dangerous={!isGuestMode} // Red only for authenticated user (dangerous action)
-            />
-          </View>
-
-          {/* Coming soon — not wired yet */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
-
-            <SettingsItem
-              icon="notifications-outline"
-              title={t('settings:notifications')}
-              subtitle={t('settings:notificationsDesc')}
-              onPress={handleNotificationsPress}
-            />
-
-            <SettingsItem
-              icon="color-palette-outline"
-              title={t('settings:theme')}
-              subtitle={t('settings:themeDesc')}
-              onPress={handleThemePress}
-            />
-
-            <SettingsItem
-              icon="shield-outline"
-              title={t('settings:privacy')}
-              subtitle={t('settings:privacyDesc')}
-              onPress={handlePrivacyPress}
-            />
-
-            <SettingsItem
-              icon="trash-outline"
-              title={t('settings:clearCache')}
-              subtitle={t('settings:clearCacheDesc')}
-              onPress={handleClearCachePress}
-            />
-
-            <SettingsItem
-              icon="flask-outline"
-              title={t('settings:scrollTestTitle')}
-              subtitle={t('settings:scrollTestSubtitle')}
-              onPress={handleScrollTest}
-            />
-          </View>
-        </ScrollView>
-      )}
-    </ScreenWrapper>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -1068,3 +281,940 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 });
+
+
+type SettingsItemProps = Readonly<{
+  isRTL: boolean;
+  icon: string;
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  showArrow?: boolean;
+  color?: string;
+  dangerous?: boolean;
+}>;
+
+function SettingsItem({
+  isRTL,
+  icon,
+  title,
+  subtitle,
+  onPress,
+  showArrow = true,
+  color = colors.textPrimary,
+  dangerous = false,
+}: SettingsItemProps) {
+  const rowFlex = isRTL ? 'row-reverse' : 'row';
+  const alignMain: 'left' | 'right' = isRTL ? 'right' : 'left';
+  return (
+    <TouchableOpacity
+      style={[styles.settingsItem, { flexDirection: rowFlex }, dangerous && styles.dangerousItem]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.settingsItemLeft, { flexDirection: rowFlex }]}>
+        <View
+          style={[
+            styles.iconContainer,
+            dangerous && styles.dangerousIconContainer,
+            isRTL ? styles.iconContainerRtl : styles.iconContainerLtr,
+          ]}
+        >
+          <Ionicons
+            name={icon as any}
+            size={22}
+            color={dangerous ? colors.error : colors.primary}
+          />
+        </View>
+        <View style={styles.textContainer}>
+          <Text style={[styles.settingsTitle, { color: dangerous ? colors.error : color, textAlign: alignMain }]}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={[styles.settingsSubtitle, { textAlign: alignMain }]}>{subtitle}</Text>
+          ) : null}
+        </View>
+      </View>
+      {showArrow ? (
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={colors.textSecondary}
+          style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
+        />
+      ) : null}
+    </TouchableOpacity>
+  );
+}
+
+
+async function resolveOrgAdminUserId(adminEmail: string): Promise<string | null> {
+  try {
+    const resolveRes = await apiService.resolveUserId({ email: adminEmail });
+    if (resolveRes.success && resolveRes.data?.id) {
+      return resolveRes.data.id;
+    }
+  } catch (e) {
+    console.warn('resolveOrgAdminUserId (resolveUserId) failed', e);
+  }
+
+  try {
+    const searchRes = await apiService.getUsers({ search: adminEmail, limit: 1 });
+    if (
+      searchRes.success &&
+      searchRes.data &&
+      Array.isArray(searchRes.data) &&
+      searchRes.data.length > 0
+    ) {
+      const adminUser = searchRes.data.find(
+        (u: { email?: string; id: string }) =>
+          u.email?.toLowerCase() === adminEmail.toLowerCase(),
+      );
+      if (adminUser) {
+        return adminUser.id;
+      }
+      return searchRes.data[0].id;
+    }
+  } catch (e) {
+    console.warn('resolveOrgAdminUserId (getUsers) failed', e);
+  }
+
+  return null;
+}
+
+type SettingsListHandlers = Readonly<{
+  onLanguagePress: () => void;
+  onAboutPress: () => void;
+  onReportPress: () => void;
+  onLogoutPress: () => void;
+  onNotificationsPress: () => void;
+  onThemePress: () => void;
+  onPrivacyPress: () => void;
+  onClearCachePress: () => void;
+  onScrollTest: () => void;
+}>;
+
+function notifyComingSoon(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    alert(message);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
+function notifyGuestLoginHint(t: TFunction) {
+  if (Platform.OS === 'web') {
+    alert(t('common:guestLoginHint'));
+  } else {
+    Alert.alert(t('common:error'), t('common:guestLoginHint'));
+  }
+}
+
+function runClearCacheFlow(t: TFunction) {
+  if (Platform.OS === 'web') {
+    const confirmed = globalThis.confirm(t('settings:clearCacheConfirm'));
+    if (confirmed) {
+      logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Cache cleared');
+      alert(t('settings:cacheCleared'));
+    }
+    return;
+  }
+
+  Alert.alert(
+    t('settings:clearCache'),
+    t('settings:clearCacheConfirm'),
+    [
+      { text: t('common:cancel'), style: 'cancel' },
+      {
+        text: t('settings:clear'),
+        style: 'destructive',
+        onPress: () => {
+          logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Cache cleared');
+          Alert.alert(t('common:done'), t('settings:cacheCleared'));
+        },
+      },
+    ],
+  );
+}
+
+async function submitSettingsUserReport(reportText: string, selectedUser: User | null): Promise<void> {
+  const adminId = await resolveOrgAdminUserId(KC_ORGANIZATION_ROOT_EMAIL);
+
+  if (!adminId) {
+    console.error('Admin user not found for report via any method');
+    throw new Error('Admin not found');
+  }
+
+  const currentUserId = selectedUser?.id;
+
+  if (!currentUserId) {
+    throw new Error('User not logged in');
+  }
+
+  const taskData = {
+    title: `Report from ${selectedUser?.name || 'User'}`,
+    description: `User Email: ${selectedUser?.email}\nUser ID: ${currentUserId}\n\nReport Content:\n${reportText}`,
+    status: 'open',
+    priority: 'high',
+    category: 'דיווח',
+    assignees: [adminId],
+    created_by: currentUserId,
+    due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const taskRes = await apiService.createTask(taskData);
+
+  if (!taskRes.success) {
+    throw new Error(taskRes.error || 'Failed to create report task');
+  }
+}
+
+function notifyReportOutcome(kind: 'success' | 'error', t: TFunction) {
+  if (kind === 'success') {
+    if (Platform.OS === 'web') {
+      alert(t('settings:reportSuccess'));
+    } else {
+      Alert.alert(t('common:done'), t('settings:reportSuccess'));
+    }
+    return;
+  }
+  if (Platform.OS === 'web') {
+    alert(t('settings:reportError'));
+  } else {
+    Alert.alert(t('common:error'), t('settings:reportError'));
+  }
+}
+
+function runScrollViewConnectivityProbe(scrollViewRef: React.RefObject<ScrollView | FlatList | null>) {
+  const ref = scrollViewRef.current;
+  if (!ref) {
+    logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - ScrollView ref is null!');
+    return;
+  }
+
+  logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - ScrollView ref exists, attempting to scroll');
+
+  if ('scrollTo' in ref) {
+    ref.scrollTo({ y: 200, animated: true });
+    setTimeout(() => {
+      logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Scrolling back to top');
+      const inner = scrollViewRef.current;
+      if (inner && 'scrollTo' in inner) {
+        inner.scrollTo({ y: 0, animated: true });
+      }
+    }, 2000);
+    return;
+  }
+
+  if ('scrollToOffset' in ref) {
+    ref.scrollToOffset({ offset: 200, animated: true });
+    setTimeout(() => {
+      logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Scrolling back to top');
+      const inner = scrollViewRef.current;
+      if (inner && 'scrollToOffset' in inner) {
+        inner.scrollToOffset({ offset: 0, animated: true });
+      }
+    }, 2000);
+  }
+}
+
+async function resetNavigationAfterLogout(mode: WebMode) {
+  const targetRoute = Platform.OS === 'web' && mode === 'site' ? 'LandingSiteScreen' : 'LoginScreen';
+
+  logger.debug('SettingsScreen', 'Navigating after logout', { targetRoute, mode });
+
+  const guardContext = {
+    isAuthenticated: false,
+    isGuestMode: false,
+    isAdmin: false,
+    mode,
+  };
+
+  const guardResult = await checkNavigationGuards(
+    {
+      type: 'reset',
+      index: 0,
+      routes: [{ name: targetRoute }],
+    },
+    guardContext,
+  );
+
+  if (!guardResult.allowed && guardResult.redirectTo) {
+    await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
+  } else {
+    await navigationQueue.reset(0, [{ name: targetRoute }], 2);
+  }
+}
+
+function useSettingsAuthRedirect(
+  isAuthenticated: boolean,
+  isGuestMode: boolean,
+  selectedUser: User | null,
+  mode: WebMode,
+) {
+  useEffect(() => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Auth state changed:', {
+      isAuthenticated,
+      isGuestMode,
+      selectedUser: selectedUser?.name || 'null',
+      mode,
+    });
+
+    if (isAuthenticated || isGuestMode) {
+      return;
+    }
+
+    void resetNavigationAfterLogout(mode);
+  }, [isAuthenticated, isGuestMode, selectedUser, mode]);
+}
+
+function useSettingsFocusRefresh() {
+  const [, bump] = useReducer((state: number) => state + 1, 0);
+  useFocusEffect(
+    useCallback(() => {
+      logger.logScreenOpened('SettingsScreen');
+      logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen focused, refreshing data...');
+      bump();
+    }, [bump]),
+  );
+}
+
+type SettingsScreenModalsProps = Readonly<{
+  isRTL: boolean;
+  t: TFunction;
+  showLangModal: boolean;
+  setShowLangModal: (v: boolean) => void;
+  applyLanguage: (lang: 'he' | 'en') => void;
+  currentLang: string;
+  showLogoutModal: boolean;
+  handleLogoutCancel: () => void;
+  handleLogoutConfirm: () => void;
+  showReportModal: boolean;
+  setShowReportModal: (v: boolean) => void;
+  reportText: string;
+  setReportText: (v: string) => void;
+  isSendingReport: boolean;
+  handleSendReport: () => void;
+}>;
+
+function SettingsScreenModals({
+  isRTL,
+  t,
+  showLangModal,
+  setShowLangModal,
+  applyLanguage,
+  currentLang,
+  showLogoutModal,
+  handleLogoutCancel,
+  handleLogoutConfirm,
+  showReportModal,
+  setShowReportModal,
+  reportText,
+  setReportText,
+  isSendingReport,
+  handleSendReport,
+}: SettingsScreenModalsProps) {
+  return (
+    <>
+      <Modal visible={showLangModal} transparent animationType="fade" onRequestClose={() => setShowLangModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={[styles.modalTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:selectLanguage')}</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => applyLanguage('he')}>
+              <Text style={styles.modalOptionText}>{`${t('settings:lang.he')} ${currentLang === 'he' ? '✓' : ''}`}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalOption} onPress={() => applyLanguage('en')}>
+              <Text style={styles.modalOptionText}>{`${t('settings:lang.en')} ${currentLang === 'en' ? '✓' : ''}`}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalOption, { marginTop: 8 }]} onPress={() => setShowLangModal(false)}>
+              <Text style={[styles.modalOptionText, { color: colors.textSecondary }]}>{t('common:cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={handleLogoutCancel}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.logoutModalCard}>
+            <Text style={styles.logoutModalTitle}>{t('settings:logoutTitle')}</Text>
+            <Text style={styles.logoutModalMessage}>{t('settings:logoutMessage')}</Text>
+            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <TouchableOpacity
+                style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
+                onPress={handleLogoutCancel}
+              >
+                <Text style={styles.logoutModalButtonTextCancel}>{t('common:cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.logoutModalButton, styles.logoutModalButtonConfirm]}
+                onPress={handleLogoutConfirm}
+              >
+                <Text style={styles.logoutModalButtonTextConfirm}>{t('settings:logoutConfirm')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showReportModal} transparent animationType="slide" onRequestClose={() => setShowReportModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
+          <View style={styles.reportModalCard}>
+            <Text style={styles.reportModalTitle}>{t('settings:reportTitle')}</Text>
+            <Text style={styles.reportModalSubtitle}>{t('settings:reportIssueDesc')}</Text>
+
+            <TextInput
+              style={styles.reportInput}
+              multiline
+              numberOfLines={4}
+              placeholder={t('settings:reportPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={reportText}
+              onChangeText={setReportText}
+              textAlignVertical="top"
+              textAlign={isRTL ? 'right' : 'left'}
+            />
+
+            <View style={[styles.logoutModalButtons, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <TouchableOpacity
+                style={[styles.logoutModalButton, styles.logoutModalButtonCancel]}
+                onPress={() => setShowReportModal(false)}
+                disabled={isSendingReport}
+              >
+                <Text style={styles.logoutModalButtonTextCancel}>{t('common:cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.logoutModalButton,
+                  styles.logoutModalButtonConfirm,
+                  { backgroundColor: colors.primary, opacity: isSendingReport ? 0.7 : 1 },
+                ]}
+                onPress={handleSendReport}
+                disabled={isSendingReport || !reportText.trim()}
+              >
+                <Text style={[styles.logoutModalButtonTextConfirm, { color: colors.white }]}>
+                  {isSendingReport ? t('common:loading') : t('settings:reportSend')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
+  );
+}
+
+type SettingsWebBodyProps = Readonly<{
+  isRTL: boolean;
+  isGuestMode: boolean;
+  currentLang: string;
+  handlers: SettingsListHandlers;
+  t: TFunction;
+}>;
+
+function SettingsWebBody({ isRTL, isGuestMode, currentLang, handlers, t }: SettingsWebBodyProps) {
+  return (
+    <View style={styles.webScrollContainer}>
+      <View style={styles.webScrollContent}>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="language-outline"
+            title={t('settings:language')}
+            subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
+            onPress={handlers.onLanguagePress}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="information-circle-outline"
+            title={t('settings:about')}
+            subtitle={t('settings:aboutDesc')}
+            onPress={handlers.onAboutPress}
+          />
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="warning-outline"
+            title={t('settings:reportIssue')}
+            subtitle={t('settings:reportIssueDesc')}
+            onPress={handlers.onReportPress}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SettingsItem
+            isRTL={isRTL}
+            icon={isGuestMode ? 'arrow-back-outline' : 'log-out-outline'}
+            title={isGuestMode ? t('settings:guestBack') : t('settings:logout')}
+            subtitle={isGuestMode ? t('settings:guestBackDesc') : t('settings:logoutDesc')}
+            onPress={handlers.onLogoutPress}
+            showArrow={false}
+            dangerous={!isGuestMode}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="notifications-outline"
+            title={t('settings:notifications')}
+            subtitle={t('settings:notificationsDesc')}
+            onPress={handlers.onNotificationsPress}
+          />
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="color-palette-outline"
+            title={t('settings:theme')}
+            subtitle={t('settings:themeDesc')}
+            onPress={handlers.onThemePress}
+          />
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="shield-outline"
+            title={t('settings:privacy')}
+            subtitle={t('settings:privacyDesc')}
+            onPress={handlers.onPrivacyPress}
+          />
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="trash-outline"
+            title={t('settings:clearCache')}
+            subtitle={t('settings:clearCacheDesc')}
+            onPress={handlers.onClearCachePress}
+          />
+
+          <SettingsItem
+            isRTL={isRTL}
+            icon="flask-outline"
+            title={t('settings:scrollTestTitle')}
+            subtitle={t('settings:scrollTestSubtitle')}
+            onPress={handlers.onScrollTest}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+type SettingsScreenNavigation = Readonly<{
+  navigate: (name: string) => void;
+}>;
+
+type SettingsNativeBodyProps = Readonly<{
+  scrollViewRef: React.RefObject<ScrollView | FlatList | null>;
+  onScroll: (event: unknown) => void;
+  screenHeight: number;
+  isRTL: boolean;
+  isGuestMode: boolean;
+  selectedUser: User | null;
+  currentLang: string;
+  navigation: SettingsScreenNavigation;
+  handlers: SettingsListHandlers;
+  t: TFunction;
+}>;
+
+function SettingsNativeBody({
+  scrollViewRef,
+  onScroll,
+  screenHeight,
+  isRTL,
+  isGuestMode,
+  selectedUser,
+  currentLang,
+  navigation,
+  handlers,
+  t,
+}: SettingsNativeBodyProps) {
+  return (
+    <ScrollView
+      ref={scrollViewRef as React.RefObject<ScrollView>}
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator
+      scrollEnabled
+      bounces={Platform.OS === 'ios'}
+      overScrollMode={Platform.OS === 'android' ? 'auto' : undefined}
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+      onScroll={(event) => {
+        onScroll(event);
+      }}
+      onScrollBeginDrag={() => {
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Scroll begin drag detected!');
+      }}
+      onScrollEndDrag={() => {
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Scroll end drag detected!');
+      }}
+      onMomentumScrollBegin={() => {
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Momentum scroll begin!');
+      }}
+      onMomentumScrollEnd={() => {
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Momentum scroll end!');
+      }}
+      onContentSizeChange={(contentWidth, contentHeight) => {
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Content size changed:', { contentWidth, contentHeight });
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Screen height:', { screenHeight });
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - Should scroll:', {
+          shouldScroll: contentHeight > screenHeight,
+        });
+      }}
+      onLayout={(event) => {
+        const { x, y, width, height } = event.nativeEvent.layout;
+        logger.debug(SettingsScreen_LOG, '📜 SettingsScreen - ScrollView layout:', { x, y, width, height });
+      }}
+      scrollEventThrottle={16}
+    >
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:appSettings')}</Text>
+        {selectedUser?.roles?.includes('org_admin') ? (
+          <SettingsItem
+            isRTL={isRTL}
+            icon="briefcase-outline"
+            title={t('settings:orgDashboardTitle')}
+            subtitle={t('settings:orgDashboardSubtitle')}
+            onPress={() => navigation.navigate('OrgDashboardScreen')}
+          />
+        ) : null}
+        {selectedUser?.roles?.includes('admin') ? (
+          <SettingsItem
+            isRTL={isRTL}
+            icon="checkmark-done-outline"
+            title={t('settings:adminApprovalsTitle')}
+            subtitle={t('settings:adminApprovalsSubtitle')}
+            onPress={() => navigation.navigate('AdminOrgApprovalsScreen')}
+          />
+        ) : null}
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="language-outline"
+          title={t('settings:language')}
+          subtitle={currentLang === 'he' ? t('settings:lang.he') : t('settings:lang.en')}
+          onPress={handlers.onLanguagePress}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:myActivitySection')}</Text>
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="trophy-outline"
+          title={t('challenges:myChallenges')}
+          subtitle={t('settings:myChallengesDesc')}
+          onPress={() => navigation.navigate('ChallengeStatisticsScreen')}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:aboutSection')}</Text>
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="information-circle-outline"
+          title={t('settings:about')}
+          subtitle={t('settings:aboutDesc')}
+          onPress={handlers.onAboutPress}
+        />
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="warning-outline"
+          title={t('settings:reportIssue')}
+          subtitle={t('settings:reportIssueDesc')}
+          onPress={handlers.onReportPress}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <SettingsItem
+          isRTL={isRTL}
+          icon={isGuestMode ? 'arrow-back-outline' : 'log-out-outline'}
+          title={isGuestMode ? t('settings:guestBack') : t('settings:logout')}
+          subtitle={isGuestMode ? t('settings:guestBackDesc') : t('settings:logoutDesc')}
+          onPress={handlers.onLogoutPress}
+          showArrow={false}
+          dangerous={!isGuestMode}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings:comingSoonSection')}</Text>
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="notifications-outline"
+          title={t('settings:notifications')}
+          subtitle={t('settings:notificationsDesc')}
+          onPress={handlers.onNotificationsPress}
+        />
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="color-palette-outline"
+          title={t('settings:theme')}
+          subtitle={t('settings:themeDesc')}
+          onPress={handlers.onThemePress}
+        />
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="shield-outline"
+          title={t('settings:privacy')}
+          subtitle={t('settings:privacyDesc')}
+          onPress={handlers.onPrivacyPress}
+        />
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="trash-outline"
+          title={t('settings:clearCache')}
+          subtitle={t('settings:clearCacheDesc')}
+          onPress={handlers.onClearCachePress}
+        />
+
+        <SettingsItem
+          isRTL={isRTL}
+          icon="flask-outline"
+          title={t('settings:scrollTestTitle')}
+          subtitle={t('settings:scrollTestSubtitle')}
+          onPress={handlers.onScrollTest}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+export default function SettingsScreen() {
+  const navigation = useNavigation();
+  const { signOut, isGuestMode, selectedUser, isAuthenticated } = useUser();
+  const { mode } = useWebMode();
+  const { ref: scrollRef, onScroll } = useScrollPositionWithHandler('SettingsScreen', {
+    enabled: true,
+  });
+  const scrollViewRef = scrollRef;
+  useSettingsFocusRefresh();
+  const { t } = useTranslation(['settings', 'common']);
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'he');
+  const [showLangModal, setShowLangModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [isSendingReport, setIsSendingReport] = useState(false);
+
+  useSettingsAuthRedirect(isAuthenticated, isGuestMode, selectedUser, mode);
+
+  const isRTL = currentLang === 'he';
+
+  useEffect(() => {
+    const sync = (lng: string) => {
+      const code = lng?.split('-')[0];
+      if (code === 'he' || code === 'en') {
+        setCurrentLang(code);
+      }
+    };
+    sync(i18n.language || 'he');
+    i18n.on('languageChanged', sync);
+    return () => {
+      i18n.off('languageChanged', sync);
+    };
+  }, []);
+
+  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Rendered with isGuestMode:', { isGuestMode });
+  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
+  logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Screen dimensions:', { width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
+
+  const navigateAfterLogout = async () => {
+    await resetNavigationAfterLogout(mode);
+  };
+
+  const handleAboutPress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - About pressed');
+    navigateToAuthenticatedLandingSite(navigation);
+  };
+
+  const handleLogoutPress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ 14SettingsScreen - Logout pressed');
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Platform:', { os: Platform.OS });
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - isGuestMode:', { isGuestMode });
+
+    if (isGuestMode) {
+      logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Guest mode detected, direct logout without confirmation');
+      signOut().then(() => {
+        logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Guest logout completed');
+        setTimeout(() => {
+          void navigateAfterLogout();
+        }, 100);
+      });
+      return;
+    }
+
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Showing logout confirmation modal');
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Logout confirmed');
+    setShowLogoutModal(false);
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Calling signOut()');
+    await signOut();
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - signOut() completed');
+
+    setTimeout(() => {
+      void navigateAfterLogout();
+    }, 100);
+  };
+
+  const handleLogoutCancel = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Logout cancelled');
+    setShowLogoutModal(false);
+  };
+
+  const handleNotificationsPress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Notifications pressed');
+    notifyComingSoon(t('settings:notificationsTitle'), t('settings:notificationsComingSoon'));
+  };
+
+  const handlePrivacyPress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Privacy pressed');
+    notifyComingSoon(t('settings:privacyTitle'), t('settings:privacyComingSoon'));
+  };
+
+  const handleThemePress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Theme pressed');
+    notifyComingSoon(t('settings:themeTitle'), t('settings:themeComingSoon'));
+  };
+
+  const applyLanguage = async (lang: 'he' | 'en') => {
+    await AsyncStorage.setItem('app_language', lang);
+    await i18n.changeLanguage(lang);
+    setCurrentLang(lang);
+    const rtl = lang === 'he';
+    if (I18nManager.isRTL !== rtl) {
+      I18nManager.allowRTL(rtl);
+      I18nManager.forceRTL(rtl);
+      if (Platform.OS !== 'web') {
+        Alert.alert(t('settings:restartRequired'), t('settings:restartDesc'));
+      }
+    }
+    setShowLangModal(false);
+  };
+
+  const handleLanguagePress = () => {
+    setShowLangModal(true);
+  };
+
+  const handleClearCachePress = () => {
+    logger.debug(SettingsScreen_LOG, '⚙️ SettingsScreen - Clear cache pressed');
+    runClearCacheFlow(t);
+  };
+
+  const handleReportPress = () => {
+    if (!isAuthenticated) {
+      notifyGuestLoginHint(t);
+      return;
+    }
+    setShowReportModal(true);
+  };
+
+  const handleSendReport = async () => {
+    if (!reportText.trim()) return;
+
+    setIsSendingReport(true);
+    try {
+      await submitSettingsUserReport(reportText, selectedUser);
+      setReportText('');
+      setShowReportModal(false);
+      notifyReportOutcome('success', t);
+    } catch (error) {
+      console.error('Failed to send report:', error);
+      notifyReportOutcome('error', t);
+    } finally {
+      setIsSendingReport(false);
+    }
+  };
+
+  const handleScrollTest = () => {
+    logger.debug(SettingsScreen_LOG, '🧪 SettingsScreen - Testing scroll functionality');
+    runScrollViewConnectivityProbe(scrollViewRef);
+  };
+
+  const listHandlers: SettingsListHandlers = {
+    onLanguagePress: handleLanguagePress,
+    onAboutPress: handleAboutPress,
+    onReportPress: handleReportPress,
+    onLogoutPress: handleLogoutPress,
+    onNotificationsPress: handleNotificationsPress,
+    onThemePress: handleThemePress,
+    onPrivacyPress: handlePrivacyPress,
+    onClearCachePress: handleClearCachePress,
+    onScrollTest: handleScrollTest,
+  };
+
+  return (
+    <ScreenWrapper style={styles.container}>
+      <SettingsScreenModals
+        isRTL={isRTL}
+        t={t}
+        showLangModal={showLangModal}
+        setShowLangModal={setShowLangModal}
+        applyLanguage={applyLanguage}
+        currentLang={currentLang}
+        showLogoutModal={showLogoutModal}
+        handleLogoutCancel={handleLogoutCancel}
+        handleLogoutConfirm={handleLogoutConfirm}
+        showReportModal={showReportModal}
+        setShowReportModal={setShowReportModal}
+        reportText={reportText}
+        setReportText={setReportText}
+        isSendingReport={isSendingReport}
+        handleSendReport={handleSendReport}
+      />
+
+      {!isGuestMode && selectedUser ? (
+        <View style={styles.userSection}>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.name}</Text>
+            <Text style={[styles.userEmail, { textAlign: isRTL ? 'right' : 'left' }]}>{selectedUser.email}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {isGuestMode ? <GuestModeNotice variant="compact" /> : null}
+
+      {Platform.OS === 'web' ? (
+        <SettingsWebBody
+          isRTL={isRTL}
+          isGuestMode={isGuestMode}
+          currentLang={currentLang}
+          handlers={listHandlers}
+          t={t}
+        />
+      ) : (
+        <SettingsNativeBody
+          scrollViewRef={scrollViewRef}
+          onScroll={onScroll}
+          screenHeight={SCREEN_HEIGHT}
+          isRTL={isRTL}
+          isGuestMode={isGuestMode}
+          selectedUser={selectedUser}
+          currentLang={currentLang}
+          navigation={navigation as SettingsScreenNavigation}
+          handlers={listHandlers}
+          t={t}
+        />
+      )}
+    </ScreenWrapper>
+  );
+}

@@ -8,6 +8,7 @@ Product requirements live in the **[SRS](../SRS/README.md)**. For SSOT-wide **do
 |------|---------|
 | [layers-and-boundaries.md](layers-and-boundaries.md) | Dependency direction: Domain → Application → Infrastructure |
 | [constraints.md](constraints.md) | Complexity limits, error handling, error boundaries |
+| [api-internationalization.md](api-internationalization.md) | API locale resolution, i18n alignment with mobile, phased rollout |
 | [testing.md](testing.md) | Testing expectations by layer |
 | [tech-debt-log.md](tech-debt-log.md) | Technical debt register and `[PENDING REFACTOR]` items |
 
