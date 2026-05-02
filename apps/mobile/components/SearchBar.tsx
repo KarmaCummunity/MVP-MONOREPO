@@ -38,6 +38,8 @@ interface SearchBarProps {
   renderSelectedRow?: boolean;
   // Whether to hide the sort button explicitly
   hideSortButton?: boolean;
+  /** When true, the filter button and filter modal are not shown (e.g. offer mode on donation screens). */
+  hideFilterButton?: boolean;
   /** Optional post-process for filter keys (e.g. admin tasks: drop show-completed when status chips are on). */
   sanitizeSelectedFilters?: (filters: string[]) => string[];
 }
@@ -58,6 +60,7 @@ const SearchBar = ({
   onRemoveSortRequested,
   renderSelectedRow = true,
   hideSortButton = false,
+  hideFilterButton = false,
   sanitizeSelectedFilters,
 }: SearchBarProps) => {
   const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
@@ -200,6 +203,20 @@ const SearchBar = ({
           const bRating = b.rating || 0;
           return bRating - aRating; // Descending order
         });
+      } else if (sortOption === 'challenge_created_desc' || sortOption === 'challenge_created_asc') {
+        results.sort((a, b) => {
+          const ta = new Date(a.created_at || 0).getTime();
+          const tb = new Date(b.created_at || 0).getTime();
+          return sortOption === 'challenge_created_desc' ? tb - ta : ta - tb;
+        });
+      } else if (sortOption === 'challenge_participants_desc') {
+        results.sort((a, b) => (b.participants_count || 0) - (a.participants_count || 0));
+      } else if (sortOption === 'challenge_title') {
+        results.sort((a, b) => {
+          const at = (a.title || '').toLowerCase();
+          const bt = (b.title || '').toLowerCase();
+          return at.localeCompare(bt, 'he');
+        });
       }
     }
 
@@ -314,12 +331,14 @@ const SearchBar = ({
         )}
 
         {/* Filter Button (opens filter modal) - Inside search bar, smaller */}
-        <TouchableOpacity
-          style={localStyles.buttonContainer}
-          onPress={() => setIsFilterModalVisible(true)}
-        >
-          <Text style={localStyles.buttonText}>{t('search:filterTitle')}</Text>
-        </TouchableOpacity>
+        {!hideFilterButton && (
+          <TouchableOpacity
+            style={localStyles.buttonContainer}
+            onPress={() => setIsFilterModalVisible(true)}
+          >
+            <Text style={localStyles.buttonText}>{t('search:filterTitle')}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Search Input Field */}
         <TextInput

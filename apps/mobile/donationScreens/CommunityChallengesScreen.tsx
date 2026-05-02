@@ -1,7 +1,7 @@
 // Community Challenges Screen
 // Main screen for community challenges - similar to ItemsScreen structure
 // Supports two modes: Search (browse challenges) and Offer (create new challenge)
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -21,12 +21,17 @@ import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
-import ScrollContainer from '../components/ScrollContainer';
 import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
-import { DonationsStackParamList, CommunityChallenge, ChallengeType, ChallengeFrequency, ChallengeDifficulty } from '../globals/types';
+import {
+  DonationsStackParamList,
+  CommunityChallenge,
+  ChallengeType,
+  ChallengeFrequency,
+  ChallengeDifficulty,
+} from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
 
 // Default challenge images by difficulty
@@ -62,9 +67,17 @@ const CHALLENGE_DIFFICULTY_OPTIONS = [
   { id: 'expert', label: 'מומחה', icon: 'trophy-outline', color: colors.primary },
 ];
 
+const CHALLENGE_TYPE_IDS: ChallengeType[] = ['BOOLEAN', 'NUMERIC', 'DURATION'];
+const CHALLENGE_SORT_IDS = [
+  'challenge_created_desc',
+  'challenge_created_asc',
+  'challenge_participants_desc',
+  'challenge_title',
+] as const;
+
 export default function CommunityChallengesScreen({ navigation, route }: CommunityChallengesScreenProps) {
   const { showToast } = useToast();
-  const { t } = useTranslation(['donations', 'common', 'challenges']);
+  const { t, i18n } = useTranslation(['donations', 'common', 'challenges', 'search']);
   const { selectedUser: user } = useUser();
   
   const routeParams = route?.params as { mode?: string } | undefined;
@@ -79,12 +92,33 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Search and filters
+  // Search, filters, and sort (receive/browse mode — driven from HeaderComp / SearchBar)
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<ChallengeType | ''>('');
+  const [headerSelectedFilters, setHeaderSelectedFilters] = useState<string[]>([]);
+  const [headerSelectedSorts, setHeaderSelectedSorts] = useState<string[]>([]);
   const [selectedFrequencyFilter] = useState<ChallengeFrequency | ''>('');
   const [selectedDifficultyFilter] = useState<ChallengeDifficulty | ''>('');
-  const [showMyCreatedOnly, setShowMyCreatedOnly] = useState(false);
+
+  const challengeFilterOptions = useMemo(
+    () => [
+      'challenges_all',
+      ...CHALLENGE_TYPE_IDS,
+      'challenges_my_created',
+    ],
+    [],
+  );
+
+  const challengeSortOptions = useMemo(() => [...CHALLENGE_SORT_IDS], []);
+
+  const sanitizeChallengeFilters = useCallback((filters: string[]) => {
+    const next = [...filters];
+    const hasAllTypes = next.includes('challenges_all');
+    const typeKeys = next.filter((f) => CHALLENGE_TYPE_IDS.includes(f as ChallengeType));
+    if (hasAllTypes && typeKeys.length > 0) {
+      return next.filter((f) => f !== 'challenges_all');
+    }
+    return next;
+  }, []);
   
   // Form state for creating challenge
   const [title, setTitle] = useState('');
@@ -141,47 +175,83 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const applyFilters = useCallback(() => {
     let filtered = [...allChallenges];
 
-    // My created filter
+    const filters = headerSelectedFilters;
+    const showMyCreatedOnly = filters.includes('challenges_my_created');
+    const typeFilters = filters.filter((f) => CHALLENGE_TYPE_IDS.includes(f as ChallengeType)) as ChallengeType[];
+    const selectedTypeFilter =
+      filters.includes('challenges_all') || typeFilters.length === 0
+        ? ''
+        : typeFilters.length === 1
+          ? typeFilters[0]
+          : null;
+
     if (showMyCreatedOnly && user?.id) {
       filtered = filtered.filter((c) => c.creator_id === user.id);
     }
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (c) =>
           c.title.toLowerCase().includes(query) ||
           c.description?.toLowerCase().includes(query) ||
-          c.category?.toLowerCase().includes(query)
+          c.category?.toLowerCase().includes(query),
       );
     }
 
-    // Type filter
-    if (selectedTypeFilter) {
+    if (selectedTypeFilter === null) {
+      const typeSet = new Set(typeFilters);
+      filtered = filtered.filter((c) => typeSet.has(c.type));
+    } else if (selectedTypeFilter) {
       filtered = filtered.filter((c) => c.type === selectedTypeFilter);
     }
 
-    // Frequency filter
     if (selectedFrequencyFilter) {
       filtered = filtered.filter((c) => c.frequency === selectedFrequencyFilter);
     }
 
-    // Difficulty filter
     if (selectedDifficultyFilter) {
       filtered = filtered.filter((c) => c.difficulty === selectedDifficultyFilter);
+    }
+
+    const sortKey = headerSelectedSorts[0];
+    if (sortKey === 'challenge_created_desc') {
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortKey === 'challenge_created_asc') {
+      filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    } else if (sortKey === 'challenge_participants_desc') {
+      filtered.sort((a, b) => (b.participants_count || 0) - (a.participants_count || 0));
+    } else if (sortKey === 'challenge_title') {
+      const loc = i18n.language?.startsWith('he') ? 'he' : 'en';
+      filtered.sort((a, b) =>
+        (a.title || '').localeCompare(b.title || '', loc, { sensitivity: 'base' }),
+      );
     }
 
     setFilteredChallenges(filtered);
   }, [
     allChallenges,
     searchQuery,
-    selectedTypeFilter,
+    headerSelectedFilters,
+    headerSelectedSorts,
     selectedFrequencyFilter,
     selectedDifficultyFilter,
-    showMyCreatedOnly,
     user?.id,
+    i18n.language,
   ]);
+
+  const handleHeaderSearch = useCallback(
+    (query: string, filters?: string[], sorts?: string[]) => {
+      setSearchQuery(query);
+      if (filters !== undefined) {
+        setHeaderSelectedFilters(filters);
+      }
+      if (sorts !== undefined) {
+        setHeaderSelectedSorts(sorts);
+      }
+    },
+    [],
+  );
 
   const handleToggleHeaderMode = useCallback(() => {
     const nextSearchMode = !mode;
@@ -194,13 +264,13 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   // Load challenges when screen focuses
   useFocusEffect(
     useCallback(() => {
-      // Reset filters when coming back to the screen
-      setShowMyCreatedOnly(false);
+      setHeaderSelectedFilters([]);
+      setHeaderSelectedSorts([]);
 
       if (mode) {
         loadChallenges();
       }
-    }, [mode, loadChallenges])
+    }, [mode, loadChallenges]),
   );
 
   // Apply filters when search or filters change
@@ -389,55 +459,6 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
 
   const renderSearchMode = () => (
     <View style={styles.container}>
-      {/* My Created Filter Badge */}
-      {showMyCreatedOnly && (
-        <View style={styles.myCreatedBanner}>
-          <Text style={styles.myCreatedText}>
-            {t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')}
-          </Text>
-          <TouchableOpacity onPress={() => setShowMyCreatedOnly(false)}>
-            <Ionicons name="close-circle" size={24} color={colors.white} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Filters */}
-      <ScrollContainer horizontal style={styles.filtersContainer} showsHorizontalScrollIndicator={false}>
-        <TouchableOpacity
-          style={[styles.filterChip, !selectedTypeFilter && !showMyCreatedOnly && styles.filterChipActive]}
-          onPress={() => {
-            setSelectedTypeFilter('');
-            setShowMyCreatedOnly(false);
-          }}
-        >
-          <Text style={[styles.filterChipText, !selectedTypeFilter && !showMyCreatedOnly && styles.filterChipTextActive]}>
-            {t('challenges:filters.all')}
-          </Text>
-        </TouchableOpacity>
-        {CHALLENGE_TYPE_OPTIONS.map((option) => (
-          <TouchableOpacity
-            key={option.id}
-            style={[styles.filterChip, selectedTypeFilter === option.id && styles.filterChipActive]}
-            onPress={() => setSelectedTypeFilter(option.id as ChallengeType)}
-          >
-            <Ionicons
-              name={option.icon as any}
-              size={16}
-              color={selectedTypeFilter === option.id ? colors.white : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedTypeFilter === option.id && styles.filterChipTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollContainer>
-
-      {/* Challenges List */}
       <FlatList
         data={filteredChallenges}
         renderItem={renderChallengeCard}
@@ -651,12 +672,15 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
           }
         }}
         title={t('challenges:title')}
-        placeholder={t('common:search')}
-        filterOptions={[]}
-        sortOptions={[]}
-        searchData={filteredChallenges}
-        onSearch={(query) => setSearchQuery(query)}
-        hideSortButton={true}
+        placeholder={mode ? t('common:search') : t('challenges:createNewChallenge')}
+        filterOptions={mode ? challengeFilterOptions : []}
+        sortOptions={mode ? challengeSortOptions : []}
+        searchData={mode ? allChallenges : []}
+        onSearch={handleHeaderSearch}
+        hideSortButton={!mode}
+        hideFilterButton={!mode}
+        searchBarRemountKey={mode ? 1 : 0}
+        sanitizeSelectedFilters={mode ? sanitizeChallengeFilters : undefined}
       />
       {mode ? renderSearchMode() : renderOfferMode()}
     </SafeAreaView>
@@ -670,37 +694,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  filtersContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  filterChipTextActive: {
-    color: colors.white,
   },
   listContent: {
     padding: 16,
@@ -865,19 +858,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   createButtonText: {
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  myCreatedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  myCreatedText: {
     fontSize: FontSizes.medium,
     fontWeight: '600',
     color: colors.white,

@@ -68,7 +68,12 @@
     "task_category_עיצוב": "Category: Design",
     "task_category_אחר": "Category: Other",
     "task_category_דיווח": "Category: User reports",
-    "task_category_תרומת מידע": "Category: Knowledge donation"
+    "task_category_תרומת מידע": "Category: Knowledge donation",
+    "challenges_all": "All types",
+    "challenges_my_created": "Created by me",
+    "BOOLEAN": "Yes/No",
+    "NUMERIC": "Numeric",
+    "DURATION": "Duration"
   },
   "sort": {
     "created_desc": "Newest first",
@@ -83,7 +88,11 @@
     "byEstablishedDate": "By established date",
     "byDonors": "By donors",
     "byRating": "By rating",
-    "byRelevance": "By relevance"
+    "byRelevance": "By relevance",
+    "challenge_created_desc": "Newest first",
+    "challenge_created_asc": "Oldest first",
+    "challenge_participants_desc": "Most participants",
+    "challenge_title": "Title (A–Z)"
   },
   "popularTitle": "Popular searches",
   "recentTitle": "Recent searches",
