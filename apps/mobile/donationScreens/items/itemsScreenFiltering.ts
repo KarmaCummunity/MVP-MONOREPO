@@ -78,67 +78,60 @@ function categoryIdFromFilterLabel(
   return undefined;
 }
 
-export function getFilteredItemsForItemsScreen(params: {
-  mode: boolean;
-  allPosts: FeedItem[];
-  allItems: DonationItem[];
-  searchQuery: string;
-  selectedFilters: string[];
-  selectedSorts: string[];
-  sortLabels: ItemsScreenSortLabels;
-  conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>;
-  t: ItemsScreenTranslate;
-}): FeedItem[] | DonationItem[] {
-  const {
-    mode,
-    allPosts,
-    allItems,
-    searchQuery,
-    selectedFilters,
-    selectedSorts,
-    sortLabels,
-    conditionLabels,
-    t,
-  } = params;
-
-  if (mode) {
-    let filtered = [...allPosts];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (p.description || '').toLowerCase().includes(q) ||
-          (p.user?.name || '').toLowerCase().includes(q),
-      );
-    }
-
-    const includeRequestsLabel = t('donationScreen.filters.includeRequests', { ns: 'items' });
-    if (!selectedFilters.includes(includeRequestsLabel)) {
-      filtered = filtered.filter((p) => p.intent !== 'request');
-    }
-
-    if (selectedFilters.length > 0) {
-      selectedFilters.forEach((f) => {
-        const catId = categoryIdFromFilterLabel(f, t);
-        if (catId) {
-          filtered = filtered.filter((post) => post.category === catId);
-        }
-      });
-    }
-
-    const selectedSort = selectedSorts[0];
-    if (selectedSort === sortLabels.alphabetical) {
-      filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
-    } else if (selectedSort === sortLabels.byDate) {
-      filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    } else if (selectedSort === sortLabels.byRating || selectedSort === sortLabels.byRelevance) {
-      filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-    }
-
-    return filtered;
+function getFilteredPostsForItemsSearchMode(
+  allPosts: FeedItem[],
+  searchQuery: string,
+  selectedFilters: string[],
+  selectedSorts: string[],
+  sortLabels: ItemsScreenSortLabels,
+  t: ItemsScreenTranslate,
+): FeedItem[] {
+  let filtered = [...allPosts];
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q) ||
+        (p.user?.name || '').toLowerCase().includes(q),
+    );
   }
 
+  const includeRequestsLabel = t('donationScreen.filters.includeRequests', { ns: 'items' });
+  if (!selectedFilters.includes(includeRequestsLabel)) {
+    filtered = filtered.filter((p) => p.intent !== 'request');
+  }
+
+  if (selectedFilters.length > 0) {
+    selectedFilters.forEach((f) => {
+      const catId = categoryIdFromFilterLabel(f, t);
+      if (catId) {
+        filtered = filtered.filter((post) => post.category === catId);
+      }
+    });
+  }
+
+  const selectedSort = selectedSorts[0];
+  if (selectedSort === sortLabels.alphabetical) {
+    filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
+  } else if (selectedSort === sortLabels.byDate) {
+    filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  } else if (selectedSort === sortLabels.byRating || selectedSort === sortLabels.byRelevance) {
+    filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  }
+
+  return filtered;
+}
+
+function getFilteredDonationItemsOfferMode(
+  allItems: DonationItem[],
+  searchQuery: string,
+  selectedFilters: string[],
+  selectedSorts: string[],
+  sortLabels: ItemsScreenSortLabels,
+  conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>,
+  t: ItemsScreenTranslate,
+): DonationItem[] {
   let filtered = [...allItems];
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -206,4 +199,49 @@ export function getFilteredItemsForItemsScreen(params: {
   }
 
   return filtered;
+}
+
+export function getFilteredItemsForItemsScreen(params: {
+  mode: boolean;
+  allPosts: FeedItem[];
+  allItems: DonationItem[];
+  searchQuery: string;
+  selectedFilters: string[];
+  selectedSorts: string[];
+  sortLabels: ItemsScreenSortLabels;
+  conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>;
+  t: ItemsScreenTranslate;
+}): FeedItem[] | DonationItem[] {
+  const {
+    mode,
+    allPosts,
+    allItems,
+    searchQuery,
+    selectedFilters,
+    selectedSorts,
+    sortLabels,
+    conditionLabels,
+    t,
+  } = params;
+
+  if (mode) {
+    return getFilteredPostsForItemsSearchMode(
+      allPosts,
+      searchQuery,
+      selectedFilters,
+      selectedSorts,
+      sortLabels,
+      t,
+    );
+  }
+
+  return getFilteredDonationItemsOfferMode(
+    allItems,
+    searchQuery,
+    selectedFilters,
+    selectedSorts,
+    sortLabels,
+    conditionLabels,
+    t,
+  );
 }

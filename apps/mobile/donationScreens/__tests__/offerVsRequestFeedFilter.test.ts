@@ -10,6 +10,11 @@ import {
   getFilteredItemsForItemsScreen,
 } from '../items/itemsScreenFiltering';
 
+/** Stable id order for assertions (Sonar: avoid bare `.sort()` on strings). */
+function sortedIds(ids: string[]): string[] {
+  return [...ids].sort((a, b) => a.localeCompare(b, 'he'));
+}
+
 function baseFeed(overrides: Partial<FeedItem>): FeedItem {
   return {
     id: '1',
@@ -39,7 +44,7 @@ describe('Trump search mode: default offers only, includeRequests shows requests
     expect(without.map((p) => p.id)).toEqual(['offer']);
 
     const withReq = getFilteredPostsForTrumpMode(posts, '', [TRUMP_INCLUDE_REQUESTS_FILTER_KEY], [], noopT);
-    expect(withReq.map((p) => p.id).sort()).toEqual(['offer', 'req'].sort());
+    expect(sortedIds(withReq.map((p) => p.id))).toEqual(sortedIds(['offer', 'req']));
   });
 });
 
@@ -100,6 +105,6 @@ describe('Items search mode: default offers only, includeRequests shows requests
       conditionLabels,
       t,
     }) as FeedItem[];
-    expect(withReq.map((p) => p.id).sort()).toEqual(['g', 'r'].sort());
+    expect(sortedIds(withReq.map((p) => p.id))).toEqual(sortedIds(['g', 'r']));
   });
 });
