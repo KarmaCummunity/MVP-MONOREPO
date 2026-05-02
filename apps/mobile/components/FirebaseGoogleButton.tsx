@@ -8,19 +8,14 @@ import { TouchableOpacity, Text, StyleSheet, View, Platform, ActivityIndicator }
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirebase } from '../utils/firebaseClient';
-import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../utils/config.constants';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 import { navigationQueue } from '../utils/navigationQueue';
-import { checkNavigationGuards } from '../utils/navigationGuards';
 import { logger } from '../utils/loggerService';
 
 export default function FirebaseGoogleButton() {
   const { t } = useTranslation(['auth']);
-  const { setSelectedUserWithMode } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,171 +56,14 @@ export default function FirebaseGoogleButton() {
 
       logger.debug('FirebaseGoogleButton', 'Popup returned', { hasResult: !!result });
 
-      // Extract Google Credential to get the Google Access Token and ID Token
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const googleAccessToken = credential?.accessToken;
-      const googleIdToken = credential?.idToken;
-
-      logger.debug('FirebaseGoogleButton', 'Google credentials extracted', {
-        hasAccessToken: !!googleAccessToken,
-        hasIdToken: !!googleIdToken,
-      });
-
       const user = result.user;
       logger.debug('FirebaseGoogleButton', 'User data received', {
         uid: user.uid,
         email: user.email,
       });
 
-      logger.debug('FirebaseGoogleButton', 'Sending to server for verification', {
-        apiUrl: API_BASE_URL,
-        firebaseUid: user.uid,
-      });
-
-      // Send Google tokens and Firebase UID to server
-      // Firebase UID is different from Google ID - we need to send it separately
-      // This handler is web-only (see early return above). Do not set User-Agent: CORS preflight
-      // requires it in Access-Control-Allow-Headers; server omits it and the request fails.
-      const response = await fetch(`${API_BASE_URL}/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          idToken: googleIdToken,
-          accessToken: googleAccessToken,
-          firebaseUid: user.uid, // Send Firebase UID (from Firebase Auth)
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error('FirebaseGoogleButton', 'Server error response', {
-          errorData,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
-      }
-
-      const serverResponse = await response.json();
-
-      if (!serverResponse.success || !serverResponse.user) {
-        throw new Error(serverResponse.error || 'Invalid response from server');
-      }
-
-      logger.info('FirebaseGoogleButton', 'Server authentication successful', {
-        userId: serverResponse.user.id,
-        email: serverResponse.user.email,
-        hasTokens: !!serverResponse.tokens,
-      });
-
-      // Save JWT tokens through the central tokenManager (SSOT)
-      if (serverResponse.tokens) {
-        const { tokenManager } = await import('../auth/services/tokenManager');
-        await tokenManager.setTokens(
-          serverResponse.tokens.accessToken,
-          serverResponse.tokens.refreshToken
-        );
-        logger.debug('FirebaseGoogleButton', 'JWT tokens saved via tokenManager');
-      }
-
-      // Use server-verified user data
-      const serverUser = serverResponse.user;
-      
-      
-      const userData = {
-        id: serverUser.id,
-        name: serverUser.name || user.displayName || user.email?.split('@')[0] || 'User',
-        email: serverUser.email || user.email || '',
-        avatar: serverUser.avatar || serverUser.avatar_url || user.photoURL || 'https://i.pravatar.cc/150?img=1',
-        phone: user.phoneNumber || '+972500000000',
-        bio: serverUser.bio || '',
-        karmaPoints: serverUser.karmaPoints || 0,
-        joinDate: serverUser.joinDate || new Date().toISOString(),
-        isActive: serverUser.isActive !== false,
-        lastActive: serverUser.lastActive || new Date().toISOString(),
-        location: serverUser.location || { city: 'ישראל', country: 'IL' },
-        interests: serverUser.interests || [],
-        roles: serverUser.roles || ['user'],
-        postsCount: serverUser.postsCount || 0,
-        followersCount: serverUser.followersCount || 0,
-        followingCount: serverUser.followingCount || 0,
-        notifications: serverUser.notifications || [
-          { type: 'system', text: 'ברוך הבא לקרמה קומיוניטי!', date: new Date().toISOString() }
-        ],
-        settings: serverUser.settings || {
-          language: 'he',
-          darkMode: false,
-          notificationsEnabled: true
-        }
-      };
-      logger.debug('FirebaseGoogleButton', 'User data prepared from server', {
-        email: userData.email,
-      });
-
-      logger.debug('FirebaseGoogleButton', 'Saving to UserStore');
-      await setSelectedUserWithMode(userData, 'real');
-      logger.debug('FirebaseGoogleButton', 'UserStore updated');
-
-      logger.debug('FirebaseGoogleButton', 'Saving to AsyncStorage');
-      await AsyncStorage.setItem('current_user', JSON.stringify(userData));
-      await AsyncStorage.setItem('auth_mode', 'real');
-      logger.debug('FirebaseGoogleButton', 'AsyncStorage updated');
-
-      // Give React time to update state and re-render before navigation
-      // Use longer timeout for iOS/mobile web to ensure state is fully updated
-      const isMobileWeb = Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth <= 768;
-      const timeoutDuration = isMobileWeb ? 300 : 100;
-      await new Promise(resolve => setTimeout(resolve, timeoutDuration));
-
-      // Use requestAnimationFrame to ensure DOM/state updates are complete
-      await new Promise(resolve => {
-        if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-          });
-        } else {
-          setTimeout(resolve, 50);
-        }
-      });
-
-      logger.debug('FirebaseGoogleButton', 'Navigating to HomeStack');
-
-      // Check guards before navigation
-      // After successful login, user is authenticated
-      const guardContext = {
-        isAuthenticated: true,
-        isGuestMode: false,
-        isAdmin: false,
-      };
-
-      const guardResult = await checkNavigationGuards(
-        {
-          type: 'reset',
-          index: 0,
-          routes: [{ name: 'HomeStack' }],
-        },
-        guardContext
-      );
-
-      if (!guardResult.allowed) {
-        // If guard blocks, try redirect if provided
-        if (guardResult.redirectTo) {
-          await navigationQueue.reset(0, [{ name: guardResult.redirectTo }], 2);
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Use reset instead of replace for more reliable navigation after auth
-      // This ensures a clean navigation stack
       await navigationQueue.reset(0, [{ name: 'HomeStack' }], 2);
       logger.info('FirebaseGoogleButton', 'Google login success');
-
-      // Reset loading state after navigation
-      setLoading(false);
-
     } catch (error: any) {
       logger.error('FirebaseGoogleButton', 'Google login error', {
         error: error.message,
@@ -237,7 +75,7 @@ export default function FirebaseGoogleButton() {
       if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = 'ההתחברות בוטלה';
         logger.debug('FirebaseGoogleButton', 'User closed the popup');
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (error.code === 'auth/popup-blocked' || error.code === 'auth/unauthorized-domain') {
         errorMessage = 'הדפדפן חסם את חלון ההתחברות. אנא אפשר pop-ups.';
         logger.warn('FirebaseGoogleButton', 'Popup was blocked by browser');
       } else {
@@ -246,7 +84,6 @@ export default function FirebaseGoogleButton() {
       }
 
       setError(errorMessage);
-      setLoading(false);
     }
   };
 
