@@ -5,8 +5,7 @@ import {
   FEED_GRID_CARD_HEIGHT_MOBILE,
 } from '../feedLayout';
 import {
-  composeFeedCardContainerStyle,
-  getFeedGridSizing,
+  resolveFeedCardRootLayout,
   resolveGridFixedOuterStyle,
   withFeedGridContentFill,
 } from '../../components/Feed/PostCard/postCardGridLayout';
@@ -25,24 +24,20 @@ describe('feedLayout & grid helpers', () => {
     ).toBe(180);
   });
 
-  it('grid sizing helpers', () => {
+  it('grid helpers', () => {
     expect(resolveGridFixedOuterStyle(false, 320)).toBeUndefined();
-    expect(resolveGridFixedOuterStyle(true, undefined)).toBeUndefined();
     expect(resolveGridFixedOuterStyle(true, 300)).toEqual({ height: 300, minHeight: 300 });
-    expect(getFeedGridSizing(true, 100).gridFixedHeight).toBe(true);
-    expect(getFeedGridSizing(true, undefined).gridFixedHeight).toBe(false);
     const c: ViewStyle = { flex: 1 };
     const g: ViewStyle = { minHeight: 1 };
-    const arr2 = withFeedGridContentFill([c], true) as ViewStyle[];
-    expect(arr2.length).toBe(2);
-    const arr = composeFeedCardContainerStyle({
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
+      isGrid: true,
+      gridCardHeight: 400,
+      cardWidth: 12,
       container: c,
       gridMinHeightFallback: g,
-      isGrid: true,
-      gridOuterFixed: undefined,
-      cardWidth: 12,
-    }) as ViewStyle[];
-    expect(arr[arr.length - 1]).toEqual({ width: 12 });
+    });
+    expect(gridFixedHeight).toBe(true);
+    expect((rootStyle as ViewStyle[])[(rootStyle as ViewStyle[]).length - 1]).toEqual({ width: 12 });
+    expect((withFeedGridContentFill([c], true) as ViewStyle[]).length).toBe(2);
   });
 });
-

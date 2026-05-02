@@ -6,8 +6,7 @@ import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
 import { BaseCardProps } from './types';
 import {
-    composeFeedCardContainerStyle,
-    getFeedGridSizing,
+    resolveFeedCardRootLayout,
     withFeedGridContentFill
 } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
@@ -41,19 +40,17 @@ const RideCard: React.FC<BaseCardProps> = ({
 
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const locations = { from: item.from || '', to: item.to || '' };
-    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
+        isGrid,
+        gridCardHeight,
+        cardWidth,
+        container: styles.container,
+        gridMinHeightFallback: styles.gridContainer,
+        modifiers: [isCompleted && styles.containerCompleted],
+    });
 
     return (
-        <View
-            style={composeFeedCardContainerStyle({
-                container: styles.container,
-                gridMinHeightFallback: styles.gridContainer,
-                isGrid,
-                gridOuterFixed,
-                cardWidth,
-                modifiers: [isCompleted && styles.containerCompleted],
-            })}
-        >
+        <View style={rootStyle}>
             <View style={[styles.header, isCompleted && styles.headerCompleted, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <TouchableOpacity
                     style={[styles.userInfo, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}

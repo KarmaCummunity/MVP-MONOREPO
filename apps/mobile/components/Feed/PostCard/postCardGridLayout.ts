@@ -40,6 +40,27 @@ export function withFeedGridContentFill(
     return [...baseStyles, gridFixedHeight && feedCardContentGridFillStyle];
 }
 
+/** Root layout for feed cards: combines grid sizing + container style array (single call site per card). */
+export function resolveFeedCardRootLayout(parts: {
+    isGrid: boolean;
+    gridCardHeight?: number;
+    cardWidth: number;
+    container: ViewStyle;
+    gridMinHeightFallback: ViewStyle;
+    modifiers?: (ViewStyle | false | null | undefined)[];
+}): { rootStyle: StyleProp<ViewStyle>; gridFixedHeight: boolean } {
+    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(parts.isGrid, parts.gridCardHeight);
+    const rootStyle = composeFeedCardContainerStyle({
+        container: parts.container,
+        gridMinHeightFallback: parts.gridMinHeightFallback,
+        isGrid: parts.isGrid,
+        gridOuterFixed,
+        cardWidth: parts.cardWidth,
+        modifiers: parts.modifiers
+    });
+    return { rootStyle, gridFixedHeight };
+}
+
 /** Root `View` style array shared by feed post cards (grid min-height vs fixed height). */
 export function composeFeedCardContainerStyle(parts: {
     container: ViewStyle;

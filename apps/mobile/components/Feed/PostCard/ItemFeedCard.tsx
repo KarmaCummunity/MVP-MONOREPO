@@ -9,8 +9,7 @@ import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
 import {
-    composeFeedCardContainerStyle,
-    getFeedGridSizing,
+    resolveFeedCardRootLayout,
     withFeedGridContentFill
 } from './postCardGridLayout';
 
@@ -66,7 +65,14 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     const showFullActions = !isDelivered;
     const hasThumbnail = !!item.thumbnail;
-    const { gridOuterFixed, gridFixedHeight } = getFeedGridSizing(isGrid, gridCardHeight);
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
+        isGrid,
+        gridCardHeight,
+        cardWidth,
+        container: styles.container,
+        gridMinHeightFallback: styles.gridContainer,
+        modifiers: [hasThumbnail && styles.mediaContainer, isDelivered && styles.containerDelivered],
+    });
 
     const renderHeader = (overlay = false) => (
         <View
@@ -203,14 +209,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     return (
         <View
-            style={composeFeedCardContainerStyle({
-                container: styles.container,
-                gridMinHeightFallback: styles.gridContainer,
-                isGrid,
-                gridOuterFixed,
-                cardWidth,
-                modifiers: [hasThumbnail && styles.mediaContainer, isDelivered && styles.containerDelivered],
-            })}
+            style={rootStyle}
         >
             {!hasThumbnail && renderHeader(false)}
 
