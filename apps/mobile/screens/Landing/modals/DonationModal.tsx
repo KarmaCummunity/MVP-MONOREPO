@@ -1,9 +1,10 @@
 import React from 'react';
 import { Linking, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import { landingSiteScreenStyles as styles } from '../landingSiteScreenStyles';
-import { IS_MOBILE_WEB as isMobileWeb } from '../constants';
+import { IS_MOBILE_WEB as isMobileWeb, WHATSAPP_URL } from '../constants';
 import { logger } from '../../../utils/loggerService';
 
 // Donation Modal Component
@@ -11,11 +12,12 @@ export const DonationModal: React.FC<{
   visible: boolean;
   onClose: () => void;
 }> = ({ visible, onClose }) => {
+  const { t } = useTranslation('landing');
+
   const handleWhatsApp = () => {
     logger.info('DonationModal', 'Click - whatsapp');
-    Linking.openURL('https://wa.me/972528616878');
+    Linking.openURL(WHATSAPP_URL);
   };
-
 
   return (
     <Modal
@@ -30,8 +32,8 @@ export const DonationModal: React.FC<{
             <View style={styles.donationModalTitleRow}>
               <Ionicons name="heart" size={isMobileWeb ? 32 : 40} color={colors.secondary} />
               <View style={styles.donationModalTitleContainer}>
-                <Text style={styles.donationModalTitle}>תרמו לנו</Text>
-                <Text style={styles.donationModalSubtitle}>כל תרומה עוזרת לנו לגדול</Text>
+                <Text style={styles.donationModalTitle}>{t('donationModal.title')}</Text>
+                <Text style={styles.donationModalSubtitle}>{t('donationModal.subtitle')}</Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
@@ -43,7 +45,18 @@ export const DonationModal: React.FC<{
             <View style={styles.donationMessageContainer}>
               <Ionicons name="information-circle" size={isMobileWeb ? 24 : 32} color={colors.info} />
               <Text style={styles.donationMessageText}>
-                מוזמנים להעביר למספר 0528616878 לנוה המייסד בביט/פייבוקס
+                {t('donationModal.paymentInfo')}
+              </Text>
+            </View>
+
+            <View style={styles.donationNonprofitNoticeContainer}>
+              <Ionicons
+                name="alert-circle"
+                size={isMobileWeb ? 22 : 28}
+                color={colors.warning}
+              />
+              <Text style={styles.donationNonprofitNoticeText}>
+                {t('donationModal.nonprofitNotice')}
               </Text>
             </View>
 
@@ -54,13 +67,13 @@ export const DonationModal: React.FC<{
                 activeOpacity={0.8}
               >
                 <Ionicons name="logo-whatsapp" size={isMobileWeb ? 20 : 28} color={colors.white} />
-                <Text style={styles.donationButtonText}>ווטסאפ</Text>
+                <Text style={styles.donationButtonText}>{t('donationModal.whatsappButton')}</Text>
               </TouchableOpacity>
 
             </View>
 
             <Text style={styles.donationNoteText}>
-              תודה על התמיכה שלכם! כל תרומה עוזרת לנו להמשיך ולפתח את הקהילה.
+              {t('donationModal.thankYouNote')}
             </Text>
           </View>
         </View>

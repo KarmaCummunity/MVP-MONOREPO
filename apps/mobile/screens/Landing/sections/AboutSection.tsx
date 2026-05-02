@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '../../../globals/colors';
 import { Section } from '../components';
 import { landingSiteScreenStyles as styles } from '../landingSiteScreenStyles';
-import { IS_MOBILE_WEB as isMobileWeb } from '../constants';
+import { IS_MOBILE_WEB as isMobileWeb, WHATSAPP_URL } from '../constants';
 import { logger } from '../../../utils/loggerService';
 
 export const AboutSection: React.FC = () => (
@@ -29,7 +29,7 @@ export const AboutSection: React.FC = () => (
         style={[styles.contactButton, { backgroundColor: colors.success }]}
         onPress={() => {
           logger.info('LandingSite', 'Click - whatsapp from founder section');
-          Linking.openURL('https://wa.me/972528616878');
+          Linking.openURL(WHATSAPP_URL);
         }}
         activeOpacity={0.8}
       >
