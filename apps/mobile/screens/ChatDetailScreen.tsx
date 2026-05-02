@@ -4,7 +4,7 @@
 // - Expects route params: `{ conversationId: string, userName: string, userAvatar: string, otherUserId: string }`.
 // - Provides: Loads messages, subscribes to updates, marks as read, sends text/files, optional fake auto-replies for demo.
 // - Reads from context: `useUser()` -> selectedUser.
-// - External deps/services: `chatService` (get/subscribe/send/mark), `fileService` (pick/validate), i18n.
+// - External deps/services: `chatService` (get/subscribe/send/mark), `fileService` (pick/validate), i18n, responsive breakpoints for web mobile vs desktop.
 // screens/ChatDetailScreen.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -21,8 +21,8 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
-  Dimensions,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { logger } from '../utils/loggerService';
 
@@ -43,6 +43,7 @@ import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { BREAKPOINTS } from '../globals/responsive';
 
 type ChatDetailRouteParams = {
   conversationId: string;
@@ -61,12 +62,23 @@ export default function ChatDetailScreen() {
   const { t } = useTranslation(['chat']);
   const tabBarHeight = useBottomTabBarHeight() || 0;
   const stackHeaderHeight = useHeaderHeight();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  /** Narrow web viewport (phone / small browser): same composer rules as native apps. */
+  const isMobileWebChat =
+    isWeb &&
+    windowWidth <= BREAKPOINTS.LARGE_PHONE &&
+    windowWidth / Math.max(windowHeight, 1) < 1.5;
+  /** Wide web: fixed bottom input + capped messages area (keyboard is optional / different). */
+  const isDesktopWebChat = isWeb && !isMobileWebChat;
   const [headerHeight, setHeaderHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
-  const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
-  const maxMessagesHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0 && inputHeight > 0
-    ? screenHeight - tabBarHeight - inputHeight - headerHeight
-    : undefined;
+  const screenHeight = isDesktopWebChat ? windowHeight : undefined;
+  const maxMessagesHeight =
+    isDesktopWebChat && screenHeight && headerHeight > 0 && inputHeight > 0
+      ? screenHeight - tabBarHeight - inputHeight - headerHeight
+      : undefined;
+  const useNativeStyleComposer = !isWeb || isMobileWebChat;
 
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [inputText, setInputText] = useState('');
@@ -462,12 +474,12 @@ export default function ChatDetailScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
+    <SafeAreaView style={[styles.safeArea, isWeb && { position: 'relative' }]}>
       <StatusBar backgroundColor={colors.backgroundSecondary} barStyle="dark-content" />
       <View
         style={styles.header}
         onLayout={(event) => {
-          if (Platform.OS === 'web') {
+          if (isDesktopWebChat) {
             const { height } = event.nativeEvent.layout;
             setHeaderHeight(height);
           }
@@ -504,13 +516,13 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages + composer: native uses in-flow composer + tab margin; web keeps fixed input */}
+      {/* Messages + composer: desktop web uses fixed input + maxHeight; native + mobile web use in-flow composer */}
       <View style={[
         styles.messagesWrapper,
-        Platform.OS === 'web' && maxMessagesHeight ? {
+        isDesktopWebChat && maxMessagesHeight ? {
           maxHeight: maxMessagesHeight,
         } : undefined,
-        Platform.OS !== 'web' ? { marginBottom: tabBarHeight } : undefined,
+        useNativeStyleComposer ? { marginBottom: tabBarHeight } : undefined,
       ]}>
         {isLoading ? (
           renderLoadingIndicator()
@@ -523,9 +535,9 @@ export default function ChatDetailScreen() {
             contentContainerStyle={[
               styles.messagesContainer,
               (() => {
-                const inputHeight = 70;
-                const paddingBottom = Platform.OS === 'web'
-                  ? tabBarHeight + inputHeight + 40
+                const inputHeightPad = 70;
+                const paddingBottom = isDesktopWebChat
+                  ? tabBarHeight + inputHeightPad + 40
                   : (showMediaOptions ? 24 : 16);
                 return { paddingBottom };
               })()
@@ -540,13 +552,13 @@ export default function ChatDetailScreen() {
             showsVerticalScrollIndicator={false}
             style={styles.messagesList}
             scrollEnabled={true}
-            nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
+            nestedScrollEnabled={isDesktopWebChat ? true : undefined}
             scrollEventThrottle={16}
           />
         )}
       </View>
 
-      {Platform.OS === 'web' ? (
+      {isDesktopWebChat ? (
         <>
           {showMediaOptions && (
             <View style={[
