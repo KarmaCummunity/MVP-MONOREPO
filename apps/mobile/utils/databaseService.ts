@@ -3,30 +3,20 @@
 // - Reached from: Many screens/services via `db` helpers and `DatabaseService` static methods.
 // - Provides: CRUD/list/search/batch across logical collections; export/import; user-wide operations.
 // - Behavior: Delegates to `restAdapter` when `USE_BACKEND` is true, else Firestore/AsyncStorage.
+// - Larger refactors for this module: see `docs/SSOT/CODE_QUALITY/tech-debt-log.md`.
 // utils/databaseService.ts
 
-// TODO: CRITICAL - This file is extremely complex (800+ lines). Split into specialized services:
-//   - UserDataService, PostDataService, ChatDataService, etc.
-// TODO: Add comprehensive error handling and retry mechanisms
-// TODO: Implement proper caching strategy and cache invalidation
-// TODO: Add comprehensive TypeScript interfaces for all data models
-// TODO: Remove duplicate code between different adapters
-// TODO: Add comprehensive data validation and sanitization
-// TODO: Implement proper offline sync and conflict resolution
-// TODO: Add comprehensive logging and monitoring for all operations
-// TODO: Add unit tests for all CRUD operations and edge cases
-// TODO: Implement proper migration system for data schema changes
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { USE_BACKEND, USE_FIRESTORE, API_BASE_URL } from './config.constants';
 import { apiService } from './apiService';
 import { restAdapter } from './restAdapter';
 import { firestoreAdapter } from './firestoreAdapter';
 import { DB_COLLECTIONS } from './dbCollections';
+export { DB_COLLECTIONS } from './dbCollections';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
 import { logger } from './loggerService';
 
 const DatabaseService_LOG = 'databaseService';
-export { DB_COLLECTIONS };
 let enhancedDbInstance: any = null;
 
 async function loadEnhancedDB() {
@@ -55,15 +45,10 @@ export async function setDailyChallengeReminderLastEmittedDate(userId: string, d
 }
 
 // Generic Database Service
-// TODO: Convert to proper class instance instead of static methods
-// TODO: Add proper dependency injection for different adapters
-// TODO: Implement proper connection management and pooling
 export class DatabaseService {
   // Simple key-space versioning for future migrations
-  // TODO: Implement proper migration system with rollback support
-  // TODO: Add schema validation and versioning
-  private static DB_VERSION = 1;
-  private static VERSION_KEY = 'db_version';
+  private static readonly DB_VERSION = 1;
+  private static readonly VERSION_KEY = 'db_version';
 
   static async ensureVersion(): Promise<void> {
     const v = await AsyncStorage.getItem(DatabaseService.VERSION_KEY);
@@ -110,7 +95,7 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.setItem(key, JSON.stringify(data));
       }
-      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Created ${collection} item:`, itemId);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Created ${collection} item`, { itemId });
     } catch (error) {
       console.error(`❌ DatabaseService - Create ${collection} error:`, error);
       throw error;
@@ -148,16 +133,16 @@ export class DatabaseService {
     try {
       if (USE_BACKEND) {
         await restAdapter.update(collection, userId, itemId, data);
-        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item`, { itemId });
       } else if (USE_FIRESTORE) {
         await firestoreAdapter.update(collection, userId, itemId, data);
-        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
+        logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item`, { itemId });
       } else {
         const existing = await this.read<T>(collection, userId, itemId);
         if (existing) {
           const updated = { ...existing, ...data };
           await this.create(collection, userId, itemId, updated);
-          logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item:`, itemId);
+          logger.debug(DatabaseService_LOG, `✅ DatabaseService - Updated ${collection} item`, { itemId });
         }
       }
     } catch (error) {
@@ -180,7 +165,7 @@ export class DatabaseService {
         const key = getDBKey(collection, userId, itemId);
         await AsyncStorage.removeItem(key);
       }
-      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Deleted ${collection} item:`, itemId);
+      logger.debug(DatabaseService_LOG, `✅ DatabaseService - Deleted ${collection} item`, { itemId });
     } catch (error) {
       console.error(`❌ DatabaseService - Delete ${collection} error:`, error);
       throw error;
@@ -374,7 +359,9 @@ export class DatabaseService {
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove);
       }
-      logger.debug(DatabaseService_LOG, '✅ DatabaseService - Cleared local collection keys:', keysToRemove.length);
+      logger.debug(DatabaseService_LOG, '✅ DatabaseService - Cleared local collection keys', {
+        removedKeyCount: keysToRemove.length,
+      });
     } catch (error) {
       console.error('❌ DatabaseService - Clear local collections error:', error);
       throw error;
@@ -654,8 +641,8 @@ export const db = {
             logger.debug(DatabaseService_LOG, '🕐 Converting time:', { dateStr, timeStr, localDate: localDate.toLocaleString('he-IL'), isoString });
 
             // Check if date is valid
-            if (isNaN(localDate.getTime())) {
-              throw new Error('Invalid datetime');
+            if (Number.isNaN(localDate.getTime())) {
+              throw new TypeError('Invalid datetime');
             }
 
             return isoString;
@@ -700,10 +687,21 @@ export const db = {
             if (rideData.kidsFriendly) reqs.push('kids-friendly');
             return reqs.length > 0 ? reqs.join(', ') : null;
           })(),
-          metadata: { source: 'legacy-app', legacy_id: rideId },
+          metadata: {
+            source: 'legacy-app',
+            legacy_id: rideId,
+            is_recurring: Boolean(rideData.isRecurring),
+            recurrence_frequency: typeof rideData.recurrenceFrequency === 'number' ? rideData.recurrenceFrequency : 1,
+            recurrence_unit: rideData.recurrenceUnit ?? null,
+            preferences: {
+              no_smoking: Boolean(rideData.noSmoking),
+              pets_allowed: Boolean(rideData.petsAllowed),
+              kids_friendly: Boolean(rideData.kidsFriendly),
+            },
+          },
         };
 
-        logger.debug(DatabaseService_LOG, '🚗 Creating ride with payload:', JSON.stringify(payload, null, 2));
+        logger.debug(DatabaseService_LOG, '🚗 Creating ride with payload', { payload });
         const res = await apiService.createRide(payload);
         if (!res.success) throw new Error(res.error || 'Failed to create ride');
 
@@ -762,22 +760,23 @@ export const db = {
         }
         // Don't set status filter - let server return all active/published rides
         // The server defaults to 'active' but we want to see all published rides too
-        logger.debug(DatabaseService_LOG, '🔍 listRides filters:', filters);
+        logger.debug(DatabaseService_LOG, '🔍 listRides filters', filters as Record<string, unknown>);
         const apiRides = await enhancedDB.getRides(filters);
-        logger.debug(DatabaseService_LOG, '📋 listRides returned:', apiRides?.length || 0, 'rides');
+        logger.debug(DatabaseService_LOG, '📋 listRides returned', { count: apiRides?.length || 0, entity: 'rides' });
         if (apiRides && apiRides.length > 0) {
-          logger.debug(DatabaseService_LOG, '📋 First ride sample:', JSON.stringify({
-            id: apiRides[0].id,
-            status: apiRides[0].status,
-            from: apiRides[0].from_location?.name,
-            to: apiRides[0].to_location?.name,
-            departure_time: apiRides[0].departure_time
-          }, null, 2));
+          const sample = apiRides[0];
+          logger.debug(DatabaseService_LOG, '📋 First ride sample', {
+            id: sample.id,
+            status: sample.status,
+            from: sample.from_location?.name,
+            to: sample.to_location?.name,
+            departure_time: sample.departure_time,
+          });
         }
         return (apiRides || []).map((r: any) => {
           // Convert UTC time to local time for display
           let dateStr = '';
-          let timeStr = '00:00';
+          let timeStr: string;
 
           if (r.departure_time) {
             const departureDate = new Date(r.departure_time);
@@ -826,7 +825,7 @@ export const db = {
         return (apiRides || []).map((r: any) => {
           // Convert UTC time to local time for display
           let dateStr = '';
-          let timeStr = '00:00';
+          let timeStr: string;
 
           if (r.departure_time) {
             const departureDate = new Date(r.departure_time);
@@ -872,7 +871,7 @@ export const db = {
         if (rideData.seats !== undefined) payload.available_seats = rideData.seats;
         if (rideData.price !== undefined) payload.price_per_seat = Number(rideData.price);
         if (rideData.status) payload.status = rideData.status;
-        const res = await apiService.updateDonation(rideId as any, payload as any); // reuse generic update if exists
+        const res = await apiService.updateDonation(rideId, payload); // reuse generic update if exists
         if (!res.success) throw new Error(res.error || 'Failed to update ride');
         return;
       }
@@ -960,26 +959,28 @@ export const db = {
   // ========================================
 
   createDedicatedItem: async (itemData: any) => {
-    logger.debug(DatabaseService_LOG, '📤 API: Creating dedicated item to:', `${API_BASE_URL}/api/dedicated-items`);
-    logger.debug(DatabaseService_LOG, '📦 Item data:', JSON.stringify(itemData, null, 2));
+    logger.debug(DatabaseService_LOG, '📤 API: Creating dedicated item', {
+      url: `${API_BASE_URL}/api/dedicated-items`,
+    });
+    logger.debug(DatabaseService_LOG, '📦 Item data', { itemData });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items`, { method: 'POST', body: JSON.stringify(itemData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Item created:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Item created', { data: response.data as unknown });
     return response.data;
   },
 
   getDedicatedItemsByOwner: async (ownerId: string) => {
-    logger.debug(DatabaseService_LOG, '📥 API: Fetching items for owner:', ownerId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching items for owner', { ownerId });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/owner/${ownerId}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Received items:', response.data.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received items', { count: response.data.length || 0 });
     return response.data;
   },
 
   getDedicatedItemById: async (id: string) => {
-    logger.debug(DatabaseService_LOG, '📥 API: Fetching item by ID:', id);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching item by ID', { id });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
@@ -988,7 +989,7 @@ export const db = {
   },
 
   updateDedicatedItem: async (id: string, itemData: any) => {
-    logger.debug(DatabaseService_LOG, '✏️ API: Updating item:', id);
+    logger.debug(DatabaseService_LOG, '✏️ API: Updating item', { id });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'PUT', body: JSON.stringify(itemData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
@@ -1000,7 +1001,7 @@ export const db = {
   // All user data is now unified in user_profiles table with UUID identifiers
 
   deleteDedicatedItem: async (id: string) => {
-    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting item:', id);
+    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting item', { id });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/dedicated-items/${id}`, { method: 'DELETE' });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
@@ -1026,11 +1027,11 @@ export const db = {
     category?: string;
     is_public?: boolean;
   }) => {
-    logger.debug(DatabaseService_LOG, '📤 API: Creating community challenge:', challengeData.title);
+    logger.debug(DatabaseService_LOG, '📤 API: Creating community challenge', { title: challengeData.title });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges`, { method: 'POST', body: JSON.stringify(challengeData) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Challenge created:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge created', { data: response.data as unknown });
     return response.data;
   },
 
@@ -1047,7 +1048,7 @@ export const db = {
     limit?: number;
     offset?: number;
   } = {}) => {
-    logger.debug(DatabaseService_LOG, '📥 API: Fetching community challenges with filters:', filters);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching community challenges with filters', filters as Record<string, unknown>);
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -1057,12 +1058,14 @@ export const db = {
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges?${params.toString()}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Received challenges:', response.data.data?.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received challenges', {
+      count: response.data.data?.length || 0,
+    });
     return response.data;
   },
 
   getChallengeDetails: async (challengeId: string) => {
-    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge details:', challengeId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge details', { challengeId });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
@@ -1071,7 +1074,7 @@ export const db = {
   },
 
   joinChallenge: async (challengeId: string, userId: string) => {
-    logger.debug(DatabaseService_LOG, '🤝 API: Joining challenge:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '🤝 API: Joining challenge', { challengeId, userId });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/${challengeId}/join`, { method: 'POST', body: JSON.stringify({
       user_id: userId
     }) });
@@ -1088,18 +1091,25 @@ export const db = {
     notes?: string;
   }) => {
     const body = { challenge_id: challengeId, ...entryData };
-    logger.debug(DatabaseService_LOG, '📝 API: Adding challenge entry:', challengeId, 'date=', entryData.entry_date, 'value=', entryData.value);
+    logger.debug(DatabaseService_LOG, '📝 API: Adding challenge entry', {
+      challengeId,
+      entry_date: entryData.entry_date,
+      value: entryData.value,
+    });
     const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/${challengeId}/entries`, { method: 'POST', body: JSON.stringify(body
     ) });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Entry added. Streak:', response.data?.data?.current_streak, 'entry_date:', response.data?.data?.entry_date);
+    logger.debug(DatabaseService_LOG, '✅ API: Entry added', {
+      streak: response.data?.data?.current_streak as unknown,
+      entry_date: response.data?.data?.entry_date as unknown,
+    });
     return response.data;
   },
 
   getChallengeEntries: async (challengeId: string, userId: string, limit = 100, offset = 0) => {
-    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge entries:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '📥 API: Fetching challenge entries', { challengeId, userId });
     const params = new URLSearchParams({
       user_id: userId,
       limit: String(limit),
@@ -1110,12 +1120,14 @@ export const db = {
     );
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Received entries:', response.data.data?.length || 0);
+    logger.debug(DatabaseService_LOG, '✅ API: Received entries', {
+      count: response.data.data?.length || 0,
+    });
     return response.data;
   },
 
   getChallengeStatistics: async (userId: string) => {
-    logger.debug(DatabaseService_LOG, '📊 API: Fetching challenge statistics for user:', userId);
+    logger.debug(DatabaseService_LOG, '📊 API: Fetching challenge statistics for user', { userId });
     const res = await fetchWithAuth(`${API_BASE_URL}/api/community-challenges/user/${userId}/stats`);
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
@@ -1134,7 +1146,7 @@ export const db = {
     category?: string;
     is_active?: boolean;
   }) => {
-    logger.debug(DatabaseService_LOG, '✏️ API: Updating challenge:', challengeId);
+    logger.debug(DatabaseService_LOG, '✏️ API: Updating challenge', { challengeId });
     const params = new URLSearchParams({ user_id: userId });
     const res = await fetchWithAuth(
       `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`, { method: 'PUT', body: JSON.stringify(updateData
@@ -1146,14 +1158,14 @@ export const db = {
   },
 
   deleteCommunityChallenge: async (challengeId: string, userId: string) => {
-    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting challenge:', challengeId, 'User:', userId);
+    logger.debug(DatabaseService_LOG, '🗑️ API: Deleting challenge', { challengeId, userId });
     const params = new URLSearchParams({ user_id: userId });
     const url = `${API_BASE_URL}/api/community-challenges/${challengeId}?${params.toString()}`;
-    logger.debug(DatabaseService_LOG, '🔗 API: DELETE URL:', url);
+    logger.debug(DatabaseService_LOG, '🔗 API: DELETE URL', { url });
     const res = await fetchWithAuth(url, { method: 'DELETE' });
     const response = { data: await res.json(), status: res.status };
     if (!res.ok) throw new Error(response.data?.error || response.data?.message || 'Request failed');
-    logger.debug(DatabaseService_LOG, '✅ API: Challenge deleted:', response.data);
+    logger.debug(DatabaseService_LOG, '✅ API: Challenge deleted', { data: response.data as unknown });
     return response.data;
   },
 
@@ -1162,8 +1174,11 @@ export const db = {
   // ========================================
 
   getDailyTrackerData: async (userId: string, startDate?: string, endDate?: string) => {
-    logger.debug(DatabaseService_LOG, '📊 API: Fetching daily tracker data for user:', userId);
-    logger.debug(DatabaseService_LOG, '📅 Date range:', startDate, '-', endDate);
+    logger.debug(DatabaseService_LOG, '📊 API: Fetching daily tracker data for user', { userId });
+    logger.debug(DatabaseService_LOG, '📅 Date range', {
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
+    });
     
     const params = new URLSearchParams({ user_id: userId });
     if (startDate) params.append('start_date', startDate);
@@ -1177,11 +1192,17 @@ export const db = {
     
     const payload = response.data?.data ?? response.data;
     logger.debug(DatabaseService_LOG, '✅ API: Tracker data received');
-    logger.debug(DatabaseService_LOG, '   Challenges:', payload?.challenges?.length ?? 0);
-    logger.debug(DatabaseService_LOG, '   Success rate:', payload?.stats?.total_success_rate ?? 'N/A');
+    logger.debug(DatabaseService_LOG, 'Tracker summary — challenges', {
+      count: payload?.challenges?.length ?? 0,
+    });
+    logger.debug(DatabaseService_LOG, 'Tracker summary — success rate', {
+      rate: payload?.stats?.total_success_rate ?? 'N/A',
+    });
     if (payload?.entries_by_date && typeof __DEV__ !== 'undefined' && __DEV__) {
       const dates = Object.keys(payload.entries_by_date);
-      logger.debug(DatabaseService_LOG, '   Dates with entries:', dates.join(', '));
+      logger.debug(DatabaseService_LOG, 'Tracker summary — dates with entries', {
+        dates: dates.join(', '),
+      });
     }
     return response.data;
   },

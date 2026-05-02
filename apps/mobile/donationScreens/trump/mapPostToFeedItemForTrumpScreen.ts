@@ -1,4 +1,5 @@
-import type { FeedItem } from '../../types/feed';
+import type { FeedItem, FeedRideExtended } from '../../types/feed';
+import { mergeFeedRideExtended, rideExtendedFromRideBlock, rideExtendedFromRideDataJoin } from '../../utils/rideFeedExtendedFields';
 
 type RideDataShape = {
   from: string;
@@ -152,6 +153,24 @@ export function mapPostToFeedItemForTrumpScreen(post: Record<string, unknown>): 
   const rawPostType = String(post.post_type ?? 'post');
   const subtype = rawPostType === 'ride_offered' ? 'ride' : rawPostType;
 
+  let rideExtended: FeedRideExtended | undefined;
+  if (post.ride_data && typeof post.ride_data === 'object') {
+    rideExtended = rideExtendedFromRideDataJoin(post.ride_data as Record<string, unknown>);
+  }
+  let metaParsed: Record<string, unknown> = {};
+  try {
+    metaParsed =
+      typeof post.metadata === 'string'
+        ? (JSON.parse(post.metadata) as Record<string, unknown>)
+        : ((post.metadata as Record<string, unknown>) ?? {});
+  } catch {
+    metaParsed = {};
+  }
+  const rideMetaBlock = (metaParsed.ride as Record<string, unknown> | undefined) ?? undefined;
+  if (rideMetaBlock && typeof rideMetaBlock === 'object') {
+    rideExtended = mergeFeedRideExtended(rideExtended, rideExtendedFromRideBlock(rideMetaBlock));
+  }
+
   return {
     id: post.id as string,
     type: rawPostType,
@@ -172,6 +191,7 @@ export function mapPostToFeedItemForTrumpScreen(post: Record<string, unknown>): 
     status: rideStatus,
     intent,
     category,
+    rideExtended,
     ...rideData,
   } as FeedItem;
 }
