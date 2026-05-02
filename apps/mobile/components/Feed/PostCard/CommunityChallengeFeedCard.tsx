@@ -4,9 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import {
+    feedCardMainAreaStyle,
     resolveFeedGridCardRoot,
-    withFeedGridContentFill
-} from './postCardGridLayout';
+} from '../../../utils/feedPostCardLayout';
 import type { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { styles } from './communityChallengeFeedCard.styles';
@@ -69,7 +69,7 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={withFeedGridContentFill([styles.cardContent], gridFixedHeight)}
+                style={feedCardMainAreaStyle(gridFixedHeight, styles.cardContent)}
             >
                 {item.thumbnail ? (
                     <Image

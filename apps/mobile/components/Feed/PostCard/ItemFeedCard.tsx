@@ -9,9 +9,9 @@ import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
 import {
+    feedCardMainAreaStyle,
     resolveFeedGridCardRoot,
-    withFeedGridContentFill
-} from './postCardGridLayout';
+} from '../../../utils/feedPostCardLayout';
 
 export interface ItemFeedCardProps extends BaseCardProps {
     /** Donation vs generic item — drives badge colors and placeholder copy. */
@@ -261,7 +261,7 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
                     <TouchableOpacity
                         onPress={onPress}
                         activeOpacity={0.95}
-                        style={withFeedGridContentFill([styles.cardContent], gridFixedHeight)}
+                        style={feedCardMainAreaStyle(gridFixedHeight, styles.cardContent)}
                     >
                     <View
                         style={[

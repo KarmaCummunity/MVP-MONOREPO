@@ -7,9 +7,9 @@ import { TaskAssignmentFeedCardBody } from './TaskAssignmentFeedCardBody';
 import { TaskFeedVariant } from './TaskFeedCard.types';
 import { styles } from './taskFeedCard.styles';
 import {
+    feedCardMainAreaStyle,
     resolveFeedGridCardRoot,
-    withFeedGridContentFill
-} from './postCardGridLayout';
+} from '../../../utils/feedPostCardLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 import type { BaseCardProps } from './types';
 
@@ -95,12 +95,10 @@ const TaskFeedCard: React.FC<TaskFeedCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={withFeedGridContentFill(
-                    [
-                        styles.cardContent,
-                        isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment
-                    ],
-                    gridFixedHeight
+                style={feedCardMainAreaStyle(
+                    gridFixedHeight,
+                    styles.cardContent,
+                    isCompletion ? styles.cardContentCompletion : styles.cardContentAssignment
                 )}
             >
                 {isCompletion ? (

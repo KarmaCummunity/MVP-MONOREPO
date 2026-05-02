@@ -6,9 +6,9 @@ import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
 import { BaseCardProps } from './types';
 import {
+    feedCardMainAreaStyle,
     resolveFeedGridCardRoot,
-    withFeedGridContentFill
-} from './postCardGridLayout';
+} from '../../../utils/feedPostCardLayout';
 import { isMobileWeb } from '../../../globals/responsive';
 
 const isMobile = isMobileWeb();
@@ -92,9 +92,10 @@ const RideCard: React.FC<BaseCardProps> = ({
             <TouchableOpacity
                 onPress={onPress}
                 activeOpacity={0.95}
-                style={withFeedGridContentFill(
-                    [styles.cardContent, isCompleted && styles.cardContentCompleted],
-                    gridFixedHeight
+                style={feedCardMainAreaStyle(
+                    gridFixedHeight,
+                    styles.cardContent,
+                    isCompleted && styles.cardContentCompleted
                 )}
             >
                 {isCompleted ? (
