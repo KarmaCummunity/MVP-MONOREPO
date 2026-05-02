@@ -1,4 +1,5 @@
 import { type StyleProp, type ViewStyle } from 'react-native';
+import type { BaseCardProps } from './types';
 
 /**
  * Middle section grows between header and actions in fixed-height grid cards (no gray gap).
@@ -38,6 +39,31 @@ export function withFeedGridContentFill(
     gridFixedHeight: boolean
 ): StyleProp<ViewStyle> {
     return [...baseStyles, gridFixedHeight && feedCardContentGridFillStyle];
+}
+
+/** Container + grid fallback styles present on every feed card StyleSheet. */
+export interface FeedCardGridRootStyles {
+    container: ViewStyle;
+    gridMinHeightFallback: ViewStyle;
+}
+
+/**
+ * Same root layout as `resolveFeedCardRootLayout` but folds repeated `isGrid` / `gridCardHeight` /
+ * `cardWidth` + `styles.container` / `styles.gridContainer` wiring into one call site.
+ */
+export function resolveFeedCardRootFromBaseGrid(
+    grid: Pick<BaseCardProps, 'isGrid' | 'gridCardHeight' | 'cardWidth'>,
+    cardStyles: FeedCardGridRootStyles,
+    modifiers?: (ViewStyle | false | null | undefined)[]
+): { rootStyle: StyleProp<ViewStyle>; gridFixedHeight: boolean } {
+    return resolveFeedCardRootLayout({
+        isGrid: grid.isGrid,
+        gridCardHeight: grid.gridCardHeight,
+        cardWidth: grid.cardWidth,
+        container: cardStyles.container,
+        gridMinHeightFallback: cardStyles.gridMinHeightFallback,
+        modifiers
+    });
 }
 
 /** Root layout for feed cards: combines grid sizing + container style array (single call site per card). */

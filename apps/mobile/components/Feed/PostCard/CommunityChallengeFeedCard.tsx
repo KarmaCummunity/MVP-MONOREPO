@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../../../globals/colors';
 import {
-    resolveFeedCardRootLayout,
+    resolveFeedCardRootFromBaseGrid,
     withFeedGridContentFill
 } from './postCardGridLayout';
 import type { BaseCardProps } from './types';
@@ -53,13 +53,10 @@ const CommunityChallengeFeedCard: React.FC<BaseCardProps> = ({
         ...(item.thumbnail ? [styles.contentInnerWithImage] : []),
     ];
 
-    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
-        isGrid,
-        gridCardHeight,
-        cardWidth,
-        container: styles.container,
-        gridMinHeightFallback: styles.gridContainer,
-    });
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootFromBaseGrid(
+        { isGrid, gridCardHeight, cardWidth },
+        { container: styles.container, gridMinHeightFallback: styles.gridContainer }
+    );
 
     return (
         <View style={rootStyle}>

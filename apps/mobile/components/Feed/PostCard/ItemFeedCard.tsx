@@ -9,7 +9,7 @@ import { BaseCardProps } from './types';
 import { isMobileWeb } from '../../../globals/responsive';
 import { buildItemCardDescription, resolveItemDisplayTitle } from './postCardUtils';
 import {
-    resolveFeedCardRootLayout,
+    resolveFeedCardRootFromBaseGrid,
     withFeedGridContentFill
 } from './postCardGridLayout';
 
@@ -65,14 +65,11 @@ const ItemFeedCard: React.FC<ItemFeedCardProps> = ({
 
     const showFullActions = !isDelivered;
     const hasThumbnail = !!item.thumbnail;
-    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
-        isGrid,
-        gridCardHeight,
-        cardWidth,
-        container: styles.container,
-        gridMinHeightFallback: styles.gridContainer,
-        modifiers: [hasThumbnail && styles.mediaContainer, isDelivered && styles.containerDelivered],
-    });
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootFromBaseGrid(
+        { isGrid, gridCardHeight, cardWidth },
+        { container: styles.container, gridMinHeightFallback: styles.gridContainer },
+        [hasThumbnail && styles.mediaContainer, isDelivered && styles.containerDelivered]
+    );
 
     const renderHeader = (overlay = false) => (
         <View

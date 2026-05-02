@@ -6,7 +6,7 @@ import colors from '../../../globals/colors';
 import { FontSizes } from '../../../globals/constants';
 import { BaseCardProps } from './types';
 import {
-    resolveFeedCardRootLayout,
+    resolveFeedCardRootFromBaseGrid,
     withFeedGridContentFill
 } from './postCardGridLayout';
 import { isMobileWeb } from '../../../globals/responsive';
@@ -40,14 +40,11 @@ const RideCard: React.FC<BaseCardProps> = ({
 
     const displayName = item.user.name === 'common.unknownUser' ? t('common.unknownUser') : item.user.name;
     const locations = { from: item.from || '', to: item.to || '' };
-    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
-        isGrid,
-        gridCardHeight,
-        cardWidth,
-        container: styles.container,
-        gridMinHeightFallback: styles.gridContainer,
-        modifiers: [isCompleted && styles.containerCompleted],
-    });
+    const { rootStyle, gridFixedHeight } = resolveFeedCardRootFromBaseGrid(
+        { isGrid, gridCardHeight, cardWidth },
+        { container: styles.container, gridMinHeightFallback: styles.gridContainer },
+        [isCompleted && styles.containerCompleted]
+    );
 
     return (
         <View style={rootStyle}>

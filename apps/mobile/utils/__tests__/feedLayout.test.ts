@@ -5,13 +5,14 @@ import {
   FEED_GRID_CARD_HEIGHT_MOBILE,
 } from '../feedLayout';
 import {
+  resolveFeedCardRootFromBaseGrid,
   resolveFeedCardRootLayout,
   resolveGridFixedOuterStyle,
   withFeedGridContentFill,
 } from '../../components/Feed/PostCard/postCardGridLayout';
 
 describe('feedLayout & grid helpers', () => {
-  it('feed exports and cell width', () => {
+  it('feed constants, cell width, and grid layout helpers', () => {
     expect(FEED_GRID_CARD_HEIGHT_MOBILE).toBeGreaterThan(0);
     expect(FEED_GRID_CARD_HEIGHT_DESKTOP).toBeGreaterThan(0);
     expect(
@@ -22,22 +23,30 @@ describe('feedLayout & grid helpers', () => {
         columnGap: 8,
       }),
     ).toBe(180);
-  });
 
-  it('grid helpers', () => {
     expect(resolveGridFixedOuterStyle(false, 320)).toBeUndefined();
     expect(resolveGridFixedOuterStyle(true, 300)).toEqual({ height: 300, minHeight: 300 });
+
     const c: ViewStyle = { flex: 1 };
     const g: ViewStyle = { minHeight: 1 };
-    const { rootStyle, gridFixedHeight } = resolveFeedCardRootLayout({
+    const fromBase = resolveFeedCardRootFromBaseGrid(
+      { isGrid: true, gridCardHeight: 400, cardWidth: 12 },
+      { container: c, gridMinHeightFallback: g },
+    );
+    expect(fromBase.gridFixedHeight).toBe(true);
+    expect((fromBase.rootStyle as ViewStyle[])[(fromBase.rootStyle as ViewStyle[]).length - 1]).toEqual({
+      width: 12,
+    });
+
+    const raw = resolveFeedCardRootLayout({
       isGrid: true,
       gridCardHeight: 400,
       cardWidth: 12,
       container: c,
       gridMinHeightFallback: g,
     });
-    expect(gridFixedHeight).toBe(true);
-    expect((rootStyle as ViewStyle[])[(rootStyle as ViewStyle[]).length - 1]).toEqual({ width: 12 });
+    expect(raw.gridFixedHeight).toBe(true);
+
     expect((withFeedGridContentFill([c], true) as ViewStyle[]).length).toBe(2);
   });
 });
