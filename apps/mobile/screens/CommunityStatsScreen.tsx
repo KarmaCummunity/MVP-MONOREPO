@@ -67,6 +67,16 @@ function formatMoney(n: number): string {
   return `${formatInt(n)} ₪`;
 }
 
+function getBottomSpacerHeight(tabBarHeight: number): number {
+  if (Platform.OS === 'ios') {
+    return 24 + tabBarHeight + 40;
+  }
+  if (Platform.OS === 'web') {
+    return 24 + tabBarHeight + 24;
+  }
+  return 16 + tabBarHeight + 24;
+}
+
 export default function CommunityStatsScreen() {
   useLogScreenOpened('CommunityStatsScreen');
   const { t } = useTranslation('communityStats');
@@ -80,8 +90,11 @@ export default function CommunityStatsScreen() {
 
   const loadStats = useCallback(async (forceRefresh = false) => {
     try {
-      if (!forceRefresh) setLoading(true);
-      else setRefreshing(true);
+      if (forceRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       const [communityStats, dashboardRes] = await Promise.all([
         EnhancedStatsService.getCommunityStats({}, forceRefresh),
@@ -106,7 +119,9 @@ export default function CommunityStatsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      void loadStats();
+      loadStats().catch((err: unknown) => {
+        logger.error('CommunityStatsScreen', 'loadStats on focus failed', { error: err });
+      });
     }, [loadStats]),
   );
 
@@ -116,12 +131,7 @@ export default function CommunityStatsScreen() {
 
   const bottomSpacerStyle = useMemo(
     () => ({
-      height:
-        Platform.OS === 'ios'
-          ? 24 + tabBarHeight + 40
-          : Platform.OS === 'web'
-            ? 24 + tabBarHeight + 24
-            : 16 + tabBarHeight + 24,
+      height: getBottomSpacerHeight(tabBarHeight),
     }),
     [tabBarHeight],
   );

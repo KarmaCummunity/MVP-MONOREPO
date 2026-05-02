@@ -142,8 +142,12 @@ export class EnhancedStatsService {
       const stored =
         (await DatabaseService.getItem<CommunityStats>(DB_COLLECTIONS.ANALYTICS, 'global', 'community_stats')) ??
         null;
-      const currentStats: CommunityStats =
-        stored !== null ? { ...DEFAULT_STATS, ...stored } : { ...DEFAULT_STATS };
+      let currentStats: CommunityStats;
+      if (stored === null) {
+        currentStats = { ...DEFAULT_STATS };
+      } else {
+        currentStats = { ...DEFAULT_STATS, ...stored };
+      }
 
       // Map new stat types to legacy format
       const legacyKey = this.mapStatToLegacyKey(statType);

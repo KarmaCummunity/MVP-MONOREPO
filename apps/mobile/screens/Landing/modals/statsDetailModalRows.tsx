@@ -40,6 +40,35 @@ function safeDateOnly(value: unknown, lang: string | undefined): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(dateLocale(lang));
 }
 
+function trimmedNonEmpty(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const t = value.trim();
+  return t.length > 0 ? t : undefined;
+}
+
+function displayFromPlainObject(o: Record<string, unknown>): string | undefined {
+  const fromName = trimmedNonEmpty(o.name);
+  if (fromName !== undefined) {
+    return fromName;
+  }
+  const fromCity = trimmedNonEmpty(o.city);
+  if (fromCity !== undefined) {
+    return fromCity;
+  }
+  return trimmedNonEmpty(o.label);
+}
+
+/** Small stable key for list items without using array index alone (Sonar). */
+function subLineKey(rowIndex: number, text: string): string {
+  let h = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+  }
+  return `row-${rowIndex}-h${String(h)}`;
+}
+
 /**
  * Safe display for API row fields: primitives as text; plain objects with common keys (name, city, label).
  */
@@ -48,8 +77,7 @@ export function optionalDisplayString(value: unknown): string | undefined {
     return undefined;
   }
   if (typeof value === 'string') {
-    const t = value.trim();
-    return t.length > 0 ? t : undefined;
+    return trimmedNonEmpty(value);
   }
   if (typeof value === 'number' && Number.isFinite(value)) {
     return String(value);
@@ -58,19 +86,23 @@ export function optionalDisplayString(value: unknown): string | undefined {
     return value ? 'true' : 'false';
   }
   if (typeof value === 'object') {
-    const o = value as Record<string, unknown>;
-    if (typeof o.name === 'string' && o.name.trim().length > 0) {
-      return o.name.trim();
-    }
-    if (typeof o.city === 'string' && o.city.trim().length > 0) {
-      return o.city.trim();
-    }
-    if (typeof o.label === 'string' && o.label.trim().length > 0) {
-      return o.label.trim();
-    }
-    return undefined;
+    return displayFromPlainObject(value as Record<string, unknown>);
   }
   return undefined;
+}
+
+function assignStableSubLineIds(rowIndex: number, lines: string[]): { id: string; text: string }[] {
+  const used = new Set<string>();
+  return lines.map((text) => {
+    let id = subLineKey(rowIndex, text);
+    let suffix = 0;
+    while (used.has(id)) {
+      suffix += 1;
+      id = `${subLineKey(rowIndex, text)}-d${suffix}`;
+    }
+    used.add(id);
+    return { id, text };
+  });
 }
 
 function rowShell(
@@ -80,17 +112,17 @@ function rowShell(
   lines: (string | null | undefined)[],
 ): React.ReactElement {
   const nonEmptyLines = lines.filter(
-    (line): line is string =>
-      line !== null && line !== undefined && typeof line === 'string' && line.trim().length > 0,
+    (line): line is string => typeof line === 'string' && line.trim().length > 0,
   );
+  const keyed = assignStableSubLineIds(index, nonEmptyLines);
   return (
     <View style={styles.detailItem}>
       <Text style={styles.detailItemNumber}>{index + 1}.</Text>
       <View style={styles.detailItemContent}>
         <Text style={styles.detailItemText}>{primary}</Text>
-        {nonEmptyLines.map((line, i) => (
-          <Text key={`sub-${i}`} style={styles.detailItemSubtext}>
-            {line}
+        {keyed.map((entry) => (
+          <Text key={entry.id} style={styles.detailItemSubtext}>
+            {entry.text}
           </Text>
         ))}
       </View>

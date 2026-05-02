@@ -761,7 +761,8 @@ class ApiService {
   }
 
   async getStatDetails(statType: string): Promise<ApiResponse> {
-    return this.request(`/api/stats/details/${statType}`);
+    const segment = encodeURIComponent(statType);
+    return this.request(`/api/stats/details/${segment}`);
   }
 
   // Posts APIs
