@@ -11,16 +11,66 @@ function dateLocale(lang: string | undefined): string | undefined {
   return lang === 'he' ? 'he-IL' : undefined;
 }
 
+/** ISO string / number timestamp / Date — never String(object). */
+function toDateInputString(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return '';
+}
+
 function safeDate(value: unknown, lang: string | undefined): string {
-  const raw = value != null ? String(value) : '';
+  const raw = toDateInputString(value);
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(dateLocale(lang));
 }
 
 function safeDateOnly(value: unknown, lang: string | undefined): string {
-  const raw = value != null ? String(value) : '';
+  const raw = toDateInputString(value);
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString(dateLocale(lang));
+}
+
+/**
+ * Safe display for API row fields: primitives as text; plain objects with common keys (name, city, label).
+ */
+export function optionalDisplayString(value: unknown): string | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t.length > 0 ? t : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    if (typeof o.name === 'string' && o.name.trim().length > 0) {
+      return o.name.trim();
+    }
+    if (typeof o.city === 'string' && o.city.trim().length > 0) {
+      return o.city.trim();
+    }
+    if (typeof o.label === 'string' && o.label.trim().length > 0) {
+      return o.label.trim();
+    }
+    return undefined;
+  }
+  return undefined;
 }
 
 function rowShell(
@@ -29,18 +79,20 @@ function rowShell(
   primary: string,
   lines: (string | null | undefined)[],
 ): React.ReactElement {
+  const nonEmptyLines = lines.filter(
+    (line): line is string =>
+      line !== null && line !== undefined && typeof line === 'string' && line.trim().length > 0,
+  );
   return (
     <View style={styles.detailItem}>
       <Text style={styles.detailItemNumber}>{index + 1}.</Text>
       <View style={styles.detailItemContent}>
         <Text style={styles.detailItemText}>{primary}</Text>
-        {lines
-          .filter((line): line is string => Boolean(line && line.trim().length > 0))
-          .map((line, i) => (
-            <Text key={`sub-${i}`} style={styles.detailItemSubtext}>
-              {line}
-            </Text>
-          ))}
+        {nonEmptyLines.map((line, i) => (
+          <Text key={`sub-${i}`} style={styles.detailItemSubtext}>
+            {line}
+          </Text>
+        ))}
       </View>
     </View>
   );
@@ -53,8 +105,12 @@ export function renderSiteVisitRow(
   styles: StatDetailRowStyles,
 ): React.ReactElement {
   const ua = item.user_agent;
-  const uaStr = typeof ua === 'string' && ua.length > 0 ? (ua.length > 50 ? `${ua.slice(0, 50)}…` : ua) : undefined;
-  return rowShell(styles, index, safeDate(item.timestamp ?? item.created_at, lang), uaStr ? [uaStr] : []);
+  let uaStr: string | undefined;
+  if (typeof ua === 'string' && ua.length > 0) {
+    uaStr = ua.length > 50 ? `${ua.slice(0, 50)}…` : ua;
+  }
+  const sublines = uaStr === undefined ? [] : [uaStr];
+  return rowShell(styles, index, safeDate(item.timestamp ?? item.created_at, lang), sublines);
 }
 
 export function renderTotalUserRow(
@@ -63,11 +119,9 @@ export function renderTotalUserRow(
   lang: string | undefined,
   styles: StatDetailRowStyles,
 ): React.ReactElement {
-  const title = String(item.name || item.email || '—');
-  const lines = [
-    safeDateOnly(item.join_date ?? item.created_at, lang),
-    item.city != null ? String(item.city) : undefined,
-  ];
+  const title = optionalDisplayString(item.name) ?? optionalDisplayString(item.email) ?? '—';
+  const cityLine = optionalDisplayString(item.city);
+  const lines = [safeDateOnly(item.join_date ?? item.created_at, lang), cityLine];
   return rowShell(styles, index, title, lines);
 }
 
@@ -79,8 +133,9 @@ export function renderMoneyDonationRow(
 ): React.ReactElement {
   const amount = Number(item.amount ?? 0);
   const amt = Number.isFinite(amount) ? amount.toLocaleString(dateLocale(lang)) : '0';
-  const title = `${String(item.donor_name || '—')} • ${amt} ₪`;
-  const lines = [safeDateOnly(item.donation_date ?? item.created_at, lang), item.category_name != null ? String(item.category_name) : undefined];
+  const title = `${optionalDisplayString(item.donor_name) ?? '—'} • ${amt} ₪`;
+  const categoryLine = optionalDisplayString(item.category_name);
+  const lines = [safeDateOnly(item.donation_date ?? item.created_at, lang), categoryLine];
   return rowShell(styles, index, title, lines);
 }
 
@@ -90,8 +145,9 @@ export function renderItemDonationRow(
   lang: string | undefined,
   styles: StatDetailRowStyles,
 ): React.ReactElement {
-  const title = String(item.title || item.item_name || '—');
-  const lines = [safeDateOnly(item.created_at, lang), item.donor_name != null ? String(item.donor_name) : undefined];
+  const title = optionalDisplayString(item.title) ?? optionalDisplayString(item.item_name) ?? '—';
+  const donorLine = optionalDisplayString(item.donor_name);
+  const lines = [safeDateOnly(item.created_at, lang), donorLine];
   return rowShell(styles, index, title, lines);
 }
 
@@ -101,8 +157,9 @@ export function renderCompletedRideRow(
   lang: string | undefined,
   styles: StatDetailRowStyles,
 ): React.ReactElement {
-  const title = `${String(item.from_city || '—')} → ${String(item.to_city || '—')}`;
-  const lines = [safeDateOnly(item.ride_date ?? item.created_at, lang), item.driver_name != null ? String(item.driver_name) : undefined];
+  const title = `${optionalDisplayString(item.from_city) ?? '—'} → ${optionalDisplayString(item.to_city) ?? '—'}`;
+  const driverLine = optionalDisplayString(item.driver_name);
+  const lines = [safeDateOnly(item.ride_date ?? item.created_at, lang), driverLine];
   return rowShell(styles, index, title, lines);
 }
 
@@ -112,14 +169,17 @@ export function renderDonorRecurringRow(
   lang: string | undefined,
   styles: StatDetailRowStyles,
 ): React.ReactElement {
-  const amount = item.amount != null ? Number(item.amount) : null;
+  const rawAmount = item.amount;
+  const amount = rawAmount === undefined || rawAmount === null ? null : Number(rawAmount);
   const amtPart =
-    amount != null && Number.isFinite(amount) ? ` • ${amount.toLocaleString(dateLocale(lang))} ₪` : '';
-  const title = `${String(item.donor_name || '—')}${amtPart}`;
-  const lines = [
-    item.frequency != null ? String(item.frequency) : undefined,
-    item.start_date != null ? safeDateOnly(item.start_date, lang) : undefined,
-  ];
+    amount !== null && Number.isFinite(amount) ? ` • ${amount.toLocaleString(dateLocale(lang))} ₪` : '';
+  const title = `${optionalDisplayString(item.donor_name) ?? '—'}${amtPart}`;
+  const frequencyLine = optionalDisplayString(item.frequency);
+  let startDateLine: string | undefined;
+  if (item.start_date != null) {
+    startDateLine = safeDateOnly(item.start_date, lang);
+  }
+  const lines = [frequencyLine, startDateLine];
   return rowShell(styles, index, title, lines);
 }
 
@@ -129,8 +189,13 @@ export function renderCompletedTaskRow(
   lang: string | undefined,
   styles: StatDetailRowStyles,
 ): React.ReactElement {
-  const title = String(item.title || '—');
-  const lines = [item.category != null ? String(item.category) : undefined, item.updated_at != null ? safeDateOnly(item.updated_at, lang) : undefined];
+  const title = optionalDisplayString(item.title) ?? '—';
+  const categoryLine = optionalDisplayString(item.category);
+  let updatedLine: string | undefined;
+  if (item.updated_at != null) {
+    updatedLine = safeDateOnly(item.updated_at, lang);
+  }
+  const lines = [categoryLine, updatedLine];
   return rowShell(styles, index, title, lines);
 }
 

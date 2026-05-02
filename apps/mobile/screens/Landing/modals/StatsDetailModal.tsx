@@ -147,12 +147,17 @@ export const StatsDetailModal: React.FC<{
   }, [statType]);
 
   useEffect(() => {
-    if (visible && USE_BACKEND) {
-      void loadDetailData();
-    } else if (visible && !USE_BACKEND) {
-      setDetailData([]);
+    if (!visible) {
+      return;
     }
-  }, [visible, loadDetailData]);
+    if (USE_BACKEND) {
+      loadDetailData().catch((err: unknown) => {
+        logger.error('StatsDetailModal', 'loadDetailData rejected', { error: err, statType });
+      });
+      return;
+    }
+    setDetailData([]);
+  }, [visible, loadDetailData, statType]);
 
   const rowStyles = useMemo(
     (): StatDetailRowStyles => ({
@@ -196,7 +201,13 @@ export const StatsDetailModal: React.FC<{
   );
 
   const sheetAlign = Platform.OS === 'web' ? 'center' : 'flex-end';
-  const sheetPaddingBottom = Platform.OS === 'ios' ? 28 : Platform.OS === 'android' ? 20 : 16;
+
+  let sheetPaddingBottom = 16;
+  if (Platform.OS === 'ios') {
+    sheetPaddingBottom = 28;
+  } else if (Platform.OS === 'android') {
+    sheetPaddingBottom = 20;
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

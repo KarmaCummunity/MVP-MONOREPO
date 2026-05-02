@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import {
+  optionalDisplayString,
   renderCompletedRideRow,
   renderItemDonationRow,
   renderUnknownStatRow,
@@ -16,6 +17,11 @@ const rowStyles = {
 };
 
 describe('statsDetailModalRows', () => {
+  it('optionalDisplayString reads object city without object default stringification', () => {
+    expect(optionalDisplayString({ city: 'Tel Aviv' })).toBe('Tel Aviv');
+    expect(optionalDisplayString({ foo: 1 })).toBeUndefined();
+  });
+
   it('renders ride row with route text', () => {
     render(renderCompletedRideRow({ from_city: 'A', to_city: 'B', ride_date: '2020-01-02' }, 0, 'en', rowStyles));
     expect(screen.getByText(/A.*B/)).toBeTruthy();
