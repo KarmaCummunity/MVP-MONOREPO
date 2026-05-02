@@ -1,7 +1,7 @@
 // File overview:
 // - Purpose: Home tab root — main posts feed (same UI as `PostsReelsScreen`).
 // - Reached from: `HomeTabStack` -> route 'HomeMain' (initial route of the Home tab).
-// - Provides: Full feed via `PostsReelsScreen`; toasts overlay.
+// - Provides: Full feed via `PostsReelsScreen` including floating feed header (stats, filters, friends/discovery); toasts overlay.
 // - Reads from context: `useToast` only.
 // - External deps: `PostsReelsScreen` (Feed UI).
 import React from "react";
@@ -20,7 +20,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <PostsReelsScreen hideTopBar />
+      <PostsReelsScreen />
       {ToastComponent}
     </View>
   );
