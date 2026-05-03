@@ -1,7 +1,7 @@
 /**
  * Main profile body (own vs other user). Extracted from ProfileScreen.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -292,7 +292,8 @@ export function ProfileScreenContent({
       const userToUse = isOwnProfile ? selectedUser : viewingUser;
 
       setUserStats({
-        posts: (userToUse as any)?.postsCount || 0,
+        // Post total is driven by Open + Closed tab loaders (`profileTabCounts`), not stale `postsCount`.
+        posts: 0,
         followers: currentUserStats.followersCount,
         following: currentUserStats.followingCount,
         karmaPoints: userToUse?.karmaPoints || 0,
@@ -497,7 +498,7 @@ export function ProfileScreenContent({
         console.error('Error loading tasks:', error);
       }
 
-      // Sort by time (newest first) and limit to 10
+      // Sort by time (newest first) and limit to 5 (recent activity section)
       activities.sort((a, b) => {
         const timeA = new Date(a.time).getTime();
         const timeB = new Date(b.time).getTime();
@@ -505,7 +506,7 @@ export function ProfileScreenContent({
       });
 
       // Format time for display
-      const formattedActivities = activities.slice(0, 10).map(activity => {
+      const formattedActivities = activities.slice(0, 5).map(activity => {
         const activityTime = new Date(activity.time);
         const now = new Date();
         const diffMs = now.getTime() - activityTime.getTime();
@@ -564,10 +565,53 @@ export function ProfileScreenContent({
     updateUserStats();
     Alert.alert(t('profile:alerts.sampleDataTitle'), t('profile:alerts.sampleDataCreated'));
   };
-  const [routes] = useState<TabRoute[]>([
-    { key: 'open', title: 'פתוח' },
-    { key: 'closed', title: 'סגור' },
-  ]);
+
+  /** Matches the Open / Closed profile tabs — same sources as `OpenRoute` / `ClosedRoute` (within fetch limits). */
+  const [profileTabCounts, setProfileTabCounts] = useState<{ open: number | null; closed: number | null }>({
+    open: null,
+    closed: null,
+  });
+  const profileCountsUserIdRef = useRef<string | undefined>(targetUserId);
+  profileCountsUserIdRef.current = targetUserId;
+
+  useEffect(() => {
+    setProfileTabCounts({ open: null, closed: null });
+  }, [targetUserId]);
+
+  const onProfileOpenTabCount = useCallback((count: number) => {
+    if (profileCountsUserIdRef.current !== targetUserId) return;
+    setProfileTabCounts(prev => (prev.open === count ? prev : { ...prev, open: count }));
+  }, [targetUserId]);
+
+  const onProfileClosedTabCount = useCallback((count: number) => {
+    if (profileCountsUserIdRef.current !== targetUserId) return;
+    setProfileTabCounts(prev => (prev.closed === count ? prev : { ...prev, closed: count }));
+  }, [targetUserId]);
+
+  const profilePostsAggregate =
+    profileTabCounts.open !== null && profileTabCounts.closed !== null
+      ? profileTabCounts.open + profileTabCounts.closed
+      : null;
+
+  const routes = useMemo<TabRoute[]>(
+    () => [
+      {
+        key: 'open',
+        title:
+          profileTabCounts.open !== null
+            ? t('profile:tabs.openWithCount', { count: profileTabCounts.open })
+            : t('profile:tabs.open'),
+      },
+      {
+        key: 'closed',
+        title:
+          profileTabCounts.closed !== null
+            ? t('profile:tabs.closedWithCount', { count: profileTabCounts.closed })
+            : t('profile:tabs.closed'),
+      },
+    ],
+    [profileTabCounts.open, profileTabCounts.closed, t],
+  );
 
   // Update stats when user changes
   useEffect(() => {
@@ -622,9 +666,23 @@ export function ProfileScreenContent({
   const renderScene = ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
     switch (sceneRoute.key) {
       case 'open':
-        return <OpenRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('open', h)} />;
+        return (
+          <OpenRoute
+            userId={targetUserId}
+            user={displayUser}
+            onHeightChange={(h) => handleTabHeightChange('open', h)}
+            onLoadedContentCount={onProfileOpenTabCount}
+          />
+        );
       case 'closed':
-        return <ClosedRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('closed', h)} />;
+        return (
+          <ClosedRoute
+            userId={targetUserId}
+            user={displayUser}
+            onHeightChange={(h) => handleTabHeightChange('closed', h)}
+            onLoadedContentCount={onProfileClosedTabCount}
+          />
+        );
       default:
         return null;
     }
@@ -760,13 +818,17 @@ export function ProfileScreenContent({
               <View style={styles.statsContainer}>
                 {isOwnProfile && (
                   <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{userStats.posts}</Text>
+                    <Text style={styles.statNumber}>
+                      {profilePostsAggregate !== null ? profilePostsAggregate : '–'}
+                    </Text>
                     <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                   </View>
                 )}
                 {!isOwnProfile && (
                   <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{displayUser?.postsCount ?? 0}</Text>
+                    <Text style={styles.statNumber}>
+                      {profilePostsAggregate !== null ? profilePostsAggregate : '–'}
+                    </Text>
                     <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                   </View>
                 )}
@@ -1334,13 +1396,17 @@ export function ProfileScreenContent({
             <View style={styles.statsContainer}>
               {isOwnProfile && (
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{userStats.posts}</Text>
+                  <Text style={styles.statNumber}>
+                    {profilePostsAggregate !== null ? profilePostsAggregate : '–'}
+                  </Text>
                   <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                 </View>
               )}
               {!isOwnProfile && (
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{displayUser?.postsCount ?? 0}</Text>
+                  <Text style={styles.statNumber}>
+                    {profilePostsAggregate !== null ? profilePostsAggregate : '–'}
+                  </Text>
                   <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                 </View>
               )}

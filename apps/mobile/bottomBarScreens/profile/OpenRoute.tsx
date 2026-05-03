@@ -21,13 +21,26 @@ import ReportPostModal from '../../components/Feed/ReportPostModal';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
 import { logger } from '../../utils/loggerService';
-export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
+export const OpenRoute = ({
+  userId,
+  user,
+  onHeightChange,
+  onLoadedContentCount,
+}: {
+  userId?: string;
+  user?: any;
+  onHeightChange?: (height: number) => void;
+  /** Fires after each load attempt with the number of items shown in this tab (0 on failure / empty). */
+  onLoadedContentCount?: (count: number) => void;
+}) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { db } = require('../../utils/databaseService');
+  const onCountRef = React.useRef(onLoadedContentCount);
+  onCountRef.current = onLoadedContentCount;
 
   // Post menu hook
   const {
@@ -64,9 +77,11 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
     const loadOpenContent = async () => {
       if (!targetUserId) {
         setLoading(false);
+        onCountRef.current?.(0);
         return;
       }
 
+      let loadedCount = 0;
       try {
         setLoading(true);
         logger.debug('OpenRoute', 'Loading open content for userId', { targetUserId });
@@ -326,12 +341,15 @@ export const OpenRoute = ({ userId, user, onHeightChange }: { userId?: string, u
         }
 
         logger.debug('OpenRoute', 'Total open content', { count: allContent.length });
+        loadedCount = allContent.length;
         setPosts(allContent);
       } catch (error) {
         console.error('Error loading open content:', error);
+        loadedCount = 0;
         setPosts([]);
       } finally {
         setLoading(false);
+        onCountRef.current?.(loadedCount);
       }
     };
 

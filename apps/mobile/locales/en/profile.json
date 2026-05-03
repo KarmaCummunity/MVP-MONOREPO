@@ -3,7 +3,11 @@
   "tabs": {
     "posts": "Posts",
     "reels": "Reels",
-    "tagged": "Tagged"
+    "tagged": "Tagged",
+    "open": "Open",
+    "closed": "Closed",
+    "openWithCount": "Open ({{count}})",
+    "closedWithCount": "Closed ({{count}})"
   },
   "stats": {
     "posts": "Posts",
