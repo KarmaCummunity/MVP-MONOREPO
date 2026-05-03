@@ -141,6 +141,19 @@ CREATE TABLE IF NOT EXISTS organization_applications (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- JSONB collection store for /api/collections/org_applications (ItemsService); distinct from organization_applications above
+CREATE TABLE IF NOT EXISTS org_applications (
+    user_id TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, item_id)
+);
+CREATE INDEX IF NOT EXISTS org_applications_user_idx ON org_applications (user_id);
+CREATE INDEX IF NOT EXISTS org_applications_item_idx ON org_applications (item_id);
+CREATE INDEX IF NOT EXISTS org_applications_data_gin ON org_applications USING GIN (data);
+
 -- Donation categories table
 CREATE TABLE IF NOT EXISTS donation_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

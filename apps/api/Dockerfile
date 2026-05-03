@@ -2,6 +2,7 @@
 # - Purpose: Multi-stage Dockerfile to build and run the NestJS server on Railway/containers.
 # - Context: Designed for monorepo - Railway builds from root, this file is in apps/api
 # - Notes: Copies monorepo structure, installs deps, builds api workspace, runs from dist
+# dockerfile-utils: ignore (IDE parser false positive on `FROM node:<numeric-tag> AS`)
 
 FROM node:20 AS builder
 WORKDIR /app
