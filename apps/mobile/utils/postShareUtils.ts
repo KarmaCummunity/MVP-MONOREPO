@@ -15,12 +15,16 @@ export function getPublicWebAppOrigin(): string {
     if (fromEnv && /^https?:\/\//i.test(fromEnv)) {
         return fromEnv.replace(/\/$/, '');
     }
-    if (typeof window !== 'undefined' && window.location?.origin) {
-        const h = window.location.hostname || '';
+    if (
+        typeof globalThis !== 'undefined' &&
+        typeof globalThis.window !== 'undefined' &&
+        globalThis.window?.location?.origin
+    ) {
+        const h = globalThis.window.location.hostname || '';
         if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') {
             return PRODUCTION_WEB_ORIGIN;
         }
-        return window.location.origin.replace(/\/$/, '');
+        return globalThis.window.location.origin.replace(/\/$/, '');
     }
     return PRODUCTION_WEB_ORIGIN;
 }
