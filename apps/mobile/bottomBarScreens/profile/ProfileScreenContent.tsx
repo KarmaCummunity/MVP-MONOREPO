@@ -183,6 +183,7 @@ export function ProfileScreenContent({
               avatar: userData.avatar_url || userData.avatar || 'https://i.pravatar.cc/150?img=1',
               bio: userData.bio || '',
               karmaPoints: userData.karma_points || 0,
+              postsCount: userData.posts_count ?? userData.postsCount ?? 0,
               completedTasks: 0,
               roles: userData.roles || ['user'],
               isVerified: userData.is_verified || false,
@@ -757,7 +758,7 @@ export function ProfileScreenContent({
               </View>
 
               <View style={styles.statsContainer}>
-                {isOwnProfile && !isRealAuth && (
+                {isOwnProfile && (
                   <View style={styles.statItem}>
                     <Text style={styles.statNumber}>{userStats.posts}</Text>
                     <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
@@ -765,7 +766,7 @@ export function ProfileScreenContent({
                 )}
                 {!isOwnProfile && (
                   <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{(displayUser as any)?.postsCount || 0}</Text>
+                    <Text style={styles.statNumber}>{displayUser?.postsCount ?? 0}</Text>
                     <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                   </View>
                 )}
@@ -1331,7 +1332,7 @@ export function ProfileScreenContent({
             </View>
 
             <View style={styles.statsContainer}>
-              {isOwnProfile && !isRealAuth && (
+              {isOwnProfile && (
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{userStats.posts}</Text>
                   <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
@@ -1339,7 +1340,7 @@ export function ProfileScreenContent({
               )}
               {!isOwnProfile && (
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{(displayUser as any)?.postsCount || 0}</Text>
+                  <Text style={styles.statNumber}>{displayUser?.postsCount ?? 0}</Text>
                   <Text style={styles.statLabel}>{t('profile:stats.posts')}</Text>
                 </View>
               )}
