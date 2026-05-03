@@ -29,5 +29,19 @@
     "task_completion": "Task completed",
     "task_post": "Task",
     "community_challenge": "Challenge"
+  },
+  "share": {
+    "message": {
+      "generic": "Check out this post on Karma Community (KC).",
+      "itemGive": "Here is an item offered for giving on Karma Community (KC).",
+      "itemRequest": "Here is a request for an item on Karma Community (KC).",
+      "itemDelivered": "Here is a completed item handoff on Karma Community (KC).",
+      "rideOffered": "Here is a ride offer on Karma Community (KC).",
+      "rideRequest": "Here is a ride request on Karma Community (KC).",
+      "rideCompleted": "Here is a completed ride on Karma Community (KC).",
+      "taskOpened": "Here is an open task on Karma Community (KC).",
+      "taskCompleted": "Here is a completed task on Karma Community (KC).",
+      "challenge": "Here is a community challenge post on Karma Community (KC)."
+    }
   }
 }
