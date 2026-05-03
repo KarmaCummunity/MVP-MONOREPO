@@ -6,6 +6,26 @@
   "retry": "נסה שוב",
   "sellerHint": "מפרסם/ת",
   "viewProfile": "פרופיל",
+  "quickMessage": "הודעה מהירה למפרסם/ת",
+  "closePost": "סגירת הפוסט",
+  "closePostConfirmTitle": "לסגור את הפוסט?",
+  "closePostConfirmMessage": "פעולה זו מסמנת את הפריט/הנסיעה/המשימה כהושלמו. אפשר לרענן את הרשימה אחרי הסגירה.",
+  "closePostConfirmAction": "סגור",
+  "challengeSection": "אתגר",
+  "challengeCategory": "קטגוריה",
+  "challengeGoal": "יעד",
+  "statusValues": {
+    "active": "פעיל",
+    "full": "מלא",
+    "completed": "הושלם",
+    "cancelled": "בוטל",
+    "delivered": "נמסר",
+    "expired": "פג תוקף",
+    "open": "פתוח",
+    "in_progress": "בביצוע",
+    "done": "בוצע",
+    "archived": "בארכיון"
+  },
   "intent": {
     "give": "לתת",
     "request": "לקבל"

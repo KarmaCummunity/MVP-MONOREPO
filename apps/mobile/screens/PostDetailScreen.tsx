@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
+  Alert,
   Image,
   RefreshControl,
   ScrollView,
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -22,9 +23,15 @@ import { useUser } from '../stores/userStore';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useProfileNavigation } from '../hooks/useProfileNavigation';
 import CommentsModal from '../components/CommentsModal';
+import QuickMessageModal from '../components/Feed/QuickMessageModal';
 import { logger } from '../utils/loggerService';
-
-const { width: SCREEN_W } = Dimensions.get('window');
+import { closeOwnerPostFromFeedItem } from '../utils/feedPostOwnerClose';
+import {
+  canOwnerClosePostFromDetail,
+  getQuickMessageModalPostType,
+  isQuickMessageAvailableToViewer,
+} from '../utils/feedPostQuickMessageEligibility';
+import { toastService } from '../utils/toastService';
 
 type RouteParams = { postId: string; initialItem?: FeedItem };
 
@@ -37,17 +44,29 @@ function formatPostedAt(iso: string, locale: string): string {
   });
 }
 
+const GALLERY_MIN_H = 220;
+const GALLERY_MAX_H = 420;
+
 function PostDetailBody({
   item,
   onRefreshCounts,
+  onPostClosedLocally,
 }: {
   item: FeedItem;
   onRefreshCounts: () => void;
+  onPostClosedLocally: (next: FeedItem) => void;
 }): React.ReactElement {
   const { t, i18n } = useTranslation(['postDetail', 'common']);
   const navigation = useNavigation<any>();
+  const { width: windowW } = useWindowDimensions();
+  const screenW = Math.max(1, windowW);
+  const galleryTileH = Math.min(GALLERY_MAX_H, Math.max(GALLERY_MIN_H, screenW * 0.72));
+
   const { navigateToProfile } = useProfileNavigation();
+  const { selectedUser } = useUser();
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [quickMessageOpen, setQuickMessageOpen] = useState(false);
+  const [closingPost, setClosingPost] = useState(false);
 
   const {
     isLiked,
@@ -77,6 +96,24 @@ function PostDetailBody({
     const translated = t(key);
     return translated === key ? String(item.subtype) : translated;
   }, [item.subtype, t]);
+
+  const showQuickMessage = useMemo(
+    () => isQuickMessageAvailableToViewer(item, selectedUser?.id),
+    [item, selectedUser?.id],
+  );
+
+  const showClosePost = useMemo(
+    () => canOwnerClosePostFromDetail(item, selectedUser?.id),
+    [item, selectedUser?.id],
+  );
+
+  const statusLabel = useMemo(() => {
+    const st = item.status || item.taskData?.status;
+    if (!st) return '';
+    const key = `postDetail:statusValues.${st}`;
+    const translated = t(key);
+    return translated === key ? st : translated;
+  }, [item.status, item.taskData?.status, t]);
 
   const onOpenProfile = useCallback(() => {
     if (!item.user?.id) return;
@@ -111,16 +148,63 @@ function PostDetailBody({
     );
   }, [item.challengeId, navigation]);
 
+  const confirmClosePost = useCallback(() => {
+    Alert.alert(
+      t('postDetail:closePostConfirmTitle'),
+      t('postDetail:closePostConfirmMessage'),
+      [
+        { text: t('common:cancel'), style: 'cancel' },
+        {
+          text: t('postDetail:closePostConfirmAction'),
+          style: 'destructive',
+          onPress: async () => {
+            setClosingPost(true);
+            try {
+              const result = await closeOwnerPostFromFeedItem(item);
+              if (result.success) {
+                toastService.showSuccess(t('common:post.closedSuccess'));
+                let next: FeedItem = { ...item };
+                if (item.subtype === 'task_assignment' || item.type === 'task_post') {
+                  next = item.taskData
+                    ? { ...item, taskData: { ...item.taskData, status: 'done' } }
+                    : { ...item, status: 'done' };
+                } else if (item.subtype === 'ride' || item.subtype === 'ride_offered') {
+                  next = { ...item, status: 'completed' };
+                } else if (item.subtype === 'item' || item.subtype === 'donation') {
+                  next = { ...item, status: 'delivered' };
+                }
+                onPostClosedLocally(next);
+                onRefreshCounts();
+              } else {
+                toastService.showError(result.error || t('common:post.closeError'));
+              }
+            } finally {
+              setClosingPost(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [item, onPostClosedLocally, onRefreshCounts, t]);
+
   return (
     <>
       {galleryUris.length > 0 ? (
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.gallery}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={[styles.galleryScroll, { maxHeight: galleryTileH }]}
+          contentContainerStyle={styles.galleryContent}
+        >
           {galleryUris.map((uri) => (
-            <Image key={uri} source={{ uri }} style={[styles.heroImage, { width: SCREEN_W }]} resizeMode="cover" />
+            <View key={uri} style={[styles.galleryTile, { width: screenW, height: galleryTileH }]}>
+              <Image source={{ uri }} style={styles.galleryImage} resizeMode="contain" />
+            </View>
           ))}
         </ScrollView>
       ) : (
-        <View style={styles.heroPlaceholder}>
+        <View style={[styles.heroPlaceholder, { minHeight: galleryTileH * 0.55 }]}>
           <Ionicons name="image-outline" size={56} color={colors.textSecondary} />
         </View>
       )}
@@ -152,6 +236,38 @@ function PostDetailBody({
           </TouchableOpacity>
         </View>
 
+        {(showQuickMessage || showClosePost) && (
+          <View style={styles.ctaRow}>
+            {showQuickMessage && item.user?.id ? (
+              <TouchableOpacity
+                style={styles.ctaPrimary}
+                onPress={() => setQuickMessageOpen(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.white} />
+                <Text style={styles.ctaPrimaryText}>{t('postDetail:quickMessage')}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {showClosePost ? (
+              <TouchableOpacity
+                style={styles.ctaSecondary}
+                onPress={confirmClosePost}
+                disabled={closingPost}
+                activeOpacity={0.85}
+              >
+                {closingPost ? (
+                  <ActivityIndicator size="small" color={colors.error} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-done-outline" size={20} color={colors.error} />
+                    <Text style={styles.ctaSecondaryText}>{t('postDetail:closePost')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
+
         <Text style={styles.title}>{item.title}</Text>
         {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
 
@@ -168,6 +284,17 @@ function PostDetailBody({
               </Text>
             </View>
           ) : null}
+          {item.category ? (
+            <View style={styles.chipMuted}>
+              <Text style={styles.chipMutedText}>{item.category}</Text>
+            </View>
+          ) : null}
+          {statusLabel ? (
+            <View style={styles.chipMuted}>
+              <Ionicons name="flag-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.chipMutedText}>{statusLabel}</Text>
+            </View>
+          ) : null}
           {postedLabel ? (
             <View style={styles.chipMuted}>
               <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
@@ -175,6 +302,24 @@ function PostDetailBody({
             </View>
           ) : null}
         </View>
+
+        {item.challengeData?.category || item.challengeData?.goal_value != null ? (
+          <View style={styles.detailBlock}>
+            <Text style={styles.blockTitle}>{t('postDetail:challengeSection')}</Text>
+            {item.challengeData?.category ? (
+              <Text style={styles.blockLine}>
+                <Text style={styles.blockLabel}>{t('postDetail:challengeCategory')} </Text>
+                {item.challengeData.category}
+              </Text>
+            ) : null}
+            {item.challengeData?.goal_value != null && item.challengeData.goal_value !== '' ? (
+              <Text style={styles.blockLine}>
+                <Text style={styles.blockLabel}>{t('postDetail:challengeGoal')} </Text>
+                {String(item.challengeData.goal_value)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {item.from || item.to ? (
           <View style={styles.detailBlock}>
@@ -216,10 +361,11 @@ function PostDetailBody({
           <View style={styles.detailBlock}>
             <Text style={styles.blockTitle}>{t('postDetail:taskSection')}</Text>
             <Text style={styles.blockLine}>{item.taskData.title}</Text>
+            {item.taskData.description ? <Text style={styles.blockLine}>{item.taskData.description}</Text> : null}
             {item.taskData.status ? (
               <Text style={styles.blockLine}>
                 <Text style={styles.blockLabel}>{t('postDetail:status')} </Text>
-                {item.taskData.status}
+                {statusLabel || item.taskData.status}
               </Text>
             ) : null}
           </View>
@@ -266,6 +412,16 @@ function PostDetailBody({
         postTitle={item.title || ''}
         onCommentsCountChange={onRefreshCounts}
       />
+
+      {showQuickMessage && item.user?.id ? (
+        <QuickMessageModal
+          visible={quickMessageOpen}
+          onClose={() => setQuickMessageOpen(false)}
+          postType={getQuickMessageModalPostType(item)}
+          recipientId={item.user.id}
+          recipientName={item.user.name || t('common:unknownUser')}
+        />
+      ) : null}
     </>
   );
 }
@@ -336,6 +492,10 @@ export default function PostDetailScreen(): React.ReactElement {
     load(true);
   }, [load]);
 
+  const onPostClosedLocally = useCallback((next: FeedItem) => {
+    setItem(next);
+  }, []);
+
   if (!postId) {
     return (
       <View style={styles.centered}>
@@ -379,18 +539,16 @@ export default function PostDetailScreen(): React.ReactElement {
             <Text style={styles.bannerText}>{fetchError}</Text>
           </View>
         ) : null}
-        <PostDetailBody item={item} onRefreshCounts={onRefreshCounts} />
+        <PostDetailBody item={item} onRefreshCounts={onRefreshCounts} onPostClosedLocally={onPostClosedLocally} />
       </ScrollView>
     </View>
   );
 }
 
-const HERO_H = 260;
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { flexGrow: 1, paddingBottom: 40 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.background },
   muted: { marginTop: 12, color: colors.textSecondary, fontSize: 15 },
   errorText: { marginTop: 12, color: colors.textPrimary, fontSize: 16, textAlign: 'center' },
@@ -398,25 +556,34 @@ const styles = StyleSheet.create({
   retryBtnText: { color: colors.white, fontWeight: '600' },
   banner: { backgroundColor: colors.surfaceAlice, padding: 10 },
   bannerText: { color: colors.textPrimary, textAlign: 'center', fontSize: 13 },
-  gallery: { maxHeight: HERO_H },
-  heroImage: { height: HERO_H, backgroundColor: colors.surfaceMuted },
+  galleryScroll: { width: '100%' },
+  galleryContent: { alignItems: 'stretch' },
+  galleryTile: {
+    backgroundColor: colors.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  galleryImage: { width: '100%', height: '100%' },
   heroPlaceholder: {
-    height: HERO_H,
+    width: '100%',
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   card: {
-    marginHorizontal: 16,
-    marginTop: -16,
+    marginHorizontal: 0,
+    marginTop: 0,
     backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 8,
     shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
   },
   sellerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   sellerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -429,6 +596,35 @@ const styles = StyleSheet.create({
   sellerHint: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   profileBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.borderLight },
   profileBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+  ctaRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16, gap: 10 },
+  ctaPrimary: {
+    flex: 1,
+    minWidth: 140,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  ctaPrimaryText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  ctaSecondary: {
+    flex: 1,
+    minWidth: 140,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+  },
+  ctaSecondaryText: { color: colors.error, fontSize: 15, fontWeight: '700' },
   title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
   description: { fontSize: 16, lineHeight: 24, color: colors.textBodyNeutral, marginBottom: 12 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
@@ -464,8 +660,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
-    paddingTop: 14,
-    marginTop: 8,
+    paddingTop: 16,
+    marginTop: 12,
+    paddingBottom: 8,
   },
   actionBtn: { alignItems: 'center', minWidth: 56 },
   actionLabel: { marginTop: 4, fontSize: 13, color: colors.textSecondary, fontWeight: '600' },

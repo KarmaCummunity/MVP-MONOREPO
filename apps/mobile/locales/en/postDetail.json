@@ -6,6 +6,26 @@
   "retry": "Try again",
   "sellerHint": "Publisher",
   "viewProfile": "Profile",
+  "quickMessage": "Quick message to publisher",
+  "closePost": "Close post",
+  "closePostConfirmTitle": "Close this post?",
+  "closePostConfirmMessage": "This marks the item, ride, or task as completed. You can refresh the list afterward.",
+  "closePostConfirmAction": "Close",
+  "challengeSection": "Challenge",
+  "challengeCategory": "Category",
+  "challengeGoal": "Goal",
+  "statusValues": {
+    "active": "Active",
+    "full": "Full",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "delivered": "Delivered",
+    "expired": "Expired",
+    "open": "Open",
+    "in_progress": "In progress",
+    "done": "Done",
+    "archived": "Archived"
+  },
   "intent": {
     "give": "Give",
     "request": "Receive"
