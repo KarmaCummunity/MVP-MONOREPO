@@ -11,9 +11,12 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
   Logger,
 } from "@nestjs/common";
+import type { Request } from "express";
+import type { SessionTokenPayload } from "../auth/services/jwt.service";
 import { Inject } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../database/database.module";
@@ -60,6 +63,8 @@ interface UpdateTaskDto {
   tags?: string[];
   checklist?: unknown;
   estimated_hours?: number | null;
+  /** When an admin marks a task done on behalf of a volunteer, set this to the volunteer UUID */
+  completed_by_user_id?: string;
 }
 
 interface LogTaskHoursDto {
@@ -1525,21 +1530,39 @@ export class TasksController {
     }
   }
 
-  private async runUpdateTaskCompletionPosts(task: {
-    id: string;
-    title: string;
-    description: string | null;
-    created_by: string | null;
-    assignees: string[] | null;
-  }): Promise<void> {
+  private async runUpdateTaskCompletionSideEffects(
+    task: {
+      id: string;
+      title: string;
+      description: string | null;
+      created_by: string | null;
+      assignees: string[] | null;
+    },
+    options: {
+      /** User who actually completed the work (JWT user or explicit completed_by_user_id) */
+      completedByUserId: string | null;
+    },
+  ): Promise<void> {
     const completionPostResults = { created: 0, failed: 0 };
+    const assignees = (task.assignees || []).filter(Boolean);
+    let completedBy: string | null = null;
+    const cand = options.completedByUserId;
+    if (cand && assignees.includes(cand)) {
+      completedBy = cand;
+    } else if (assignees.length === 1) {
+      completedBy = assignees[0];
+    } else if (cand && assignees.length === 0) {
+      completedBy = cand;
+    }
 
     try {
       await this.ensurePostsTable();
 
-      this.logger.log(`📝 Creating completion posts for task ${task.id}...`);
+      this.logger.log(
+        `📝 Task ${task.id} marked done — completion author: ${completedBy ?? "none"}`,
+      );
 
-      if (task.created_by) {
+      if (completedBy) {
         try {
           await this.pool.query(
             `
@@ -1547,61 +1570,66 @@ export class TasksController {
                 VALUES ($1, $2, $3, $4, 'task_completion')
               `,
             [
-              task.created_by,
+              completedBy,
               task.id,
-              `משימה הושלמה: ${task.title}`,
+              `ביצעתי משימה: ${task.title}`,
               task.description
-                ? `המשימה "${task.title}" הושלמה בהצלחה! ${task.description}`
-                : `המשימה "${task.title}" הושלמה בהצלחה!`,
+                ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
+                : `השלמתי את המשימה "${task.title}" בהצלחה!`,
             ],
           );
           completionPostResults.created++;
           this.logger.log(
-            `✅ Completion post created for creator ${task.created_by}`,
+            `✅ Completion post created for performer ${completedBy}`,
           );
-        } catch (creatorPostError) {
+        } catch (performerPostError) {
           completionPostResults.failed++;
           this.logger.error(
-            `❌ Failed to create completion post for creator ${task.created_by}:`,
-            creatorPostError,
+            `❌ Failed to create completion post for performer ${completedBy}:`,
+            performerPostError,
+          );
+        }
+      } else {
+        this.logger.warn(
+          `⚠️ No completion post author resolved for task ${task.id} (assignees: ${assignees.length})`,
+        );
+      }
+
+      const creatorId = task.created_by;
+      if (
+        creatorId &&
+        completedBy &&
+        creatorId !== completedBy
+      ) {
+        const timestamp = new Date().toISOString();
+        try {
+          await this.itemsService.create(
+            "notifications",
+            creatorId,
+            randomUUID(),
+            {
+              title: "משימה הושלמה",
+              body: `המשימה "${task.title}" סומנה כבוצעה`,
+              type: "system",
+              timestamp,
+              read: false,
+              userId: creatorId,
+              data: { taskId: task.id },
+            },
+          );
+          this.logger.log(
+            `✅ Task-done notification sent to creator ${creatorId}`,
+          );
+        } catch (notifyErr) {
+          this.logger.error(
+            `❌ Failed to notify creator ${creatorId} of task completion:`,
+            notifyErr,
           );
         }
       }
 
-      if (task.assignees && task.assignees.length > 0) {
-        for (const assigneeId of task.assignees) {
-          if (assigneeId !== task.created_by) {
-            try {
-              await this.pool.query(
-                `
-                    INSERT INTO posts (author_id, task_id, title, description, post_type)
-                    VALUES ($1, $2, $3, $4, 'task_completion')
-                  `,
-                [
-                  assigneeId,
-                  task.id,
-                  `ביצעתי משימה: ${task.title}`,
-                  task.description
-                    ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
-                    : `השלמתי את המשימה "${task.title}" בהצלחה!`,
-                ],
-              );
-              completionPostResults.created++;
-              this.logger.log(
-                `✅ Completion post created for assignee ${assigneeId}`,
-              );
-            } catch (assigneePostError) {
-              completionPostResults.failed++;
-              this.logger.error(
-                `❌ Failed to create completion post for assignee ${assigneeId}:`,
-                assigneePostError,
-              );
-            }
-          }
-        }
-      }
       this.logger.log(
-        `📊 Completion post summary: ${completionPostResults.created} created, ${completionPostResults.failed} failed`,
+        `📊 Completion side effects: ${completionPostResults.created} post(s) created, ${completionPostResults.failed} failed`,
       );
 
       if (completionPostResults.created > 0) {
@@ -1627,7 +1655,11 @@ export class TasksController {
 
   @Patch(":id")
   @UseGuards(JwtAuthGuard, AdminAuthGuard)
-  async updateTask(@Param("id") id: string, @Body() body: UpdateTaskDto) {
+  async updateTask(
+    @Param("id") id: string,
+    @Body() body: UpdateTaskDto,
+    @Req() req: Request & { user?: SessionTokenPayload },
+  ) {
     try {
       // Ensure table exists before updating
       await this.ensureTasksTable();
@@ -1909,8 +1941,27 @@ export class TasksController {
         );
       }
 
-      if (rows.length > 0 && body.status === "done") {
-        await this.runUpdateTaskCompletionPosts(rows[0]);
+      if (
+        rows.length > 0 &&
+        body.status === "done" &&
+        oldStatus !== "done"
+      ) {
+        const jwtUserId = req.user?.userId ?? null;
+        let explicitCompleter: string | null = null;
+        if (
+          typeof body.completed_by_user_id === "string" &&
+          body.completed_by_user_id.trim()
+        ) {
+          explicitCompleter = await this.resolveUserIdToUUID(
+            body.completed_by_user_id.trim(),
+          );
+        }
+        const completedByUserId =
+          explicitCompleter ||
+          (jwtUserId ? await this.resolveUserIdToUUID(jwtUserId) : null);
+        await this.runUpdateTaskCompletionSideEffects(rows[0], {
+          completedByUserId,
+        });
       }
 
       return { success: true, data: rows[0] };

@@ -527,7 +527,10 @@ export function useAdminTasksScreen() {
     }
 
     // Then update status to done
-    const updateRes = await apiService.updateTask(pendingTaskId, { status: 'done' });
+    const updateRes = await apiService.updateTask(pendingTaskId, {
+      status: 'done',
+      completed_by_user_id: selectedUser.id,
+    });
     if (!updateRes.success) {
       const msg = updateRes.error || 'שגיאה בעדכון סטטוס המשימה';
       toastService.showError(msg);
