@@ -144,9 +144,9 @@ function topFiles(byFile, n = 10) {
     .slice(0, n);
 }
 
-const API_KEY = process.env.SONAR_PROJECT_KEY_API?.trim();
-const MOBILE_KEY = process.env.SONAR_PROJECT_KEY_MOBILE?.trim();
-if (!API_KEY || !MOBILE_KEY) {
+const sonarProjectKeyApi = process.env.SONAR_PROJECT_KEY_API?.trim();
+const sonarProjectKeyMobile = process.env.SONAR_PROJECT_KEY_MOBILE?.trim();
+if (!sonarProjectKeyApi || !sonarProjectKeyMobile) {
   console.error(
     'Set SONAR_PROJECT_KEY_API and SONAR_PROJECT_KEY_MOBILE to match sonar.projectKey in ' +
       'apps/api/sonar-project.properties and apps/mobile/sonar-project.properties.',
@@ -155,8 +155,8 @@ if (!API_KEY || !MOBILE_KEY) {
 }
 
 const [apiIssues, mobileIssues] = await Promise.all([
-  fetchAllIssues(API_KEY, SONAR_BRANCH),
-  fetchAllIssues(MOBILE_KEY, SONAR_BRANCH),
+  fetchAllIssues(sonarProjectKeyApi, SONAR_BRANCH),
+  fetchAllIssues(sonarProjectKeyMobile, SONAR_BRANCH),
 ]);
 
 const api = analyze(apiIssues);
@@ -327,8 +327,8 @@ ${allVulns.length === 1 ? '1 open vulnerability' : `${allVulns.length} open vuln
 for (const v of allVulns) {
   const file = v.component.split(':').pop();
   let proj = v.project;
-  if (v.project === API_KEY) proj = 'api';
-  else if (v.project === MOBILE_KEY) proj = 'mobile';
+  if (v.project === sonarProjectKeyApi) proj = 'api';
+  else if (v.project === sonarProjectKeyMobile) proj = 'mobile';
   md += `- **${v.rule}** (${proj}) in file \`${file}\` line ${v.line ?? '—'}
   - Message: ${v.message}
 
@@ -397,8 +397,8 @@ md += `---
 
 ## Useful links
 
-- [SonarCloud - API Project](https://sonarcloud.io/dashboard?id=${API_KEY})
-- [SonarCloud - Mobile Project](https://sonarcloud.io/dashboard?id=${MOBILE_KEY})
+- [SonarCloud - API Project](https://sonarcloud.io/dashboard?id=${sonarProjectKeyApi})
+- [SonarCloud - Mobile Project](https://sonarcloud.io/dashboard?id=${sonarProjectKeyMobile})
 - [SonarQube TypeScript Rules](https://rules.sonarsource.com/typescript/)
 
 ---
