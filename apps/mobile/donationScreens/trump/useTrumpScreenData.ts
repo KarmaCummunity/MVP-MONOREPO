@@ -154,26 +154,15 @@ export function useTrumpScreenData({ mode, selectedUserId, t }: UseTrumpScreenDa
   }, []);
 
   const handlePostReopen = useCallback(async (item: FeedItem) => {
-    const { reopenFeedPost } = await import('../../utils/reopenFeedPost');
-    const { toastService } = await import('../../utils/toastService');
-    const { default: i18n } = await import('../../app/i18n');
-
-    const result = await reopenFeedPost(item);
-    if (result.success) {
-      toastService.showSuccess(
-        i18n.t('post.reopenSuccess', { ns: 'common', defaultValue: 'הפוסט נפתח מחדש' }),
-      );
+    const { reopenFeedPostWithUiFeedback } = await import('../../utils/reopenFeedPost');
+    const ok = await reopenFeedPostWithUiFeedback(item);
+    if (ok) {
       const reloader = loadRidesRef.current;
       if (reloader) {
         reloader().catch((err: unknown) => {
           console.error('Error reloading rides after reopen:', err);
         });
       }
-    } else {
-      toastService.showError(
-        result.error ||
-          i18n.t('post.reopenError', { ns: 'common', defaultValue: 'שגיאה בפתיחה מחדש' }),
-      );
     }
   }, []);
 

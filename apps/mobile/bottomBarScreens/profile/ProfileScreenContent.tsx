@@ -209,6 +209,8 @@ function ProfileSceneForRoute(
     handleTabHeightChange: (key: string, height: number) => void;
     onProfileOpenTabCount: (count: number) => void;
     onProfileClosedTabCount: (count: number) => void;
+    profileOpenClosedReloadKey: number;
+    onProfileReopenSuccess: () => void;
   }>,
 ): React.ReactElement | null {
   const {
@@ -218,6 +220,8 @@ function ProfileSceneForRoute(
     handleTabHeightChange,
     onProfileOpenTabCount,
     onProfileClosedTabCount,
+    profileOpenClosedReloadKey,
+    onProfileReopenSuccess,
   } = props;
 
   switch (sceneRoute.key) {
@@ -228,6 +232,8 @@ function ProfileSceneForRoute(
           user={displayUser}
           onHeightChange={(h) => handleTabHeightChange('open', h)}
           onLoadedContentCount={onProfileOpenTabCount}
+          reloadSignal={profileOpenClosedReloadKey}
+          onReopenSuccess={onProfileReopenSuccess}
         />
       );
     case 'closed':
@@ -237,6 +243,8 @@ function ProfileSceneForRoute(
           user={displayUser}
           onHeightChange={(h) => handleTabHeightChange('closed', h)}
           onLoadedContentCount={onProfileClosedTabCount}
+          reloadSignal={profileOpenClosedReloadKey}
+          onReopenSuccess={onProfileReopenSuccess}
         />
       );
     default:
@@ -447,6 +455,10 @@ export function ProfileScreenContent(
     open: null,
     closed: null,
   });
+  const [profileOpenClosedReloadKey, setProfileOpenClosedReloadKey] = useState(0);
+  const onProfileReopenSuccess = useCallback(() => {
+    setProfileOpenClosedReloadKey((k) => k + 1);
+  }, []);
   const profileCountsUserIdRef = useRef<string | undefined>(targetUserId);
   profileCountsUserIdRef.current = targetUserId;
 
@@ -534,9 +546,19 @@ export function ProfileScreenContent(
         handleTabHeightChange={handleTabHeightChange}
         onProfileOpenTabCount={onProfileOpenTabCount}
         onProfileClosedTabCount={onProfileClosedTabCount}
+        profileOpenClosedReloadKey={profileOpenClosedReloadKey}
+        onProfileReopenSuccess={onProfileReopenSuccess}
       />
     ),
-    [targetUserId, displayUser, handleTabHeightChange, onProfileOpenTabCount, onProfileClosedTabCount],
+    [
+      targetUserId,
+      displayUser,
+      handleTabHeightChange,
+      onProfileOpenTabCount,
+      onProfileClosedTabCount,
+      profileOpenClosedReloadKey,
+      onProfileReopenSuccess,
+    ],
   );
 
   const currentTabHeight = tabHeights[routes[index].key] || 600;

@@ -22,11 +22,17 @@ export const ClosedRoute = ({
   user,
   onHeightChange,
   onLoadedContentCount,
+  reloadSignal,
+  onReopenSuccess,
 }: {
   userId?: string;
   user?: any;
   onHeightChange?: (height: number) => void;
   onLoadedContentCount?: (count: number) => void;
+  /** Increment to refetch tab content (e.g. after reopening a closed post). */
+  reloadSignal?: number;
+  /** Called after a successful reopen so the parent can bump `reloadSignal`. */
+  onReopenSuccess?: () => void;
 }) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
@@ -48,7 +54,15 @@ export const ClosedRoute = ({
     setReportModalVisible,
     selectedPostForReport,
     setSelectedPostForReport
-  } = usePostMenu();
+  } = usePostMenu({
+    onReopen: async (item) => {
+      const { reopenFeedPostWithUiFeedback } = await import('../../utils/reopenFeedPost');
+      const ok = await reopenFeedPostWithUiFeedback(item);
+      if (ok) {
+        onReopenSuccess?.();
+      }
+    },
+  });
 
   const handlePostPress = useCallback(
     (feedItem: FeedItem) => {
@@ -253,6 +267,7 @@ export const ClosedRoute = ({
               ...item,
               price: item.price
             },
+            itemId: item.id,
             price: item.price,
             rawData: item
           });
@@ -415,7 +430,7 @@ export const ClosedRoute = ({
     };
 
     loadClosedContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
+  }, [targetUserId, user, selectedUser?.id, db, reloadSignal, onReopenSuccess]);
 
   if (loading) {
     return (

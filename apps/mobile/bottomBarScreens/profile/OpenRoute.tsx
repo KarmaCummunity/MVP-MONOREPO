@@ -19,12 +19,18 @@ export const OpenRoute = ({
   user,
   onHeightChange,
   onLoadedContentCount,
+  reloadSignal,
+  onReopenSuccess,
 }: {
   userId?: string;
   user?: any;
   onHeightChange?: (height: number) => void;
   /** Fires after each load attempt with the number of items shown in this tab (0 on failure / empty). */
   onLoadedContentCount?: (count: number) => void;
+  /** Increment to refetch tab content (e.g. after reopening a closed post). */
+  reloadSignal?: number;
+  /** Called after a successful reopen so the parent can bump `reloadSignal`. */
+  onReopenSuccess?: () => void;
 }) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
@@ -46,7 +52,15 @@ export const OpenRoute = ({
     setReportModalVisible,
     selectedPostForReport,
     setSelectedPostForReport
-  } = usePostMenu();
+  } = usePostMenu({
+    onReopen: async (item) => {
+      const { reopenFeedPostWithUiFeedback } = await import('../../utils/reopenFeedPost');
+      const ok = await reopenFeedPostWithUiFeedback(item);
+      if (ok) {
+        onReopenSuccess?.();
+      }
+    },
+  });
 
   const handlePostPress = useCallback(
     (feedItem: FeedItem) => {
@@ -96,7 +110,7 @@ export const OpenRoute = ({
     };
 
     void loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
+  }, [targetUserId, user, selectedUser?.id, db, reloadSignal, onReopenSuccess]);
 
   if (loading) {
     return (

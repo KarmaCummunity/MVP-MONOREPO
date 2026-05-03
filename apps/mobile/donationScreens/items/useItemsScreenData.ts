@@ -208,25 +208,12 @@ export function useItemsScreenData(
   }, []);
 
   const handlePostReopen = useCallback(async (item: FeedItem) => {
-    const { reopenFeedPost } = await import('../../utils/reopenFeedPost');
-    const { toastService } = await import('../../utils/toastService');
-    const { default: i18n } = await import('../../app/i18n');
-
-    const result = await reopenFeedPost(item);
-    if (result.success) {
-      toastService.showSuccess(
-        i18n.t('post.reopenSuccess', { ns: 'common', defaultValue: 'הפוסט נפתח מחדש' }),
-      );
-      if (loadItemsRef.current) {
-        loadItemsRef.current().catch((err: unknown) => {
-          console.error('Error reloading items after reopen:', err);
-        });
-      }
-    } else {
-      toastService.showError(
-        result.error ||
-          i18n.t('post.reopenError', { ns: 'common', defaultValue: 'שגיאה בפתיחה מחדש' }),
-      );
+    const { reopenFeedPostWithUiFeedback } = await import('../../utils/reopenFeedPost');
+    const ok = await reopenFeedPostWithUiFeedback(item);
+    if (ok && loadItemsRef.current) {
+      loadItemsRef.current().catch((err: unknown) => {
+        console.error('Error reloading items after reopen:', err);
+      });
     }
   }, []);
 
