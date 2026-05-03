@@ -19,7 +19,7 @@ import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { CommunityChallenge, ChallengeDifficulty } from '../../globals/types';
-import { db } from '../../src/infrastructure/database.service';
+import { db } from '../../utils/databaseService';
 import { useToast } from '../../utils/toastService';
 import { useUser } from '../../stores/userStore';
 
@@ -30,7 +30,12 @@ interface EditChallengeModalProps {
   onUpdate: () => void;
 }
 
-
+const CHALLENGE_DIFFICULTY_OPTIONS = [
+  { id: 'easy', label: 'קל', icon: 'happy-outline', color: colors.success },
+  { id: 'medium', label: 'בינוני', icon: 'bulb-outline', color: colors.warning },
+  { id: 'hard', label: 'קשה', icon: 'flame-outline', color: colors.error },
+  { id: 'expert', label: 'מומחה', icon: 'trophy-outline', color: colors.primary },
+];
 
 export default function EditChallengeModal({
   visible,
@@ -39,13 +44,6 @@ export default function EditChallengeModal({
   onUpdate,
 }: EditChallengeModalProps) {
   const { t } = useTranslation(['challenges', 'common']);
-
-  const challengeDifficultyOptions = React.useMemo(() => [
-    { id: ChallengeDifficulty.EASY, label: t('difficulty.easy'), icon: 'happy-outline', color: colors.success },
-    { id: ChallengeDifficulty.MEDIUM, label: t('difficulty.medium'), icon: 'bulb-outline', color: colors.warning },
-    { id: ChallengeDifficulty.HARD, label: t('difficulty.hard'), icon: 'flame-outline', color: colors.error },
-    { id: ChallengeDifficulty.EXPERT, label: t('difficulty.expert'), icon: 'trophy-outline', color: colors.primary },
-  ], [t]);
   const { showToast } = useToast();
   const { selectedUser: user } = useUser();
 
@@ -53,7 +51,7 @@ export default function EditChallengeModal({
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState('');
   const [goalValue, setGoalValue] = useState('');
-  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(ChallengeDifficulty.EASY);
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('easy');
   const [category, setCategory] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -65,7 +63,7 @@ export default function EditChallengeModal({
       setDescription(challenge.description || '');
       setImageUri(challenge.image_url || '');
       setGoalValue(challenge.goal_value?.toString() || '');
-      setDifficulty(challenge.difficulty || ChallengeDifficulty.EASY);
+      setDifficulty(challenge.difficulty || 'easy');
       setCategory(challenge.category || '');
       setIsActive(challenge.is_active ?? true);
     }
@@ -128,9 +126,9 @@ export default function EditChallengeModal({
       } else {
         showToast(t('messages.errorUpdating'), 'error');
       }
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      showToast(err?.message || t('messages.errorUpdating'), 'error');
+    } catch (error: any) {
+      console.error('Error updating challenge:', error);
+      showToast(error.message || t('messages.errorUpdating'), 'error');
     } finally {
       setLoading(false);
     }
@@ -173,7 +171,7 @@ export default function EditChallengeModal({
             />
 
             {/* Image */}
-            <Text style={styles.label}>{t('fields.image')} ({t('common:optional')})</Text>
+            <Text style={styles.label}>{t('fields.image')} ({t('common:optional', 'אופציונלי')})</Text>
             <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.challengeImage} resizeMode="cover" />
@@ -188,7 +186,7 @@ export default function EditChallengeModal({
             {/* Difficulty */}
             <Text style={styles.label}>{t('fields.difficulty')}</Text>
             <View style={styles.optionsRow}>
-              {challengeDifficultyOptions.map((option) => (
+              {CHALLENGE_DIFFICULTY_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.id}
                   style={[
@@ -199,7 +197,7 @@ export default function EditChallengeModal({
                   onPress={() => setDifficulty(option.id as ChallengeDifficulty)}
                 >
                   <Ionicons
-                    name={option.icon as keyof typeof Ionicons.glyphMap}
+                    name={option.icon as any}
                     size={20}
                     color={difficulty === option.id ? colors.white : option.color}
                   />
@@ -214,7 +212,7 @@ export default function EditChallengeModal({
             {challenge.type !== 'BOOLEAN' && (
               <>
                 <Text style={styles.label}>
-                  {t('fields.goalValue')} ({t('common:optional')})
+                  {t('fields.goalValue')} ({t('common:optional', 'אופציונלי')})
                 </Text>
                 <TextInput
                   style={styles.input}
@@ -232,7 +230,7 @@ export default function EditChallengeModal({
 
             {/* Category */}
             <Text style={styles.label}>
-              {t('fields.category')} ({t('common:optional')})
+              {t('fields.category')} ({t('common:optional', 'אופציונלי')})
             </Text>
             <TextInput
               style={styles.input}
@@ -296,7 +294,7 @@ export default function EditChallengeModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContainer: {
@@ -402,7 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primary,
     padding: 12,
     borderRadius: 8,
     marginTop: 16,

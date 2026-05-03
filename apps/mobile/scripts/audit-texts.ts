@@ -61,7 +61,7 @@ interface TextAuditReport {
 const HEBREW_PATTERN = /[\u0590-\u05FF]+/;
 const STRING_LITERAL_PATTERN = /(['"`])(?:(?=(\\?))\2.)*?\1/g;
 
-// Files/directories to exclude (translation JSON lives under locales/ and is not scanned — only .ts/.tsx)
+// Files/directories to exclude
 const EXCLUDE_PATTERNS = [
   'node_modules',
   'dist',
@@ -70,11 +70,11 @@ const EXCLUDE_PATTERNS = [
   'ios',
   'android',
   'web',
-  'locales',
+  'locales', // Don't audit the translation files themselves
+  'scripts',
   '.git',
   'coverage',
-  'assets',
-  'audit-reports'
+  'assets'
 ];
 
 // Patterns to ignore (technical strings, not user-facing)
@@ -130,58 +130,32 @@ class TextAuditor {
     this.loadTranslations();
   }
 
-  /**
-   * Loads split locale files from locales/{lang}/*.json (same layout as app/i18n.ts).
-   */
   private loadTranslations(): void {
     try {
-      const heDir = path.join(this.rootDir, 'locales', 'he');
-      const enDir = path.join(this.rootDir, 'locales', 'en');
+      const hePath = path.join(this.rootDir, 'locales', 'he.json');
+      const enPath = path.join(this.rootDir, 'locales', 'en.json');
 
-      if (fs.existsSync(heDir)) {
-        this.translationsHe = this.readLocaleDirectory(heDir);
-        this.report.translationStats.totalKeysHe = this.countKeysAllNamespaces(this.translationsHe);
+      if (fs.existsSync(hePath)) {
+        this.translationsHe = JSON.parse(fs.readFileSync(hePath, 'utf-8'));
+        this.report.translationStats.totalKeysHe = this.countKeys(this.translationsHe);
       }
 
-      if (fs.existsSync(enDir)) {
-        this.translationsEn = this.readLocaleDirectory(enDir);
-        this.report.translationStats.totalKeysEn = this.countKeysAllNamespaces(this.translationsEn);
+      if (fs.existsSync(enPath)) {
+        this.translationsEn = JSON.parse(fs.readFileSync(enPath, 'utf-8'));
+        this.report.translationStats.totalKeysEn = this.countKeys(this.translationsEn);
       }
 
-      console.log(`Loaded translations: ${this.report.translationStats.totalKeysHe} Hebrew keys, ${this.report.translationStats.totalKeysEn} English keys\n`);
+      console.info(`Loaded translations: ${this.report.translationStats.totalKeysHe} Hebrew keys, ${this.report.translationStats.totalKeysEn} English keys\n`);
     } catch (error) {
       console.error('Error loading translations:', error);
     }
   }
 
-  private readLocaleDirectory(dir: string): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    for (const file of fs.readdirSync(dir)) {
-      if (!file.endsWith('.json')) {
-        continue;
-      }
-      const ns = path.basename(file, '.json');
-      const fullPath = path.join(dir, file);
-      const raw = fs.readFileSync(fullPath, 'utf-8');
-      result[ns] = JSON.parse(raw);
-    }
-    return result;
-  }
-
-  private countKeysAllNamespaces(namespaced: Record<string, unknown>): number {
-    let total = 0;
-    for (const ns of Object.keys(namespaced)) {
-      total += this.countKeys(namespaced[ns] as Record<string, unknown>, ns);
-    }
-    return total;
-  }
-
-  private countKeys(obj: Record<string, unknown>, prefix: string): number {
+  private countKeys(obj: any, prefix: string = ''): number {
     let count = 0;
-    for (const key of Object.keys(obj)) {
-      const value = obj[key];
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        count += this.countKeys(value as Record<string, unknown>, `${prefix}.${key}`);
+    for (const key in obj) {
+      if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        count += this.countKeys(obj[key], prefix ? `${prefix}.${key}` : key);
       } else {
         count++;
       }
@@ -273,16 +247,17 @@ class TextAuditor {
 
       for (const match of matches) {
         const fullMatch = match[0];
-        const literalContent = fullMatch.slice(1, -1); // Remove quotes
+        const quote = match[1];
+        const content = fullMatch.slice(1, -1); // Remove quotes
         const column = match.index || 0;
 
         // Skip empty strings
-        if (!literalContent.trim()) {
+        if (!content.trim()) {
           continue;
         }
 
         // Skip ignored patterns
-        if (this.isIgnoredString(literalContent)) {
+        if (this.isIgnoredString(content)) {
           continue;
         }
 
@@ -290,7 +265,7 @@ class TextAuditor {
         const beforeMatch = line.substring(0, column);
         if (/t\s*\(\s*$/.test(beforeMatch)) {
           // Extract the key being used
-          const keyMatch = literalContent.match(/^([a-z]+:[a-zA-Z.]+)$/);
+          const keyMatch = content.match(/^([a-z]+:[a-zA-Z.]+)$/);
           if (keyMatch) {
             this.usedKeys.add(keyMatch[1]);
           }
@@ -298,35 +273,35 @@ class TextAuditor {
         }
 
         // Detect Hebrew text
-        if (this.containsHebrew(literalContent)) {
+        if (this.containsHebrew(content)) {
           this.addIssue({
             file: path.relative(this.rootDir, filePath),
             line: lineIndex + 1,
             column: column + 1,
             type: 'hardcoded-hebrew',
             severity: hasI18nImport ? 'high' : 'critical',
-            value: literalContent,
+            value: content,
             context: line.trim(),
             suggestion: hasI18nImport
-              ? `Replace "${literalContent}" with {t('${this.suggestKey(literalContent)}')}`
-              : `Import useTranslation and replace "${literalContent}" with {t('key')}`,
-            suggestedKey: this.suggestKey(literalContent)
+              ? `Replace "${content}" with {t('${this.suggestKey(content)}')}`
+              : `Import useTranslation and replace "${content}" with {t('key')}`,
+            suggestedKey: this.suggestKey(content)
           });
         }
         // Detect English text (only if it looks like user-facing text)
-        else if (literalContent.length > 2 && /[a-zA-Z]/.test(literalContent) && /\s/.test(literalContent)) {
+        else if (content.length > 2 && /[a-zA-Z]/.test(content) && /\s/.test(content)) {
           this.addIssue({
             file: path.relative(this.rootDir, filePath),
             line: lineIndex + 1,
             column: column + 1,
             type: 'hardcoded-english',
             severity: 'medium',
-            value: literalContent,
+            value: content,
             context: line.trim(),
             suggestion: hasI18nImport
-              ? `Replace "${literalContent}" with {t('${this.suggestKey(literalContent)}')}`
-              : `Import useTranslation and replace "${literalContent}" with {t('key')}`,
-            suggestedKey: this.suggestKey(literalContent)
+              ? `Replace "${content}" with {t('${this.suggestKey(content)}')}`
+              : `Import useTranslation and replace "${content}" with {t('key')}`,
+            suggestedKey: this.suggestKey(content)
           });
         }
       }
@@ -388,10 +363,10 @@ class TextAuditor {
   }
 
   public audit(): TextAuditReport {
-    console.log('📝 Starting text/i18n audit...\n');
+    console.info('📝 Starting text/i18n audit...\n');
 
     const files = this.getAllFiles(this.rootDir);
-    console.log(`Found ${files.length} TypeScript files to audit\n`);
+    console.info(`Found ${files.length} TypeScript files to audit\n`);
 
     files.forEach((file, index) => {
       if (index % 10 === 0) {
@@ -412,36 +387,36 @@ class TextAuditor {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(this.report, null, 2));
-    console.log(`\n📊 Report saved to: ${outputPath}`);
+    console.info(`\n📊 Report saved to: ${outputPath}`);
   }
 
   public printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('TEXT/I18N AUDIT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`\nTotal files scanned: ${this.report.totalFiles}`);
-    console.log(`Files with issues: ${this.report.filesWithIssues}`);
-    console.log(`Total issues found: ${this.report.totalIssues}\n`);
+    console.info('\n' + '='.repeat(60));
+    console.info('TEXT/I18N AUDIT SUMMARY');
+    console.info('='.repeat(60));
+    console.info(`\nTotal files scanned: ${this.report.totalFiles}`);
+    console.info(`Files with issues: ${this.report.filesWithIssues}`);
+    console.info(`Total issues found: ${this.report.totalIssues}\n`);
 
-    console.log('Translation coverage:');
-    console.log(`  Hebrew keys:  ${this.report.translationStats.totalKeysHe}`);
-    console.log(`  English keys: ${this.report.translationStats.totalKeysEn}\n`);
+    console.info('Translation coverage:');
+    console.info(`  Hebrew keys:  ${this.report.translationStats.totalKeysHe}`);
+    console.info(`  English keys: ${this.report.translationStats.totalKeysEn}\n`);
 
-    console.log('Issues by severity:');
-    console.log(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
-    console.log(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
-    console.log(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
-    console.log(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
+    console.info('Issues by severity:');
+    console.info(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
+    console.info(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
+    console.info(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
+    console.info(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
 
-    console.log('Issues by type:');
-    console.log(`  Hardcoded Hebrew:  ${this.report.issuesByType['hardcoded-hebrew']}`);
-    console.log(`  Hardcoded English: ${this.report.issuesByType['hardcoded-english']}`);
-    console.log(`  Missing keys:      ${this.report.issuesByType['missing-key']}`);
-    console.log(`  Unused keys:       ${this.report.issuesByType['unused-key']}`);
-    console.log(`  Missing i18n:      ${this.report.issuesByType['no-i18n-import']}\n`);
+    console.info('Issues by type:');
+    console.info(`  Hardcoded Hebrew:  ${this.report.issuesByType['hardcoded-hebrew']}`);
+    console.info(`  Hardcoded English: ${this.report.issuesByType['hardcoded-english']}`);
+    console.info(`  Missing keys:      ${this.report.issuesByType['missing-key']}`);
+    console.info(`  Unused keys:       ${this.report.issuesByType['unused-key']}`);
+    console.info(`  Missing i18n:      ${this.report.issuesByType['no-i18n-import']}\n`);
 
     if (this.report.totalIssues > 0) {
-      console.log('Top 5 files with most issues:');
+      console.info('Top 5 files with most issues:');
       const fileIssueCount = new Map<string, number>();
       this.report.issues.forEach(issue => {
         fileIssueCount.set(issue.file, (fileIssueCount.get(issue.file) || 0) + 1);
@@ -452,11 +427,11 @@ class TextAuditor {
         .slice(0, 5);
 
       sorted.forEach(([file, count], index) => {
-        console.log(`  ${index + 1}. ${file} (${count} issues)`);
+        console.info(`  ${index + 1}. ${file} (${count} issues)`);
       });
     }
 
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.info('\n' + '='.repeat(60) + '\n');
   }
 }
 

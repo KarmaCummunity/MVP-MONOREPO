@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { donationResources } from '../utils/donationResources';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
+import { logger } from '../utils/loggerService';
+import { isSafeExternalUrl } from '../utils/urlValidator';
 
 export interface CategoryConfig {
   id: string;
@@ -42,16 +44,16 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
 
   const handleToggleMode = () => setMode((prev) => !prev);
   const handleSelectMenuItem = (option: string) => {
-    console.log('Category menu selected:', option);
+    logger.debug('CategoryScreen', 'Category menu selected', { option });
   };
 
   const handleSearch = (
     query: string,
     filters?: string[],
     sorts?: string[],
-    results?: unknown[]
+    results?: any[]
   ) => {
-    console.log('Category search:', {
+    logger.debug('CategoryScreen', 'Category search', {
       query,
       filters: filters ?? [],
       sorts: sorts ?? [],
@@ -68,15 +70,18 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
     const controller = new AbortController();
 
     const checkUrl = async (url: string): Promise<boolean> => {
+      if (!isSafeExternalUrl(url)) {
+        return false;
+      }
       try {
         const timeout = setTimeout(() => controller.abort(), 5000);
         // Some servers block HEAD; try HEAD then GET fallback
-        const headResp = await fetch(url, { method: 'HEAD', signal: controller.signal } as RequestInit).catch(() => null);
+        const headResp = await fetch(url, { method: 'HEAD', signal: controller.signal } as any).catch(() => null);
         if (headResp && (headResp.ok || (headResp.status >= 200 && headResp.status < 400))) {
           clearTimeout(timeout);
           return true;
         }
-        const getResp = await fetch(url, { method: 'GET', signal: controller.signal } as RequestInit).catch(() => null);
+        const getResp = await fetch(url, { method: 'GET', signal: controller.signal } as any).catch(() => null);
         clearTimeout(timeout);
         return !!(getResp && (getResp.ok || (getResp.status >= 200 && getResp.status < 400)));
       } catch {
@@ -112,6 +117,7 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
         sortOptions={[t('donations:sort.name'), t('donations:sort.date'), t('donations:sort.rating')]}
         searchData={[]}
         onSearch={handleSearch}
+        formatFilterLabel={(label) => label}
       />
 
       <ScrollContainer contentStyle={[
@@ -141,24 +147,36 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
                 return (
                   <TouchableOpacity
                     key={`${config.id}-${res.url}`}
-                    style={[styles.linkButton, !isHealthy === true ? styles.linkButtonDisabled : null, { borderColor: config.color }]}
+                    style={[
+                      styles.linkButton,
+                      isHealthy === true ? null : styles.linkButtonDisabled,
+                      { borderColor: config.color },
+                    ]}
                     activeOpacity={0.8}
                     onPress={async () => {
                       try {
+                        if (!isSafeExternalUrl(res.url)) {
+                          Alert.alert(t('common:error'), t('common:cannotOpenLink'));
+                          return;
+                        }
                         const supported = await Linking.canOpenURL(res.url);
                         if (supported) await Linking.openURL(res.url);
                         else Alert.alert(t('common:error'), t('common:cannotOpenLink'));
-                      } catch (_e) {
+                      } catch (error) {
+                        logger.warn('CategoryScreen', 'Open donation link failed', {
+                          url: res.url,
+                          error: error instanceof Error ? error.message : String(error),
+                        });
                         Alert.alert(t('common:error'), t('common:cannotOpenLink'));
                       }
                     }}
                   >
                     <View style={styles.linkButtonHeader}>
-                      <Text style={styles.linkButtonTitle}>{t(res.nameKey)}</Text>
+                      <Text style={styles.linkButtonTitle}>{res.name}</Text>
                       <Text style={[styles.linkPill, { borderColor: config.color, color: config.color }]}>{t('common:web')}</Text>
                     </View>
-                    {!!res.descriptionKey && (
-                      <Text style={styles.linkButtonDesc}>{t(res.descriptionKey)}</Text>
+                    {!!res.description && (
+                      <Text style={styles.linkButtonDesc}>{res.description}</Text>
                     )}
                     {isHealthy === false && (
                       <Text style={styles.linkWarningText}>{t('common:cannotOpenLink')}</Text>

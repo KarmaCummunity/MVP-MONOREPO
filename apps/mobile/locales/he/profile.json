@@ -3,7 +3,11 @@
   "tabs": {
     "posts": "פוסטים",
     "reels": "רילס",
-    "tagged": "תיוגים"
+    "tagged": "תיוגים",
+    "open": "פתוח",
+    "closed": "סגור",
+    "openWithCount": "פתוח ({{count}})",
+    "closedWithCount": "סגור ({{count}})"
   },
   "stats": {
     "posts": "פוסטים",
@@ -32,17 +36,13 @@
     "createFirstPost": "הפוסטים שלך יופיעו כאן"
   },
   "alerts": {
-    "disabledOnRealAuth": "פונקציה זו אינה זמינה במצב התחברות אמיתי",
-    "noUserSelected": "יש לבחור משתמש",
-    "sampleDataTitle": "נתוני דמו",
-    "sampleDataCreated": "נתוני דמו נוצרו בהצלחה",
-    "highlight": "היילייט",
     "post": "פוסט",
     "postNumber": "פוסט מספר {{number}}",
     "newUser": "משתמש חדש",
     "selectedUser": "נבחר משתמש: {{name}}",
     "shareProfile": "שתף פרופיל",
     "shareProfileDesc": "שתף את הפרופיל שלך עם אחרים",
+    "shareMessage": "היי! בואו לראות את הפרופיל שלי ב-Karma Community: {{url}}",
     "editProfile": "ערוך פרופיל",
     "editProfileDesc": "ערוך את פרטי הפרופיל שלך",
     "settings": "הגדרות",
@@ -64,6 +64,7 @@
     "settings": "הגדרות",
     "help": "עזרה",
     "login": "התחברות",
+    "logout": "התנתקות",
     "switchUser": "שנה משתמש"
   },
   "activity": "פעילות",
@@ -81,15 +82,6 @@
     "selected": "נבחר",
     "selectUserTitle": "בחר יוזר",
     "selectUserSubtitle": "בחר יוזר כדי לראות את האפליקציה מנקודת המבט שלו"
-  },
-  "hierarchy": {
-    "removeManager": "הסר מנהל",
-    "makeManager": "הפוך למנהל בצוות",
-    "removeManagerConfirm": "האם אתה בטוח שברצונך להסיר משתמש זה מניהול תחתיך? המשימות יועברו אליך.",
-    "makeManagerConfirm": "האם אתה בטוח שברצונך להפוך משתמש זה למנהל תחתיך?",
-    "success": "הצלחה",
-    "actionFailed": "פעולה נכשלה",
-    "communicationError": "שגיאה בתקשורת"
   },
   "banner": {
     "title": "השלם פרטים לחוויה מלאה",
@@ -131,92 +123,11 @@
     "preferredLanguage": "שפה מועדפת",
     "preferredLanguagePlaceholder": "he / en",
     "interests": "תחומי עניין",
-    "interestsPlaceholder": "מופרד בפסיקים",
-    "saveSuccess": "הפרופיל נשמר בהצלחה",
-    "saveErrorGeneric": "אירעה שגיאה בשמירת הפרופיל. נסה שוב.",
-    "userNotIdentified": "משתמש לא מזוהה"
+    "interestsPlaceholder": "מופרד בפסיקים"
   },
   "recent": {
     "taskCompleted": "השלמת משימה: {{task}}",
     "donated": "תרמת {{amount}} ל{{purpose}}",
-    "joinedEvent": "הצטרפת לאירוע: {{event}}",
-    "noActivityYet": "אין פעילויות עדיין",
-    "startCreating": "התחל ליצור תוכן כדי לראות את הפעילויות שלך כאן"
-  },
-  "roles": {
-    "user": "משתמש",
-    "donor": "תורם",
-    "volunteer": "מתנדב",
-    "recipient": "מקבל עזרה",
-    "organization": "עמותה",
-    "student": "סטודנט"
-  },
-  "fallbacks": {
-    "noName": "ללא שם",
-    "israel": "ישראל",
-    "unknownUser": "משתמש לא ידוע",
-    "notSpecified": "לא צויין"
-  },
-  "contentTabs": {
-    "open": "פתוח",
-    "closed": "סגור"
-  },
-  "openContent": {
-    "loading": "טוען תוכן פתוח...",
-    "empty": "אין תוכן פתוח עדיין",
-    "emptySubtext": "התוכן הפתוח שלך יופיע כאן"
-  },
-  "closedContent": {
-    "loading": "טוען תוכן סגור...",
-    "empty": "אין תוכן סגור עדיין",
-    "emptySubtext": "התוכן הסגור שלך יופיע כאן"
-  },
-  "taggedComingSoon": "תיוגים יהיה פעיל בהמשך",
-  "backToHome": "חזרה לעמוד הבית",
-  "verified": "מאומת",
-  "message": "הודעה",
-  "requestTask": "בקש משימה",
-  "content": {
-    "donationMoneyFormat": "תרומה: {{amount}} ₪",
-    "volunteeringFormat": "התנדבות: {{title}}",
-    "rideFormat": "טרמפ: {{title}}",
-    "newPost": "פוסט חדש",
-    "newItem": "פריט חדש",
-    "newDonation": "תרומה חדשה",
-    "newTask": "משימה חדשה",
-    "taskCompleted": "משימה הושלמה",
-    "justNow": "לפני רגע"
-  },
-  "ride": {
-    "fromToFormat": "טרמפ: {{from}} ➝ {{to}}"
-  },
-  "alertsProfile": {
-    "unfollowTitle": "ביטול עקיבה",
-    "openOptions": "פתיחת אפשרויות",
-    "loginRequired": "יש להתחבר תחילה",
-    "userNotFound": "משתמש לא נמצא",
-    "unfollowSuccess": "ביטלת את העקיבה בהצלחה",
-    "followSuccess": "התחלת לעקוב בהצלחה",
-    "actionFailed": "אירעה שגיאה בביצוע הפעולה",
-    "selectUserFirst": "יש לבחור יוזר תחילה",
-    "chatError": "שגיאה ביצירת השיחה",
-    "taskRequestTitle": "בקשת משימה",
-    "taskRequest": "האם לשלוח בקשת משימה למנהל זה?",
-    "willingToHelp": "אשמח לעזור במה שצריך"
-  },
-  "follow": {
-    "following": "עוקב",
-    "follow": "עקוב"
-  },
-  "followersList": {
-    "loadUsersError": "שגיאה בטעינת המשתמשים",
-    "karmaPoints": "{{count}} נקודות קארמה",
-    "tasksCompleted": "{{count}} משימות הושלמו",
-    "emptyFollowersTitle": "אין עוקבים עדיין",
-    "emptyFollowingTitle": "לא עוקב אחרי אף אחד עדיין",
-    "emptyFollowersSubtitle": "כאשר אנשים יתחילו לעקוב אחריך, הם יופיעו כאן",
-    "emptyFollowingSubtitle": "התחל לעקוב אחרי אנשים כדי לראות את הפעילות שלהם"
-  },
-  "interestsSectionTitle": "תחומי עניין:",
-  "joinedDatePrefix": "הצטרף ב-"
+    "joinedEvent": "הצטרפת לאירוע: {{event}}"
+  }
 }

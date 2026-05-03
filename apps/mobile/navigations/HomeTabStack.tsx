@@ -1,15 +1,13 @@
 // File overview:
 // - Purpose: Stack navigator for the Home tab.
 // - Reached from: `BottomNavigator` -> Tab 'HomeScreen'.
-// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route 'HomeMain'.
-// - Screens: HomeMain (HomeScreen), ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
+// - Provides: Custom header via `TopBarNavigator` that can be hidden with route param `hideTopBar`; initial route always `HomeMain` (posts feed). Authenticated `LandingSiteScreen` (marketing) is registered **only** here; unauthenticated web site mode uses root `LandingSiteScreen` in `MainNavigator`.
+// - Screens: HomeMain (HomeScreen), PostDetail, ChatList, ChatDetail, Notifications, About, Settings, Bookmarks, UserProfile, Followers, PostsReels (modal), WebView.
 // - Params of interest: `hideTopBar`, `showPosts` passed by HomeScreen to control header and content.
 // - External deps: react-navigation stack, TopBarNavigator wrapper.
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useNavigation, CommonActions } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
 
 import HomeScreen from '../bottomBarScreens/HomeScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
@@ -27,77 +25,26 @@ import DiscoverPeopleScreen from '../screens/DiscoverPeopleScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
 
 import TopBarNavigator from './TopBarNavigator';
-import { useWebMode } from '../stores/webModeStore';
-import { logger } from '../utils/loggerService';
-import { useUser } from '../stores/userStore';
 import CommunityStatsScreen from '../screens/CommunityStatsScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import { HomeTabStackParamList } from '../globals/types';
 
 
 const Stack = createStackNavigator<HomeTabStackParamList>();
 
 export default function HomeTabStack(): React.ReactElement {
-  const { mode } = useWebMode();
-  const { resetHomeScreenTrigger } = useUser();
-  const navigation = useNavigation();
-  const previousTriggerRef = useRef(resetHomeScreenTrigger);
-
-  // Determine initial route based on web mode
-  const initialRouteName = (typeof window !== 'undefined' && mode === 'site')
-    ? "LandingSiteScreen"
-    : "HomeMain";
-
-  // Listen to resetHomeScreenTrigger and reset navigation to HomeMain
-  useEffect(() => {
-    // Only act if trigger actually changed (not on initial mount)
-    if (previousTriggerRef.current !== resetHomeScreenTrigger && resetHomeScreenTrigger > 0) {
-      logger.debug('HomeTabStack', 'resetHomeScreenTrigger changed, resetting to HomeMain', {
-        previousTrigger: previousTriggerRef.current,
-        currentTrigger: resetHomeScreenTrigger,
-        platform: Platform.OS
-      });
-
-      try {
-        // Reset navigation stack to HomeMain
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'HomeMain' }],
-          })
-        );
-
-        logger.debug('HomeTabStack', 'Navigation reset to HomeMain completed', {
-          platform: Platform.OS,
-          trigger: resetHomeScreenTrigger
-        });
-      } catch (error) {
-        logger.error('HomeTabStack', 'Error resetting navigation to HomeMain', {
-          error,
-          platform: Platform.OS,
-          trigger: resetHomeScreenTrigger
-        });
-      }
-
-      // Update ref to current trigger value
-      previousTriggerRef.current = resetHomeScreenTrigger;
-    }
-  }, [resetHomeScreenTrigger, navigation]);
-
   return (
     <Stack.Navigator
       id="HomeTabStack"
-      initialRouteName={initialRouteName as keyof HomeTabStackParamList}
+      initialRouteName="HomeMain"
       detachInactiveScreens={true}
-      screenOptions={({ navigation, route }) => {
-        type Params = { hideTopBar?: boolean; showPosts?: boolean };
-        const params = (route?.params ?? {}) as Params;
-        return {
+      screenOptions={({ navigation, route }) => ({
         headerShown: true,
         header: () => (
           <TopBarNavigator
-            navigation={navigation as StackNavigationProp<HomeTabStackParamList>}
-            hideTopBar={params.hideTopBar === true}
-            showPosts={params.showPosts === true}
+            navigation={navigation as any}
+            hideTopBar={(route?.params as any)?.hideTopBar === true}
+            showPosts={(route?.params as any)?.showPosts === true}
           />
         ),
         // Fix for aria-hidden warning: prevent focus on inactive screens
@@ -106,10 +53,14 @@ export default function HomeTabStack(): React.ReactElement {
           // On web, ensure inactive screens don't interfere with focus
           // This prevents elements in hidden screens from receiving focus
         } : undefined,
-      };
-      }}
+      })}
     >
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        initialParams={{ showPosts: true }}
+      />
+      <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
@@ -135,5 +86,3 @@ export default function HomeTabStack(): React.ReactElement {
     </Stack.Navigator>
   );
 }
-
-

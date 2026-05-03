@@ -20,9 +20,9 @@ DO $$
 DECLARE
     mapping_record RECORD;
     user_uuid UUID;
-    c_tbl CONSTANT TEXT := 'user_id_mapping';
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
+    -- Check if user_id_mapping table exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_id_mapping') THEN
         -- Migrating data from user_id_mapping to user_profiles
         
         FOR mapping_record IN 
@@ -79,14 +79,15 @@ DO $$
 DECLARE
     item_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
-    c_tbl CONSTANT TEXT := 'items';
-    c_col CONSTANT TEXT := 'owner_id';
 BEGIN
+    -- Check if items table exists and owner_id is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'items' AND column_name = 'owner_id' AND data_type = 'text'
     ) THEN
         -- Converting items.owner_id from TEXT to UUID
         
@@ -115,7 +116,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(item_record.owner_id, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(item_record.owner_id, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN item_record.owner_id !~ '@' AND length(item_record.owner_id) > 20 
                          THEN item_record.owner_id 
@@ -135,7 +136,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(item_record.owner_id, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(item_record.owner_id, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -173,14 +174,15 @@ DO $$
 DECLARE
     task_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
-    c_tbl CONSTANT TEXT := 'tasks';
-    c_col CONSTANT TEXT := 'created_by';
 BEGIN
+    -- Check if tasks table exists and created_by is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' AND column_name = 'created_by' AND data_type = 'text'
     ) THEN
         -- Converting tasks.created_by from TEXT to UUID
         
@@ -209,7 +211,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(task_record.created_by, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(task_record.created_by, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN task_record.created_by !~ '@' AND length(task_record.created_by) > 20 
                          THEN task_record.created_by 
@@ -229,7 +231,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(task_record.created_by, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(task_record.created_by, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -262,14 +264,15 @@ DO $$
 DECLARE
     member_record RECORD;
     user_uuid UUID;
+    migrated_domain CONSTANT TEXT := '@migrated.local';
+    unknown_fallback CONSTANT TEXT := 'unknown';
     converted_count INTEGER := 0;
     failed_count INTEGER := 0;
-    c_tbl CONSTANT TEXT := 'community_members';
-    c_col CONSTANT TEXT := 'created_by';
 BEGIN
+    -- Check if community_members table exists and created_by is TEXT
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = current_schema() AND table_name = c_tbl AND column_name = c_col AND data_type = 'text'
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'community_members' AND column_name = 'created_by' AND data_type = 'text'
     ) THEN
         -- Converting community_members.created_by from TEXT to UUID
         
@@ -298,7 +301,7 @@ BEGIN
                 -- If user not found, create a placeholder user profile
                 INSERT INTO user_profiles (email, name, firebase_uid, created_at)
                 VALUES (
-                    COALESCE(member_record.created_by, 'unknown_' || uuid_generate_v4()::text) || '@migrated.local',
+                    COALESCE(member_record.created_by, 'unknown_' || uuid_generate_v4()::text) || migrated_domain,
                     'Migrated User',
                     CASE WHEN member_record.created_by !~ '@' AND length(member_record.created_by) > 20 
                          THEN member_record.created_by 
@@ -318,7 +321,7 @@ BEGIN
                     -- Get the existing user by email
                     SELECT id INTO user_uuid 
                     FROM user_profiles 
-                    WHERE email = COALESCE(member_record.created_by, 'unknown') || '@migrated.local'
+                    WHERE email = COALESCE(member_record.created_by, unknown_fallback) || migrated_domain
                     LIMIT 1;
                     
                     IF user_uuid IS NOT NULL THEN
@@ -348,10 +351,8 @@ END $$;
 -- STEP 5: Drop links table
 -- ============================================
 DO $$
-DECLARE
-    c_tbl CONSTANT TEXT := 'links';
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'links') THEN
         DROP TABLE IF EXISTS links CASCADE;
     ELSE
         -- links table does not exist, skipping
@@ -362,10 +363,8 @@ END $$;
 -- STEP 6: Drop user_id_mapping table
 -- ============================================
 DO $$
-DECLARE
-    c_tbl CONSTANT TEXT := 'user_id_mapping';
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = c_tbl) THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_id_mapping') THEN
         DROP TABLE IF EXISTS user_id_mapping CASCADE;
     ELSE
         -- user_id_mapping table does not exist, skipping
@@ -377,4 +376,3 @@ END $$;
 -- ============================================
 -- All user ID fields have been converted to UUID
 -- Duplicate tables (links, user_id_mapping) have been removed
-

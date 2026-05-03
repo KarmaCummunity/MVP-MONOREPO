@@ -26,7 +26,7 @@ interface StatItemProps {
 
 const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color = colors.info }) => (
   <View style={styles.statItem}>
-    <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={32} color={color} />
+    <Ionicons name={icon as any} size={32} color={color} />
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>

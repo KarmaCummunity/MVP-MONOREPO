@@ -9,24 +9,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../stores/userStore';
 import colors from '../globals/colors';
+import { logger } from '../utils/loggerService';
 
-// Parse JWT token
-const parseJWT = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Failed to parse JWT token:', error);
-    return null;
-  }
-};
+const Oauthredirect_LOG = 'oauthredirect';
 
 export default function OAuthRedirect() {
   const router = useRouter();
@@ -36,10 +21,10 @@ export default function OAuthRedirect() {
   useEffect(() => {
     const processAuth = async () => {
       try {
-        const hash = window.location.hash;
-        console.log('🔍 [OAuthRedirect] Hash:', hash);
+        const hash = globalThis.window?.location.hash ?? '';
+        logger.debug(Oauthredirect_LOG, 'OAuth redirect hash', { hash });
 
-        if (!hash || !hash.includes('id_token=')) {
+        if (!hash?.includes('id_token=')) {
           console.error('❌ [OAuthRedirect] No id_token found');
           setStatus('error');
           setTimeout(() => router.replace('/'), 2000);
@@ -53,16 +38,11 @@ export default function OAuthRedirect() {
           throw new Error('No ID token');
         }
 
-        console.log('✅ [OAuthRedirect] Found token');
-        const profile = parseJWT(idToken);
-        console.log('👤 [OAuthRedirect] Profile:', profile);
-
-        if (!profile) {
-          throw new Error('Failed to parse token');
-        }
+        logger.debug(Oauthredirect_LOG, '✅ [OAuthRedirect] Found token');
+        // Do not decode JWT claims client-side (Sonar S5659). Server verifies id_token and returns user.
 
         // Send idToken to server to get UUID
-        const { API_BASE_URL } = await import('../src/infrastructure/config');
+        const { API_BASE_URL } = await import('../utils/config.constants');
         const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
@@ -86,9 +66,9 @@ export default function OAuthRedirect() {
         const serverUser = serverResponse.user;
         const userData = {
           id: serverUser.id, // UUID from database, not Google ID
-          name: serverUser.name || profile.name || profile.email?.split('@')[0] || 'User',
-          email: serverUser.email || profile.email || '',
-          avatar: serverUser.avatar || profile.picture || 'https://i.pravatar.cc/150?img=1',
+          name: serverUser.name || serverUser.email?.split('@')[0] || 'User',
+          email: serverUser.email || '',
+          avatar: serverUser.avatar || 'https://i.pravatar.cc/150?img=1',
           phone: serverUser.phone || '+972500000000',
           bio: serverUser.bio || '',
           karmaPoints: serverUser.karmaPoints || 0,
@@ -111,16 +91,16 @@ export default function OAuthRedirect() {
           }
         };
 
-        console.log('💾 [OAuthRedirect] Saving user with UUID:', userData.id);
+        logger.debug(Oauthredirect_LOG, 'Saving user with UUID', { userId: userData.id });
         await setSelectedUserWithMode(userData, 'real');
         await AsyncStorage.setItem('current_user', JSON.stringify(userData));
         await AsyncStorage.setItem('auth_mode', 'real');
-        console.log('✅ [OAuthRedirect] User saved!');
+        logger.debug(Oauthredirect_LOG, '✅ [OAuthRedirect] User saved!');
 
         setStatus('success');
 
         // Navigate to home
-        console.log('🏠 [OAuthRedirect] Navigating to home...');
+        logger.debug(Oauthredirect_LOG, '🏠 [OAuthRedirect] Navigating to home...');
         setTimeout(() => {
           router.replace('/(tabs)');
         }, 1000);
@@ -132,7 +112,7 @@ export default function OAuthRedirect() {
       }
     };
 
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       processAuth();
     }
   }, [router, setSelectedUserWithMode]);

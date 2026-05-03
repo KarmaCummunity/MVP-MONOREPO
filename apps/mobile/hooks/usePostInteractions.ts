@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Share } from 'react-native';
-import { postsService } from '../src/services/posts.service';
+import { useTranslation } from 'react-i18next';
+import { postsService } from '../utils/postsService';
 import { isBookmarked, addBookmark, removeBookmark } from '../utils/bookmarksService';
 import { toastService } from '../utils/toastService';
 import { logger } from '../utils/loggerService';
 import { FeedItem } from '../types/feed';
 import { useUser } from '../stores/userStore';
+import { buildPostDetailShareUrl, getPostShareMessageKey } from '../utils/postShareUtils';
 
 export const usePostInteractions = (item: FeedItem) => {
+    const { t } = useTranslation(['postDetail']);
     // Correct destructuring for useUser
     const { selectedUser: user } = useUser();
 
@@ -84,7 +87,7 @@ export const usePostInteractions = (item: FeedItem) => {
                 setIsBookmarkedState(false);
                 toastService.show('Removed from bookmarks');
             } else {
-                await addBookmark(user.id, item as unknown as Parameters<typeof addBookmark>[1]);
+                await addBookmark(user.id, item);
                 setIsBookmarkedState(true);
                 toastService.show('Added to bookmarks');
             }
@@ -96,10 +99,10 @@ export const usePostInteractions = (item: FeedItem) => {
 
     const handleShare = async () => {
         try {
-            const result = await Share.share({
-                message: `Check out this post on Karma Community: ${item.title}`,
-                // url: `https://karma-community.com/post/${item.id}`, // TODO: Deep linking
-            });
+            const url = buildPostDetailShareUrl(item.id);
+            const intro = t(getPostShareMessageKey(item));
+            const message = `${intro}\n\n${url}`;
+            const result = await Share.share({ message });
 
             if (result.action === Share.sharedAction) {
                 if (result.activityType) {

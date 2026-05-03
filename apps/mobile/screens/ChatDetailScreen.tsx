@@ -5,8 +5,9 @@
 // - Provides: Loads messages, subscribes to updates, marks as read, sends text/files, optional fake auto-replies for demo.
 // - Reads from context: `useUser()` -> selectedUser.
 // - External deps/services: `chatService` (get/subscribe/send/mark), `fileService` (pick/validate), i18n.
+// - Composer: stable subcomponents at module scope so TextInput is not remounted every parent render (fixes keyboard/focus).
 // screens/ChatDetailScreen.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,28 +19,33 @@ import {
   Platform,
   Image,
   Alert,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
-  Dimensions,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { logger } from '../utils/loggerService';
+
+const ChatDetailScreen_LOG = 'ChatDetailScreen';
 import { useNavigation, useRoute, RouteProp, useFocusEffect, NavigationProp } from '@react-navigation/native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import ChatMessageBubble from '../components/ChatMessageBubble';
 import { RootStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
-import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../src/services/chat.service';
+import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../utils/chatService';
 import { pickImage, pickVideo, takePhoto, pickDocument, validateFile, FileData } from '../utils/fileService';
-import { uploadFileWithProgress, buildChatFilePath } from '../src/infrastructure/storage.service';
-import { apiService } from '../src/api/api.service';
-import { USE_BACKEND } from '../src/infrastructure/config';
+import { uploadFileWithProgress, buildChatFilePath } from '../utils/storageService';
+import { generateId } from '../utils/chat/id';
+import { apiService } from '../utils/apiService';
+import { USE_BACKEND } from '../utils/config.constants';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import * as ExpoCrypto from 'expo-crypto';
-import { logger } from '../utils/loggerService';
+import { BREAKPOINTS } from '../globals/responsive';
 
 type ChatDetailRouteParams = {
   conversationId: string;
@@ -48,20 +54,222 @@ type ChatDetailRouteParams = {
   otherUserId: string;
 };
 
+type ChatComposerProps = Readonly<{
+  inputText: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  onSend: () => void;
+  onToggleMedia: () => void;
+  isSending: boolean;
+}>;
+
+/** Module-scope composer so TextInput identity is stable across ChatDetailScreen re-renders (critical for keyboard/focus). */
+function ChatComposer({
+  inputText,
+  onChangeText,
+  placeholder,
+  onSend,
+  onToggleMedia,
+  isSending,
+}: ChatComposerProps) {
+  return (
+    <View style={styles.inputContainer}>
+      <TouchableOpacity onPress={onToggleMedia} accessibilityRole="button" accessibilityLabel="הוספת מדיה">
+        <Icon name="add-circle-outline" size={24} color={colors.primary} style={styles.icon} />
+      </TouchableOpacity>
+      <TextInput
+        style={styles.textInput}
+        value={inputText}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textSecondary}
+        multiline
+        submitBehavior="newline"
+        editable={!isSending}
+        keyboardType="default"
+        textAlignVertical="top"
+      />
+      <TouchableOpacity
+        onPress={onSend}
+        style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
+        disabled={isSending}
+        accessibilityRole="button"
+        accessibilityLabel="שליחה"
+      >
+        {isSending ? (
+          <ActivityIndicator size="small" color={colors.background} />
+        ) : (
+          <Text style={styles.sendButtonText}>שלח</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+type ChatMediaRowProps = Readonly<{
+  onTakePhoto: () => void;
+  onPickImage: () => void;
+  onPickVideo: () => void;
+  onPickDocument: () => void;
+}>;
+
+function ChatMediaRow({ onTakePhoto, onPickImage, onPickVideo, onPickDocument }: ChatMediaRowProps) {
+  return (
+    <View style={styles.mediaOptionsRow}>
+      <TouchableOpacity style={styles.mediaOption} onPress={onTakePhoto}>
+        <Icon name="camera" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>צלם תמונה</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={onPickImage}>
+        <Icon name="image" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר תמונה</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={onPickVideo}>
+        <Icon name="videocam" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר סרטון</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mediaOption} onPress={onPickDocument}>
+        <Icon name="document" size={24} color={colors.primary} />
+        <Text style={styles.mediaOptionText}>בחר קובץ</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function getTabBarFallbackPixels(isWeb: boolean): number {
+  if (Platform.OS === 'ios') return 49;
+  if (Platform.OS === 'android') return 58;
+  if (isWeb) return 72;
+  return 56;
+}
+
+type ChatMainSectionProps = Readonly<{
+  isDesktopWebChat: boolean;
+  maxMessagesHeight: number | undefined;
+  isLoading: boolean;
+  messageList: React.ReactNode;
+  renderLoadingIndicator: () => React.ReactNode;
+  showMediaOptions: boolean;
+  tabBarHeight: number;
+  onTakePhoto: () => void;
+  onPickImage: () => void;
+  onPickVideo: () => void;
+  onPickDocument: () => void;
+  setInputHeight: (height: number) => void;
+  renderDesktopComposer: () => React.ReactNode;
+  renderNativeComposerColumn: () => React.ReactNode;
+  bottomReserve: number;
+  iosKeyboardOffset: number;
+}>;
+
+function ChatMainSection({
+  isDesktopWebChat,
+  maxMessagesHeight,
+  isLoading,
+  messageList,
+  renderLoadingIndicator,
+  showMediaOptions,
+  tabBarHeight,
+  onTakePhoto,
+  onPickImage,
+  onPickVideo,
+  onPickDocument,
+  setInputHeight,
+  renderDesktopComposer,
+  renderNativeComposerColumn,
+  bottomReserve,
+  iosKeyboardOffset,
+}: ChatMainSectionProps) {
+  if (isDesktopWebChat) {
+    return (
+      <>
+        <View style={[styles.messagesWrapper, maxMessagesHeight ? { maxHeight: maxMessagesHeight } : undefined]}>
+          {isLoading ? renderLoadingIndicator() : messageList}
+        </View>
+        {showMediaOptions ? (
+          <View style={[styles.mediaOptionsContainer, { bottom: tabBarHeight + 70, zIndex: 1000 }]}>
+            <ChatMediaRow
+              onTakePhoto={onTakePhoto}
+              onPickImage={onPickImage}
+              onPickVideo={onPickVideo}
+              onPickDocument={onPickDocument}
+            />
+          </View>
+        ) : null}
+        <View
+          style={{
+            position: 'fixed' as any,
+            left: 0,
+            right: 0,
+            bottom: tabBarHeight,
+            zIndex: 999,
+            backgroundColor: 'transparent',
+          }}
+          onLayout={(event) => {
+            const { height } = event.nativeEvent.layout;
+            setInputHeight(height);
+          }}
+        >
+          {renderDesktopComposer()}
+        </View>
+      </>
+    );
+  }
+
+  const messagesAndComposer = (
+    <>
+      <View style={styles.messagesWrapper}>{isLoading ? renderLoadingIndicator() : messageList}</View>
+      <View style={styles.nativeComposerColumn}>{renderNativeComposerColumn()}</View>
+    </>
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <KeyboardAvoidingView
+        style={styles.chatBodyColumn}
+        behavior="padding"
+        keyboardVerticalOffset={iosKeyboardOffset}
+      >
+        <View style={[styles.chatBodyInner, { paddingBottom: bottomReserve }]}>{messagesAndComposer}</View>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return <View style={[styles.chatBodyColumn, { paddingBottom: bottomReserve }]}>{messagesAndComposer}</View>;
+}
+
 export default function ChatDetailScreen() {
+  useLogScreenOpened('ChatDetailScreen');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<Record<string, ChatDetailRouteParams>, string>>();
   const routeParams = route.params || {};
   const { conversationId: initialConversationId, userName: initialUserName, userAvatar: initialUserAvatar, otherUserId } = routeParams;
   const { selectedUser } = useUser();
-  const { t } = useTranslation(['chat', 'common']);
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const { t } = useTranslation(['chat']);
+  const tabBarHeight = useSafeBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+  const stackHeaderHeight = useHeaderHeight();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isMobileWebChat =
+    isWeb &&
+    windowWidth <= BREAKPOINTS.LARGE_PHONE &&
+    windowWidth / Math.max(windowHeight, 1) < 1.5;
+  const isDesktopWebChat = isWeb && !isMobileWebChat;
   const [headerHeight, setHeaderHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(0);
-  const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
-  const maxMessagesHeight = Platform.OS === 'web' && screenHeight && headerHeight > 0 && inputHeight > 0
-    ? screenHeight - tabBarHeight - inputHeight - headerHeight
-    : undefined;
+  const screenHeight = isDesktopWebChat ? windowHeight : undefined;
+  const maxMessagesHeight =
+    isDesktopWebChat && screenHeight && headerHeight > 0 && inputHeight > 0
+      ? screenHeight - tabBarHeight - inputHeight - headerHeight
+      : undefined;
+
+  const bottomReserve = useMemo(() => {
+    if (isDesktopWebChat) return 0;
+    const measured = Math.max(tabBarHeight, 0);
+    const barFallback = getTabBarFallbackPixels(isWeb);
+    return Math.max(measured, barFallback + insets.bottom);
+  }, [tabBarHeight, insets.bottom, isDesktopWebChat, isWeb]);
 
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [inputText, setInputText] = useState('');
@@ -76,36 +284,38 @@ export default function ChatDetailScreen() {
   const [uploadingFile, setUploadingFile] = useState<FileData | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const prevMessageCountRef = useRef(0);
 
-  // Load user profile for the other user
+  useEffect(() => {
+    if (messages.length === prevMessageCountRef.current) return;
+    prevMessageCountRef.current = messages.length;
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({ animated: messages.length > 1 });
+    });
+  }, [messages.length]);
+
   const loadUserProfile = useCallback(async () => {
     if (!USE_BACKEND || !otherUserId || isLoadingProfile) return;
 
     setIsLoadingProfile(true);
     try {
       const response = await apiService.getUserById(otherUserId);
-      const data = response.data as Record<string, unknown>;
-      if (response.success && data) {
-        const userData = data;
-        // Only update if we got valid data and the initial name was "unknown user"
-        const newName = (userData.name as string) || initialUserName || t('chat:unknownUser');
-        const newAvatar = (userData.avatar_url as string) || (userData.avatar as string) || initialUserAvatar || '';
+      if (response.success && response.data) {
+        const userData = response.data;
+        const newName = userData.name || initialUserName || t('chat:unknownUser');
+        const newAvatar = userData.avatar_url || userData.avatar || initialUserAvatar || '';
 
-        // Always update, but prioritize loaded data
         setUserName(newName);
         setUserAvatar(newAvatar);
       } else {
-        // If user not found, keep initial values but log warning
-        logger.warn('ChatDetailScreen', 'User not found', { otherUserId });
+        console.warn('User not found:', otherUserId);
         if (initialUserName && initialUserName !== t('chat:unknownUser')) {
-          // Keep the initial name if it's not "unknown user"
           setUserName(initialUserName);
           setUserAvatar(initialUserAvatar);
         }
       }
     } catch (error) {
-      logger.warn('ChatDetailScreen', 'Failed to load user profile', { error });
-      // Keep the initial values if loading fails, but only if they're not "unknown user"
+      console.warn('Failed to load user profile:', error);
       if (initialUserName && initialUserName !== t('chat:unknownUser')) {
         setUserName(initialUserName);
         setUserAvatar(initialUserAvatar);
@@ -113,7 +323,8 @@ export default function ChatDetailScreen() {
     } finally {
       setIsLoadingProfile(false);
     }
-  }, [otherUserId, initialUserName, initialUserAvatar, t, isLoadingProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard is synchronous; listing isLoadingProfile retriggers fetch
+  }, [otherUserId, initialUserName, initialUserAvatar, t]);
 
   const loadMessages = useCallback(async () => {
     try {
@@ -125,55 +336,45 @@ export default function ChatDetailScreen() {
         await markMessagesAsRead(conversationId, selectedUser.id);
       }
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Load messages error', { error });
-      Alert.alert(t('common:errorTitle'), t('chat:loadError'));
+      console.error('❌ Load messages error:', error);
+      Alert.alert('שגיאה', 'שגיאה בטעינת ההודעות');
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, selectedUser, t]);
+  }, [conversationId, selectedUser]);
 
-  // Update state when screen comes into focus (e.g., when returning from profile)
   useFocusEffect(
     React.useCallback(() => {
       const params = route.params;
       if (params) {
-        // Update userName if provided and different
         if (params.userName) {
-          setUserName(prev => params.userName !== prev ? params.userName : prev);
+          setUserName(prev => (params.userName === prev ? prev : params.userName));
         }
-        // Update userAvatar if provided and different
         if (params.userAvatar) {
-          setUserAvatar(prev => params.userAvatar !== prev ? params.userAvatar : prev);
+          setUserAvatar(prev => (params.userAvatar === prev ? prev : params.userAvatar));
         }
-        // Update conversationId if provided and different
         if (params.conversationId) {
-          setConversationId(prev => params.conversationId !== prev ? params.conversationId : prev);
+          setConversationId(prev => (params.conversationId === prev ? prev : params.conversationId));
         }
       }
     }, [route.params])
   );
 
-  // Load user profile on mount - prioritize loading if initial name is "unknown user"
   useEffect(() => {
-    // If initial name is "unknown user", load immediately
-    // Load user profile on mount
     loadUserProfile();
   }, [loadUserProfile, initialUserName, t]);
 
-  // Real-time subscription
   useEffect(() => {
     loadMessages();
 
     let unsubscribe: (() => void) | undefined;
 
-    // Subscribe to real-time updates
     if (selectedUser) {
       unsubscribe = subscribeToMessages(conversationId, selectedUser.id, (newMessages) => {
         setMessages(newMessages);
 
-        // Mark messages as read when they arrive
-        markMessagesAsRead(conversationId, selectedUser.id).catch((err) => logger.error('ChatDetailScreen', 'Mark messages read failed', { err }));
-      });
+        markMessagesAsRead(conversationId, selectedUser.id).catch(console.error);
+      }, getMessages);
     }
 
     return () => {
@@ -183,34 +384,12 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId, selectedUser, loadMessages]);
 
-  const _generateFakeResponse = async () => {
-    const rnd = new Uint8Array(1);
-    ExpoCrypto.getRandomValues(rnd);
-    const demoReplyIndex = (rnd[0] % 4) + 1;
-    const responseText = t(`chat:demoFakeReplies.${demoReplyIndex}`);
-
-    try {
-      await sendMessage({
-        conversationId,
-        senderId: otherUserId,
-        text: responseText,
-        timestamp: new Date().toISOString(),
-        read: false,
-        type: 'text',
-        status: 'sent',
-      });
-    } catch (error) {
-      logger.error('ChatDetailScreen', 'Send fake response error', { error });
-    }
-  };
-
   const handleSendMessage = async () => {
     if (inputText.trim() === '' || !selectedUser || isSending) return;
 
     const messageText = inputText.trim();
     const tempMessageId = `temp_${Date.now()}`;
 
-    // Add message to local state immediately with "sending" status
     const tempMessage: Message = {
       id: tempMessageId,
       conversationId,
@@ -227,8 +406,6 @@ export default function ChatDetailScreen() {
     setIsSending(true);
 
     try {
-      // Send the message with fallback participants in case conversation not found
-      // Note: sendMessage may update conversationId if backend creates new conversation
       const currentConversationId = conversationId;
       const messageId = await sendMessage({
         conversationId: currentConversationId,
@@ -238,16 +415,12 @@ export default function ChatDetailScreen() {
         read: false,
         type: 'text',
         status: 'sent',
-      }, [selectedUser.id, otherUserId]); // Provide fallback participants
+      }, [selectedUser.id, otherUserId]);
 
-      // Check if conversation was updated (backend may have created new UUID)
-      // We'll reload messages to get the updated conversation
       await loadMessages();
 
-      // Extract the actual message ID (handle both string and object return types)
       const actualMessageId = typeof messageId === 'string' ? messageId : messageId.messageId;
 
-      // Update the temp message with the real message ID and status
       setMessages(prev => prev.map(msg =>
         msg.id === tempMessageId
           ? { ...msg, id: actualMessageId, status: 'sent' as const }
@@ -255,16 +428,15 @@ export default function ChatDetailScreen() {
       ));
 
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Send message error', { error });
+      console.error('❌ Send message error:', error);
 
-      // Remove the temp message and restore the text
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
       setInputText(messageText);
 
       Alert.alert(
-        t('common:errorTitle'),
-        t('chat:errors.sendRetry'),
-        [{ text: t('common:confirm'), style: 'default' }]
+        'שגיאה',
+        'שגיאה בשליחת ההודעה. אנא נסה שוב.',
+        [{ text: 'אישור', style: 'default' }]
       );
     } finally {
       setIsSending(false);
@@ -280,23 +452,19 @@ export default function ChatDetailScreen() {
       setUploadingFile(fileData);
       setShowUploadModal(true);
 
-      // Validate file
       const validation = validateFile(fileData);
       if (!validation.isValid) {
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
-        Alert.alert(t('common:errorTitle'), validation.error || t('chat:fileInvalid'));
+        Alert.alert('שגיאה', validation.error || 'הקובץ אינו תקין');
         return;
       }
 
-      // Generate temp messageId for file path
-      const tempMessageId = `temp_${Date.now()}_${ExpoCrypto.randomUUID().replace(/-/g, '').slice(0, 9)}`;
+      const tempMessageId = generateId('temp');
 
-      // Build file path in Firebase Storage
       const fullPath = buildChatFilePath(conversationId, tempMessageId, fileData.name);
 
-      // Upload file to Firebase Storage with progress tracking
       let uploadedUrl: string;
       try {
         const uploadResult = await uploadFileWithProgress(
@@ -308,41 +476,35 @@ export default function ChatDetailScreen() {
           }
         );
         uploadedUrl = uploadResult.url;
-      } catch (err: unknown) {
-        const uploadError = err as { message?: string; code?: string };
-        logger.error('ChatDetailScreen', 'Upload file error', {
+      } catch (uploadError: any) {
+        console.error('❌ Upload file error:', uploadError);
+        const errorMessage = uploadError?.message || uploadError?.code || 'שגיאה לא ידועה';
+        console.error('❌ Upload error details:', {
           error: uploadError,
           fullPath,
           fileName: fileData.name,
           fileSize: fileData.size,
           mimeType: fileData.mimeType,
         });
-        const errorMessage = uploadError?.message || uploadError?.code || t('chat:errors.unknown');
-        const detail = errorMessage.includes('CORS')
-          ? t('chat:errors.corsFirebaseHint')
-          : errorMessage;
         setShowUploadModal(false);
         setUploadingFile(null);
         setIsSending(false);
         Alert.alert(
-          t('chat:errors.uploadFileTitle'),
-          t('chat:errors.uploadFileBody', { detail })
+          'שגיאה בהעלאת הקובץ',
+          `לא ניתן להעלות את הקובץ. ${errorMessage.includes('CORS') ? 'בעיית CORS - בדוק את הגדרות Firebase Storage.' : errorMessage}`
         );
         return;
       }
 
-      // Update fileData with Firebase Storage URL
       const updatedFileData: FileData = {
         ...fileData,
         uri: uploadedUrl,
       };
 
-      // Hide upload modal
       setShowUploadModal(false);
       setUploadingFile(null);
       setUploadProgress(0);
 
-      // Send message with uploaded file URL
       await sendMessage({
         conversationId,
         senderId: selectedUser.id,
@@ -354,17 +516,16 @@ export default function ChatDetailScreen() {
         fileData: updatedFileData,
       }, [selectedUser.id, otherUserId]);
 
-      logger.info('ChatDetailScreen', 'File message sent');
+      logger.debug(ChatDetailScreen_LOG, '✅ File message sent');
 
-      // Reload messages to show the new message
       await loadMessages();
 
     } catch (error) {
-      logger.error('ChatDetailScreen', 'Send file error', { error });
+      console.error('❌ Send file error:', error);
       setShowUploadModal(false);
       setUploadingFile(null);
       setUploadProgress(0);
-      Alert.alert(t('common:errorTitle'), t('chat:errors.fileSendRetry'));
+      Alert.alert('שגיאה', 'שגיאה בשליחת הקובץ. אנא נסה שוב.');
     } finally {
       setIsSending(false);
     }
@@ -377,7 +538,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert(t('common:errorTitle'), result.error);
+      Alert.alert('שגיאה', result.error);
     }
   };
 
@@ -388,7 +549,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert(t('common:errorTitle'), result.error);
+      Alert.alert('שגיאה', result.error);
     }
   };
 
@@ -399,7 +560,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert(t('common:errorTitle'), result.error);
+      Alert.alert('שגיאה', result.error);
     }
   };
 
@@ -410,7 +571,7 @@ export default function ChatDetailScreen() {
     if (result.success && result.fileData) {
       await handleSendFile(result.fileData);
     } else if (result.error) {
-      Alert.alert(t('common:errorTitle'), result.error);
+      Alert.alert('שגיאה', result.error);
     }
   };
 
@@ -425,46 +586,62 @@ export default function ChatDetailScreen() {
   const renderLoadingIndicator = () => (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={colors.secondary} />
-      <Text style={styles.loadingText}>{t('chat:loadingMessages')}</Text>
+      <Text style={styles.loadingText}>טוען הודעות...</Text>
     </View>
   );
 
-  const InputChildren = () => (
+  const listPaddingBottom = isDesktopWebChat ? tabBarHeight + 70 + 40 : 8;
+
+  const messageList = (
+    <FlatList
+      ref={flatListRef}
+      data={messages}
+      keyExtractor={(item) => item.id}
+      renderItem={renderMessage}
+      contentContainerStyle={[
+        styles.messagesContainer,
+        { paddingBottom: listPaddingBottom },
+      ]}
+      keyboardShouldPersistTaps="always"
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
+      style={styles.messagesList}
+      scrollEnabled
+      nestedScrollEnabled={isDesktopWebChat}
+      scrollEventThrottle={32}
+    />
+  );
+
+  const composerBlock = (
     <>
-      <TouchableOpacity onPress={() => setShowMediaOptions(!showMediaOptions)}>
-        <Icon name="add-circle-outline" size={24} color={colors.primary} style={styles.icon} />
-      </TouchableOpacity>
-      <TextInput
-        style={styles.textInput}
-        value={inputText}
+      {showMediaOptions ? (
+        <ChatMediaRow
+          onTakePhoto={handleTakePhoto}
+          onPickImage={handlePickImage}
+          onPickVideo={handlePickVideo}
+          onPickDocument={handlePickDocument}
+        />
+      ) : null}
+      <ChatComposer
+        inputText={inputText}
         onChangeText={setInputText}
         placeholder={t('chat:placeholder')}
-        placeholderTextColor={colors.textSecondary}
-        multiline
-        textAlignVertical="center"
-        editable={!isSending}
+        onSend={handleSendMessage}
+        onToggleMedia={() => setShowMediaOptions(v => !v)}
+        isSending={isSending}
       />
-      <TouchableOpacity
-        onPress={handleSendMessage}
-        style={[styles.sendButton, isSending && styles.sendButtonDisabled]}
-        disabled={isSending}
-      >
-        {isSending ? (
-          <ActivityIndicator size="small" color={colors.background} />
-        ) : (
-          <Text style={styles.sendButtonText}>{t('chat:send')}</Text>
-        )}
-      </TouchableOpacity>
     </>
   );
 
+  const iosKeyboardOffset = Math.max(0, stackHeaderHeight);
+
   return (
-    <SafeAreaView style={[styles.safeArea, Platform.OS === 'web' && { position: 'relative' }]}>
+    <SafeAreaView style={[styles.safeArea, isWeb && { position: 'relative' }]} edges={['top', 'left', 'right']}>
       <StatusBar backgroundColor={colors.backgroundSecondary} barStyle="dark-content" />
       <View
         style={styles.header}
         onLayout={(event) => {
-          if (Platform.OS === 'web') {
+          if (isDesktopWebChat) {
             const { height } = event.nativeEvent.layout;
             setHeaderHeight(height);
           }
@@ -501,135 +678,40 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages container - limited height on web to leave space for input */}
-      <View style={[
-        styles.messagesWrapper,
-        Platform.OS === 'web' && maxMessagesHeight ? {
-          maxHeight: maxMessagesHeight,
-        } : undefined
-      ]}>
-        {isLoading ? (
-          renderLoadingIndicator()
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderMessage}
-            contentContainerStyle={[
-              styles.messagesContainer,
-              (() => {
-                // For web with fixed position input, we need extra padding since fixed elements don't take space in flow
-                // Input height is approximately 70px, but we need more padding to ensure scrolling works
-                const inputHeight = 70;
-                const paddingBottom = Platform.OS === 'web'
-                  ? tabBarHeight + inputHeight + 40  // Extra 40px for web to ensure scrolling works
-                  : tabBarHeight + (showMediaOptions ? 150 : 70);
-                return { paddingBottom };
-              })()
-            ]}
-            onContentSizeChange={(_contentWidth, _contentHeight) => {
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-              }, 100);
-            }}
-            onLayout={(_event) => {
-              flatListRef.current?.scrollToEnd({ animated: true });
-            }}
-            showsVerticalScrollIndicator={false}
-            style={styles.messagesList}
-            scrollEnabled={true}
-            nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}
-            scrollEventThrottle={16}
+      <ChatMainSection
+        isDesktopWebChat={isDesktopWebChat}
+        maxMessagesHeight={maxMessagesHeight}
+        isLoading={isLoading}
+        messageList={messageList}
+        renderLoadingIndicator={renderLoadingIndicator}
+        showMediaOptions={showMediaOptions}
+        tabBarHeight={tabBarHeight}
+        onTakePhoto={handleTakePhoto}
+        onPickImage={handlePickImage}
+        onPickVideo={handlePickVideo}
+        onPickDocument={handlePickDocument}
+        setInputHeight={setInputHeight}
+        renderDesktopComposer={() => (
+          <ChatComposer
+            inputText={inputText}
+            onChangeText={setInputText}
+            placeholder={t('chat:placeholder')}
+            onSend={handleSendMessage}
+            onToggleMedia={() => setShowMediaOptions(v => !v)}
+            isSending={isSending}
           />
         )}
-      </View>
+        renderNativeComposerColumn={() => composerBlock}
+        bottomReserve={bottomReserve}
+        iosKeyboardOffset={iosKeyboardOffset}
+      />
 
-      {/* Media Options - Absolutely positioned above input */}
-      {showMediaOptions && (
-        <View style={[
-          styles.mediaOptionsContainer,
-          { bottom: tabBarHeight + 70, zIndex: 1000 }
-        ]}>
-          <TouchableOpacity style={styles.mediaOption} onPress={handleTakePhoto}>
-            <Icon name="camera" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>{t('chat:camera')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickImage}>
-            <Icon name="image" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>{t('chat:pickImage')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickVideo}>
-            <Icon name="videocam" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>{t('chat:pickVideo')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.mediaOption} onPress={handlePickDocument}>
-            <Icon name="document" size={24} color={colors.primary} />
-            <Text style={styles.mediaOptionText}>{t('chat:pickFile')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Input Container - Fixed positioned at bottom for web */}
-      {Platform.OS === 'web' ? (
-        <View
-          style={(() => {
-            const inputStyle = {
-              position: 'fixed' as never,
-              left: 0,
-              right: 0,
-              bottom: tabBarHeight,
-              zIndex: 999,
-              backgroundColor: 'transparent'
-            };
-            return inputStyle;
-          })()}
-        >
-          <View
-            style={styles.inputContainer}
-            onLayout={(event) => {
-              if (Platform.OS === 'web') {
-                const { height } = event.nativeEvent.layout;
-                setInputHeight(height);
-              }
-            }}
-          >
-            <InputChildren />
-          </View>
-        </View>
-      ) : (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: tabBarHeight,
-            zIndex: 999,
-            backgroundColor: 'transparent'
-          }}
-          pointerEvents="box-none"
-        >
-          <View style={styles.inputContainer}>
-            <InputChildren />
-          </View>
-        </KeyboardAvoidingView>
-      )}
-
-      {/* Upload Progress Modal */}
-      <Modal
-        visible={showUploadModal}
-        transparent
-        animationType="fade"
-      >
+      <Modal visible={showUploadModal} transparent animationType="fade">
         <View style={styles.uploadModalOverlay}>
           <View style={styles.uploadModalContent}>
             <ActivityIndicator size="large" color={colors.primary} style={styles.uploadSpinner} />
             <Text style={styles.uploadText}>
-              {uploadingFile
-                ? t('chat:uploadingFileNamed', { name: uploadingFile.name })
-                : t('chat:uploadingFile')}
+              {uploadingFile ? `מעלה ${uploadingFile.name}...` : 'מעלה קובץ...'}
             </Text>
             <View style={styles.progressBarContainer}>
               <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
@@ -646,7 +728,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
-    position: 'relative', // Ensure absolute children are positioned relative to this
+    position: 'relative',
   },
   header: {
     flexDirection: 'row',
@@ -683,25 +765,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: 15,
-  },
-  // Content container for messages
   contentContainer: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  // Messages wrapper - takes all available space
   messagesWrapper: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: colors.background,
   },
-  // Messages list
   messagesList: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  // Loading indicator
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -713,28 +789,46 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.body,
     color: colors.textSecondary,
   },
-  // Chat messages container
   messagesContainer: {
     backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingTop: 10,
   },
-  // Input container wrapper - ABSOLUTE POSITION
   inputContainerWrapper: {
     position: 'absolute',
     left: 0,
     right: 0,
     backgroundColor: 'transparent',
-    zIndex: 99, // Ensure it sits on top of messages
-    elevation: 5, // For Android shadow
+    zIndex: 99,
+    elevation: 5,
   },
-  // Input container at bottom
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    paddingBottom: Platform.OS === 'android' ? 15 : 10,
+    paddingBottom: Platform.OS === 'android' ? 12 : 10,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  nativeComposerColumn: {
+    backgroundColor: colors.background,
+    flexShrink: 0,
+  },
+  chatBodyColumn: {
+    flex: 1,
+    minHeight: 0,
+  },
+  chatBodyInner: {
+    flex: 1,
+    minHeight: 0,
+  },
+  mediaOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -744,6 +838,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
@@ -751,7 +846,7 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     marginHorizontal: 8,
     fontSize: FontSizes.body,
-    maxHeight: 80,
+    maxHeight: 120,
     textAlign: 'right',
     color: colors.textPrimary,
     backgroundColor: colors.background,
@@ -777,7 +872,6 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: colors.background,
   },
-  // Media options container - ABSOLUTE POSITION
   mediaOptionsContainer: {
     position: 'absolute',
     left: 0,
@@ -789,7 +883,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    zIndex: 100, // Above input container
+    zIndex: 100,
     elevation: 6,
   },
   mediaOption: {
@@ -802,7 +896,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  // Upload progress modal
   uploadModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

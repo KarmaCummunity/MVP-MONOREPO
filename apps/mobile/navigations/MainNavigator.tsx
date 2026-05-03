@@ -12,97 +12,95 @@
 // - External deps: react-navigation stack, i18n for titles, shared colors/styles.
 
 import React, { useEffect, useMemo } from 'react';
-import { View, ActivityIndicator, Text, Platform, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { createStackNavigator } from "@react-navigation/stack";
+import { Platform } from 'react-native';
+import { createStackNavigator, type StackHeaderProps } from "@react-navigation/stack";
 import { useFocusEffect } from "@react-navigation/native";
 import BottomNavigator from "./BottomNavigator";
 import WebViewScreen from "../screens/WebViewScreen";
 import PostsReelsScreenWrapper from "../components/PostsReelsScreenWrapper";
-import BookmarksScreen from "../screens/BookmarksScreen";
 // Removed UserProfileScreen import - it should only be accessed via HomeTabStack or SearchTabStack
 import FollowersScreen from "../screens/FollowersScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
 import LoginScreen from "../screens/LoginScreen";
 import { useUser } from '../stores/userStore';
-import colors from '../globals/colors';
-import styles from '../globals/styles';
 import NewChatScreen from '../screens/NewChatScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
 import SettingsScreen from '../topBarScreens/SettingsScreen';
 import ChatListScreen from '../topBarScreens/ChatListScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AboutKarmaCommunityScreen from '../topBarScreens/AboutKarmaCommunityScreen';
-import OrgOnboardingScreen from '../screens/OrgOnboardingScreen';
-import AdminOrgApprovalsScreen from '../screens/AdminOrgApprovalsScreen';
-import OrgDashboardScreen from '../screens/OrgDashboardScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import LandingSiteScreen from '../screens/Landing/LandingSiteScreen';
-import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import TopBarNavigator from './TopBarNavigator';
+import AdminOrgApprovalsScreen from '../screens/admin/AdminOrgApprovalsScreen';
+import OrgDashboardScreen from '../screens/org/OrgDashboardScreen';
 
 import { RootStackParamList } from '../globals/types';
+import { computeMainNavigatorStackKey } from './mainNavigatorStackKey';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+function MainNavigatorAdminDashboardHeader({
+  navigation,
+  route,
+}: Readonly<StackHeaderProps>) {
+  return (
+    <TopBarNavigator
+      navigation={navigation as any}
+      hideTopBar={(route.params as any)?.hideTopBar === true}
+    />
+  );
+}
+
 export default function MainNavigator() {
   const { selectedUser, isLoading, isGuestMode, isAuthenticated } = useUser();
-  const { t } = useTranslation(['common', 'profile']);
   const { mode } = useWebMode();
 
-  // Log render state for debugging
+  // Log render state for debugging (periodic — avoids noisy storage in tight re-render loops)
   useEffect(() => {
-    logger.debug('MainNavigator', 'Render state', {
-      selectedUser: selectedUser?.name || 'null',
-      isLoading,
-      isGuestMode,
-      isAuthenticated,
-      mode,
-    });
+    logger.debug(
+      'MainNavigator',
+      'Render state',
+      {
+        selectedUser: selectedUser?.name || 'null',
+        isLoading,
+        isGuestMode,
+        isAuthenticated,
+        mode,
+      },
+      { periodic: true },
+    );
   }, [selectedUser, isLoading, isGuestMode, isAuthenticated, mode]);
 
   // Refresh data when navigator comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('MainNavigator', 'Navigator focused');
-    }, [])
+      logger.debug('MainNavigator', 'Navigator focused', undefined, { periodic: true });
+    }, []),
   );
 
   // Stack Navigator key - only change when mode changes, or authentication state toggles major branches
   // This helps ensure clean transitions between Auth and Unauth states
-  const stackKey = useMemo(() => `stack-${mode}-${isAuthenticated || isGuestMode ? 'auth' : 'unauth'}`, [mode, isAuthenticated, isGuestMode]);
-
-  // Loading screen
-  if (isLoading) {
-    logger.debug('MainNavigator', 'Showing loading screen');
-    return (
-      <View style={styles.centeredScreen as StyleProp<ViewStyle>}>
-        <ActivityIndicator size="large" color={colors.info} />
-        <Text style={styles.loadingText as StyleProp<TextStyle>}>{t('common:loading')}</Text>
-      </View>
-    );
-  }
+  const stackKey = useMemo(
+    () => computeMainNavigatorStackKey(mode, isAuthenticated, isGuestMode),
+    [mode, isAuthenticated, isGuestMode],
+  );
 
   return (
     <Stack.Navigator
       key={stackKey}
       id={undefined}
       detachInactiveScreens={true}
-      screenOptions={({ navigation, route }) => ({
-        headerShown: route.name === 'AdminDashboard' ? true : false,
-        header: route.name === 'AdminDashboard' ? () => (
-          <TopBarNavigator
-            navigation={navigation}
-            hideTopBar={(route.params as Record<string, unknown>)?.hideTopBar === true}
-          />
-        ) : undefined,
+      screenOptions={{
+        headerShown: false,
         // Fix for aria-hidden warning: prevent focus on inactive screens
         cardStyle: Platform.OS === 'web' ? {
           // On web, ensure inactive screens don't interfere with focus
         } : undefined,
-      })}
+      }}
     >
       {isAuthenticated || isGuestMode ? (
         // ==================================================================
@@ -126,15 +124,7 @@ export default function MainNavigator() {
             }}
           />
 
-          <Stack.Screen
-            name="BookmarksScreen"
-            component={BookmarksScreen}
-            options={{
-              title: t('profile:menu.bookmarks'),
-              headerTitleAlign: 'center',
-              headerShown: true,
-            }}
-          />
+          {/* Bookmarked posts: `BookmarksScreen` lives in `HomeTabStack` and `ProfileTabStack` so the bottom tab bar stays visible. */}
 
           {/* Removed UserProfileScreen from MainNavigator - it should only be accessed via HomeTabStack or SearchTabStack 
               to ensure bottom bar and top bar remain visible */}
@@ -150,13 +140,18 @@ export default function MainNavigator() {
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
           <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
           <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
+          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
           <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
-
-          {/* Org & Admin Screens */}
+          <Stack.Screen
+            name="AdminDashboard"
+            component={AdminDashboardScreen}
+            options={{
+              headerShown: true,
+              header: MainNavigatorAdminDashboardHeader,
+            }}
+          />
           <Stack.Screen name="AdminOrgApprovalsScreen" component={AdminOrgApprovalsScreen} />
           <Stack.Screen name="OrgDashboardScreen" component={OrgDashboardScreen} />
-          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         </Stack.Group>
       ) : (
         // ==================================================================
@@ -172,8 +167,6 @@ export default function MainNavigator() {
           {/* In app mode (or if site mode landing navigates here), LoginScreen is main */}
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
 
-          {/* Org Onboarding is part of the sign-up flow */}
-          <Stack.Screen name="OrgOnboardingScreen" component={OrgOnboardingScreen} />
 
           {/* Legacy mapping for removed screen */}
           <Stack.Screen name="InactiveScreen" component={LoginScreen} />

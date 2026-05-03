@@ -34,7 +34,7 @@ const DonationStatsFooter: React.FC<DonationStatsFooterProps> = ({ stats, contai
         {topThree.map((s, idx) => (
           <View key={`${s.label}-${idx}`} style={[styles.statChip, compact && styles.statChipCompact]}>
             {s.icon ? (
-              <Ionicons name={s.icon as keyof typeof Ionicons.glyphMap} size={compact ? 14 : 16} color={colors.textSecondary} style={{ marginBottom: compact ? 2 : 4 }} />
+              <Ionicons name={s.icon as any} size={compact ? 14 : 16} color={colors.textSecondary} style={{ marginBottom: compact ? 2 : 4 }} />
             ) : null}
             <Text style={[styles.statLabel, compact && styles.statLabelCompact]}>{s.label}</Text>
             <Text style={[styles.statValue, compact && styles.statValueCompact]}>{String(s.value)}</Text>

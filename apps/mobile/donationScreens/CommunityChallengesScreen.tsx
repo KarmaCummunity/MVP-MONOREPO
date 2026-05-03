@@ -1,7 +1,7 @@
 // Community Challenges Screen
 // Main screen for community challenges - similar to ItemsScreen structure
 // Supports two modes: Search (browse challenges) and Offer (create new challenge)
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,146 +14,146 @@ import {
   RefreshControl,
   TextInput,
   Image,
+  Platform,
 } from 'react-native';
-import { NavigationProp, RouteProp, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import ScrollContainer from '../components/ScrollContainer';
-import { db } from '../src/infrastructure/database.service';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
-import { DonationsStackParamList, CommunityChallenge, ChallengeType, ChallengeFrequency, ChallengeDifficulty } from '../globals/types';
+import {
+  DonationsStackParamList,
+  CommunityChallenge,
+  ChallengeType,
+  ChallengeFrequency,
+  ChallengeDifficulty,
+} from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
-import { logger } from '../utils/loggerService';
 
 // Default challenge images by difficulty
 const DEFAULT_CHALLENGE_IMAGES = {
-  [ChallengeDifficulty.EASY]: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400',
-  [ChallengeDifficulty.MEDIUM]: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400',
-  [ChallengeDifficulty.HARD]: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400',
-  [ChallengeDifficulty.EXPERT]: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400',
+  easy: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400',
+  medium: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400',
+  hard: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400',
+  expert: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400',
 };
 
 export interface CommunityChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: RouteProp<DonationsStackParamList, 'CommunityChallengesScreen'>;
+  route?: any;
 }
+
+// Filter options for challenges
+const CHALLENGE_TYPE_OPTIONS = [
+  { id: 'BOOLEAN', label: 'כן/לא', icon: 'checkmark-circle-outline' },
+  { id: 'NUMERIC', label: 'מספרי', icon: 'calculator-outline' },
+  { id: 'DURATION', label: 'זמן', icon: 'time-outline' },
+];
+
+const CHALLENGE_FREQUENCY_OPTIONS = [
+  { id: 'DAILY', label: 'יומי', icon: 'calendar-outline' },
+  { id: 'WEEKLY', label: 'שבועי', icon: 'calendar-number-outline' },
+  { id: 'FLEXIBLE', label: 'גמיש', icon: 'infinite-outline' },
+];
+
+const CHALLENGE_DIFFICULTY_OPTIONS = [
+  { id: 'easy', label: 'קל', icon: 'happy-outline', color: colors.success },
+  { id: 'medium', label: 'בינוני', icon: 'bulb-outline', color: colors.warning },
+  { id: 'hard', label: 'קשה', icon: 'flame-outline', color: colors.error },
+  { id: 'expert', label: 'מומחה', icon: 'trophy-outline', color: colors.primary },
+];
+
+const CHALLENGE_TYPE_IDS: ChallengeType[] = ['BOOLEAN', 'NUMERIC', 'DURATION'];
+const CHALLENGE_SORT_IDS = [
+  'challenge_created_desc',
+  'challenge_created_asc',
+  'challenge_participants_desc',
+  'challenge_title',
+] as const;
 
 export default function CommunityChallengesScreen({ navigation, route }: CommunityChallengesScreenProps) {
   const { showToast } = useToast();
-  const { t } = useTranslation(['donations', 'common', 'challenges']);
+  const { t, i18n } = useTranslation(['donations', 'common', 'challenges', 'search']);
   const { selectedUser: user } = useUser();
-
-  // Filter options for challenges (Memoized to support translations)
-  const challengeTypeOptions = useMemo(() => [
-    { id: ChallengeType.BOOLEAN, label: t('challenges:types.BOOLEAN'), icon: 'checkmark-circle-outline' },
-    { id: ChallengeType.NUMERIC, label: t('challenges:types.NUMERIC'), icon: 'calculator-outline' },
-    { id: ChallengeType.DURATION, label: t('challenges:types.DURATION'), icon: 'time-outline' },
-  ], [t]);
-
-  const challengeFrequencyOptions = useMemo(() => [
-    { id: ChallengeFrequency.DAILY, label: t('challenges:frequency.DAILY'), icon: 'calendar-outline' },
-    { id: ChallengeFrequency.WEEKLY, label: t('challenges:frequency.WEEKLY'), icon: 'calendar-number-outline' },
-    { id: ChallengeFrequency.FLEXIBLE, label: t('challenges:frequency.FLEXIBLE'), icon: 'infinite-outline' },
-  ], [t]);
-
-  const challengeDifficultyOptions = useMemo(() => [
-    { id: ChallengeDifficulty.EASY, label: t('challenges:difficulty.easy'), icon: 'happy-outline', color: colors.success },
-    { id: ChallengeDifficulty.MEDIUM, label: t('challenges:difficulty.medium'), icon: 'bulb-outline', color: colors.warning },
-    { id: ChallengeDifficulty.HARD, label: t('challenges:difficulty.hard'), icon: 'flame-outline', color: colors.error },
-    { id: ChallengeDifficulty.EXPERT, label: t('challenges:difficulty.expert'), icon: 'trophy-outline', color: colors.primary },
-  ], [t]);
-
+  
   const routeParams = route?.params as { mode?: string } | undefined;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
 
-  // Mode: true = מחפש (search), false = מציע (offer/create)
+  // true = seeker/search (browse), false = offerer/create form
   const [mode, setMode] = useState(initialMode);
-
-  const hasSetInitialModeRef = useRef(false);
-  const navRef = useRef(navigation);
-  navRef.current = navigation;
-
-  // Initial load only: set URL to search when no mode in params; do not reset mode when params briefly missing (avoids loop when toggling to offer)
-  useEffect(() => {
-    const currentMode = routeParams?.mode;
-    const missingOrInvalid =
-      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
-
-    if (!missingOrInvalid) return;
-
-    if (!hasSetInitialModeRef.current) {
-      hasSetInitialModeRef.current = true;
-      (navRef.current as NavigationProp<DonationsStackParamList> & { setParams?: (p: { mode?: string }) => void }).setParams?.({ mode: 'search' });
-      queueMicrotask(() => setMode(true));
-    }
-  }, [routeParams?.mode]);
-
-  // Sync mode from route params (e.g. deep link)
-  useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'search';
-      setMode((prev) => (prev === newMode ? prev : newMode));
-    }
-  }, [routeParams?.mode]);
-
-  // Sync mode to URL when user toggles; re-apply when params briefly missing so URL stays in sync
-  useEffect(() => {
-    const nav = navRef.current as NavigationProp<DonationsStackParamList> & { setParams?: (p: { mode?: string }) => void };
-    const newMode = mode ? 'search' : 'offer';
-    const currentMode = routeParams?.mode;
-    const missingOrInvalid =
-      !currentMode || currentMode === 'undefined' || currentMode === 'null' || currentMode === '';
-
-    if (missingOrInvalid) {
-      if (hasSetInitialModeRef.current) {
-        nav.setParams?.({ mode: newMode });
-      }
-      return;
-    }
-    if (newMode !== currentMode) {
-      nav.setParams?.({ mode: newMode });
-    }
-  }, [mode, routeParams?.mode]);
-
+  
   // State for challenges list
   const [allChallenges, setAllChallenges] = useState<CommunityChallenge[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<CommunityChallenge[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Search and filters
+  
+  // Search, filters, and sort (receive/browse mode — driven from HeaderComp / SearchBar)
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<ChallengeType | ''>('');
-  const [selectedFrequencyFilter, _setSelectedFrequencyFilter] = useState<ChallengeFrequency | ''>('');
-  const [selectedDifficultyFilter, _setSelectedDifficultyFilter] = useState<ChallengeDifficulty | ''>('');
-  const [showMyCreatedOnly, setShowMyCreatedOnly] = useState(false);
+  const [headerSelectedFilters, setHeaderSelectedFilters] = useState<string[]>([]);
+  const [headerSelectedSorts, setHeaderSelectedSorts] = useState<string[]>([]);
+  const [selectedFrequencyFilter] = useState<ChallengeFrequency | ''>('');
+  const [selectedDifficultyFilter] = useState<ChallengeDifficulty | ''>('');
 
+  const challengeFilterOptions = useMemo(
+    () => [
+      'challenges_all',
+      ...CHALLENGE_TYPE_IDS,
+      'challenges_my_created',
+    ],
+    [],
+  );
+
+  const challengeSortOptions = useMemo(() => [...CHALLENGE_SORT_IDS], []);
+
+  const sanitizeChallengeFilters = useCallback((filters: string[]) => {
+    const next = [...filters];
+    const hasAllTypes = next.includes('challenges_all');
+    const typeKeys = next.filter((f) => CHALLENGE_TYPE_IDS.includes(f as ChallengeType));
+    if (hasAllTypes && typeKeys.length > 0) {
+      return next.filter((f) => f !== 'challenges_all');
+    }
+    return next;
+  }, []);
+  
   // Form state for creating challenge
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState('');
-  const [challengeType, setChallengeType] = useState<ChallengeType>(ChallengeType.BOOLEAN);
-  const [frequency, setFrequency] = useState<ChallengeFrequency>(ChallengeFrequency.DAILY);
+  const [challengeType, setChallengeType] = useState<ChallengeType>('BOOLEAN');
+  const [frequency, setFrequency] = useState<ChallengeFrequency>('DAILY');
   const [goalValue, setGoalValue] = useState('');
-  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>(ChallengeDifficulty.EASY);
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('easy');
   const [category, setCategory] = useState('');
+  const [isCommunityPublic, setIsCommunityPublic] = useState(true);
+
+  useEffect(() => {
+    const m = routeParams?.mode;
+    if (m === 'offer' || m === 'search') {
+      const nextSearchMode = m === 'search';
+      setMode((prev) => (prev !== nextSearchMode ? nextSearchMode : prev));
+    }
+  }, [routeParams?.mode]);
+
+  const syncModeToUrl = useCallback(
+    (nextSearchMode: boolean) => {
+      navigation.setParams({ mode: nextSearchMode ? 'search' : 'offer' });
+    },
+    [navigation],
+  );
 
   const loadChallenges = useCallback(async () => {
     try {
       setLoading(true);
-      const filters: {
-        is_active?: boolean;
-        sort_by?: string;
-        sort_order?: 'ASC' | 'DESC';
-        limit?: number;
-      } = {
+      const filters: any = {
         is_active: true,
         sort_by: 'created_at',
-        sort_order: 'DESC',
+        sort_order: 'DESC' as const,
         limit: 100,
       };
 
@@ -165,7 +165,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         setAllChallenges([]);
       }
     } catch (error) {
-      logger.error('CommunityChallengesScreen', 'Error loading challenges', { error: String(error) });
+      console.error('Error loading challenges:', error);
       showToast(t('challenges:messages.errorLoading'), 'error');
       setAllChallenges([]);
     } finally {
@@ -173,18 +173,18 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
     }
   }, [showToast, t]);
 
-  // Load challenges when screen focuses
-  useFocusEffect(
-    useCallback(() => {
-      setShowMyCreatedOnly(false);
-      if (mode) {
-        loadChallenges();
-      }
-    }, [mode, loadChallenges])
-  );
-
   const applyFilters = useCallback(() => {
     let filtered = [...allChallenges];
+
+    const filters = headerSelectedFilters;
+    const showMyCreatedOnly = filters.includes('challenges_my_created');
+    const typeFilters = filters.filter((f) => CHALLENGE_TYPE_IDS.includes(f as ChallengeType)) as ChallengeType[];
+    const selectedTypeFilter =
+      filters.includes('challenges_all') || typeFilters.length === 0
+        ? ''
+        : typeFilters.length === 1
+          ? typeFilters[0]
+          : null;
 
     if (showMyCreatedOnly && user?.id) {
       filtered = filtered.filter((c) => c.creator_id === user.id);
@@ -196,11 +196,14 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         (c) =>
           c.title.toLowerCase().includes(query) ||
           c.description?.toLowerCase().includes(query) ||
-          c.category?.toLowerCase().includes(query)
+          c.category?.toLowerCase().includes(query),
       );
     }
 
-    if (selectedTypeFilter) {
+    if (selectedTypeFilter === null) {
+      const typeSet = new Set(typeFilters);
+      filtered = filtered.filter((c) => typeSet.has(c.type));
+    } else if (selectedTypeFilter) {
       filtered = filtered.filter((c) => c.type === selectedTypeFilter);
     }
 
@@ -212,8 +215,64 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       filtered = filtered.filter((c) => c.difficulty === selectedDifficultyFilter);
     }
 
+    const sortKey = headerSelectedSorts[0];
+    if (sortKey === 'challenge_created_desc') {
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortKey === 'challenge_created_asc') {
+      filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    } else if (sortKey === 'challenge_participants_desc') {
+      filtered.sort((a, b) => (b.participants_count || 0) - (a.participants_count || 0));
+    } else if (sortKey === 'challenge_title') {
+      const loc = i18n.language?.startsWith('he') ? 'he' : 'en';
+      filtered.sort((a, b) =>
+        (a.title || '').localeCompare(b.title || '', loc, { sensitivity: 'base' }),
+      );
+    }
+
     setFilteredChallenges(filtered);
-  }, [allChallenges, searchQuery, selectedTypeFilter, selectedFrequencyFilter, selectedDifficultyFilter, showMyCreatedOnly, user?.id]);
+  }, [
+    allChallenges,
+    searchQuery,
+    headerSelectedFilters,
+    headerSelectedSorts,
+    selectedFrequencyFilter,
+    selectedDifficultyFilter,
+    user?.id,
+    i18n.language,
+  ]);
+
+  const handleHeaderSearch = useCallback(
+    (query: string, filters?: string[], sorts?: string[]) => {
+      setSearchQuery(query);
+      if (filters !== undefined) {
+        setHeaderSelectedFilters(filters);
+      }
+      if (sorts !== undefined) {
+        setHeaderSelectedSorts(sorts);
+      }
+    },
+    [],
+  );
+
+  const handleToggleHeaderMode = useCallback(() => {
+    const nextSearchMode = !mode;
+    setMode(nextSearchMode);
+    if (Platform.OS === 'web') {
+      syncModeToUrl(nextSearchMode);
+    }
+  }, [mode, syncModeToUrl]);
+
+  // Load challenges when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      setHeaderSelectedFilters([]);
+      setHeaderSelectedSorts([]);
+
+      if (mode) {
+        loadChallenges();
+      }
+    }, [mode, loadChallenges]),
+  );
 
   // Apply filters when search or filters change
   useEffect(() => {
@@ -245,7 +304,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         setImageUri(result.assets[0].uri);
       }
     } catch (error) {
-      logger.error('CommunityChallengesScreen', 'Error picking image', { error: String(error) });
+      console.error('Error picking image:', error);
       Alert.alert(t('common:error'), t('challenges:imagePickError'));
     }
   };
@@ -272,48 +331,56 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         type: challengeType,
         frequency,
         goal_value: goalValue ? parseFloat(goalValue) : undefined,
+        goal_direction:
+          challengeType !== 'BOOLEAN' && goalValue
+            ? ('maximize' as const)
+            : undefined,
         difficulty,
         category: category.trim() || undefined,
+        is_public: isCommunityPublic,
       };
 
       const response = await db.createCommunityChallenge(challengeData);
 
       if (response.success) {
         showToast(t('challenges:challengeCreated'), 'success');
-
+        
         // Reset form
         setTitle('');
         setDescription('');
         setImageUri('');
-        setChallengeType(ChallengeType.BOOLEAN);
-        setFrequency(ChallengeFrequency.DAILY);
+        setChallengeType('BOOLEAN');
+        setFrequency('DAILY');
         setGoalValue('');
-        setDifficulty(ChallengeDifficulty.EASY);
+        setDifficulty('easy');
         setCategory('');
+        setIsCommunityPublic(true);
 
-        // Switch to search mode and reload
         setMode(true);
+        if (Platform.OS === 'web') {
+          syncModeToUrl(true);
+        }
         await loadChallenges();
       } else {
         showToast(t('challenges:messages.errorCreating'), 'error');
       }
-    } catch (error: unknown) {
-      logger.error('CommunityChallengesScreen', 'Error creating challenge', { error: String(error) });
-      showToast(error instanceof Error ? error.message : t('challenges:messages.errorCreating'), 'error');
+    } catch (error: any) {
+      console.error('Error creating challenge:', error);
+      showToast(error.message || t('challenges:messages.errorCreating'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleChallengePress = (challenge: CommunityChallenge) => {
-    navigation.navigate('ChallengeDetailsScreen', {
+    (navigation as any).navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
     });
   };
 
   const renderChallengeCard = ({ item }: { item: CommunityChallenge }) => {
-    const typeOption = challengeTypeOptions.find((t) => t.id === item.type);
-    const difficultyOption = challengeDifficultyOptions.find((d) => d.id === item.difficulty);
+    const typeOption = CHALLENGE_TYPE_OPTIONS.find((t) => t.id === item.type);
+    const difficultyOption = CHALLENGE_DIFFICULTY_OPTIONS.find((d) => d.id === item.difficulty);
     const imageUrl = item.image_url || DEFAULT_CHALLENGE_IMAGES[item.difficulty || 'easy'];
 
     return (
@@ -335,7 +402,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
               <Ionicons
-                name={(typeOption?.icon ?? 'trophy-outline') as keyof typeof Ionicons.glyphMap}
+                name={typeOption?.icon as any || 'trophy-outline'}
                 size={24}
                 color={difficultyOption?.color || colors.primary}
               />
@@ -356,26 +423,26 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             </Text>
           )}
 
-          <View style={styles.cardMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.metaText}>{item.creator_name || t('common:unknownUser')}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.metaText}>{t('challenges:stats.participantsCount', { count: item.participants_count })}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons
-                name={(challengeFrequencyOptions.find((f) => f.id === item.frequency)?.icon ?? 'calendar-outline') as keyof typeof Ionicons.glyphMap}
-                size={16}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.metaText}>
-                {challengeFrequencyOptions.find((f) => f.id === item.frequency)?.label}
-              </Text>
-            </View>
+        <View style={styles.cardMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{item.creator_name || 'משתמש'}</Text>
           </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{t('challenges:stats.participantsCount', { count: item.participants_count })}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name={CHALLENGE_FREQUENCY_OPTIONS.find((f) => f.id === item.frequency)?.icon as any}
+              size={16}
+              color={colors.textSecondary}
+            />
+            <Text style={styles.metaText}>
+              {CHALLENGE_FREQUENCY_OPTIONS.find((f) => f.id === item.frequency)?.label}
+            </Text>
+          </View>
+        </View>
         </View>
       </TouchableOpacity>
     );
@@ -393,55 +460,6 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
 
   const renderSearchMode = () => (
     <View style={styles.container}>
-      {/* My Created Filter Badge */}
-      {showMyCreatedOnly && (
-        <View style={styles.myCreatedBanner}>
-          <Text style={styles.myCreatedText}>
-            {t('challenges:myCreatedChallenges')}
-          </Text>
-          <TouchableOpacity onPress={() => setShowMyCreatedOnly(false)}>
-            <Ionicons name="close-circle" size={24} color={colors.white} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Filters */}
-      <ScrollContainer horizontal style={styles.filtersContainer} showsHorizontalScrollIndicator={false}>
-        <TouchableOpacity
-          style={[styles.filterChip, !selectedTypeFilter && !showMyCreatedOnly && styles.filterChipActive]}
-          onPress={() => {
-            setSelectedTypeFilter('');
-            setShowMyCreatedOnly(false);
-          }}
-        >
-          <Text style={[styles.filterChipText, !selectedTypeFilter && !showMyCreatedOnly && styles.filterChipTextActive]}>
-            {t('challenges:filters.all')}
-          </Text>
-        </TouchableOpacity>
-        {challengeTypeOptions.map((option) => (
-          <TouchableOpacity
-            key={option.id}
-            style={[styles.filterChip, selectedTypeFilter === option.id && styles.filterChipActive]}
-            onPress={() => setSelectedTypeFilter(option.id as ChallengeType)}
-          >
-            <Ionicons
-              name={option.icon as keyof typeof Ionicons.glyphMap}
-              size={16}
-              color={selectedTypeFilter === option.id ? colors.white : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedTypeFilter === option.id && styles.filterChipTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollContainer>
-
-      {/* Challenges List */}
       <FlatList
         data={filteredChallenges}
         renderItem={renderChallengeCard}
@@ -456,6 +474,37 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
   const renderOfferMode = () => (
     <ScrollContainer style={styles.formContainer}>
       <Text style={styles.formTitle}>{t('challenges:createNewChallenge')}</Text>
+
+      <Text style={styles.label}>{t('challenges:visibility.label')}</Text>
+      <View style={styles.optionsRow}>
+        <TouchableOpacity
+          style={[styles.optionButton, isCommunityPublic && styles.optionButtonActive]}
+          onPress={() => setIsCommunityPublic(true)}
+        >
+          <Ionicons
+            name="earth-outline"
+            size={20}
+            color={isCommunityPublic ? colors.white : colors.textSecondary}
+          />
+          <Text style={[styles.optionText, isCommunityPublic && styles.optionTextActive]}>
+            {t('challenges:visibility.community')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.optionButton, !isCommunityPublic && styles.optionButtonActive]}
+          onPress={() => setIsCommunityPublic(false)}
+        >
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color={!isCommunityPublic ? colors.white : colors.textSecondary}
+          />
+          <Text style={[styles.optionText, !isCommunityPublic && styles.optionTextActive]}>
+            {t('challenges:visibility.private')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.visibilityHint}>{t('challenges:visibility.hint')}</Text>
 
       {/* Title */}
       <Text style={styles.label}>{t('challenges:fields.title')} *</Text>
@@ -480,7 +529,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       />
 
       {/* Image */}
-      <Text style={styles.label}>{t('challenges:fields.image')} ({t('common:optional')})</Text>
+      <Text style={styles.label}>{t('challenges:fields.image')} ({t('common:optional', 'אופציונלי')})</Text>
       <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.challengeImage} resizeMode="cover" />
@@ -496,14 +545,14 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       {/* Challenge Type */}
       <Text style={styles.label}>{t('challenges:fields.type')} *</Text>
       <View style={styles.optionsRow}>
-        {challengeTypeOptions.map((option) => (
+        {CHALLENGE_TYPE_OPTIONS.map((option) => (
           <TouchableOpacity
             key={option.id}
             style={[styles.optionButton, challengeType === option.id && styles.optionButtonActive]}
             onPress={() => setChallengeType(option.id as ChallengeType)}
           >
             <Ionicons
-              name={option.icon as keyof typeof Ionicons.glyphMap}
+              name={option.icon as any}
               size={20}
               color={challengeType === option.id ? colors.white : colors.textSecondary}
             />
@@ -519,14 +568,14 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       {/* Frequency */}
       <Text style={styles.label}>{t('challenges:fields.frequency')} *</Text>
       <View style={styles.optionsRow}>
-        {challengeFrequencyOptions.map((option) => (
+        {CHALLENGE_FREQUENCY_OPTIONS.map((option) => (
           <TouchableOpacity
             key={option.id}
             style={[styles.optionButton, frequency === option.id && styles.optionButtonActive]}
             onPress={() => setFrequency(option.id as ChallengeFrequency)}
           >
             <Ionicons
-              name={option.icon as keyof typeof Ionicons.glyphMap}
+              name={option.icon as any}
               size={20}
               color={frequency === option.id ? colors.white : colors.textSecondary}
             />
@@ -540,7 +589,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       {/* Difficulty */}
       <Text style={styles.label}>{t('challenges:fields.difficulty')}</Text>
       <View style={styles.optionsRow}>
-        {challengeDifficultyOptions.map((option) => (
+        {CHALLENGE_DIFFICULTY_OPTIONS.map((option) => (
           <TouchableOpacity
             key={option.id}
             style={[
@@ -551,7 +600,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
             onPress={() => setDifficulty(option.id as ChallengeDifficulty)}
           >
             <Ionicons
-              name={option.icon as keyof typeof Ionicons.glyphMap}
+              name={option.icon as any}
               size={20}
               color={difficulty === option.id ? colors.white : option.color}
             />
@@ -565,7 +614,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       {/* Goal Value (optional) */}
       {challengeType !== 'BOOLEAN' && (
         <>
-          <Text style={styles.label}>{t('challenges:fields.goalValue')} ({t('common:optional')})</Text>
+          <Text style={styles.label}>{t('challenges:fields.goalValue')} ({t('common:optional', 'אופציונלי')})</Text>
           <TextInput
             style={styles.input}
             placeholder={challengeType === 'DURATION' ? t('challenges:fields.goalValueMinutes') : t('challenges:fields.goalValuePlaceholder')}
@@ -577,7 +626,7 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
       )}
 
       {/* Category (optional) */}
-      <Text style={styles.label}>{t('challenges:fields.category')} ({t('common:optional')})</Text>
+      <Text style={styles.label}>{t('challenges:fields.category')} ({t('common:optional', 'אופציונלי')})</Text>
       <TextInput
         style={styles.input}
         placeholder={t('challenges:fields.categoryPlaceholder')}
@@ -610,26 +659,29 @@ export default function CommunityChallengesScreen({ navigation, route }: Communi
         mode={mode}
         menuOptions={[
           t('challenges:statistics'),
-          t('challenges:myChallenges'),
-          t('challenges:myCreatedChallenges'),
+          t('challenges:myChallenges', 'האתגרים שלי'),
+          t('challenges:myCreatedChallenges', 'האתגרים שיצרתי'),
         ]}
-        onToggleMode={() => setMode(!mode)}
+        onToggleMode={handleToggleHeaderMode}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            navigation.navigate('ChallengeStatisticsScreen');
-          } else if (option === t('challenges:myChallenges')) {
-            navigation.navigate('MyChallengesScreen');
-          } else if (option === t('challenges:myCreatedChallenges')) {
-            navigation.navigate('MyCreatedChallengesScreen');
+            (navigation as any).navigate('ChallengeStatisticsScreen');
+          } else if (option === t('challenges:myChallenges', 'האתגרים שלי')) {
+            (navigation as any).navigate('MyChallengesScreen');
+          } else if (option === t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')) {
+            (navigation as any).navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('challenges:title')}
-        placeholder={t('common:search')}
-        filterOptions={[]}
-        sortOptions={[]}
-        searchData={filteredChallenges as unknown as Record<string, unknown>[]}
-        onSearch={(query) => setSearchQuery(query)}
-        hideSortButton={true}
+        placeholder={mode ? t('common:search') : t('challenges:createNewChallenge')}
+        filterOptions={mode ? challengeFilterOptions : []}
+        sortOptions={mode ? challengeSortOptions : []}
+        searchData={mode ? allChallenges : []}
+        onSearch={handleHeaderSearch}
+        hideSortButton={!mode}
+        hideFilterButton={!mode}
+        searchBarRemountKey={mode ? 1 : 0}
+        sanitizeSelectedFilters={mode ? sanitizeChallengeFilters : undefined}
       />
       {mode ? renderSearchMode() : renderOfferMode()}
     </SafeAreaView>
@@ -643,37 +695,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  filtersContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  filterChipTextActive: {
-    color: colors.white,
   },
   listContent: {
     padding: 16,
@@ -842,19 +863,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
   },
-  myCreatedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  myCreatedText: {
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-    color: colors.white,
-  },
   imagePickerButton: {
     marginBottom: 16,
     borderRadius: 12,
@@ -886,5 +894,11 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  visibilityHint: {
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
+    marginTop: 8,
+    lineHeight: 20,
   },
 });

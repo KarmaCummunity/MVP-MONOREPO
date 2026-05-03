@@ -1,11 +1,14 @@
+// ErrorBoundary.tsx
+// Purpose: Catch JavaScript errors anywhere in the child component tree, log those errors, 
+// and display a fallback UI instead of the component tree that crashed.
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { logger } from '../utils/loggerService';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
-import { withTranslation, WithTranslation } from 'react-i18next';
 
-interface Props extends WithTranslation {
+interface Props {
   children: ReactNode;
   fallbackComponent?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
@@ -26,10 +29,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI
-    return {
-      hasError: true,
+    return { 
+      hasError: true, 
       error,
-      errorInfo: null
+      errorInfo: null 
     };
   }
 
@@ -71,7 +74,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleShowDetails = () => {
     const { error, errorInfo } = this.state;
-
+    
     if (error && errorInfo) {
       logger.debug('ErrorBoundary', 'Error details requested', {
         error: {
@@ -84,8 +87,6 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public render() {
-    const { t } = this.props;
-
     if (this.state.hasError) {
       // Custom fallback component if provided
       if (this.props.fallbackComponent) {
@@ -97,25 +98,25 @@ export class ErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <View style={styles.errorContainer}>
             {/* App icon or logo could go here */}
-            <Text style={styles.title}>{t('errorBoundary:title')}</Text>
+            <Text style={styles.title}>שגיאה בלתי צפויה</Text>
             <Text style={styles.message}>
-              {t('errorBoundary:message')}
+              משהו השתבש באפליקציה. אנחנו מצטערים על התקלה.
             </Text>
-
+            
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={[styles.button, styles.primaryButton]}
                 onPress={this.handleRestart}
               >
-                <Text style={styles.primaryButtonText}>{t('errorBoundary:tryAgain')}</Text>
+                <Text style={styles.primaryButtonText}>נסה שוב</Text>
               </TouchableOpacity>
-
+              
               {(typeof __DEV__ !== 'undefined' && __DEV__) && (
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={[styles.button, styles.secondaryButton]}
                   onPress={this.handleShowDetails}
                 >
-                  <Text style={styles.secondaryButtonText}>{t('errorBoundary:details')}</Text>
+                  <Text style={styles.secondaryButtonText}>פרטי שגיאה</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -142,87 +143,94 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default withTranslation()(ErrorBoundary);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundPrimary || colors.white,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   errorContainer: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
     padding: 24,
-    alignItems: 'center',
     width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   title: {
-    fontSize: FontSizes.heading2,
+    fontSize: FontSizes.heading1,
     fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
+    color: colors.error,
+    marginBottom: 16,
     textAlign: 'center',
   },
   message: {
-    fontSize: FontSizes.medium,
-    color: colors.textSecondary,
-    marginBottom: 24,
+    fontSize: FontSizes.body,
+    color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 22,
+    marginBottom: 24,
+    lineHeight: 24,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    width: '100%',
     gap: 12,
   },
   button: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    minWidth: 120,
+    borderRadius: 8,
     alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: colors.primary,
   },
   secondaryButton: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
   },
   primaryButtonText: {
-    color: colors.white,
+    color: colors.background,
+    fontSize: FontSizes.body,
     fontWeight: 'bold',
-    fontSize: FontSizes.medium,
   },
   secondaryButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-    fontSize: FontSizes.medium,
+    color: colors.primary,
+    fontSize: FontSizes.body,
   },
   debugContainer: {
-    marginTop: 32,
-    padding: 16,
+    marginTop: 20,
+    width: '100%',
     backgroundColor: colors.errorLight,
     borderRadius: 8,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: 12,
   },
   debugTitle: {
     fontSize: FontSizes.small,
     fontWeight: 'bold',
     color: colors.error,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   debugText: {
-    fontSize: FontSizes.caption,
-    color: colors.error,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: FontSizes.small,
+    color: colors.textPrimary,
+    marginBottom: 8,
   },
   debugStack: {
-    fontSize: 10,
-    color: colors.error,
-    marginTop: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: FontSizes.small,
+    color: colors.textSecondary,
+    fontFamily: 'monospace',
   },
 });
+
+export default ErrorBoundary;

@@ -56,7 +56,7 @@ export const validateNavigationState = (
   }
 
   // Validate routes recursively
-  const validateRoute = (route: Record<string, unknown>, stackName: string = 'RootStack', depth: number = 0): void => {
+  const validateRoute = (route: any, stackName: string = 'RootStack', depth: number = 0): void => {
     if (depth > 10) {
       errors.push('Navigation state has too many nested levels (max 10)');
       return;
@@ -79,17 +79,16 @@ export const validateNavigationState = (
     }
 
     // Validate nested state
-    const routeState = route.state as { routes?: unknown[]; index?: number } | undefined;
-    if (routeState) {
-      if (!routeState.routes || !Array.isArray(routeState.routes)) {
+    if (route.state) {
+      if (!route.state.routes || !Array.isArray(route.state.routes)) {
         errors.push(`Route "${route.name}" has invalid nested state`);
         return;
       }
 
-      if (routeState.index !== undefined) {
-        if (typeof routeState.index !== 'number' ||
-          routeState.index < 0 ||
-          routeState.index >= routeState.routes.length) {
+      if (route.state.index !== undefined) {
+        if (typeof route.state.index !== 'number' ||
+          route.state.index < 0 ||
+          route.state.index >= route.state.routes.length) {
           errors.push(`Route "${route.name}" has invalid nested state index`);
           return;
         }
@@ -106,13 +105,13 @@ export const validateNavigationState = (
       } else if (route.name === 'DonationsTab') {
         nestedStackName = 'DonationsStack';
       } else if (route.name === 'AdminTab') {
-        nestedStackName = 'AdminStack';
+        nestedStackName = 'AdminTab';
       } else if (route.name === 'BottomTab') {
         nestedStackName = 'BottomTab';
       }
 
       // Validate nested routes
-      (routeState.routes as Record<string, unknown>[]).forEach((nestedRoute) => {
+      route.state.routes.forEach((nestedRoute: any) => {
         validateRoute(nestedRoute, nestedStackName, depth + 1);
       });
     }
@@ -120,7 +119,7 @@ export const validateNavigationState = (
 
   // Validate all routes
   state.routes.forEach((route) => {
-    validateRoute(route as Record<string, unknown>, 'RootStack', 0);
+    validateRoute(route, 'RootStack', 0);
   });
 
   const valid = errors.length === 0;

@@ -1,0 +1,573 @@
+[
+  {
+    "user_id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+    "item_id": "conv_1755102943260_c13oili28",
+    "data": {
+      "id": "conv_1755102943260_c13oili28",
+      "createdAt": "2025-08-13T16:35:43.260Z",
+      "unreadCount": 0,
+      "participants": [
+        "t2P5MvlK9rac1K8Msx65KBltOG43",
+        "user003"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-08-13T16:35:43.260Z"
+    },
+    "created_at": "2025-08-13T16:35:43.473Z",
+    "updated_at": "2025-08-13T16:35:43.473Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "data": {
+      "id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "createdAt": "2025-11-26T19:03:08.979Z",
+      "unreadCount": 0,
+      "participants": [
+        "karmacommunity2.0@gmail.com",
+        "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      ],
+      "lastMessageText": "Djshssh",
+      "lastMessageTime": "2025-11-26T19:06:00.178Z"
+    },
+    "created_at": "2025-11-26T18:55:04.672Z",
+    "updated_at": "2025-11-26T23:32:33.833Z"
+  },
+  {
+    "user_id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+    "item_id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "data": {
+      "id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "createdAt": "2025-11-26T18:55:02.225Z",
+      "unreadCount": 0,
+      "participants": [
+        "t2P5MvlK9rac1K8Msx65KBltOG43",
+        "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-11-26T18:55:02.225Z"
+    },
+    "created_at": "2025-11-26T18:55:02.767Z",
+    "updated_at": "2025-11-26T18:55:50.935Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "4dec1a1f-ab50-4636-908d-8b43cf00df5a",
+    "data": {
+      "id": "4dec1a1f-ab50-4636-908d-8b43cf00df5a",
+      "createdAt": "2025-12-14T16:17:22.233Z",
+      "unreadCount": 0,
+      "participants": [
+        "0c42bb55-1499-4822-bbd0-074c2f865830",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-21T09:34:04.624Z"
+    },
+    "created_at": "2025-12-14T16:17:25.626Z",
+    "updated_at": "2025-12-21T09:34:12.758Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "conv_matanya.a@lsports.eu",
+    "data": {
+      "unreadCount": 0
+    },
+    "created_at": "2025-11-25T17:44:26.591Z",
+    "updated_at": "2025-11-25T17:53:35.815Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "b7b7912b-fa96-48de-8f61-f77d6c3bb456",
+    "data": {
+      "id": "b7b7912b-fa96-48de-8f61-f77d6c3bb456",
+      "createdAt": "2025-12-11T19:05:44.886Z",
+      "unreadCount": "0",
+      "participants": [
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+        "550e8400-e29b-41d4-a716-446655440000"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-12-11T19:05:44.886Z"
+    },
+    "created_at": "2025-12-11T19:05:45.170Z",
+    "updated_at": "2025-12-24T01:29:15.818Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "data": {
+      "id": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "createdAt": "2025-11-26T19:03:08.979Z",
+      "unreadCount": 1,
+      "participants": [
+        "karmacommunity2.0@gmail.com",
+        "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      ],
+      "lastMessageText": "Djshssh",
+      "lastMessageTime": "2025-11-26T19:06:00.178Z"
+    },
+    "created_at": "2025-11-26T19:03:03.314Z",
+    "updated_at": "2025-11-26T19:06:02.795Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "conv_evelrap@gmail.com",
+    "data": {
+      "id": "conv_evelrap@gmail.com",
+      "createdAt": "2025-11-26T20:54:50.007Z",
+      "unreadCount": 1,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "evelrap@gmail.com"
+      ],
+      "lastMessageText": "היי ימלך",
+      "lastMessageTime": "2025-11-26T20:54:43.725Z"
+    },
+    "created_at": "2025-11-26T20:54:52.272Z",
+    "updated_at": "2025-11-26T20:55:09.120Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "conv_matanya.a@lsports.eu",
+    "data": {
+      "id": "conv_matanya.a@lsports.eu",
+      "createdAt": "2025-11-26T21:57:47.538Z",
+      "unreadCount": 0,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "matanya.a@lsports.eu"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-11-26T21:57:47.538Z"
+    },
+    "created_at": "2025-11-26T21:57:42.420Z",
+    "updated_at": "2025-11-26T22:30:52.833Z"
+  },
+  {
+    "user_id": "35de96db-0043-4d8f-8844-e67318568ecd",
+    "item_id": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e",
+    "data": {
+      "id": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e",
+      "createdAt": "2025-12-14T18:55:32.087Z",
+      "unreadCount": 2,
+      "participants": [
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+        "35de96db-0043-4d8f-8844-e67318568ecd"
+      ],
+      "lastMessageText": "גיא .\n?",
+      "lastMessageTime": "2025-12-14T18:55:45.274Z"
+    },
+    "created_at": "2025-12-14T18:55:32.652Z",
+    "updated_at": "2025-12-14T18:55:46.976Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "data": {
+      "id": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "createdAt": "2025-11-26T21:16:59.612Z",
+      "unreadCount": 0,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+      ],
+      "lastMessageText": "כעעעע",
+      "lastMessageTime": "2025-11-26T21:16:59.018Z"
+    },
+    "created_at": "2025-11-26T21:15:11.051Z",
+    "updated_at": "2025-11-26T21:18:25.002Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "conv_karmacommunity2.0@gmail.com",
+    "data": {
+      "id": "conv_karmacommunity2.0@gmail.com",
+      "createdAt": "2025-11-26T21:13:57.592Z",
+      "unreadCount": 0,
+      "participants": [
+        "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+        "karmacommunity2.0@gmail.com"
+      ],
+      "lastMessageText": "רוצה לצאת איתי?",
+      "lastMessageTime": "2025-11-26T21:13:56.927Z"
+    },
+    "created_at": "2025-11-26T21:13:57.862Z",
+    "updated_at": "2025-11-27T16:46:12.196Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "conv_karmacommunity2.0@gmail.com",
+    "data": {
+      "id": "conv_karmacommunity2.0@gmail.com",
+      "createdAt": "2025-11-26T21:13:57.592Z",
+      "unreadCount": 0,
+      "participants": [
+        "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+        "karmacommunity2.0@gmail.com"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-11-26T21:13:57.592Z"
+    },
+    "created_at": "2025-11-26T21:13:43.355Z",
+    "updated_at": "2025-11-26T21:17:50.342Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "data": {
+      "id": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "createdAt": "2025-11-26T21:16:59.612Z",
+      "unreadCount": 0,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+      ],
+      "lastMessageText": "כעעעע",
+      "lastMessageTime": "2025-11-26T21:16:59.018Z"
+    },
+    "created_at": "2025-11-26T21:15:09.031Z",
+    "updated_at": "2025-12-11T18:01:50.485Z"
+  },
+  {
+    "user_id": "matanya.a@lsports.eu",
+    "item_id": "conv_matanya.a@lsports.eu",
+    "data": {
+      "id": "conv_matanya.a@lsports.eu",
+      "createdAt": "2025-11-26T21:57:47.538Z",
+      "unreadCount": 1,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "matanya.a@lsports.eu"
+      ],
+      "lastMessageText": "אחחחח עובד ?",
+      "lastMessageTime": "2025-11-26T21:57:46.739Z"
+    },
+    "created_at": "2025-11-26T21:57:48.098Z",
+    "updated_at": "2025-11-26T21:57:49.979Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "conv_evelrap@gmail.com",
+    "data": {
+      "id": "conv_evelrap@gmail.com",
+      "createdAt": "2025-11-26T20:54:50.007Z",
+      "unreadCount": 0,
+      "participants": [
+        "g2s18BxQlTenRmttoWlu5fRNNyR2",
+        "evelrap@gmail.com"
+      ],
+      "lastMessageText": "היי ימלך",
+      "lastMessageTime": "2025-11-26T20:54:43.725Z"
+    },
+    "created_at": "2025-11-26T20:54:50.197Z",
+    "updated_at": "2025-11-26T22:00:14.755Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "ai_simulation",
+    "data": {
+      "unreadCount": 0
+    },
+    "created_at": "2025-12-09T20:38:15.722Z",
+    "updated_at": "2025-12-09T20:39:53.608Z"
+  },
+  {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "item_id": "b7b7912b-fa96-48de-8f61-f77d6c3bb456",
+    "data": {
+      "id": "b7b7912b-fa96-48de-8f61-f77d6c3bb456",
+      "createdAt": "2025-12-11T19:05:44.675Z",
+      "unreadCount": 0,
+      "participants": [
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+        "550e8400-e29b-41d4-a716-446655440000"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-12-11T19:05:44.675Z"
+    },
+    "created_at": "2025-12-11T19:05:45.329Z",
+    "updated_at": "2025-12-11T19:05:45.329Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "93778c0a-7c55-4603-adca-69c8b8267a8d",
+    "data": {
+      "id": "93778c0a-7c55-4603-adca-69c8b8267a8d",
+      "createdAt": "2025-12-11T17:59:40.871Z",
+      "unreadCount": "0",
+      "participants": [
+        "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-13T16:33:35.971Z"
+    },
+    "created_at": "2025-12-11T17:59:41.149Z",
+    "updated_at": "2025-12-24T01:34:00.303Z"
+  },
+  {
+    "user_id": "98e833c2-004a-4696-88f8-92bc9fc508cb",
+    "item_id": "27684465-ec1e-40d0-b9d7-638c46ce69a6",
+    "data": {
+      "id": "27684465-ec1e-40d0-b9d7-638c46ce69a6",
+      "createdAt": "2025-12-18T14:52:18.264Z",
+      "unreadCount": 0,
+      "participants": [
+        "98e833c2-004a-4696-88f8-92bc9fc508cb",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם טרמפ זה רלוונטי?",
+      "lastMessageTime": "2025-12-18T14:52:19.097Z"
+    },
+    "created_at": "2025-12-18T14:52:18.678Z",
+    "updated_at": "2025-12-18T14:52:20.159Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "411b38ab-88c6-445e-bd77-d82f05217a4b",
+    "data": {
+      "id": "411b38ab-88c6-445e-bd77-d82f05217a4b",
+      "createdAt": "2025-12-12T08:24:56.239Z",
+      "unreadCount": 6,
+      "participants": [
+        "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-18T15:15:27.900Z"
+    },
+    "created_at": "2025-12-12T08:24:56.684Z",
+    "updated_at": "2025-12-18T15:15:29.493Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "ai_simulation",
+    "data": {
+      "unreadCount": 0
+    },
+    "created_at": "2025-12-15T13:44:43.339Z",
+    "updated_at": "2025-12-15T13:45:41.313Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "80422c62-4377-4c1c-9311-4db57ba2005d",
+    "data": {
+      "id": "80422c62-4377-4c1c-9311-4db57ba2005d",
+      "createdAt": "2025-12-18T15:43:49.928Z",
+      "unreadCount": 1,
+      "participants": [
+        "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "שלום יצחק! מה נשמע?",
+      "lastMessageTime": "2025-12-18T18:54:40.505Z"
+    },
+    "created_at": "2025-12-18T15:43:50.072Z",
+    "updated_at": "2025-12-18T18:54:42.060Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "4dec1a1f-ab50-4636-908d-8b43cf00df5a",
+    "data": {
+      "id": "4dec1a1f-ab50-4636-908d-8b43cf00df5a",
+      "createdAt": "2025-12-14T16:17:25.427Z",
+      "unreadCount": "0",
+      "participants": [
+        "0c42bb55-1499-4822-bbd0-074c2f865830",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-21T09:34:12.013Z"
+    },
+    "created_at": "2025-12-14T16:17:25.727Z",
+    "updated_at": "2025-12-24T01:29:14.402Z"
+  },
+  {
+    "user_id": "8acb4594-20ed-4ded-8d78-f789f8bf407f",
+    "item_id": "16e82d2b-e62f-42a4-8782-e207bde199a1",
+    "data": {
+      "id": "16e82d2b-e62f-42a4-8782-e207bde199a1",
+      "createdAt": "2025-12-17T18:08:35.457Z",
+      "unreadCount": 0,
+      "participants": [
+        "8acb4594-20ed-4ded-8d78-f789f8bf407f",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-12-17T18:08:35.457Z"
+    },
+    "created_at": "2025-12-17T18:08:35.705Z",
+    "updated_at": "2025-12-18T15:33:07.546Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "27684465-ec1e-40d0-b9d7-638c46ce69a6",
+    "data": {
+      "id": "27684465-ec1e-40d0-b9d7-638c46ce69a6",
+      "createdAt": "2025-12-18T14:52:18.407Z",
+      "unreadCount": "2",
+      "participants": [
+        "98e833c2-004a-4696-88f8-92bc9fc508cb",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם טרמפ זה רלוונטי?",
+      "lastMessageTime": "2025-12-18T14:52:19.637Z"
+    },
+    "created_at": "2025-12-18T14:52:18.788Z",
+    "updated_at": "2025-12-24T01:29:14.989Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5",
+    "data": {
+      "id": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5",
+      "createdAt": "2025-12-18T15:43:49.447Z",
+      "unreadCount": 0,
+      "participants": [
+        "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+        "34684837-8737-446e-8fc7-9185a7ecc01f"
+      ],
+      "lastMessageText": "היי עדו ניצני! 👋",
+      "lastMessageTime": "2025-12-18T15:43:50.172Z"
+    },
+    "created_at": "2025-12-18T15:43:49.620Z",
+    "updated_at": "2025-12-18T15:43:58.219Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "411b38ab-88c6-445e-bd77-d82f05217a4b",
+    "data": {
+      "id": "411b38ab-88c6-445e-bd77-d82f05217a4b",
+      "createdAt": "2025-12-12T08:24:56.471Z",
+      "unreadCount": "0",
+      "participants": [
+        "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-18T15:15:28.600Z"
+    },
+    "created_at": "2025-12-12T08:24:56.795Z",
+    "updated_at": "2025-12-24T01:29:14.789Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "16e82d2b-e62f-42a4-8782-e207bde199a1",
+    "data": {
+      "id": "16e82d2b-e62f-42a4-8782-e207bde199a1",
+      "createdAt": "2025-12-17T18:08:35.448Z",
+      "unreadCount": "0",
+      "participants": [
+        "8acb4594-20ed-4ded-8d78-f789f8bf407f",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "",
+      "lastMessageTime": "2025-12-17T18:08:35.448Z"
+    },
+    "created_at": "2025-12-17T18:08:35.804Z",
+    "updated_at": "2025-12-24T01:29:15.219Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e",
+    "data": {
+      "id": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e",
+      "createdAt": "2025-12-14T18:55:32.254Z",
+      "unreadCount": "0",
+      "participants": [
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+        "35de96db-0043-4d8f-8844-e67318568ecd"
+      ],
+      "lastMessageText": "גיא .\n?",
+      "lastMessageTime": "2025-12-14T18:55:45.979Z"
+    },
+    "created_at": "2025-12-14T18:55:32.523Z",
+    "updated_at": "2025-12-24T01:29:15.431Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5",
+    "data": {
+      "id": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5",
+      "createdAt": "2025-12-18T15:43:49.447Z",
+      "unreadCount": 1,
+      "participants": [
+        "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+        "34684837-8737-446e-8fc7-9185a7ecc01f"
+      ],
+      "lastMessageText": "היי עדו ניצני! 👋",
+      "lastMessageTime": "2025-12-18T15:43:50.172Z"
+    },
+    "created_at": "2025-12-18T15:43:50.074Z",
+    "updated_at": "2025-12-18T15:43:54.282Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "93778c0a-7c55-4603-adca-69c8b8267a8d",
+    "data": {
+      "id": "93778c0a-7c55-4603-adca-69c8b8267a8d",
+      "createdAt": "2025-12-11T17:59:40.871Z",
+      "unreadCount": "0",
+      "participants": [
+        "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "האם פריט זה רלוונטי?",
+      "lastMessageTime": "2025-12-13T16:33:35.971Z"
+    },
+    "created_at": "2025-12-11T17:59:41.294Z",
+    "updated_at": "2025-12-24T01:29:15.625Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "f5f62816-f95c-4b0c-835a-75116f2db162",
+    "data": {
+      "id": "f5f62816-f95c-4b0c-835a-75116f2db162",
+      "createdAt": "2025-12-18T18:58:48.015Z",
+      "unreadCount": "0",
+      "participants": [
+        "34684837-8737-446e-8fc7-9185a7ecc01f",
+        "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd"
+      ],
+      "lastMessageText": "היי עדו ניצני! 👋",
+      "lastMessageTime": "2025-12-18T18:58:48.978Z"
+    },
+    "created_at": "2025-12-18T18:58:48.339Z",
+    "updated_at": "2025-12-24T01:34:00.120Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "f5f62816-f95c-4b0c-835a-75116f2db162",
+    "data": {
+      "id": "f5f62816-f95c-4b0c-835a-75116f2db162",
+      "createdAt": "2025-12-18T18:58:48.006Z",
+      "unreadCount": 1,
+      "participants": [
+        "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+        "34684837-8737-446e-8fc7-9185a7ecc01f"
+      ],
+      "lastMessageText": "היי עדו ניצני! 👋",
+      "lastMessageTime": "2025-12-18T18:58:48.432Z"
+    },
+    "created_at": "2025-12-18T18:58:48.496Z",
+    "updated_at": "2025-12-18T18:58:50.177Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "80422c62-4377-4c1c-9311-4db57ba2005d",
+    "data": {
+      "id": "80422c62-4377-4c1c-9311-4db57ba2005d",
+      "createdAt": "2025-12-18T15:43:49.552Z",
+      "unreadCount": "0",
+      "participants": [
+        "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+        "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      ],
+      "lastMessageText": "שלום יצחק! מה נשמע?",
+      "lastMessageTime": "2025-12-18T18:54:40.975Z"
+    },
+    "created_at": "2025-12-18T15:43:50.225Z",
+    "updated_at": "2025-12-24T01:29:14.602Z"
+  }
+]

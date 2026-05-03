@@ -1,0 +1,55 @@
+{
+  "title": "סטטיסטיקות הקהילה",
+  "subtitle": "השפעה אמיתית, במספרים",
+  "sections": {
+    "impact": "השפעה בקהילה",
+    "posts": "פוסטים",
+    "tasks": "משימות",
+    "users": "משתמשים",
+    "volunteering": "התנדבות"
+  },
+  "posts": {
+    "total": "סה\"כ פוסטים",
+    "closed": "פוסטים סגורים",
+    "open": "פוסטים פתוחים",
+    "avgPerUser": "ממוצע פוסטים למשתמש"
+  },
+  "tasks": {
+    "open": "משימות פתוחות",
+    "inProgress": "משימות בתהליך",
+    "done": "משימות שהושלמו",
+    "total": "סה\"כ משימות"
+  },
+  "users": {
+    "admins": "מנהלים במערכת",
+    "regular": "משתמשים רגילים",
+    "total": "סה\"כ משתמשים"
+  },
+  "volunteering": {
+    "totalHours": "סה\"כ שעות התנדבות",
+    "avgPerUser": "ממוצע שעות למשתמש",
+    "thisMonth": "שעות החודש הנוכחי"
+  },
+  "stats": {
+    "siteVisits": "ביקורים באתר",
+    "totalMoneyDonated": "ש\"ח שנתרמו ישירות",
+    "totalUsers": "חברי קהילה רשומים",
+    "itemDonations": "פריטים שפורסמו",
+    "completedRides": "נסיעות קהילתיות",
+    "recurringDonationsAmount": "תרומות קבועות פעילות",
+    "uniqueDonors": "תורמים פעילים",
+    "completedTasks": "משימות שבוצעו"
+  },
+  "statModal": {
+    "loadingDetails": "טוען פרטים...",
+    "noData": "אין נתונים להצגה",
+    "suffixMoney": "₪",
+    "suffixRides": "נסיעות",
+    "suffixItems": "פריטים",
+    "suffixPeople": "אנשים",
+    "suffixVisits": "ביקורים",
+    "suffixTasks": "משימות",
+    "suffixGeneric": "סה\"כ",
+    "unknownRow": "רשומה ללא פירוט"
+  }
+}

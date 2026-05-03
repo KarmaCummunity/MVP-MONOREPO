@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  No global usesCleartextTraffic=true. Scoped cleartext: debug/res/xml/network_security_config.xml
+  (resource overlay) permits HTTP only for localhost / emulator routing to the dev machine.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

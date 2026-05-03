@@ -3,31 +3,26 @@
 // because TLS is handled externally; production traffic is never sent over this
 // server without TLS at the network edge.
 import * as http from "http";
-import { Logger } from "@nestjs/common";
 
-const logger = new Logger("MinimalServer");
+console.log("==================================================");
+console.log("!!! MINIMAL SERVER STARTING !!!");
+console.log("Current Directory:", process.cwd());
+console.log("Environment PORT:", process.env.PORT);
+console.log("Node Version:", process.version);
+console.log("==================================================");
 
-// Parse and validate port from environment without logging raw input
-const rawPort = process.env.PORT;
-const portNum = rawPort ? parseInt(rawPort, 10) : null;
-const port =
-  typeof portNum === "number" && portNum > 0 && portNum < 65536
-    ? portNum
-    : 3001;
-
-logger.log("==================================================");
-logger.log("Minimal health-check server starting");
-logger.log(`Node version: ${process.version}`);
-logger.log("==================================================");
+const port = process.env.PORT || 3001;
 
 const server = http.createServer((_req, res) => {
+  // Do not log request URL/method — they are user-controlled (tssecurity:S5145).
+  console.log("[MINIMAL] Received HTTP request");
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(
     JSON.stringify({
       status: "ok",
       message: "Minimal Server is UP!",
       env: {
-        // Only expose minimal, non-sensitive health information
+        port: process.env.PORT,
         db_url_set: !!process.env.DATABASE_URL,
       },
     }),
@@ -35,12 +30,12 @@ const server = http.createServer((_req, res) => {
 });
 
 server.listen(port, () => {
-  logger.log("Minimal health-check server is listening for requests");
+  console.log(`!!! MINIMAL SERVER LISTENING ON PORT ${port} !!!`);
 });
 
 // Prevent immediate exit
 process.on("SIGTERM", () => {
-  logger.log("SIGTERM received - shutting down minimal health-check server");
+  console.log("SIGTERM received");
   server.close();
   process.exit(0);
 });

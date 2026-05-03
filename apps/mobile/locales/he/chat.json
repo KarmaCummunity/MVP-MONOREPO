@@ -22,24 +22,5 @@
   "unknownUser": "משתמש לא ידוע",
   "noChats": "אין שיחות",
   "startNewOrClearSearch": "התחל שיחה חדשה או נקה חיפוש",
-  "loadConversationsError": "שגיאה בטעינת השיחות",
-  "errors": {
-    "createConversation": "יצירת השיחה בשרת נכשלה",
-    "conversationNotFound": "השיחה לא נמצאה או שאין משתתפים. אנא צור שיחה חדשה.",
-    "sendMessage": "שליחת ההודעה לשרת נכשלה",
-    "sendRetry": "שגיאה בשליחת ההודעה. אנא נסה שוב.",
-    "uploadFileTitle": "שגיאה בהעלאת הקובץ",
-    "uploadFileBody": "לא ניתן להעלות את הקובץ. {{detail}}",
-    "corsFirebaseHint": "בעיית CORS - בדוק את הגדרות Firebase Storage.",
-    "unknown": "שגיאה לא ידועה",
-    "fileSendRetry": "שגיאה בשליחת הקובץ. אנא נסה שוב."
-  },
-  "demoFakeReplies": {
-    "1": "תודה על המידע! מתי אפשר לבוא לקחת?",
-    "2": "האם אפשר לקבל תמונה של הספה?",
-    "3": "מה המידות של הספה?",
-    "4": "האם יש אפשרות למשלוח?"
-  },
-  "uploadingFileNamed": "מעלה {{name}}...",
-  "uploadingFile": "מעלה קובץ..."
+  "loadConversationsError": "שגיאה בטעינת השיחות"
 }

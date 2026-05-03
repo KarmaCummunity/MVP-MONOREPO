@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ViewMode } from '../../globals/types';
 import colors from '../../globals/colors';
-import { FontSizes, LAYOUT_CONSTANTS } from '../../globals/constants';
 
 interface ViewToggleButtonsProps {
   currentView: ViewMode;
@@ -49,22 +48,21 @@ export const ViewToggleButtons: React.FC<ViewToggleButtonsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceLighter,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
-    padding: LAYOUT_CONSTANTS.SPACING.XS,
-    marginHorizontal: LAYOUT_CONSTANTS.SPACING.MD,
-    marginVertical: LAYOUT_CONSTANTS.SPACING.SM,
+    backgroundColor: colors.surfaceCanvas,
+    borderRadius: 8,
+    padding: 4,
+    marginHorizontal: 16,
+    marginVertical: 8,
   },
   button: {
     flex: 1,
-    paddingVertical: LAYOUT_CONSTANTS.SPACING.SM,
-    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.MD,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 6,
     alignItems: 'center',
   },
   buttonActive: {
-    backgroundColor: colors.background,
-    ...LAYOUT_CONSTANTS.SHADOW.LIGHT,
+    backgroundColor: colors.white,
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -72,12 +70,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buttonText: {
-    fontSize: FontSizes.body,
-    color: colors.textTertiary,
+    fontSize: 14,
+    color: colors.neutralTextBody,
     fontWeight: '500',
   },
   buttonTextActive: {
-    color: colors.success,
+    color: colors.habitAccentGreen,
     fontWeight: 'bold',
   },
 });

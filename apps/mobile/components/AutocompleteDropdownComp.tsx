@@ -1,7 +1,12 @@
+// File overview:
+// - Purpose: Controlled dropdown with searchable modal list; returns a selected string value.
+// - Reached from: Various forms/screens needing a compact autocomplete selector.
+// - Inputs: `label`, `selectedValue`, `onValueChange`, `options`, optional `placeholder`.
+// - Behavior: Opens modal with search, filters options client-side, calls `onValueChange` on select.
+// components/AutocompleteDropdownComp.tsx
 import React, { useState } from "react";
 import { FontSizes } from '../globals/constants';
 import colors from '../globals/colors';
-import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -29,7 +34,6 @@ export default function AutocompleteDropdownComp({
   options,
   placeholder,
 }: AutocompleteDropdownCompProps) {
-  const { t } = useTranslation();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -55,7 +59,7 @@ export default function AutocompleteDropdownComp({
         <TextInput
           style={dropdownStyles.textInput}
           value={searchTerm || selectedValue} // Display search term or selected value
-          placeholder={placeholder || t('dropdown:select')}
+          placeholder={placeholder || 'Select'}
           placeholderTextColor={colors.dropdownPlaceholder}
           editable={false} // Make it not directly editable, only through the modal
         />
@@ -82,16 +86,17 @@ export default function AutocompleteDropdownComp({
             Keyboard.dismiss();
           }} // Dismiss modal and keyboard on overlay press
         >
-          <View
+          <View 
             style={dropdownStyles.modalContent}
             accessible={true}
-            accessibilityLabel={t('dropdown:search')}
+            accessibilityRole="dialog"
+            accessibilityLabel="Search options"
           >
             <View style={dropdownStyles.searchContainer}>
               <Icon name="search" size={20} color={colors.dropdownSearchIcon} style={{ marginRight: 8 }} />
               <TextInput
                 style={dropdownStyles.searchInput}
-                placeholder={t('dropdown:search')}
+                placeholder={'Search'}
                 placeholderTextColor={colors.dropdownPlaceholder}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
@@ -114,7 +119,7 @@ export default function AutocompleteDropdownComp({
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={dropdownStyles.noOptionsText}>{t('dropdown:noOptions')}</Text>
+                <Text style={dropdownStyles.noOptionsText}>No options</Text>
               }
             />
           </View>

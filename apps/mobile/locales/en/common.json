@@ -16,22 +16,14 @@
   },
   "error": "Error",
   "errorTitle": "Error",
-  "errors": {
-    "backendEmptyStats": "Backend returned empty stats data",
-    "fetchStatsFailed": "Failed to fetch community stats from backend",
-    "fetchStatsFailedGeneric": "Failed to fetch community stats"
-  },
-  "success": "Success",
-  "reportSent": "Report sent successfully",
-  "reportFailed": "Failed to send report",
   "time": {
     "now": "Now",
     "minutesAgo": "{{count}} minutes ago",
     "hoursAgo": "{{count}} hours ago",
     "daysAgo": "{{count}} days ago"
   },
-  "offerer": "Offerer",
-  "seeker": "Seeker",
+  "offerer": "Give",
+  "seeker": "Receive",
   "close": "Close",
   "guestLoginHint": "You're in guest mode, please log in",
   "unknownUser": "User",
@@ -54,35 +46,57 @@
   "appName": "Karma Community",
   "freeAppNotice": "The app is completely free and non-profit",
   "genericTryAgain": "An error occurred. Please try again.",
-  "versionCheck": {
-    "newVersionAvailable": "New version available!",
-    "tapToRefresh": "Tap here to refresh and get the latest update"
-  },
   "labels": {
     "countryIsrael": "Israel"
   },
   "accessibility": {
     "aboutButton": "About",
-    "aboutButtonHint": "Open About Karma Community screen"
-  },
-  "devBanner": {
-    "dataIsolated": "Data isolated from production",
-    "tapForInfo": "Tap for info"
+    "aboutButtonHint": "Open About Karma Community screen",
+    "createPostAdmin": "Create post or admin task",
+    "createPostUser": "Create give or request post"
   },
   "newChat": "New Chat",
   "chat": "Chat",
   "favorites": "Favorites",
   "posts": "Posts",
   "inactive": "Inactive",
+  "landingSiteTopBar": "About the community",
   "feed": {
     "tabs": {
       "friends": "Friends",
       "discovery": "Discovery"
     },
-    "taskCreated": "New task: {{title}}",
+    "filterAccessibility": "Filter and sort posts",
     "empty_title": "No posts yet",
-    "empty_friends": "Add friends to see posts!",
-    "empty_discovery": "Be the first to post!"
+    "empty_friends": "Add friends to see their posts!",
+    "empty_discovery": "Be the first to post!",
+    "empty_filtered": "No results for the current filters",
+    "empty_filtered_hint": "Change options or tap Reset in the filter panel",
+    "loading_more": "Loading posts…",
+    "load_failed_title": "Could not load the feed",
+    "load_more_retry": "Try again",
+    "filterSheet": {
+      "title": "Filter and sort",
+      "reset": "Reset",
+      "done": "Done",
+      "sortSection": "Sort",
+      "sortDate": "By date",
+      "sortDateHint": "Newest first",
+      "sortEngagement": "By engagement",
+      "sortEngagementHint": "Likes and comments",
+      "sortRelevance": "By relevance",
+      "sortRelevanceHint": "Blend of engagement and freshness",
+      "filterSection": "Filters",
+      "onlyOpen": "Open posts only",
+      "onlyOpenHint": "Tasks, rides, and items still available",
+      "verifiedOnly": "Verified authors only",
+      "verifiedOnlyHint": "Users with verified email",
+      "contentSection": "Content types",
+      "contentSectionHint": "When a category is off, plain text/photo posts are hidden too",
+      "includeTasks": "Show tasks",
+      "includeRides": "Show rides",
+      "includeItems": "Show items and donations"
+    }
   },
   "rides": {
     "offered": "Ride",
@@ -107,10 +121,10 @@
     "noTitle": "Post without title",
     "closedSuccess": "Post closed successfully",
     "closeError": "Error closing post",
+    "reopenSuccess": "Post reopened successfully",
+    "reopenError": "Error reopening post",
     "hideSuccess": "Post hidden successfully",
-    "hideError": "Error hiding post",
-    "itemForDelivery": "{{title}} for delivery",
-    "itemForDeliveryWithDesc": "{{title}} for delivery - {{description}}"
+    "hideError": "Error hiding post"
   },
   "edit_post": {
     "title": "Edit Post",
@@ -131,5 +145,67 @@
     "unsaved_changes_title": "Unsaved Changes",
     "unsaved_changes_message": "Are you sure you want to close without saving?",
     "discard": "Discard"
+  },
+  "give": "Give",
+  "receive": "Receive",
+  "request": "Request",
+  "postComposer": {
+    "giveTitle": "Create a Give post",
+    "requestTitle": "Create a Request post",
+    "title": "Title",
+    "description": "Description",
+    "city": "City",
+    "quantity": "Quantity",
+    "amount": "Amount",
+    "publish": "Publish",
+    "titleRequired": "Please enter a title",
+    "requestPublished": "Your request was published",
+    "givePublished": "Your give post was published",
+    "rideFromPlaceholder": "Origin (where you need a ride from)",
+    "rideToPlaceholder": "Destination",
+    "rideDepartureLabel": "When",
+    "titleOptional": "Short title (optional)",
+    "rideRequestFromToRequired": "Please enter both origin and destination.",
+    "rideRequestTitleTemplate": "Ride: {{from}} → {{to}}",
+    "rideGiveTitleTemplate": "Offering ride: {{from}} → {{to}}",
+    "rideTimeRequired": "Please choose a departure time.",
+    "rideOriginLabel": "Origin",
+    "rideDestLabel": "Destination",
+    "rideTimeLabel": "Time",
+    "rideNotesPlaceholder": "Notes",
+    "advancedSettings": "Advanced settings",
+    "rideSeatsLabel": "Seats",
+    "fuelParticipation": "Fuel contribution",
+    "fuelNone": "No",
+    "fuelYes": "Yes",
+    "fuelUpTo": "Up to amount (₪)",
+    "fuelCapPlaceholder": "Max ₪",
+    "fuelCapRequired": "Enter a maximum amount (₪) for fuel contribution, or choose another option.",
+    "smokingPref": "Smoking",
+    "smokingNo": "No smokers",
+    "smokingOk": "Smokers OK",
+    "smokingAny": "No preference",
+    "genderPref": "Driver / passengers gender",
+    "genderAny": "Any",
+    "genderFemale": "Women only",
+    "genderMale": "Men only",
+    "rideRecurrenceUnitRequired": "Choose how often the recurring ride repeats (day / week / month)."
+  },
+  "tasks": {
+    "status": {
+      "new": "New task",
+      "new_for_you": "A new task was created for you",
+      "open": "Open task",
+      "completed": "Task completed"
+    },
+    "view_details": "View details",
+    "task_completed": "Task completed!"
+  },
+  "task": {
+    "opened_by": "Opened by",
+    "performer": "Assigned to",
+    "unassigned": "Not assigned yet",
+    "duration": "Duration",
+    "delegation_intro": "This task was assigned to you by {{manager}}."
   }
 }

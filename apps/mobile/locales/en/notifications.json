@@ -14,5 +14,11 @@
     "subtitle": "When you receive new notifications, they will appear here"
   },
   "unreadBadge": "{{count}} new notifications",
-  "welcomeSystem": "Welcome to Karma Community!"
+  "welcomeSystem": "Welcome to Karma Community!",
+  "dailyChallengeReminder": {
+    "title": "Daily challenge check-ins ({{count}})",
+    "body": "You have {{count}} challenge(s) not reported for today. Tap to report quickly in the daily tracker.",
+    "pushTitle": "Daily challenge check-ins",
+    "pushBody": "{{count}} challenge(s) still need today's report."
+  }
 }

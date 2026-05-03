@@ -2,7 +2,7 @@
 // - Purpose: List of user conversations with search, pull-to-refresh, and live updates.
 // - Reached from: Top bar navigation and stacks (Home/Search/Profile/Donations) via 'ChatListScreen'.
 // - Provides: Merges real conversations (via `chatService`) with demo ones in non-real auth; navigates to 'ChatDetailScreen' with params.
-// - Reads from context: `useUser()` -> selectedUser, isRealAuth.
+// - Reads from context: `useUser()` -> selectedUser.
 // - Params on navigate to detail: `{ conversationId, otherUserId, userName, userAvatar }`.
 // - External deps/services: `chatService` (get/subscribe), i18n, Haptics, static users from `fakeData` and `characterTypes`.
 // ChatListScreen – professional, concise, with in-file demo support and live updates
@@ -11,22 +11,25 @@ import { View, Text, StyleSheet, RefreshControl, Alert, TextInput, TouchableOpac
 import { useNavigation, NavigationProp, ParamListBase, useFocusEffect } from '@react-navigation/native';
 import ChatListItem from '../components/ChatListItem';
 import { useUser } from '../stores/userStore';
-import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../src/services/chat.service';
-import { apiService } from '../src/api/api.service';
-import { USE_BACKEND } from '../src/infrastructure/config';
+import { getConversations, Conversation as ChatConversation, subscribeToConversations } from '../utils/chatService';
+import { apiService } from '../utils/apiService';
+import { USE_BACKEND } from '../utils/config.constants';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 // Demo data is now localized via i18n inside the component
 
 export default function ChatListScreen() {
+  useLogScreenOpened('ChatListScreen');
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  const { selectedUser, isRealAuth: _isRealAuth } = useUser();
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const { selectedUser } = useUser();
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,15 +50,6 @@ export default function ChatListScreen() {
     isOnline?: boolean;
     lastSeen?: string;
     status?: string;
-  }
-
-  /** Shape of user data returned by apiService.getUserById (response.data). */
-  interface UserProfileData {
-    name?: string;
-    avatar_url?: string;
-    avatar?: string;
-    last_active?: string;
-    bio?: string;
   }
 
   // Update ref when usersMap changes
@@ -79,7 +73,7 @@ export default function ChatListScreen() {
         try {
           const response = await apiService.getUserById(userId);
           if (response.success && response.data) {
-            const userData = response.data as UserProfileData;
+            const userData = response.data;
             return {
               id: userId,
               name: userData.name || t('chat:unknownUser'),
@@ -154,7 +148,7 @@ export default function ChatListScreen() {
       if (!selectedUser) return;
       const unsubscribe = subscribeToConversations(selectedUser.id, updated => {
         setConversations(updated);
-      });
+      }, getConversations);
       return () => unsubscribe();
     }, [selectedUser, loadConversations])
   );
@@ -181,12 +175,6 @@ export default function ChatListScreen() {
     }
   }, [conversations, selectedUser, usersMap, loadUserProfiles]);
 
-  // Resolve display data for conversations (other user, last message, unread)
-  const _combinedUsers = useMemo(() => {
-    // No demo/static users – rely on real user data from backend elsewhere if available
-    return [] as ChatUser[];
-  }, []);
-
   const filteredSortedConversations = useMemo(() => {
     if (!selectedUser) return [] as ChatConversation[];
     const sorted = [...conversations].sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
@@ -202,7 +190,7 @@ export default function ChatListScreen() {
   }, [conversations, searchQuery, usersMap, selectedUser]);
 
   const handlePressChat = (conversationId: string, otherUserId: string, userName: string, userAvatar: string) => {
-    navigation.navigate('ChatDetailScreen', { conversationId, otherUserId, userName, userAvatar });
+    navigateToChatDetail(navigation, { conversationId, otherUserId, userName, userAvatar });
   };
 
   // Create new chat – simple CTA next to the search bar
@@ -249,7 +237,7 @@ export default function ChatListScreen() {
           data={filteredSortedConversations.filter(item => item.participants && Array.isArray(item.participants) && item.participants.length > 0)}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
-            const otherId = item.participants!.find(id => id !== selectedUser?.id);
+            const otherId = item.participants?.find(id => id !== selectedUser?.id);
             if (!otherId) {
               return null;
             }
@@ -274,9 +262,9 @@ export default function ChatListScreen() {
               id: chattingUser.id,
               name: chattingUser.name,
               avatar: chattingUser.avatar,
-              isOnline: Boolean(chattingUser.isOnline),
-              lastSeen: chattingUser.lastSeen ?? new Date().toISOString(),
-              status: chattingUser.status ?? '',
+              isOnline: Boolean((chattingUser as any).isOnline),
+              lastSeen: (chattingUser as any).lastActive || new Date().toISOString(),
+              status: (chattingUser as any).bio || '',
             };
             const chatConversation = {
               id: item.id,

@@ -302,10 +302,10 @@ class ColorAuditor {
   }
 
   public audit(): ColorAuditReport {
-    console.log('🎨 Starting color audit...\n');
+    console.info('🎨 Starting color audit...\n');
 
     const files = this.getAllFiles(this.rootDir);
-    console.log(`Found ${files.length} TypeScript files to audit\n`);
+    console.info(`Found ${files.length} TypeScript files to audit\n`);
 
     files.forEach((file, index) => {
       if (index % 10 === 0) {
@@ -326,32 +326,32 @@ class ColorAuditor {
     }
 
     fs.writeFileSync(outputPath, JSON.stringify(this.report, null, 2));
-    console.log(`\n📊 Report saved to: ${outputPath}`);
+    console.info(`\n📊 Report saved to: ${outputPath}`);
   }
 
   public printSummary(): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('COLOR AUDIT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`\nTotal files scanned: ${this.report.totalFiles}`);
-    console.log(`Files with issues: ${this.report.filesWithIssues}`);
-    console.log(`Total issues found: ${this.report.totalIssues}\n`);
+    console.info('\n' + '='.repeat(60));
+    console.info('COLOR AUDIT SUMMARY');
+    console.info('='.repeat(60));
+    console.info(`\nTotal files scanned: ${this.report.totalFiles}`);
+    console.info(`Files with issues: ${this.report.filesWithIssues}`);
+    console.info(`Total issues found: ${this.report.totalIssues}\n`);
 
-    console.log('Issues by severity:');
-    console.log(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
-    console.log(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
-    console.log(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
-    console.log(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
+    console.info('Issues by severity:');
+    console.info(`  🔴 Critical: ${this.report.issuesBySeverity.critical}`);
+    console.info(`  🟠 High:     ${this.report.issuesBySeverity.high}`);
+    console.info(`  🟡 Medium:   ${this.report.issuesBySeverity.medium}`);
+    console.info(`  🟢 Low:      ${this.report.issuesBySeverity.low}\n`);
 
-    console.log('Issues by type:');
-    console.log(`  Hex colors:       ${this.report.issuesByType.hex}`);
-    console.log(`  RGB colors:       ${this.report.issuesByType.rgb}`);
-    console.log(`  Named colors:     ${this.report.issuesByType.named}`);
-    console.log(`  Inline styles:    ${this.report.issuesByType.inline}`);
-    console.log(`  Missing imports:  ${this.report.issuesByType['missing-import']}\n`);
+    console.info('Issues by type:');
+    console.info(`  Hex colors:       ${this.report.issuesByType.hex}`);
+    console.info(`  RGB colors:       ${this.report.issuesByType.rgb}`);
+    console.info(`  Named colors:     ${this.report.issuesByType.named}`);
+    console.info(`  Inline styles:    ${this.report.issuesByType.inline}`);
+    console.info(`  Missing imports:  ${this.report.issuesByType['missing-import']}\n`);
 
     if (this.report.totalIssues > 0) {
-      console.log('Top 5 files with most issues:');
+      console.info('Top 5 files with most issues:');
       const fileIssueCount = new Map<string, number>();
       this.report.issues.forEach(issue => {
         fileIssueCount.set(issue.file, (fileIssueCount.get(issue.file) || 0) + 1);
@@ -362,11 +362,11 @@ class ColorAuditor {
         .slice(0, 5);
 
       sorted.forEach(([file, count], index) => {
-        console.log(`  ${index + 1}. ${file} (${count} issues)`);
+        console.info(`  ${index + 1}. ${file} (${count} issues)`);
       });
     }
 
-    console.log('\n' + '='.repeat(60) + '\n');
+    console.info('\n' + '='.repeat(60) + '\n');
   }
 }
 

@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Platform, Image, ActivityIndicator } from 'react-native';
 import { logger } from '../utils/loggerService';
 import ScrollContainer from '../components/ScrollContainer';
-import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
 import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
-import { useUser, type User } from '../stores/userStore';
+import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import { pickImage, takePhoto } from '../utils/fileService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
+import { uploadFile, buildUserImagePath } from '../utils/storageService';
 
 export default function EditProfileScreen() {
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const navigation = useNavigation<any>();
   const { selectedUser, setSelectedUserWithMode } = useUser();
   const { t } = useTranslation(['profile', 'common']);
 
@@ -35,7 +36,7 @@ export default function EditProfileScreen() {
   const [linkedin, setLinkedin] = useState('');
   const [facebook, setFacebook] = useState('');
   const [instagram, setInstagram] = useState('');
-  const [language, setLanguage] = useState<'he'|'en'|''>((selectedUser?.settings?.language as 'he' | 'en' | undefined) ?? '');
+  const [language, setLanguage] = useState<'he'|'en'|''>((selectedUser?.settings?.language as any) || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -47,6 +48,23 @@ export default function EditProfileScreen() {
 
     setIsSaving(true);
     try {
+      let finalAvatarUrl = avatar.trim();
+
+      // If avatar is a local file URI, upload it first to Firebase Storage
+      if (selectedUser?.id && (finalAvatarUrl.startsWith('file://') || finalAvatarUrl.startsWith('content://') || finalAvatarUrl.startsWith('blob:'))) {
+        try {
+          const fileName = `avatar_${Date.now()}.jpg`;
+          const storagePath = buildUserImagePath(selectedUser.id, fileName);
+          const uploadResult = await uploadFile(storagePath, finalAvatarUrl);
+          finalAvatarUrl = uploadResult.url;
+          logger.info('EditProfileScreen', 'Uploaded avatar successfully', { url: finalAvatarUrl });
+        } catch (uploadError) {
+          logger.error('EditProfileScreen', 'Failed to upload avatar', { error: uploadError });
+          // We continue with the local URI as fallback, but warn the user
+          // Alert.alert('שים לב', 'העלאת התמונה נכשלה, התמונה תישמר מקומית בלבד.');
+        }
+      }
+
       // Prepare data for API (convert interests string to array)
       const interestsArray = interests.trim() 
         ? interests.split(',').map(i => i.trim()).filter(i => i.length > 0)
@@ -54,7 +72,7 @@ export default function EditProfileScreen() {
 
       const updateData = {
         name: fullName,
-        avatar_url: avatar.trim(), // API expects avatar_url
+        avatar_url: finalAvatarUrl, // Use the uploaded URL
         bio: bio.trim(),
         phone: phone.trim(),
         city: city.trim(),
@@ -62,7 +80,7 @@ export default function EditProfileScreen() {
         interests: interestsArray,
         settings: {
           ...(selectedUser?.settings || {}),
-          language: language || (selectedUser?.settings?.language as string | undefined) || 'he',
+          language: language || (selectedUser?.settings?.language as any) || 'he',
         },
       };
 
@@ -75,31 +93,30 @@ export default function EditProfileScreen() {
         if (response.success && response.data) {
           // Update local state with the response from server (includes all computed fields)
           // Map server response fields to client User interface
-          const data = response.data as Record<string, unknown>;
           const updatedUser = {
-            id: (data.id as string) ?? selectedUser?.id ?? '',
-            name: (data.name as string) || fullName,
+            id: response.data.id,
+            name: response.data.name || fullName,
             email: email.trim(), // Keep the email from form (not updated via API)
-            phone: (data.phone as string) || phone.trim(),
-            avatar: (data.avatar_url as string) || (data.avatar as string) || avatar.trim(),
-            bio: (data.bio as string) || bio.trim(),
-            karmaPoints: (data.karma_points as number) ?? (data.karmaPoints as number) ?? selectedUser?.karmaPoints ?? 0,
-            joinDate: (data.join_date as string) || (data.joinDate as string) || selectedUser?.joinDate || new Date().toISOString(),
-            isActive: (data.is_active as boolean) !== false,
-            lastActive: (data.last_active as string) || (data.lastActive as string) || new Date().toISOString(),
+            phone: response.data.phone || phone.trim(),
+            avatar: response.data.avatar_url || response.data.avatar || finalAvatarUrl,
+            bio: response.data.bio || bio.trim(),
+            karmaPoints: response.data.karma_points || response.data.karmaPoints || selectedUser?.karmaPoints || 0,
+            joinDate: response.data.join_date || response.data.joinDate || selectedUser?.joinDate || new Date().toISOString(),
+            isActive: response.data.is_active !== false,
+            lastActive: response.data.last_active || response.data.lastActive || new Date().toISOString(),
             location: {
-              city: (data.city as string) || city.trim(),
-              country: (data.country as string) || country.trim(),
+              city: response.data.city || city.trim(),
+              country: response.data.country || country.trim(),
             },
-            interests: (data.interests as string[]) || interestsArray,
-            roles: (data.roles as string[]) || selectedUser?.roles || ['user'],
-            postsCount: (data.posts_count as number) ?? (data.postsCount as number) ?? selectedUser?.postsCount ?? 0,
-            followersCount: (data.followers_count as number) ?? (data.followersCount as number) ?? selectedUser?.followersCount ?? 0,
-            followingCount: (data.following_count as number) ?? (data.followingCount as number) ?? selectedUser?.followingCount ?? 0,
+            interests: response.data.interests || interestsArray,
+            roles: response.data.roles || selectedUser?.roles || ['user'],
+            postsCount: response.data.posts_count || response.data.postsCount || selectedUser?.postsCount || 0,
+            followersCount: response.data.followers_count || response.data.followersCount || selectedUser?.followersCount || 0,
+            followingCount: response.data.following_count || response.data.followingCount || selectedUser?.followingCount || 0,
             notifications: selectedUser?.notifications || [],
-            settings: (data.settings as User['settings']) || {
+            settings: response.data.settings || {
               ...(selectedUser?.settings || {}),
-              language: language || (selectedUser?.settings?.language as string | undefined) || 'he',
+              language: language || (selectedUser?.settings?.language as any) || 'he',
             },
           };
           logger.info('EditProfileScreen', 'Updating user state', { 
@@ -108,7 +125,7 @@ export default function EditProfileScreen() {
             city: updatedUser.location.city,
             country: updatedUser.location.country 
           });
-          await setSelectedUserWithMode(updatedUser as User, 'real');
+          await setSelectedUserWithMode(updatedUser as any, 'real');
           
           // Also save to AsyncStorage with 'current_user' key (used by login flow)
           try {
@@ -120,42 +137,43 @@ export default function EditProfileScreen() {
           }
           
           // Show success message - use alert() for web, Alert.alert() for native
-          const successMessage = t('profile:edit.saveSuccess');
+          const successMessage = t('profile:edit.saveSuccess', 'הפרופיל נשמר בהצלחה');
           if (Platform.OS === 'web') {
             alert(successMessage);
           } else {
-            Alert.alert(t('common:success'), successMessage);
+            Alert.alert(t('common:success', 'הצלחה'), successMessage);
           }
           navigation.goBack();
         } else {
-          const errorMessage = response.error || t('profile:edit.saveErrorGeneric');
+          const errorMessage = response.error || t('common:genericTryAgain', 'אירעה שגיאה, נסה שוב');
           logger.error('EditProfileScreen', 'Save failed', { error: response.error, response });
           if (Platform.OS === 'web') {
-            alert(t('common:errorTitle') + ': ' + errorMessage);
+            alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMessage);
           } else {
             Alert.alert(
-              t('common:errorTitle'),
+              t('common:errorTitle', 'שגיאה'),
               errorMessage
             );
           }
         }
       } else {
-        const errorMsg = t('profile:edit.userNotIdentified');
+        const errorMsg = 'משתמש לא מזוהה';
         logger.error('EditProfileScreen', 'No user ID', { selectedUser });
         if (Platform.OS === 'web') {
-          alert(t('common:errorTitle') + ': ' + errorMsg);
+          alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMsg);
         } else {
-          Alert.alert(t('common:errorTitle'), errorMsg);
+          Alert.alert(t('common:errorTitle', 'שגיאה'), errorMsg);
         }
       }
     } catch (error) {
       logger.error('EditProfileScreen', 'Save exception', { error });
-      const errorMsg = t('profile:edit.saveErrorGeneric');
+      console.error('Error saving profile:', error);
+      const errorMsg = t('common:genericTryAgain', 'אירעה שגיאה בשמירת הפרופיל, נסה שוב');
       if (Platform.OS === 'web') {
-        alert(t('common:errorTitle') + ': ' + errorMsg);
+        alert(t('common:errorTitle', 'שגיאה') + ': ' + errorMsg);
       } else {
         Alert.alert(
-          t('common:errorTitle'),
+          t('common:errorTitle', 'שגיאה'),
           errorMsg
         );
       }
@@ -294,7 +312,7 @@ export default function EditProfileScreen() {
       <View style={styles.fieldRow}>
         <View style={[styles.fieldGroup, { flex: 1 }]}>
           <Text style={styles.label}>{t('profile:edit.gender')}</Text>
-          <TextInput style={styles.input} value={gender} onChangeText={(v)=>setGender(v as 'male'|'female'|'other'|'')} placeholder={t('profile:edit.genderPlaceholder')} />
+          <TextInput style={styles.input} value={gender} onChangeText={(v)=>setGender(v as any)} placeholder={t('profile:edit.genderPlaceholder')} />
         </View>
         <View style={[styles.fieldGroup, { flex: 1, marginLeft: LAYOUT_CONSTANTS.SPACING.SM }]}>
           <Text style={styles.label}>{t('profile:edit.birthDate')}</Text>
@@ -328,7 +346,7 @@ export default function EditProfileScreen() {
       <View style={styles.fieldRow}>
         <View style={[styles.fieldGroup, { flex: 1 }]}>
           <Text style={styles.label}>{t('profile:edit.preferredLanguage')}</Text>
-          <TextInput style={styles.input} value={language} onChangeText={(v)=>setLanguage(v as 'he'|'en'|'')} placeholder={t('profile:edit.preferredLanguagePlaceholder')} autoCapitalize="none" />
+          <TextInput style={styles.input} value={language} onChangeText={(v)=>setLanguage(v as any)} placeholder={t('profile:edit.preferredLanguagePlaceholder')} autoCapitalize="none" />
         </View>
         <View style={[styles.fieldGroup, { flex: 1, marginLeft: LAYOUT_CONSTANTS.SPACING.SM }]}>
           <Text style={styles.label}>{t('profile:edit.interests')}</Text>
@@ -367,7 +385,7 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: LAYOUT_CONSTANTS.SPACING.MD },
   fieldRow: { flexDirection: 'row-reverse', gap: LAYOUT_CONSTANTS.SPACING.SM },
   label: { fontSize: FontSizes.small, color: colors.textSecondary, marginBottom: 6, textAlign: 'right' },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
+  input: { backgroundColor: colors.surfaceGrayBlue, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
   avatarRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: LAYOUT_CONSTANTS.SPACING.MD, marginBottom: LAYOUT_CONSTANTS.SPACING.LG },
   avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.backgroundSecondary },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },

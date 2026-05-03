@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Modal,
   Text,
@@ -22,9 +22,9 @@ interface MenuCompProps {
 const MenuComp: React.FC<MenuCompProps> = ({ options, onSelectOption }) => {
   const [isVisible, setIsVisible] = useState<boolean>(false);
 
-  // Animated values for scale and opacity (useState to avoid ref access during render)
-  const [scaleAnim] = useState(() => new Animated.Value(0.01));
-  const [opacityAnim] = useState(() => new Animated.Value(0));
+  // Animated values for scale and opacity
+  const scaleAnim = useRef(new Animated.Value(0.01)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // Get responsive menu styles
   const menuStyles = getResponsiveMenuStyles();

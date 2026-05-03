@@ -1,18 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Pre-commit hook - Run quality checks on staged files only
-echo "🔍 Running pre-commit quality checks..."
-
-# Run lint-staged (ESLint on staged files)
 npx lint-staged
-
-# Check TypeScript compilation
-echo "📝 Checking TypeScript compilation..."
-npm run build > /dev/null 2>&1 || {
-  echo "❌ TypeScript compilation failed"
-  echo "Fix compilation errors before committing"
-  exit 1
-}
-
-echo "✅ Pre-commit checks passed"

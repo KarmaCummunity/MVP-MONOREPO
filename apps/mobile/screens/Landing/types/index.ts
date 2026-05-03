@@ -64,7 +64,7 @@ export interface SectionProps {
   children?: React.ReactNode;
 
   /** Additional style overrides */
-  style?: import('react-native').StyleProp<import('react-native').ViewStyle> | Record<string, unknown>;
+  style?: any;
 }
 
 /**
@@ -101,14 +101,13 @@ export interface FloatingMenuProps {
  * Props for lazy-loaded section wrapper
  * @interface LazySectionProps
  */
-/* eslint-disable @typescript-eslint/no-explicit-any -- LazySection accepts any section component with arbitrary props */
 export interface LazySectionProps {
   /** Section component to render */
   section: React.ComponentType<any>;
+
   /** Additional props to pass to the section component */
   [key: string]: any;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Props for hero section
@@ -117,6 +116,9 @@ export interface LazySectionProps {
 export interface HeroSectionProps {
   /** Callback when donate button is clicked */
   onDonate: () => void;
+
+  /** Navigate to app mode / login (or home when already signed in). Required to keep one navigation implementation. */
+  onJoinLogin: () => void | Promise<void>;
 }
 
 /**

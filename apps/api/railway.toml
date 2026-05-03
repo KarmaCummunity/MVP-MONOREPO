@@ -1,11 +1,16 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "apps/api/Dockerfile"
+# Only trigger this service when API or root install manifests change (monorepo).
+watchPatterns = [
+  "apps/api/**",
+  "package.json",
+  "package-lock.json",
+]
 
 [deploy]
-# startCommand = "node dist/main.js"
-# Dockerfile 'CMD' will be used to start the app (providing better logging)
-startCommand = "node dist/main.js"
+# Let Dockerfile CMD handle the start command (apps/api/dist/main.js)
+# startCommand is commented out to use Dockerfile's CMD
 
 # Healthcheck to verify the server is actually up nicely
 healthcheckPath = "/health"

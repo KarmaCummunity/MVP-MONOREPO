@@ -1,7 +1,7 @@
 // My Challenges Screen
 // Shows all challenges the user has joined/participating in
 // Allows adding entries for each challenge
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,23 +12,22 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import HeaderComp from '../components/HeaderComp';
 import { DailyHabitsQuickView } from '../components/Challenges/DailyHabitsQuickView';
-import { db } from '../src/infrastructure/database.service';
-import { logger } from '../utils/loggerService';
+import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 import { DonationsStackParamList, CommunityChallenge, ChallengeParticipant } from '../globals/types';
 import { Ionicons } from '@expo/vector-icons';
-import type { RouteProp } from '@react-navigation/native';
 
 export interface MyChallengesScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
-  route?: RouteProp<DonationsStackParamList, 'MyChallengesScreen'>;
+  route?: any;
 }
 
 const CHALLENGE_TYPE_OPTIONS = [
@@ -48,16 +47,21 @@ type ChallengeWithParticipation = CommunityChallenge & {
   participation?: ChallengeParticipant;
 };
 
-export default function MyChallengesScreen({ navigation, route: _route }: MyChallengesScreenProps) {
+export default function MyChallengesScreen(_props: MyChallengesScreenProps) {
+  const navigation = useNavigation<NavigationProp<DonationsStackParamList>>() as NavigationProp<DonationsStackParamList>;
+  const route = useRoute<RouteProp<DonationsStackParamList, 'MyChallengesScreen'>>();
   const { showToast } = useToast();
   const { t } = useTranslation(['challenges', 'common']);
   const { selectedUser: user } = useUser();
+  const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList>(null);
 
   const [challenges, setChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [filteredChallenges, setFilteredChallenges] = useState<ChallengeWithParticipation[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [habitsReloadTick, setHabitsReloadTick] = useState(0);
 
   const loadChallenges = useCallback(async () => {
     if (!user?.id) {
@@ -68,35 +72,37 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
     try {
       setLoading(true);
 
+      // Get user statistics which includes participations
       const statsResponse = await db.getChallengeStatistics(user.id);
 
       if (statsResponse.success && statsResponse.data && statsResponse.data.challenges) {
         const participations = statsResponse.data.challenges;
 
-        const challengesWithParticipation = participations.map((item: Record<string, unknown>) => ({
-          id: item.challenge_id as string,
+        // Map to our format
+        const challengesWithParticipation = participations.map((item: any) => ({
+          id: item.challenge_id,
           creator_id: '',
-          title: item.title as string,
+          title: item.title,
           description: '',
-          type: item.type as CommunityChallenge['type'],
-          frequency: item.frequency as CommunityChallenge['frequency'],
-          difficulty: item.difficulty as string,
-          category: item.category as string,
-          goal_value: item.goal_value as number | undefined,
-          deadline: item.deadline as string | undefined,
+          type: item.type,
+          frequency: item.frequency,
+          difficulty: item.difficulty,
+          category: item.category,
+          goal_value: item.goal_value,
+          deadline: item.deadline,
           is_active: true,
           participants_count: 0,
           created_at: '',
           updated_at: '',
           participation: {
-            id: item.id as string,
-            challenge_id: item.challenge_id as string,
-            user_id: item.user_id as string,
-            joined_at: item.joined_at as string,
-            current_streak: (item.current_streak as number) || 0,
-            best_streak: (item.best_streak as number) || 0,
-            total_entries: (item.total_entries as number) || 0,
-            last_entry_date: item.last_entry_date as string | undefined,
+            id: item.id,
+            challenge_id: item.challenge_id,
+            user_id: item.user_id,
+            joined_at: item.joined_at,
+            current_streak: item.current_streak || 0,
+            best_streak: item.best_streak || 0,
+            total_entries: item.total_entries || 0,
+            last_entry_date: item.last_entry_date,
           },
         }));
 
@@ -105,19 +111,29 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
         setChallenges([]);
       }
     } catch (error) {
-      logger.error('MyChallengesScreen', 'Error loading challenges', { error });
+      console.error('Error loading challenges:', error);
       showToast(t('messages.errorLoading'), 'error');
       setChallenges([]);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, t, showToast]);
+  }, [showToast, t, user?.id]);
 
+  // Load challenges when screen focuses
   useFocusEffect(
     useCallback(() => {
       void loadChallenges();
     }, [loadChallenges])
   );
+
+  useEffect(() => {
+    if (route.params?.scrollToDailyTracker !== true) return;
+    const id = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      navigation.setParams({ scrollToDailyTracker: undefined });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [route.params?.scrollToDailyTracker, navigation]);
 
   // Apply search filter
   React.useEffect(() => {
@@ -138,19 +154,21 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setHabitsReloadTick((n) => n + 1);
     await loadChallenges();
     setRefreshing(false);
   };
 
   const handleAddEntry = (challenge: ChallengeWithParticipation) => {
-    navigation.navigate('ChallengeDetailsScreen', {
+    // Navigate to challenge details to add entry
+    (navigation as any).navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
       openEntryForm: true,
     });
   };
 
   const handleViewDetails = (challenge: ChallengeWithParticipation) => {
-    navigation.navigate('ChallengeDetailsScreen', {
+    (navigation as any).navigate('ChallengeDetailsScreen', {
       challengeId: challenge.id,
     });
   };
@@ -169,7 +187,7 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
             <Ionicons
-              name={(typeOption?.icon as never) || 'trophy-outline'}
+              name={typeOption?.icon as any || 'trophy-outline'}
               size={24}
               color={difficultyOption?.color || colors.primary}
             />
@@ -223,6 +241,18 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
     );
   };
 
+  const listHeader = (
+    <>
+      <DailyHabitsQuickView
+        reloadToken={habitsReloadTick}
+        onBrowseChallenges={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
+      />
+      <View style={styles.titleContainer}>
+        <Text style={styles.screenTitle}>{t('challenges:myChallenges', 'האתגרים שלי')}</Text>
+      </View>
+    </>
+  );
+
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="trophy-outline" size={64} color={colors.textSecondary} />
@@ -230,7 +260,7 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
       <Text style={styles.emptySubtitle}>{t('messages.noJoinedChallengesSubtitle')}</Text>
       <TouchableOpacity
         style={styles.browseButton}
-        onPress={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
+        onPress={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
       >
         <Ionicons name="search-outline" size={24} color={colors.white} />
         <Text style={styles.browseButtonText}>{t('browseChallenges')}</Text>
@@ -247,42 +277,41 @@ export default function MyChallengesScreen({ navigation, route: _route }: MyChal
           t('challenges:browseChallenges', 'עיון באתגרים'),
           t('challenges:myCreatedChallenges', 'האתגרים שיצרתי'),
         ]}
-        onToggleMode={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
+        onToggleMode={() => (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' })}
         onSelectMenuItem={(option) => {
           if (option === t('challenges:statistics')) {
-            navigation.navigate('ChallengeStatisticsScreen');
+            (navigation as any).navigate('ChallengeStatisticsScreen');
           } else if (option === t('challenges:browseChallenges', 'עיון באתגרים')) {
-            navigation.navigate('CommunityChallengesScreen', { mode: 'search' });
+            (navigation as any).navigate('CommunityChallengesScreen', { mode: 'search' });
           } else if (option === t('challenges:myCreatedChallenges', 'האתגרים שיצרתי')) {
-            navigation.navigate('MyCreatedChallengesScreen');
+            (navigation as any).navigate('MyCreatedChallengesScreen');
           }
         }}
         title={t('myChallenges')}
         placeholder={t('common:search')}
         filterOptions={[]}
         sortOptions={[]}
-        searchData={filteredChallenges as unknown as Record<string, unknown>[]}
+        searchData={filteredChallenges}
         onSearch={(query) => setSearchQuery(query)}
         hideSortButton={true}
       />
 
-      <DailyHabitsQuickView
-        onBrowseChallenges={() => navigation.navigate('CommunityChallengesScreen', { mode: 'search' })}
-      />
-
-      {/* Screen Title */}
-      <View style={styles.titleContainer}>
-        <Text style={styles.screenTitle}>{t('challenges:myChallenges', 'האתגרים שלי')}</Text>
+      <View style={styles.listOuter}>
+        <FlatList
+          ref={listRef}
+          style={styles.flatList}
+          data={filteredChallenges}
+          renderItem={renderChallengeCard}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(insets.bottom, 12) + 24 },
+          ]}
+          ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} /> : renderEmptyState()}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
       </View>
-
-      <FlatList
-        data={filteredChallenges}
-        renderItem={renderChallengeCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} /> : renderEmptyState()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
     </SafeAreaView>
   );
 }
@@ -291,6 +320,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  listOuter: {
+    flex: 1,
+    minHeight: 0,
+  },
+  flatList: {
+    flex: 1,
   },
   titleContainer: {
     paddingHorizontal: 16,

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS community_group_challenges (
   category VARCHAR(50), -- Challenge category
   is_active BOOLEAN DEFAULT true,
   participants_count INTEGER DEFAULT 0,
+  is_public BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -37,10 +38,12 @@ END $$;
 
 -- Add goal_direction column if it doesn't exist (for success/failure calculation)
 DO $$ 
+DECLARE
+    challenges_table CONSTANT TEXT := 'community_group_challenges';
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'community_group_challenges' AND column_name = 'goal_direction'
+        WHERE table_name = challenges_table AND column_name = 'goal_direction'
     ) THEN
         -- Step 1: Add column without default
         ALTER TABLE community_group_challenges 
@@ -53,6 +56,18 @@ BEGIN
         WHERE type IN ('NUMERIC', 'DURATION') 
           AND goal_value IS NOT NULL
           AND goal_direction IS NULL;
+    END IF;
+END $$;
+
+-- Add is_public (community vs private) for existing databases
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'community_group_challenges' AND column_name = 'is_public'
+    ) THEN
+        ALTER TABLE community_group_challenges ADD COLUMN is_public BOOLEAN DEFAULT true;
+        UPDATE community_group_challenges SET is_public = true WHERE is_public IS NULL;
     END IF;
 END $$;
 
@@ -115,10 +130,10 @@ CREATE INDEX IF NOT EXISTS idx_challenge_entries_challenge_user ON community_cha
 CREATE INDEX IF NOT EXISTS idx_challenge_entries_tracker 
 ON community_challenge_entries(user_id, challenge_id, entry_date DESC);
 
--- Index for date range queries
+-- Index for date range queries (removed WHERE clause with CURRENT_DATE - it's not immutable)
+-- Queries can still use this index efficiently for date ranges
 CREATE INDEX IF NOT EXISTS idx_challenge_entries_date_range 
-ON community_challenge_entries(user_id, entry_date DESC) 
-WHERE entry_date >= CURRENT_DATE - INTERVAL '90 days';
+ON community_challenge_entries(user_id, entry_date DESC);
 
 CREATE INDEX IF NOT EXISTS idx_posts_community_challenge ON posts(community_challenge_id) WHERE community_challenge_id IS NOT NULL;
 

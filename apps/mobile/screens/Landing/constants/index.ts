@@ -33,7 +33,6 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: 'how', icon: 'help-circle-outline' },
   { id: 'who', icon: 'people-outline' },
   { id: 'values', icon: 'heart-outline' },
-  { id: 'core-mottos', icon: 'sparkles-outline' },
   { id: 'hierarchy', icon: 'git-network-outline' },
   { id: 'roadmap', icon: 'map-outline' },
   { id: 'contact', icon: 'mail-outline' },
@@ -46,34 +45,46 @@ export const MENU_ITEMS: MenuItem[] = [
 export const WHATSAPP_CONTACT = '972528616878';
 
 /**
- * WhatsApp contact URL
+ * Pre-filled body for direct WhatsApp links from the landing page (Hebrew).
  */
-export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_CONTACT}`;
+export const WHATSAPP_DEFAULT_MESSAGE =
+  'שלום נוה אשמח שנדבר על הפרויקט, אשמח לקחת חלק!';
 
 /**
- * Instagram profile URL
+ * Builds a wa.me URL for the landing contact, with optional pre-filled message.
  */
-export const INSTAGRAM_URL = 'https://www.instagram.com/karmacommunity.il';
+export function buildWhatsAppDirectUrl(message?: string): string {
+  const base = `https://wa.me/${WHATSAPP_CONTACT}`;
+  if (!message) {
+    return base;
+  }
+  return `${base}?text=${encodeURIComponent(message)}`;
+}
 
 /**
- * Instagram karma community URL (alternate handle)
+ * WhatsApp contact URL (includes default pre-filled message)
  */
-export const INSTAGRAM_KARMA_URL = 'https://www.instagram.com/karma_community_/';
+export const WHATSAPP_URL = buildWhatsAppDirectUrl(WHATSAPP_DEFAULT_MESSAGE);
 
 /**
- * GitHub organization URL
+ * Instagram handle (no @). Override at build time: EXPO_PUBLIC_INSTAGRAM_USERNAME
  */
-export const GITHUB_ORG_URL = 'https://github.com/KarmaCummunity';
+function resolveInstagramUsername(): string {
+  const raw =
+    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_INSTAGRAM_USERNAME) ||
+    'karma_community_';
+  return raw.trim().replace(/^@/, '').replace(/\/+$/, '');
+}
+
+export const INSTAGRAM_USERNAME = resolveInstagramUsername();
+
+/** Public profile URL (native + web CTA) */
+export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/`;
 
 /**
- * WhatsApp group invite URL
+ * iframe src for web embed (Meta). Not used on iOS/Android — use INSTAGRAM_URL + Linking.
  */
-export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Hi2TpFcO5huKVKarvecz00';
-
-/**
- * Contact email address
- */
-export const CONTACT_EMAIL = 'navesarussi@gmail.com';
+export const INSTAGRAM_EMBED_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}/embed`;
 
 /**
  * Default statistics fallback values

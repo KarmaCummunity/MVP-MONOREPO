@@ -8,10 +8,6 @@ coverage
 .DS_Store
 .env
 .env.*
-# Allow template files (no secrets) to be committed
-!.env.example
-!.env.test.example
-!.env*.example
 
 .vscode
 .idea
@@ -29,20 +25,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Report files
-*-report.json
-*-issues.json
-snyk-*.json
-sonar-*.json
+.scannerwork
 
-# Backup folders
-data-backups/
-
-# Temporary documentation
-*_SUMMARY.md
-*_FIX.md
-FIX_*.md
-
-# Sensitive files
-railway_vars.txt
-*_vars.txt
+# Snyk Code (SARIF) exports embed example secrets in tool rule metadata; committing them
+# triggers secret scanners and shows as a single "line 1" blob. Regenerate locally if needed.
+tools/quality/snyk/snyk-code-*.json

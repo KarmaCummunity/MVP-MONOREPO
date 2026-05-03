@@ -46,12 +46,13 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: jest.fn(),
 }));
 
-// Mock expo-notifications
+// Mock expo-notifications (include setNotificationHandler — notificationService calls it at import)
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(),
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   cancelAllScheduledNotificationsAsync: jest.fn(),
+  setNotificationHandler: jest.fn(),
 }));
 
 // הגדרת timeout גלובלי

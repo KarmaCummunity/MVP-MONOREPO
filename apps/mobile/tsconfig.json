@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
-    "jsx": "react-jsx",
     "lib": [
       "dom",
       "esnext"
@@ -14,9 +13,13 @@
     "strict": true,
     "allowJs": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "../../node_modules/@types"
+    ]
   },
-  "extends": "expo/tsconfig.base",
+  "extends": "../../node_modules/expo/tsconfig.base.json",
   "include": [
     "**/*.ts",
     "**/*.tsx",

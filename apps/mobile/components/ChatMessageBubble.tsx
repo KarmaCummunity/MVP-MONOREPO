@@ -1,7 +1,7 @@
 // components/ChatMessageBubble.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, ImageStyle } from 'react-native';
-import { Message } from '../src/services/chat.service'; // Use new Message type
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { Message } from '../utils/chatService'; // Use new Message type
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors'; // Assuming you have a Colors file
 import { FontSizes } from '../globals/constants';
@@ -37,7 +37,7 @@ const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message, isMyMess
             style={styles.fileContainer}
             onPress={() => Alert.alert(t('chat:image'), t('chat:openImage'))}
           >
-            <Image source={{ uri: fileData.uri }} style={styles.messageImage as ImageStyle} />
+            <Image source={{ uri: fileData.uri }} style={styles.messageImage as any} />
           </TouchableOpacity>
         );
       
@@ -48,7 +48,7 @@ const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message, isMyMess
             onPress={() => Alert.alert(t('chat:video'), t('chat:playVideo'))}
           >
             <View style={styles.videoContainer}>
-              <Image source={{ uri: fileData.thumbnail || fileData.uri }} style={styles.videoThumbnail as ImageStyle} />
+              <Image source={{ uri: fileData.thumbnail || fileData.uri }} style={styles.videoThumbnail as any} />
               <View style={styles.playButton}>
                 <Icon name="play" size={24} color={colors.white} />
               </View>
@@ -87,7 +87,7 @@ const ChatMessageBubble: React.FC<ChatMessageBubbleProps> = ({ message, isMyMess
   return (
     <View style={containerStyle}>
       {!isMyMessage && (
-        <Image source={{ uri: userAvatar }} style={styles.avatar as ImageStyle} />
+        <Image source={{ uri: userAvatar }} style={styles.avatar as any} />
       )}
       <View style={[styles.bubble, bubbleStyle]}>
         {message.text && <Text style={[styles.messageText, textStyle]}>{message.text}</Text>}
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
-  },
+  } as any,
   playButton: {
     position: 'absolute',
     top: '50%',

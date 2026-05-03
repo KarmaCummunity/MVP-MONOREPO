@@ -1,15 +1,15 @@
 import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useNavigation, useFocusEffect, useRoute, NavigationProp } from '@react-navigation/native';
-import { RootStackParamList } from '../globals/types';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
 
+const UseAdminProtection_LOG = 'useAdminProtection';
 export function useAdminProtection(allowViewOnly?: boolean) {
     const { isAdmin, isLoading, selectedUser, refreshUserRoles, isAuthenticated, isGuestMode } = useUser();
-    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+    const navigation = useNavigation<any>();
     const route = useRoute();
-    const routeParams = (route.params as { viewOnly?: boolean }) || {};
+    const routeParams = (route.params as any) || {};
     const isViewOnly = routeParams?.viewOnly === true;
     const isVerifyingRef = useRef(false);
     const lastCheckRef = useRef<number>(0);
@@ -19,7 +19,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
         if (navigation.canGoBack()) {
             navigation.goBack();
         } else {
-            navigation.navigate('HomeStack', { screen: 'HomeScreen' });
+            navigation.navigate('HomeStack');
         }
     }, [navigation]);
 
@@ -37,7 +37,9 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             isVerifyingRef.current = true;
             lastCheckRef.current = now;
 
-            logger.debug('useAdminProtection', 'Verifying admin status for user', { email: selectedUser.email });
+            logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: Verifying admin status for user', {
+              email: selectedUser.email,
+            });
 
             // Refresh user roles from database
             // This will update the store if roles changed
@@ -47,7 +49,7 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             // If it becomes false, the next render will catch it in the local check below
 
         } catch (err) {
-            logger.warn('useAdminProtection', 'Admin verification failed (network error or other)', { error: err });
+            console.warn('🔐 Admin verification failed (network error or other)', err);
         } finally {
             isVerifyingRef.current = false;
         }
@@ -58,13 +60,13 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             // If view-only mode is allowed and active, allow everyone (including unauthenticated)
             if (allowViewOnly && isViewOnly) {
                 // In view-only mode, allow everyone - no authentication required
-                logger.debug('useAdminProtection', 'View-only protection: Allowing access (view-only mode)');
+                logger.debug(UseAdminProtection_LOG, '🔐 View-only protection: Allowing access (view-only mode)');
                 return;
             }
 
             // 1. Immediate local check for admin access
             if (!isLoading && !isAdmin) {
-                logger.debug('useAdminProtection', 'User not admin (local check), redirecting');
+                logger.debug(UseAdminProtection_LOG, '🔐 Admin protection: User not admin (local check), redirecting');
                 handleUnauthorized();
                 return;
             }
@@ -74,7 +76,6 @@ export function useAdminProtection(allowViewOnly?: boolean) {
             if (!isLoading && isAdmin && selectedUser) {
                 verifyAdminStatus();
             }
-            // eslint-disable-next-line react-hooks/exhaustive-deps -- isAuthenticated/isGuestMode used only in return, not in callback
         }, [isAdmin, isLoading, selectedUser, verifyAdminStatus, handleUnauthorized, allowViewOnly, isViewOnly])
     );
 

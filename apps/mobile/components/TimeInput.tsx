@@ -1,5 +1,5 @@
 // components/TimeInput.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -37,12 +37,12 @@ export default function TimeInput({
   placeholder,
 }: TimeInputProps) {
   const { t } = useTranslation(['common']);
-  const isControlled = value !== undefined;
-  const [internalTime, setInternalTime] = useState<Date | null>(null);
+  const [time, setTime] = useState<Date | null>(value || null);
   const [showPicker, setShowPicker] = useState(false);
 
-  const time = isControlled ? (value ?? null) : internalTime;
-  const setTime = isControlled ? (_: Date | null) => {} : setInternalTime;
+  useEffect(() => {
+    setTime(value || null);
+  }, [value]);
 
   const handleChange = (
     event: DateTimePickerEvent,

@@ -4,19 +4,9 @@
 // - Inputs: None; fetches stats via `EnhancedStatsService` and renders to <canvas>.
 // - Behavior: Creates many bubbles with depth, wobble and shimmer; assigns labels from stats and updates periodically.
 import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { EnhancedStatsService, formatShortNumber } from '../src/services/stats.service';
-import type { CommunityStats } from '../src/services/stats.service';
+import { EnhancedStatsService, formatShortNumber } from '../utils/statsService';
+import type { CommunityStats } from '../utils/statsService';
 import colors from '../globals/colors';
-import { logger } from '../utils/loggerService';
-
-// Fallback label by size before stats are loaded (reserved for future use)
-const _getSizeLabel = (radius: number): string => {
-  if (radius < 18) return 'XS';
-  if (radius < 35) return 'S';
-  if (radius < 60) return 'M';
-  if (radius < 90) return 'L';
-  return 'XL';
-};
 
 interface Bubble {
   id: string;
@@ -66,90 +56,21 @@ interface MouseState {
   isPressed: boolean;
 }
 
-const STAT_LABELS: Partial<Record<keyof CommunityStats, string>> = {
-  moneyDonations: 'כסף נתרם',
-  volunteerHours: 'שעות התנדבות',
-  rides: 'נסיעות',
-  events: 'אירועים',
-  activeMembers: 'חברים פעילים',
-  totalUsers: 'סה״כ משתמשים',
-  dailyActiveUsers: 'פעילים יומי',
-  weeklyActiveUsers: 'פעילים שבועי',
-  newUsersThisWeek: 'חדשים השבוע',
-  newUsersThisMonth: 'חדשים החודש',
-  totalOrganizations: 'ארגונים',
-  citiesWithUsers: 'ערים',
-  userEngagementRate: 'אחוז מעורבות',
-  totalDonations: 'סה״כ תרומות',
-  donationsThisWeek: 'תרומות השבוע',
-  donationsThisMonth: 'תרומות החודש',
-  activeDonations: 'תרומות פעילות',
-  completedDonations: 'תרומות הושלמו',
-  itemDonations: 'תרומות פריטים',
-  serviceDonations: 'תרומות שירותים',
-  totalMoneyDonated: 'סכום נתרם',
-  uniqueDonors: 'תורמים ייחודיים',
-  avgDonationAmount: 'ממוצע תרומה',
-  totalRides: 'סה״כ נסיעות',
-  ridesThisWeek: 'נסיעות השבוע',
-  ridesThisMonth: 'נסיעות החודש',
-  activeRides: 'נסיעות פעילות',
-  completedRides: 'נסיעות הושלמו',
-  totalSeatsOffered: 'מקומות הוצעו',
-  uniqueDrivers: 'נהגים ייחודיים',
-  avgSeatsPerRide: 'ממוצע מקומות',
-  totalEvents: 'סה״כ אירועים',
-  eventsThisWeek: 'אירועים השבוע',
-  eventsThisMonth: 'אירועים החודש',
-  activeEvents: 'אירועים פעילים',
-  completedEvents: 'אירועים הושלמו',
-  totalEventAttendees: 'משתתפים',
-  virtualEvents: 'אירועים וירטואליים',
-  totalActivities: 'סה״כ פעילויות',
-  activitiesToday: 'פעילויות היום',
-  activitiesThisWeek: 'פעילויות השבוע',
-  totalLogins: 'סה״כ כניסות',
-  donationActivities: 'פעילות תרומה',
-  chatActivities: 'פעילות צ׳אט',
-  activeUsersTracked: 'משתמשים פעילים',
-  totalMessages: 'סה״כ הודעות',
-  totalConversations: 'שיחות',
-  messagesThisWeek: 'הודעות השבוע',
-  groupConversations: 'קבוצות',
-  directConversations: 'שיחות פרטיות',
-  foodKg: 'ק״ג מזון',
-  clothingKg: 'ק״ג בגדים',
-  bloodLiters: 'ליטר דם',
-  treesPlanted: 'עצים ניטעו',
-  animalsAdopted: 'בעלי חיים',
-  recyclingBags: 'שקיות מיחזור',
-  booksDonated: 'ספרים',
-  appActiveUsers: 'משתמשים פעילים',
-  appDownloads: 'הורדות',
-  activeVolunteers: 'מתנדבים',
-  kmCarpooled: 'ק״מ נסיעות',
-  fundsRaised: 'כספים נגויסו',
-  mealsServed: 'ארוחות הוגשו',
-  courses: 'קורסים',
-  culturalEvents: 'אירועי תרבות',
-};
-
 const FloatingBubbles = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const animateFnRef = useRef<() => void>(() => {});
   const bubblesRef = useRef<Bubble[]>([]);
   const mouseRef = useRef<MouseState>({ x: 0, y: 0, isPressed: false });
   const rippleRef = useRef<Ripple[]>([]);
   const [, setDimensions] = useState({ width: 0, height: 0 });
   const statsRef = useRef<CommunityStats | null>(null);
-  const BOTTOM_SAFE_ZONE_PX = 96;
-  const MIN_LABEL_RADIUS_FOR_STATS = 36;
-  const MAX_LABEL_RADIUS_FOR_STATS = 140;
-  const REFRESH_MS = 60000;
+  const BOTTOM_SAFE_ZONE_PX = 96; // שמירת אזור הכפתור בתחתית
+  const MIN_LABEL_RADIUS_FOR_STATS = 36; // מציגים סטטיסטיקה רק בבועות גדולות יחסית
+  const MAX_LABEL_RADIUS_FOR_STATS = 140; // רדיוס מקסימלי לבועה עם סטטיסטיקה
+  const REFRESH_MS = 60000; // רענון נתונים כל 60 שניות - סטטיסטיקות לא משתנות בתדירות גבוהה
 
   // Order and labels for mapping stats to bubbles - all 40+ stats
-  const statKeys = useMemo<Array<keyof CommunityStats>>(() => [
+  const statKeys = useMemo((): Array<keyof CommunityStats> => [
     // Core high-priority stats
     'moneyDonations', 'volunteerHours', 'rides', 'events', 'activeMembers', 'totalUsers',
 
@@ -181,8 +102,91 @@ const FloatingBubbles = () => {
     // Legacy extended stats
     'foodKg', 'clothingKg', 'bloodLiters', 'treesPlanted', 'animalsAdopted', 'recyclingBags',
     'booksDonated', 'appActiveUsers', 'appDownloads', 'activeVolunteers', 'kmCarpooled',
-    'fundsRaised', 'mealsServed', 'courses',     'culturalEvents'
+    'fundsRaised', 'mealsServed', 'courses', 'culturalEvents'
   ], []);
+
+  const STAT_LABELS = useMemo((): Partial<Record<keyof CommunityStats, string>> => ({
+    // Core stats
+    moneyDonations: 'כסף נתרם',
+    volunteerHours: 'שעות התנדבות',
+    rides: 'נסיעות',
+    events: 'אירועים',
+    activeMembers: 'חברים פעילים',
+    totalUsers: 'סה״כ משתמשים',
+
+    // User engagement
+    dailyActiveUsers: 'פעילים יומי',
+    weeklyActiveUsers: 'פעילים שבועי',
+    newUsersThisWeek: 'חדשים השבוע',
+    newUsersThisMonth: 'חדשים החודש',
+    totalOrganizations: 'ארגונים',
+    citiesWithUsers: 'ערים',
+    userEngagementRate: 'אחוז מעורבות',
+
+    // Donation metrics
+    totalDonations: 'סה״כ תרומות',
+    donationsThisWeek: 'תרומות השבוע',
+    donationsThisMonth: 'תרומות החודש',
+    activeDonations: 'תרומות פעילות',
+    completedDonations: 'תרומות הושלמו',
+    itemDonations: 'תרומות פריטים',
+    serviceDonations: 'תרומות שירותים',
+    totalMoneyDonated: 'סכום נתרם',
+    uniqueDonors: 'תורמים ייחודיים',
+    avgDonationAmount: 'ממוצע תרומה',
+
+    // Ride metrics
+    totalRides: 'סה״כ נסיעות',
+    ridesThisWeek: 'נסיעות השבוע',
+    ridesThisMonth: 'נסיעות החודש',
+    activeRides: 'נסיעות פעילות',
+    completedRides: 'נסיעות הושלמו',
+    totalSeatsOffered: 'מקומות הוצעו',
+    uniqueDrivers: 'נהגים ייחודיים',
+    avgSeatsPerRide: 'ממוצע מקומות',
+
+    // Event metrics
+    totalEvents: 'סה״כ אירועים',
+    eventsThisWeek: 'אירועים השבוע',
+    eventsThisMonth: 'אירועים החודש',
+    activeEvents: 'אירועים פעילים',
+    completedEvents: 'אירועים הושלמו',
+    totalEventAttendees: 'משתתפים',
+    virtualEvents: 'אירועים וירטואליים',
+
+    // Activity metrics
+    totalActivities: 'סה״כ פעילויות',
+    activitiesToday: 'פעילויות היום',
+    activitiesThisWeek: 'פעילויות השבוע',
+    totalLogins: 'סה״כ כניסות',
+    donationActivities: 'פעילות תרומה',
+    chatActivities: 'פעילות צ׳אט',
+    activeUsersTracked: 'משתמשים פעילים',
+
+    // Communication
+    totalMessages: 'סה״כ הודעות',
+    totalConversations: 'שיחות',
+    messagesThisWeek: 'הודעות השבוע',
+    groupConversations: 'קבוצות',
+    directConversations: 'שיחות פרטיות',
+
+    // Legacy extended stats
+    foodKg: 'ק״ג מזון',
+    clothingKg: 'ק״ג בגדים',
+    bloodLiters: 'ליטר דם',
+    treesPlanted: 'עצים ניטעו',
+    animalsAdopted: 'בעלי חיים',
+    recyclingBags: 'שקיות מיחזור',
+    booksDonated: 'ספרים',
+    appActiveUsers: 'משתמשים פעילים',
+    appDownloads: 'הורדות',
+    activeVolunteers: 'מתנדבים',
+    kmCarpooled: 'ק״מ נסיעות',
+    fundsRaised: 'כספים נגויסו',
+    mealsServed: 'ארוחות הוגשו',
+    courses: 'קורסים',
+    culturalEvents: 'אירועי תרבות',
+  }), []);
 
   const createBubble = useCallback((canvas: HTMLCanvasElement): Bubble => {
     const depth = Math.random();
@@ -252,7 +256,7 @@ const FloatingBubbles = () => {
     });
 
     // הפקת רשימת סטטיסטיקות ממוינות לפי ערך יורד
-    const statList = statKeys.map(key => ({ key, value: Number(stats[key] ?? 0) || 0 }));
+    const statList = statKeys.map(key => ({ key, value: Number((stats as any)[key] || 0) || 0 }));
     statList.sort((a, b) => b.value - a.value);
 
     const candidates = [...bubblesRef.current]
@@ -278,7 +282,7 @@ const FloatingBubbles = () => {
       bubble.labelValue = formatShortNumber(value);
       bubble.labelText = STAT_LABELS[key] || 'Stat';
     }
-  }, [statKeys]);
+  }, [statKeys, STAT_LABELS]);
 
   useEffect(() => {
     let mounted = true;
@@ -289,7 +293,7 @@ const FloatingBubbles = () => {
         statsRef.current = stats;
         assignStatsToBubbles();
       } catch (e) {
-        logger.error('FloatingBubblesOverlay', 'Failed to load stats for bubbles', { error: e });
+        console.error('Failed to load stats for bubbles', e);
       }
     })();
     return () => { mounted = false; };
@@ -303,7 +307,7 @@ const FloatingBubbles = () => {
         statsRef.current = stats;
         assignStatsToBubbles();
       } catch (e) {
-        logger.error('FloatingBubblesOverlay', 'Refresh stats error', { error: e });
+        console.error('Refresh stats error', e);
       }
     }, REFRESH_MS);
     return () => clearInterval(interval);
@@ -450,7 +454,7 @@ const FloatingBubbles = () => {
     highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${highlightAlpha})`);
     highlightGradient.addColorStop(0.3, `rgba(255, 255, 255, ${highlightAlpha * 0.6})`);
     highlightGradient.addColorStop(0.7, `rgba(200, 230, 255, ${highlightAlpha * 0.3})`);
-    highlightGradient.addColorStop(1, colors.transparent);
+    highlightGradient.addColorStop(1, colors.overlayWhiteTransparent);
 
     ctx.beginPath();
     ctx.arc(x - bubble.radius * 0.25, y - bubble.radius * 0.35, bubble.radius * 0.45, 0, Math.PI * 2);
@@ -481,7 +485,7 @@ const FloatingBubbles = () => {
     );
 
     bottomReflectionGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.12})`);
-    bottomReflectionGradient.addColorStop(1, colors.transparent);
+    bottomReflectionGradient.addColorStop(1, colors.overlayWhiteTransparent);
 
     ctx.beginPath();
     ctx.arc(x, y + bubble.radius * 0.7, bubble.radius * 0.25, 0, Math.PI * 2);
@@ -500,13 +504,14 @@ const FloatingBubbles = () => {
     if (bubble.labelValue) {
       ctx.font = `800 ${numberFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       ctx.lineWidth = outlineWidth;
-      ctx.strokeStyle = colors.bubbleOutline;
-      ctx.fillStyle = colors.bubbleFill;
+      ctx.strokeStyle = colors.bubbleCanvasStroke;
+      ctx.fillStyle = colors.bubbleCanvasFill;
       const numberY = y - bubble.radius * 0.12;
       // stroke without shadow
       ctx.shadowColor = 'transparent';
       ctx.strokeText(bubble.labelValue, x, numberY);
-      ctx.shadowColor = colors.bubbleShadow;
+      // fill with soft shadow to look bubbly
+      ctx.shadowColor = colors.shadowBubbleStrong;
       ctx.shadowBlur = Math.max(1, bubble.radius * 0.08);
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
@@ -519,13 +524,14 @@ const FloatingBubbles = () => {
     if (bubble.labelText) {
       ctx.font = `700 ${textFontSize}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`;
       ctx.lineWidth = Math.max(1, outlineWidth * 0.85);
-      ctx.strokeStyle = colors.bubbleOutlineLight;
-      ctx.fillStyle = colors.bubbleFillLight;
+      ctx.strokeStyle = colors.bubbleCanvasStrokeSoft;
+      ctx.fillStyle = colors.bubbleCanvasFillSoft;
       const textY = y + bubble.radius * 0.28;
       // stroke without shadow
       ctx.shadowColor = 'transparent';
       ctx.strokeText(bubble.labelText, x, textY);
-      ctx.shadowColor = colors.bubbleShadowLight;
+      // fill with soft shadow
+      ctx.shadowColor = colors.shadowBubbleSoft;
       ctx.shadowBlur = Math.max(1, bubble.radius * 0.06);
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
@@ -644,12 +650,8 @@ const FloatingBubbles = () => {
       ctx.fill();
     }
 
-    animationRef.current = requestAnimationFrame(() => animateFnRef.current?.());
+    animationRef.current = requestAnimationFrame(animate);
   }, [applyMouseForces, drawBubble, drawRipples]);
-
-  useEffect(() => {
-    animateFnRef.current = animate;
-  }, [animate]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -674,7 +676,7 @@ const FloatingBubbles = () => {
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-    animateFnRef.current();
+    animate();
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);

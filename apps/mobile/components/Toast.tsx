@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,15 +27,13 @@ const Toast: React.FC<ToastProps> = ({
   duration = 2000,
   onHide,
 }) => {
-  const [translateY] = useState(() => new Animated.Value(100));
-  const [opacity] = useState(() => new Animated.Value(0));
-  const [isAnimatingOut, setIsAnimatingOut] = React.useState(false);
-  const shouldRender = visible || isAnimatingOut;
+  const translateY = useRef(new Animated.Value(100)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const [shouldRender, setShouldRender] = React.useState(visible);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- Toast exit animation requires keeping mounted until animation completes */
   useEffect(() => {
     if (visible) {
-      setIsAnimatingOut(false);
+      setShouldRender(true);
       // Show animation
       Animated.parallel([
         Animated.timing(translateY, {
@@ -64,15 +62,13 @@ const Toast: React.FC<ToastProps> = ({
             useNativeDriver: false,
           }),
         ]).start(() => {
-          setIsAnimatingOut(false);
+          setShouldRender(false);
           onHide?.();
         });
       }, duration);
 
       return () => clearTimeout(timer);
     } else {
-      /* Exit animation: must keep mounted until animation completes */
-      setIsAnimatingOut(true);
       // Hide immediately
       Animated.parallel([
         Animated.timing(translateY, {
@@ -86,7 +82,7 @@ const Toast: React.FC<ToastProps> = ({
           useNativeDriver: false,
         }),
       ]).start(() => {
-        setIsAnimatingOut(false);
+        setShouldRender(false);
       });
     }
   }, [visible, duration, translateY, opacity, onHide]);
@@ -115,7 +111,6 @@ const Toast: React.FC<ToastProps> = ({
           opacity,
         },
       ]}
-      pointerEvents="none"
     >
       <View style={[styles.toast, { backgroundColor: getBackgroundColor() }]}>
         <Text style={styles.message}>{message}</Text>
@@ -145,6 +140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+      },
       ios: {
         shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
@@ -154,6 +152,7 @@ const styles = StyleSheet.create({
       android: {
         elevation: 8,
       },
+      default: {},
     }),
   },
   message: {

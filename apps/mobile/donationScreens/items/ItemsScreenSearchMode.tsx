@@ -1,0 +1,104 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import type { ListRenderItem } from 'react-native';
+import type { ItemsScreenTranslate } from './itemsScreenFiltering';
+import { isLandscape } from '../../globals/responsive';
+import DonationStatsFooter from '../../components/DonationStatsFooter';
+import AddLinkComponent from '../../components/AddLinkComponent';
+import type { FeedItem } from '../../types/feed';
+import { itemsScreenStyles } from './itemsScreen.styles';
+
+type Styles = typeof itemsScreenStyles;
+
+export type ItemsScreenSearchModeProps = Readonly<{
+  styles: Styles;
+  t: ItemsScreenTranslate;
+  filteredPosts: FeedItem[];
+  renderItem: ListRenderItem<FeedItem>;
+  renderEmpty: () => React.ReactElement;
+  screenPadding: number;
+  searchQuery: string;
+  selectedFilters: string[];
+  selectedSorts: string[];
+  onClearAll: () => void;
+  onOpenRequestComposer: () => void;
+}>;
+
+export function ItemsScreenSearchMode({
+  styles: s,
+  t,
+  filteredPosts,
+  renderItem,
+  renderEmpty,
+  screenPadding,
+  searchQuery,
+  selectedFilters,
+  selectedSorts,
+  onClearAll,
+  onOpenRequestComposer,
+}: ItemsScreenSearchModeProps) {
+  const listHeader = (
+    <>
+      <TouchableOpacity style={s.offerButton} onPress={onOpenRequestComposer}>
+        <Text style={s.offerButtonText}>{t('donationScreen.search.requestCta')}</Text>
+      </TouchableOpacity>
+      <View style={s.headerRow}>
+        {Boolean(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
+          <TouchableOpacity style={s.clearButton} onPress={onClearAll}>
+            <Text style={s.clearButtonText}>{t('donationScreen.search.clearAll')}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+
+  const listFooter = (
+    <>
+      <View style={s.section}>
+        <DonationStatsFooter
+          stats={[
+            { label: t('donationScreen.search.statsPosts'), value: filteredPosts.length, icon: 'cube-outline' },
+            {
+              label: t('donationScreen.search.statsLikes'),
+              value: filteredPosts.reduce((sum, p) => sum + (p.likes || 0), 0),
+              icon: 'heart-outline',
+            },
+            {
+              label: t('donationScreen.search.statsComments'),
+              value: filteredPosts.reduce((sum, p) => sum + (p.comments || 0), 0),
+              icon: 'chatbubble-outline',
+            },
+          ]}
+        />
+      </View>
+
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>{t('donationScreen.search.usefulLinks')}</Text>
+        <AddLinkComponent category="items" />
+      </View>
+    </>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <FlatList
+        style={s.container}
+        data={filteredPosts}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={s.columnWrapper}
+        contentContainerStyle={[
+          s.scrollContent,
+          isLandscape() && { paddingHorizontal: 32 },
+          { paddingHorizontal: screenPadding },
+        ]}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={listFooter}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
+    </View>
+  );
+}

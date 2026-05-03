@@ -272,7 +272,7 @@ export const VALIDATION = {
   MAX_MESSAGE_LENGTH: 500,
   MAX_TITLE_LENGTH: 100,
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE_REGEX: /^[+]?[1-9][\d]{0,15}$/,
+  PHONE_REGEX: /^[\+]?[1-9][\d]{0,15}$/,
 };
 
 // App version - synced with package.json

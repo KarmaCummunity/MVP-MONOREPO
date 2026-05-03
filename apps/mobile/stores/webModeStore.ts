@@ -35,7 +35,7 @@ export const useWebModeStore = create<WebModeState>((set, get) => {
       if (stored === 'site' || stored === 'app') {
         initialMode = stored;
       }
-    } catch (_) {
+    } catch {
       // Ignore localStorage errors
     }
   }
@@ -50,7 +50,7 @@ export const useWebModeStore = create<WebModeState>((set, get) => {
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(STORAGE_KEY, next);
           }
-        } catch (_) {
+        } catch {
           // Ignore localStorage errors
         }
       }
@@ -64,7 +64,7 @@ export const useWebModeStore = create<WebModeState>((set, get) => {
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(STORAGE_KEY, newMode);
           }
-        } catch (_) {
+        } catch {
           // Ignore localStorage errors
         }
       }
@@ -87,7 +87,7 @@ export const useWebModeStore = create<WebModeState>((set, get) => {
             window.localStorage.setItem(STORAGE_KEY, 'site');
           }
         }
-      } catch (_) {
+      } catch {
         set({ mode: 'site' });
       }
     },

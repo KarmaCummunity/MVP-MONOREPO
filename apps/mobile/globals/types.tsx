@@ -6,32 +6,7 @@ import {
 } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { ImageSourcePropType } from "react-native";
-import {
-  UserPreview,
-  ChallengeType,
-  ChallengeFrequency,
-  ChallengeDifficulty,
-  GoalDirection,
-  CommunityChallenge,
-  ChallengeParticipant,
-  ChallengeEntry,
-  ChallengeStatistics
-} from "@kc/shared-types";
-
-export type {
-  UserPreview,
-  CommunityChallenge,
-  ChallengeParticipant,
-  ChallengeEntry,
-  ChallengeStatistics
-};
-
-export {
-  ChallengeType,
-  ChallengeFrequency,
-  ChallengeDifficulty,
-  GoalDirection
-};
+import type { FeedItem } from "../types/feed";
 
 export interface Task {
   id: string;
@@ -64,64 +39,55 @@ export interface BubbleData {
   isBackground: boolean;
 }
 
+/** Params for `ChatDetailScreen` — canonical field names (see `screens/ChatDetailScreen.tsx`). */
+export type ChatDetailScreenParams = {
+  conversationId: string;
+  userName?: string;
+  userAvatar?: string;
+  otherUserId?: string;
+};
+
+// --- Bottom Tab Navigator (BottomNavigator) Parameter List ---
+// Must match Tab.Screen names in `navigations/BottomNavigator.tsx` only (no nested "phantom" routes).
+export type BottomTabNavigatorParamList = {
+  DonationsTab: undefined;
+  CreatePostTab: undefined;
+  HomeScreen: undefined;
+  SearchTab: undefined;
+  ProfileScreen: undefined;
+  AdminTab: undefined;
+};
+
 export type DonationsStackParamList = {
   DonationsScreen: undefined;
-  MoneyScreen: undefined;
   TrumpScreen: undefined;
-  KnowledgeScreen: undefined;
-  TimeScreen: undefined;
   ItemsScreen: undefined;
-  CategoryScreen: undefined;
+  ItemsHistoryScreen: undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   CommunityChallengesScreen: { mode?: 'search' | 'offer' } | undefined;
   ChallengeDetailsScreen: { challengeId: string; openEntryForm?: boolean } | undefined;
   ChallengeStatisticsScreen: undefined;
-  MyChallengesScreen: undefined;
+  MyChallengesScreen: { scrollToDailyTracker?: boolean } | undefined;
   MyCreatedChallengesScreen: undefined;
   // Top bar accessible screens that are also used inside the Donations stack
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   SettingsScreen: undefined;
   DiscoverPeopleScreen: undefined;
-  // Category screens
-  FoodScreen: undefined;
-  ClothesScreen: undefined;
-  BooksScreen: undefined;
-  FurnitureScreen: undefined;
-  MedicalScreen: undefined;
-  AnimalsScreen: undefined;
-  HousingScreen: undefined;
-  SupportScreen: undefined;
-  EducationScreen: undefined;
-  EnvironmentScreen: undefined;
-  TechnologyScreen: undefined;
-  MusicScreen: undefined;
-  GamesScreen: undefined;
-  RiddlesScreen: undefined;
-  RecipesScreen: undefined;
-  PlantsScreen: undefined;
-  WasteScreen: undefined;
-  ArtScreen: undefined;
-  SportsScreen: undefined;
-  DreamsScreen: undefined;
-  FertilityScreen: undefined;
-  JobsScreen: undefined;
-  MatchmakingScreen: undefined;
-  MentalHealthScreen: undefined;
-  GoldenAgeScreen: undefined;
-  LanguagesScreen: undefined;
-  UserProfileScreen: { userId: string; userName?: string; characterData?: Record<string, unknown> } | undefined;
+  UserProfileScreen: { userId: string; userName?: string; characterData?: any } | undefined;
   FollowersScreen: { userId: string; type: 'followers' | 'following'; title: string } | undefined;
 };
 
 export type HomeTabStackParamList = {
-  HomeMain: undefined;
+  /** `showPosts` default true for feed title in `TopBarNavigator`. */
+  HomeMain: { showPosts?: boolean; hideTopBar?: boolean } | undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   LandingSiteScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
@@ -130,34 +96,35 @@ export type HomeTabStackParamList = {
   PostsReelsScreen: undefined;
   CommunityStatsScreen: undefined;
   WebViewScreen: { url?: string } | undefined;
-  UserProfileScreen: { userId: string; userName: string; characterData?: Record<string, unknown> } | undefined;
+  UserProfileScreen: { userId: string; userName: string; characterData?: any } | undefined;
   FollowersScreen: { userId?: string } | undefined;
   DiscoverPeopleScreen: undefined;
 };
 
 export type SearchTabStackParamList = {
   SearchScreen: { q?: string } | undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
   UserProfileScreen: { userId?: string } | undefined;
   FollowersScreen: { userId?: string } | undefined;
   DiscoverPeopleScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   SettingsScreen: undefined;
 };
 
 export type ProfileTabStackParamList = {
   ProfileMain: { userId?: string } | undefined;
+  PostDetailScreen: { postId: string; initialItem?: FeedItem };
+  BookmarksScreen: undefined;
   SettingsScreen: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: { chatId?: string } | undefined;
+  ChatDetailScreen: ChatDetailScreenParams | undefined;
   NewChatScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
-  LandingSiteScreen: undefined;
   DiscoverPeopleScreen: undefined;
   EditProfileScreen: undefined;
 };
@@ -226,18 +193,12 @@ export type RootStackParamList = {
   SettingsScreen: undefined;
   ChatListScreen: undefined;
   NewChatScreen: undefined;
-  ChatDetailScreen: {
-    conversationId: string;
-    userName: string;
-    userAvatar: string;
-    otherUserId: string;
-  };
+  ChatDetailScreen: ChatDetailScreenParams;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
   InactiveScreen: undefined;
   WebViewScreen: undefined;
   PostsReelsScreen: undefined; // ADD THIS LINE - this was probably missing
-  BookmarksScreen: undefined;
   UserProfileScreen: {
     userId: string;
     userName: string;
@@ -249,25 +210,10 @@ export type RootStackParamList = {
     title: string;
   };
   DiscoverPeopleScreen: undefined;
-  OrgOnboardingScreen: undefined;
-  AdminOrgApprovalsScreen: undefined;
-  OrgDashboardScreen: undefined;
   EditProfileScreen: undefined;
   AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean };
-};
-
-// --- Bottom Tab Navigator (BottomNavigator) Parameter List ---
-// This lists all the screens within your BottomNavigator.tsx
-export type BottomTabNavigatorParamList = {
-  DonationsTab: undefined; // Renamed to avoid nested name collision with DonationsStack's DonationsScreen
-  HomeScreen: undefined; // This is the HomeScreen with the drag handle
-  SearchTab: undefined; // Renamed to avoid nested name collision with SearchTabStack's SearchScreen
-  ProfileScreen: undefined;
-  AdminTab: undefined; // Admin management tab (only visible to admins)
-  SettingsScreen: undefined;
-  ChatListScreen: undefined;
-  AboutKarmaCommunityScreen: undefined;
-  NotificationsScreen: undefined;
+  AdminOrgApprovalsScreen: undefined;
+  OrgDashboardScreen: undefined;
 };
 
 // --- Donations Stack (Example - adjust if you have internal screens) ---
@@ -285,37 +231,23 @@ export type PostsReelsStackParamList = {
   // Add any other screens that can be displayed inside the PostsReelsScreen modal
 };
 
-// --- Admin Stack Parameter List ---
-export type AdminParams = { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean } | undefined;
-
 export type AdminStackParamList = {
-  AdminDashboard: AdminParams;
-  AdminMoney: AdminParams;
-  AdminTasks: AdminParams;
-  AdminPeople: AdminParams;
-  AdminAdmins: AdminParams;
-  AdminReview: AdminParams;
-  AdminFiles: AdminParams;
-  AdminCRM: AdminParams;
-  AdminTimeManagement: AdminParams;
-  AdminTables: AdminParams;
-  AdminTableRows: {
-    tableId: string;
-    tableName: string;
-  } & AdminParams;
+  AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean } | undefined;
+  AdminMoney: undefined;
+  AdminTasks: undefined;
+  AdminPeople: undefined;
+  AdminAdmins: undefined;
+  AdminReview: undefined;
+  AdminFiles: undefined;
+  AdminCRM: undefined;
+  AdminTimeManagement: undefined;
   ChatListScreen: undefined;
-  ChatDetailScreen: {
-    conversationId: string;
-    userName: string;
-    userAvatar: string;
-    otherUserId: string;
-  };
+  ChatDetailScreen: ChatDetailScreenParams;
   NewChatScreen: undefined;
   SettingsScreen: undefined;
   NotificationsScreen: undefined;
   AboutKarmaCommunityScreen: undefined;
   DiscoverPeopleScreen: undefined;
-  LandingSiteScreen: undefined;
 };
 
 // --- Helper Types for Navigation Props ---
@@ -334,9 +266,102 @@ export type BottomTabNavigationPropType<
 // import { RouteProp } from '@react-navigation/native';
 // export type PostsReelsScreenRouteProp = RouteProp<RootStackParamList, 'PostsReelsScreen'>;
 
-// (Moved to @kc/shared-types)
+// --- Shared app user preview type (lightweight, nullable fields allowed) ---
+export interface UserPreview {
+  id: string;
+  name: string;
+  email?: string; // Added for filtering current user by email
+  avatar?: string;
+  bio?: string;
+  karmaPoints?: number;
+  completedTasks?: number;
+  postsCount?: number;
+  followersCount?: number;
+  roles?: string[];
+  isVerified?: boolean;
+  isActive?: boolean;
+  location?: {
+    city: string;
+    country: string;
+  };
+  joinDate?: string;
+  interests?: string[];
+  parentManagerId?: string | null;
+  hierarchyLevel?: number | null; // דרגה בהיררכיה: 0 = מנהל ראשי, 1 = סופר מנהל, 2+ = מנהלים/מתנדבים, null = משתמש רגיל
+}
 
-// (Moved to @kc/shared-types)
+// --- Community Challenges Types ---
+export type ChallengeType = 'BOOLEAN' | 'NUMERIC' | 'DURATION';
+export type ChallengeFrequency = 'DAILY' | 'WEEKLY' | 'FLEXIBLE';
+export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+export type GoalDirection = 'maximize' | 'minimize' | null;
+
+export interface CommunityChallenge {
+  id: string;
+  creator_id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  type: ChallengeType;
+  frequency: ChallengeFrequency;
+  goal_value?: number;
+  goal_direction?: GoalDirection;
+  deadline?: string;
+  difficulty?: ChallengeDifficulty;
+  category?: string;
+  is_active: boolean;
+  is_public?: boolean;
+  participants_count: number;
+  created_at: string;
+  updated_at: string;
+  // Extended fields from JOIN
+  creator_name?: string;
+  creator_avatar?: string;
+  post_id?: string;
+  participants?: ChallengeParticipant[];
+}
+
+export interface ChallengeParticipant {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  joined_at: string;
+  current_streak: number;
+  best_streak: number;
+  total_entries: number;
+  last_entry_date?: string;
+  // Extended fields from JOIN
+  user_name?: string;
+  user_avatar?: string;
+}
+
+export interface ChallengeEntry {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  entry_date: string;
+  value: number;
+  notes?: string;
+  created_at: string;
+}
+
+export interface ChallengeStatistics {
+  overall: {
+    active_challenges: number;
+    total_entries: number;
+    best_streak_overall: number;
+    avg_current_streak: number;
+  };
+  challenges: Array<ChallengeParticipant & {
+    title: string;
+    type: ChallengeType;
+    frequency: ChallengeFrequency;
+    difficulty?: ChallengeDifficulty;
+    category?: string;
+    goal_value?: number;
+    deadline?: string;
+  }>;
+}
 
 // New types for Daily Habits Tracker
 export type EntryStatus = 'success' | 'failed' | 'neutral' | 'empty';

@@ -232,9 +232,9 @@ if (!googleClientId) {
 // ========================================
 // Print Results
 // ========================================
-console.log(`\n${"=".repeat(60)}`);
+console.log("\n" + "=".repeat(60));
 console.log("תוצאות בדיקה:");
-console.log(`${"=".repeat(60)}\n`);
+console.log("=".repeat(60) + "\n");
 
 // Info messages
 if (result.info.length > 0) {
@@ -267,7 +267,7 @@ if (result.valid && result.warnings.length === 0) {
   console.log("❌ יש שגיאות קריטיות! תקן אותן לפני שממשיך!");
   process.exit(1);
 }
-console.log(`${"=".repeat(60)}\n`);
+console.log("=".repeat(60) + "\n");
 
 // Exit with appropriate code
 process.exit(result.valid ? 0 : 1);

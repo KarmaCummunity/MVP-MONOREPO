@@ -20,18 +20,21 @@ import {
   Animated,
   Linking,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from 'firebase/auth';
 import {
   getSignInMethods,
+  getEmailAuthSituation,
   signInWithEmail as fbSignInWithEmail,
   signUpWithEmail as fbSignUpWithEmail,
   sendVerification as fbSendVerification,
-  sendPasswordReset
-} from '../src/services/auth.service';
-import { ServerUser, ApiResponse } from '../src/api/api.service';
+  sendPasswordReset,
+  signInWithGoogleThenLinkPassword,
+} from '../utils/authService';
 import { createShadowStyle } from '../globals/styles';
 import colors from '../globals/colors';
 
@@ -42,7 +45,7 @@ interface EmailLoginFormProps {
   /** Callback to toggle the form open/closed state */
   onToggle: () => void;
   /** Callback when user successfully logs in */
-  onLoginSuccess: (userData: LoggedInUserData) => void;
+  onLoginSuccess: (userData: any) => void;
   /** Animation value for form expansion */
   animationValue: Animated.Value;
 }
@@ -52,6 +55,8 @@ interface EmailFormState {
   emailValue: string;
   passwordValue: string;
   emailExists: boolean | null;
+  /** Last-known Firebase sign-in methods for the email (password, google.com, …). */
+  firebaseMethods: string[] | null;
   isBusy: boolean;
   statusMessage: string | null;
   statusColor: string;
@@ -62,28 +67,6 @@ interface EmailFormState {
 interface RecentEmailsState {
   emails: string[];
   suggestions: string[];
-}
-
-/** User data passed to onLoginSuccess after successful email auth */
-export interface LoggedInUserData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar: string;
-  bio: string;
-  karmaPoints: number;
-  joinDate: string;
-  isActive: boolean;
-  lastActive: string;
-  location: { city: string; country: string };
-  interests: string[];
-  roles: string[];
-  postsCount: number;
-  followersCount: number;
-  followingCount: number;
-  notifications: unknown[];
-  settings: Record<string, unknown>;
 }
 
 const KNOWN_EMAILS_KEY = 'known_emails';
@@ -112,6 +95,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
     emailValue: '',
     passwordValue: '',
     emailExists: null,
+    firebaseMethods: null,
     isBusy: false,
     statusMessage: null,
     statusColor: colors.success,
@@ -168,6 +152,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
       emailValue: '',
       passwordValue: '',
       emailExists: null,
+      firebaseMethods: null,
       isBusy: false,
       statusMessage: null,
       statusColor: colors.success,
@@ -233,29 +218,6 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
   };
 
   /**
-   * Checks if an email is known (has existing account)
-   */
-  const isKnownEmail = async (email: string): Promise<boolean> => {
-    const lower = email.trim().toLowerCase();
-    try {
-      const methods = await getSignInMethods(lower);
-      const hasPasswordProvider = Array.isArray(methods) &&
-        methods.some(m => m && m.toLowerCase().includes('password'));
-
-      if (hasPasswordProvider) return true;
-
-      const cacheRaw = await AsyncStorage.getItem(KNOWN_EMAILS_KEY);
-      const cache = cacheRaw ? JSON.parse(cacheRaw) : [];
-      return Array.isArray(cache) && cache.includes(lower);
-    } catch (error) {
-      console.error('Error checking known email:', error);
-      const cacheRaw = await AsyncStorage.getItem(KNOWN_EMAILS_KEY);
-      const cache = cacheRaw ? JSON.parse(cacheRaw) : [];
-      return Array.isArray(cache) && cache.includes(lower);
-    }
-  };
-
-  /**
    * Handles email input continuation (checking if email exists)
    */
   const handleEmailContinue = async () => {
@@ -272,9 +234,11 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
 
       setFormState(prev => ({ ...prev, isBusy: true }));
 
-      const exists = await isKnownEmail(email);
+      const methods = await getSignInMethods(email);
+      const exists = Array.isArray(methods) && methods.length > 0;
       setFormState(prev => ({
         ...prev,
+        firebaseMethods: methods,
         emailExists: exists,
         statusMessage: `${email} • ${exists ? t('auth:email.knownUser') : t('auth:email.unknownEmail')}`,
         statusColor: exists ? colors.success : colors.error,
@@ -317,14 +281,20 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
 
       setFormState(prev => ({ ...prev, isBusy: true }));
 
-      const exists = await isKnownEmail(email);
+      const situation = await getEmailAuthSituation(email);
       const nowIso = new Date().toISOString();
 
-      if (exists) {
-        // Handle login for existing user
+      if (situation.canPasswordLogin) {
         await handleExistingUserLogin(email, nowIso);
+      } else if (situation.hasGoogle && Platform.OS === 'web') {
+        await handleGoogleAccountAddPassword(email, nowIso);
+      } else if (situation.hasGoogle) {
+        Alert.alert(
+          t('common:error') as string,
+          t('auth:email.googleOnlyNative') as string
+        );
+        setFormState(prev => ({ ...prev, isBusy: false }));
       } else {
-        // Handle registration for new user
         await handleNewUserRegistration(email, nowIso);
       }
     } catch (error) {
@@ -337,77 +307,127 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
     }
   };
 
+  const finalizeLoginWithFirebaseUser = async (fbUser: User, email: string, nowIso: string) => {
+    const { apiService } = await import('../utils/apiService');
+    const resolveResponse = await apiService.resolveUserId({
+      firebase_uid: fbUser.uid,
+      email: fbUser.email || email,
+    });
+
+    if (!resolveResponse.success || !resolveResponse.user) {
+      const userResponse = await apiService.getUserById(fbUser.email || email);
+      if (userResponse.success && userResponse.data) {
+        const serverUser = userResponse.data;
+        const userData = {
+          id: serverUser.id,
+          name: serverUser.name || fbUser.displayName || email.split('@')[0],
+          email: serverUser.email || fbUser.email || email,
+          phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
+          avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
+          bio: serverUser.bio || '',
+          karmaPoints: serverUser.karma_points || 0,
+          joinDate: serverUser.join_date || serverUser.created_at || nowIso,
+          isActive: serverUser.is_active !== false,
+          lastActive: serverUser.last_active || nowIso,
+          location: {
+            city: serverUser.city || (t('common:labels.countryIsrael') as string),
+            country: serverUser.country || 'IL',
+          },
+          interests: serverUser.interests || [],
+          roles: serverUser.roles || ['user'],
+          postsCount: serverUser.posts_count || 0,
+          followersCount: serverUser.followers_count || 0,
+          followingCount: serverUser.following_count || 0,
+          notifications: [],
+          settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
+        };
+        await saveRecentEmail(email);
+        onLoginSuccess(userData);
+        setFormState(prev => ({ ...prev, isBusy: false }));
+        return;
+      }
+      throw new Error('Failed to get user from server');
+    }
+
+    const serverUser = resolveResponse.user;
+    const userData = {
+      id: serverUser.id,
+      name: serverUser.name || fbUser.displayName || email.split('@')[0],
+      email: serverUser.email || fbUser.email || email,
+      phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
+      avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
+      bio: serverUser.bio || '',
+      karmaPoints: serverUser.karmaPoints || 0,
+      joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
+      isActive: serverUser.isActive !== false,
+      lastActive: serverUser.lastActive || nowIso,
+      location: serverUser.location || { city: t('common:labels.countryIsrael') as string, country: 'IL' },
+      interests: serverUser.interests || [],
+      roles: serverUser.roles || ['user'],
+      postsCount: serverUser.postsCount || 0,
+      followersCount: serverUser.followersCount || 0,
+      followingCount: serverUser.followingCount || 0,
+      notifications: [],
+      settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
+    };
+    await saveRecentEmail(email);
+    onLoginSuccess(userData);
+    setFormState(prev => ({ ...prev, isBusy: false }));
+  };
+
+  const handleGoogleAccountAddPassword = async (email: string, nowIso: string) => {
+    try {
+      const fbUser = await signInWithGoogleThenLinkPassword(email, formState.passwordValue);
+      await finalizeLoginWithFirebaseUser(fbUser, email, nowIso);
+    } catch (error: any) {
+      const code = String(error?.code || '');
+      if (code === 'auth/popup-closed-by-user') {
+        setFormState(prev => ({ ...prev, isBusy: false }));
+        return;
+      }
+      if (code === 'auth/google-email-mismatch') {
+        Alert.alert(
+          t('common:error') as string,
+          t('auth:email.googleEmailMismatch') as string
+        );
+      } else {
+        Alert.alert(
+          t('common:error') as string,
+          t('common:genericTryAgain') as string
+        );
+      }
+      setFormState(prev => ({
+        ...prev,
+        statusMessage: t('auth:email.linkPasswordFailed') as string,
+        statusColor: colors.error,
+        isBusy: false,
+      }));
+    }
+  };
+
   /**
    * Handles login for existing users
    */
   const handleExistingUserLogin = async (email: string, nowIso: string) => {
     try {
       const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
-
-      // Get UUID from server using firebase_uid
-      const { apiService } = await import('../src/api/api.service');
-      const resolveResponse = await apiService.resolveUserId({
-        firebase_uid: fbUser.uid,
-        email: fbUser.email || email
-      });
-
-      if (!resolveResponse.success || !resolveResponse.user) {
-        // Fallback: try to get user by email
-        const userResponse = await apiService.getUserById(fbUser.email || email);
-        if (userResponse.success && userResponse.data) {
-          const serverUser = userResponse.data as ServerUser;
-          const userData = {
-            id: serverUser.id, // UUID from database
-            name: serverUser.name || fbUser.displayName || email.split('@')[0],
-            email: serverUser.email || fbUser.email || email,
-            phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
-            avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-            bio: serverUser.bio || '',
-            karmaPoints: serverUser.karma_points || 0,
-            joinDate: serverUser.join_date || serverUser.created_at || nowIso,
-            isActive: serverUser.is_active !== false,
-            lastActive: serverUser.last_active || nowIso,
-            location: { city: serverUser.city || t('common:labels.countryIsrael') as string, country: serverUser.country || 'IL' },
-            interests: serverUser.interests || [],
-            roles: serverUser.roles || ['user'],
-            postsCount: serverUser.posts_count || 0,
-            followersCount: serverUser.followers_count || 0,
-            followingCount: serverUser.following_count || 0,
-            notifications: [],
-            settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-          };
-          await saveRecentEmail(email);
-          onLoginSuccess(userData);
-          return;
+      await finalizeLoginWithFirebaseUser(fbUser, email, nowIso);
+    } catch (error: any) {
+      const code = String(error?.code || '');
+      if (
+        (code === 'auth/invalid-credential' || code === 'auth/wrong-password') &&
+        Platform.OS === 'web'
+      ) {
+        try {
+          const retry = await getEmailAuthSituation(email);
+          if (retry.hasGoogle && !retry.canPasswordLogin) {
+            await handleGoogleAccountAddPassword(email, nowIso);
+            return;
+          }
+        } catch (fallbackErr) {
+          console.error('Google-only login fallback failed:', fallbackErr);
         }
-        throw new Error('Failed to get user from server');
       }
-
-      // Use UUID from server
-      const serverUser = (resolveResponse as ApiResponse<{ user: ServerUser }>).user as ServerUser;
-      const userData = {
-        id: serverUser.id, // UUID from database - this is the primary identifier
-        name: serverUser.name || fbUser.displayName || email.split('@')[0],
-        email: serverUser.email || fbUser.email || email,
-        phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
-        avatar: serverUser.avatar || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-        bio: serverUser.bio || '',
-        karmaPoints: serverUser.karmaPoints || 0,
-        joinDate: serverUser.createdAt || serverUser.joinDate || nowIso,
-        isActive: serverUser.isActive !== false,
-        lastActive: serverUser.lastActive || nowIso,
-        location: serverUser.location || { city: t('common:labels.countryIsrael') as string, country: 'IL' },
-        interests: serverUser.interests || [],
-        roles: serverUser.roles || ['user'],
-        postsCount: serverUser.postsCount || 0,
-        followersCount: serverUser.followersCount || 0,
-        followingCount: serverUser.followingCount || 0,
-        notifications: [],
-        settings: serverUser.settings || { language: 'he', darkMode: false, notificationsEnabled: true },
-      };
-      await saveRecentEmail(email);
-      onLoginSuccess(userData);
-    } catch (_error) {
       setFormState(prev => ({
         ...prev,
         statusMessage: t('auth:email.invalidPassword') as string,
@@ -428,83 +448,17 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
         t('auth:email.verifyTitle') as string,
         t('auth:email.verifySent') as string
       );
-    } catch (error: unknown) {
-      const err = error as { code?: string };
-      if (String(err?.code || '').includes('auth/email-already-in-use')) {
-        // Try to sign in instead
+      setFormState(prev => ({ ...prev, isBusy: false }));
+    } catch (error: any) {
+      if (String(error?.code || '').includes('auth/email-already-in-use')) {
         try {
-          const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
-
-          // Get UUID from server using firebase_uid
-          const { apiService } = await import('../src/api/api.service');
-          const resolveResponse = await apiService.resolveUserId({
-            firebase_uid: fbUser.uid,
-            email: fbUser.email || email
-          });
-
-          if (!resolveResponse.success || !resolveResponse.user) {
-            // Fallback: try to get user by email
-            const userResponse = await apiService.getUserById(fbUser.email || email);
-            if (userResponse.success && userResponse.data) {
-              const serverUser = userResponse.data as ServerUser;
-              const userData = {
-                id: serverUser.id, // UUID from database
-                name: serverUser.name || fbUser.displayName || email.split('@')[0],
-                email: serverUser.email || fbUser.email || email,
-                phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
-                avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-                bio: serverUser.bio || '',
-                karmaPoints: serverUser.karma_points || 0,
-                joinDate: nowIso,
-                isActive: true,
-                lastActive: nowIso,
-                location: { city: t('common:labels.countryIsrael') as string, country: 'IL' },
-                interests: [],
-                roles: ['user'],
-                postsCount: 0,
-                followersCount: 0,
-                followingCount: 0,
-                notifications: [],
-                settings: { language: 'he', darkMode: false, notificationsEnabled: true },
-              };
-
-              try {
-                // User is already in database from resolveUserId/getUserById - no need to create via restAdapter
-              } catch (error) {
-                console.log('Saving user on server failed (non-critical):', error);
-              }
-
-              await saveRecentEmail(email);
-              onLoginSuccess(userData);
-              return;
-            }
-            throw new Error('Failed to get user from server');
+          const situation = await getEmailAuthSituation(email);
+          if (situation.hasGoogle && !situation.canPasswordLogin && Platform.OS === 'web') {
+            await handleGoogleAccountAddPassword(email, nowIso);
+            return;
           }
-
-          const serverUser = (resolveResponse as ApiResponse<{ user: ServerUser }>).user as ServerUser;
-          const userData = {
-            id: serverUser.id,
-            name: serverUser.name || fbUser.displayName || email.split('@')[0],
-            email: serverUser.email || fbUser.email || email,
-            phone: serverUser.phone || fbUser.phoneNumber || '+9720000000',
-            avatar: serverUser.avatar_url || fbUser.photoURL || 'https://i.pravatar.cc/150?img=1',
-            bio: serverUser.bio || '',
-            karmaPoints: serverUser.karma_points || 0,
-            joinDate: nowIso,
-            isActive: true,
-            lastActive: nowIso,
-            location: { city: t('common:labels.countryIsrael') as string, country: 'IL' },
-            interests: [],
-            roles: ['user'],
-            postsCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-            notifications: [],
-            settings: { language: 'he', darkMode: false, notificationsEnabled: true },
-          };
-
-          await saveRecentEmail(email);
-          onLoginSuccess(userData);
+          const fbUser = await fbSignInWithEmail(email, formState.passwordValue);
+          await finalizeLoginWithFirebaseUser(fbUser, email, nowIso);
         } catch (_signinError) {
           setFormState(prev => ({
             ...prev,
@@ -700,7 +654,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    ...createShadowStyle('colors.black', { width: 0, height: 2 }, 0.1, 4),
+    ...createShadowStyle(colors.black, { width: 0, height: 2 }, 0.1, 4),
     elevation: 3,
     width: '100%',
     marginVertical: 6,

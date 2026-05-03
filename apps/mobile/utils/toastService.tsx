@@ -41,18 +41,6 @@ class ToastService {
     this.show(message, 'error', duration);
   }
 
-  success(message: string, duration: number = 2000) {
-    this.show(message, 'success', duration);
-  }
-
-  info(message: string, duration: number = 2000) {
-    this.show(message, 'info', duration);
-  }
-
-  error(message: string, duration: number = 2000) {
-    this.show(message, 'error', duration);
-  }
-
   warning(message: string, duration: number = 2000) {
     this.show(message, 'info', duration);
   }

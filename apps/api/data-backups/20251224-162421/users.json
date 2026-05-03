@@ -1,0 +1,407 @@
+[
+  {
+    "user_id": "matanya.a@lsports.eu",
+    "item_id": "matanya.a@lsports.eu",
+    "data": {
+      "id": "matanya.a@lsports.eu",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "matanya.a",
+      "email": "matanya.a@lsports.eu",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://i.pravatar.cc/150?img=1",
+      "isActive": true,
+      "joinDate": "2025-11-24T19:29:15.150Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-11-24T19:30:16.019Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$owW4Kzr2JORliQ0c4IDqgA$ug9Pr3UubABIma5K2qNrEGQQogx45Ac0ETju8WL2oO8",
+      "notifications": [
+        {
+          "date": "2025-11-24T19:29:15.150Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 0,
+      "followingCount": 0
+    },
+    "created_at": "2025-11-24T19:29:15.153Z",
+    "updated_at": "2025-11-24T19:30:16.024Z"
+  },
+  {
+    "user_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "item_id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+    "data": {
+      "id": "XUczHBaxmBgT4EfiJg4xtZM6dGB2",
+      "bio": "",
+      "name": "lianbh2004",
+      "email": "lianbh2004@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://i.pravatar.cc/150?img=1",
+      "isActive": true,
+      "joinDate": "2025-08-13T16:28:47.514Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-08-13T16:28:47.514Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "notifications": [],
+      "followersCount": 1,
+      "followingCount": 1
+    },
+    "created_at": "2025-08-13T16:23:50.308Z",
+    "updated_at": "2025-11-26T21:15:09.617Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "evelrap@gmail.com",
+    "data": {
+      "id": "evelrap@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "Yeveliy Tsofnas",
+      "email": "evelrap@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJOAjkXiLrfUoV_sIQaAUQ8NFEeFaJP-OpZHVKDAFlFCnkasB4=s96-c",
+      "googleId": "109769205932961789656",
+      "isActive": true,
+      "joinDate": "2025-11-26T19:48:54.558Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-11-26T20:00:25.721Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-11-26T19:48:54.558Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 2,
+      "followingCount": 0
+    },
+    "created_at": "2025-11-26T19:48:54.730Z",
+    "updated_at": "2025-11-28T16:16:45.575Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "karmacommunity2.0@gmail.com",
+    "data": {
+      "id": "karmacommunity2.0@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "Nave Sarussi",
+      "email": "karmacommunity2.0@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL8WdJrd6fPes4N0Gy2BDEzuZeCsQjDf2i9CUGQngjoM4Dcqw=s96-c",
+      "googleId": "117588450299163179665",
+      "isActive": true,
+      "joinDate": "2025-11-26T19:00:24.673Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-11-27T16:45:38.717Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-11-26T19:00:24.673Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 3,
+      "followingCount": 2
+    },
+    "created_at": "2025-11-26T19:00:24.852Z",
+    "updated_at": "2025-11-30T12:15:20.516Z"
+  },
+  {
+    "user_id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+    "item_id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+    "data": {
+      "id": "t2P5MvlK9rac1K8Msx65KBltOG43",
+      "bio": "",
+      "name": "נוה סרוסי",
+      "email": "navesarussi@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLi75_xSRqw1t0mNByewGVzhgswUbdrqsmoNDDpNWdSmv7_o59L6A=s96-c",
+      "isActive": true,
+      "joinDate": "2025-08-13T18:59:57.466Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-12-08T17:59:02.563Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "notifications": [],
+      "followersCount": 0,
+      "followingCount": 4
+    },
+    "created_at": "2025-08-12T17:17:26.081Z",
+    "updated_at": "2025-12-08T17:59:02.536Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "data": {
+      "id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "bio": "",
+      "name": "נוה סרוסי",
+      "email": "navesarussi@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLi75_xSRqw1t0mNByewGVzhgswUbdrqsmoNDDpNWdSmv7_o59L6A=s96-c",
+      "isActive": true,
+      "joinDate": "2025-11-24T23:14:21.891Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-12-02T08:50:24.555Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "notifications": [],
+      "followersCount": 2,
+      "followingCount": 5
+    },
+    "created_at": "2025-11-15T18:02:39.760Z",
+    "updated_at": "2025-12-09T00:54:34.388Z"
+  },
+  {
+    "user_id": "reuven993@gmail.com",
+    "item_id": "reuven993@gmail.com",
+    "data": {
+      "id": "reuven993@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "ראובן לריאונוב",
+      "email": "reuven993@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocKA6YgUcmUtSo08XhJXebajtZtIhqhsQMRuYRpCbGR0yUB2LVML=s96-c",
+      "googleId": "107029356051836205853",
+      "isActive": true,
+      "joinDate": "2025-11-26T22:36:46.995Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-11-26T22:36:46.995Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-11-26T22:36:46.995Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 2,
+      "followingCount": 0
+    },
+    "created_at": "2025-11-26T22:36:46.999Z",
+    "updated_at": "2025-11-28T16:16:45.566Z"
+  },
+  {
+    "user_id": "ichai1306@gmail.com",
+    "item_id": "ichai1306@gmail.com",
+    "data": {
+      "id": "ichai1306@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "Ishai Assaraf",
+      "email": "ichai1306@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJGbpo6VaQTHLptp-z2FhKKnIAhw45ZxkHWT5JP_pPALxXxHNRgag=s96-c",
+      "googleId": "106732690486163427849",
+      "isActive": true,
+      "joinDate": "2025-12-02T17:54:17.943Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-12-02T17:54:17.943Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-12-02T17:54:17.943Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 0,
+      "followingCount": 0
+    },
+    "created_at": "2025-12-02T17:54:18.026Z",
+    "updated_at": "2025-12-02T17:54:18.026Z"
+  },
+  {
+    "user_id": "maidad.maissel@gmail.com",
+    "item_id": "maidad.maissel@gmail.com",
+    "data": {
+      "id": "maidad.maissel@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "מידד מייזל",
+      "email": "maidad.maissel@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIcKlGPJ9wWcSxPfa26X9353gxzRF-yLH_XTVS3RAHQZKYu0qJ9=s96-c",
+      "googleId": "114473988399339539147",
+      "isActive": true,
+      "joinDate": "2025-12-03T20:57:43.472Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-12-03T20:57:43.472Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-12-03T20:57:43.472Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 1,
+      "followingCount": 0
+    },
+    "created_at": "2025-12-03T20:57:43.425Z",
+    "updated_at": "2025-12-09T00:54:34.828Z"
+  },
+  {
+    "user_id": "ereli123@gmail.com",
+    "item_id": "ereli123@gmail.com",
+    "data": {
+      "id": "ereli123@gmail.com",
+      "bio": "משתמש חדש בקארמה קומיוניטי",
+      "name": "ereli eli",
+      "email": "ereli123@gmail.com",
+      "phone": "+9720000000",
+      "roles": [
+        "user"
+      ],
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJL6ttCy1IdyZsFLr3kKV46UDMdk5E1dA_mQ6FC37hIkZB5Gg=s96-c",
+      "googleId": "102954690378163689262",
+      "isActive": true,
+      "joinDate": "2025-12-03T19:42:35.964Z",
+      "location": {
+        "city": "ישראל",
+        "country": "IL"
+      },
+      "settings": {
+        "darkMode": false,
+        "language": "he",
+        "notificationsEnabled": true
+      },
+      "interests": [],
+      "lastActive": "2025-12-03T19:42:35.964Z",
+      "postsCount": 0,
+      "karmaPoints": 0,
+      "emailVerified": true,
+      "notifications": [
+        {
+          "date": "2025-12-03T19:42:35.964Z",
+          "text": "ברוך הבא!",
+          "type": "system"
+        }
+      ],
+      "followersCount": 1,
+      "followingCount": 0
+    },
+    "created_at": "2025-12-03T19:42:36.056Z",
+    "updated_at": "2025-12-09T00:54:34.968Z"
+  }
+]

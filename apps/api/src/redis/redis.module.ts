@@ -4,12 +4,10 @@
 // - Env inputs: `REDIS_URL`/`REDIS_PUBLIC_URL`/Upstash vars or host/port + TLS flags.
 // - Provides: Connection with logging hooks; masks secrets in logs.
 // src/redis/redis.module.ts
-import { Global, Logger, Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import Redis from "ioredis";
 
 export const REDIS = "REDIS";
-
-const logger = new Logger("RedisModule");
 
 @Global()
 @Module({
@@ -33,10 +31,14 @@ const logger = new Logger("RedisModule");
 
         // If no Redis configuration is provided, return null (Redis is optional)
         if (!redisUrl && (!internalHost || !internalPort)) {
-          logger.warn(
-            "No Redis configuration found - running without Redis cache",
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[redis] ⚠️  No Redis configuration found - running without Redis cache",
           );
-          logger.warn("To enable Redis, set REDIS_URL environment variable");
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[redis] 💡 To enable Redis, set REDIS_URL environment variable",
+          );
           return null;
         }
 
@@ -58,6 +60,8 @@ const logger = new Logger("RedisModule");
             process.env.UPSTASH_REDIS_PASSWORD ||
             undefined,
           connectTimeout: 15000,
+          // Prevent a single slow command from blocking the event loop indefinitely
+          commandTimeout: 5000,
           maxRetriesPerRequest: 3,
           enableReadyCheck: true,
           retryStrategy: (times: number) => Math.min(times * 200, 2000),
@@ -117,27 +121,39 @@ function maskRedisUrl(url: string): string {
 }
 
 function attachRedisLogging(client: Redis, target: string) {
-  logger.log(`Connecting to Redis at ${target}`);
+  // eslint-disable-next-line no-console
+  console.log(`[redis] connecting to ${target}`);
   client.on("connect", () => {
-    logger.log("Redis socket connected");
+    // eslint-disable-next-line no-console
+    console.log("[redis] socket connected");
   });
   client.on("ready", async () => {
-    logger.log("Redis ready");
+    // eslint-disable-next-line no-console
+    console.log("[redis] ready");
 
+    // Attempt to fix MISCONF error for dev environments
     try {
+      // eslint-disable-next-line no-console
+      console.log(
+        "[redis] attempting to disable stop-writes-on-bgsave-error...",
+      );
       await client.config("SET", "stop-writes-on-bgsave-error", "no");
-      logger.log("Disabled stop-writes-on-bgsave-error for dev");
+      // eslint-disable-next-line no-console
+      console.log("[redis] successfully disabled stop-writes-on-bgsave-error");
     } catch (err) {
-      logger.warn(
-        "Failed to disable stop-writes-on-bgsave-error (might be restricted):",
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[redis] failed to disable stop-writes-on-bgsave-error (might be restricted):",
         err instanceof Error ? err.message : String(err),
       );
     }
   });
   client.on("end", () => {
-    logger.log("Redis connection ended");
+    // eslint-disable-next-line no-console
+    console.log("[redis] connection ended");
   });
   client.on("error", (err) => {
-    logger.error("Redis error", err.message);
+    // eslint-disable-next-line no-console
+    console.error("[redis] error", err.message);
   });
 }

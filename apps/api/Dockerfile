@@ -1,34 +1,53 @@
 # File overview:
 # - Purpose: Multi-stage Dockerfile to build and run the NestJS server on Railway/containers.
-# - Stages: builder (tsc), deps (prod node_modules), runner (start dist).
-# - Notes: Copies `schema.sql` into dist for runtime schema bootstrap.
+# - Context: Designed for monorepo - Railway builds from root, this file is in apps/api
+# - Notes: Copies monorepo structure, installs deps, builds api workspace, runs from dist
 
-# Simple single-stage Dockerfile (lint-friendly)
+FROM node:20 AS builder
+WORKDIR /app
+
+# Copy all package.json files for monorepo workspaces
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+
+# Install all dependencies (including dev deps for build)
+RUN npm ci --include=dev
+
+# Copy entire monorepo source
+COPY . .
+
+# Build the API workspace from root using workspace command
+RUN npm run build --workspace @kc/api
+
+# Verify build succeeded
+RUN test -f ./apps/api/dist/main.js || (echo "ERROR: apps/api/dist/main.js missing after build" && ls -la apps/api/ && exit 1)
+
+# Production stage
 FROM node:20
 WORKDIR /app
 
-# NODE_ENV will be set by Railway environment variables
-# Don't hardcode it here to allow dev/prod separation
-LABEL Name="kc-mvp-server" Version="1.1.0"
+LABEL Name="kc-mvp-server" Version="1.5.0"
 
+# Copy package files for production install
 COPY package*.json ./
-RUN npm ci --include=dev && npm cache clean --force
+COPY apps/api/package*.json ./apps/api/
 
-COPY . .
+# Install only production dependencies
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Build: prefer nest build via npm script; fallback to tsc
-RUN rm -f *.tsbuildinfo && (npm run build || npx tsc -p tsconfig.build.json)
+# Copy built application from builder (includes SQL files via nest-cli.json assets)
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Clean dev dependencies after build to reduce image size
-RUN npm prune --production
+# Ensure database directory exists and copy SQL schema files
+RUN mkdir -p ./apps/api/src/database
+COPY --from=builder /app/apps/api/src/database/*.sql ./apps/api/src/database/
 
-# Ensure dist exists and include SQL schema into dist
-RUN test -f ./dist/main.js || (echo "dist/main.js missing" && exit 1)
-RUN mkdir -p dist/database && cp -f src/database/schema.sql dist/database/ || true
+# Verify SQL files were copied
+RUN ls -la ./apps/api/dist/database/ && ls -la ./apps/api/src/database/ || echo "⚠️ SQL files location check"
 
-# Expose is optional for Railway, but helps locally
+# Expose port
 EXPOSE 3001
 
-# Standard start command
-CMD ["node", "dist/main.js"]
+# Start command from root (so node_modules are accessible)
+CMD ["node", "apps/api/dist/main.js"]
 

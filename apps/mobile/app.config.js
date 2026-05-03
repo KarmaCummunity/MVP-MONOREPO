@@ -24,12 +24,17 @@ const FIREBASE_MEASUREMENT_ID = process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID 
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+/** Public landing Instagram handle only (no password; not secret). Build-time for web export. */
+const INSTAGRAM_USERNAME = process.env.EXPO_PUBLIC_INSTAGRAM_USERNAME ?? 'karma_community_';
 
 // Define colors locally for config usage (colors.tsx cannot be imported in JS config)
 const colors = {
   secondary: '#FFB6C1',     // Soft Pink - Secondary brand color
   backgroundTertiary: '#E3F2FD', // Very light blue for highlights
 };
+
+/** ASCII filename only — Metro/tooling can fail on non-Latin paths in monorepo roots. */
+const brandIcon = './assets/images/new_logo_black.png';
 
 
 
@@ -39,13 +44,13 @@ export default {
     slug: "karma-community",
     version: APP_VERSION,
     orientation: "portrait",
-    icon: "./assets/images/לוגו_חדש_שחור.png",
+    icon: brandIcon,
     scheme: "karma-community",
     userInterfaceStyle: "automatic",
     // שמירה על primaryColor שהיה ב-app.json
     primaryColor: colors.secondary,
     splash: {
-      image: "./assets/images/לוגו_חדש_שחור.png",
+      image: brandIcon,
       resizeMode: "contain",
       backgroundColor: colors.backgroundTertiary
     },
@@ -72,8 +77,11 @@ export default {
       }
     },
     android: {
+      // Resize the window when the keyboard opens so the chat input stays usable
+      // (avoids focus loss / layout fights with KeyboardAvoidingView).
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
-        foregroundImage: "./assets/images/לוגו_חדש_שחור.png",
+        foregroundImage: brandIcon,
         backgroundColor: colors.backgroundTertiary
       },
       package: "com.navesarussi1.KarmaCommunity",
@@ -128,7 +136,7 @@ export default {
       [
         "expo-notifications",
         {
-          icon: "./assets/images/לוגו_חדש_שחור.png",
+          icon: brandIcon,
           color: colors.secondary,
           mode: "production",
           androidMode: "default",
@@ -150,7 +158,7 @@ export default {
       EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: GOOGLE_IOS_CLIENT_ID,
       EXPO_PUBLIC_USE_BACKEND: "1",
       EXPO_PUBLIC_USE_FIRESTORE: "0",
-      EXPO_PUBLIC_ADMIN_EMAILS: process.env.EXPO_PUBLIC_ADMIN_EMAILS || "navesarussi@gmail.com",
+      EXPO_PUBLIC_ADMIN_EMAILS: process.env.EXPO_PUBLIC_ADMIN_EMAILS || "karmacommunity2.0@gmail.com",
       EXPO_PUBLIC_FIREBASE_API_KEY: FIREBASE_API_KEY,
       EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: FIREBASE_AUTH_DOMAIN,
       EXPO_PUBLIC_FIREBASE_PROJECT_ID: FIREBASE_PROJECT_ID,
@@ -158,6 +166,7 @@ export default {
       EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: FIREBASE_MESSAGING_SENDER_ID,
       EXPO_PUBLIC_FIREBASE_APP_ID: FIREBASE_APP_ID,
       EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID: FIREBASE_MEASUREMENT_ID,
+      EXPO_PUBLIC_INSTAGRAM_USERNAME: INSTAGRAM_USERNAME,
       firebase: {
         prod: {
           EXPO_PUBLIC_FIREBASE_API_KEY: FIREBASE_API_KEY,

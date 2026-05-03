@@ -1,0 +1,836 @@
+[
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "8c6f776a-d270-4cfe-ac42-d8b3fca3e06c",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בשיקה",
+      "data": {
+        "taskId": "541d2994-2170-427d-92c6-793fffa7a63a"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-23T22:15:46.566Z"
+    },
+    "created_at": "2025-12-23T22:15:46.575Z",
+    "updated_at": "2025-12-23T22:15:46.575Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "msg_1764183964360",
+    "data": {
+      "id": "msg_1764183964360",
+      "body": "Djshssh",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-26T19:06:04.360Z"
+    },
+    "created_at": "2025-11-26T19:06:04.553Z",
+    "updated_at": "2025-11-26T19:06:04.553Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "follow_1764190486467",
+    "data": {
+      "id": "follow_1764190486467",
+      "body": "g2s18BxQlTenRmttoWlu5fRNNyR2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "g2s18BxQlTenRmttoWlu5fRNNyR2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "evelrap@gmail.com",
+      "timestamp": "2025-11-26T20:54:46.467Z"
+    },
+    "created_at": "2025-11-26T20:54:46.766Z",
+    "updated_at": "2025-11-26T20:54:46.766Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "msg_1764190513138",
+    "data": {
+      "id": "msg_1764190513138",
+      "body": "היי ימלך",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_evelrap@gmail.com"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "evelrap@gmail.com",
+      "timestamp": "2025-11-26T20:55:13.138Z"
+    },
+    "created_at": "2025-11-26T20:55:13.436Z",
+    "updated_at": "2025-11-26T20:55:13.436Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "follow_1764191620512",
+    "data": {
+      "id": "follow_1764191620512",
+      "body": "XUczHBaxmBgT4EfiJg4xtZM6dGB2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-26T21:13:40.512Z"
+    },
+    "created_at": "2025-11-26T21:13:40.681Z",
+    "updated_at": "2025-11-26T21:13:40.681Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191771556",
+    "data": {
+      "id": "msg_1764191771556",
+      "body": "היי אח רוצה לקנות קורס שיווק שותפים?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:16:11.556Z"
+    },
+    "created_at": "2025-11-26T21:16:11.733Z",
+    "updated_at": "2025-11-26T21:16:11.733Z"
+  },
+  {
+    "user_id": "matanya.a@lsports.eu",
+    "item_id": "msg_1764194270457",
+    "data": {
+      "id": "msg_1764194270457",
+      "body": "אחחחח עובד ?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_matanya.a@lsports.eu"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "matanya.a@lsports.eu",
+      "timestamp": "2025-11-26T21:57:50.457Z"
+    },
+    "created_at": "2025-11-26T21:57:50.939Z",
+    "updated_at": "2025-11-26T21:57:50.939Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "msg_1764191639718",
+    "data": {
+      "id": "msg_1764191639718",
+      "body": "רוצה לצאת איתי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_karmacommunity2.0@gmail.com"
+      },
+      "read": true,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-26T21:13:59.718Z"
+    },
+    "created_at": "2025-11-26T21:13:59.924Z",
+    "updated_at": "2025-11-27T16:46:08.906Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "follow_1764262007679",
+    "data": {
+      "id": "follow_1764262007679",
+      "body": "t2P5MvlK9rac1K8Msx65KBltOG43 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "t2P5MvlK9rac1K8Msx65KBltOG43"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-27T16:46:47.679Z"
+    },
+    "created_at": "2025-11-27T16:46:47.840Z",
+    "updated_at": "2025-11-27T16:46:47.840Z"
+  },
+  {
+    "user_id": "reuven993@gmail.com",
+    "item_id": "follow_1764262041158",
+    "data": {
+      "id": "follow_1764262041158",
+      "body": "karmacommunity2.0@gmail.com התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "karmacommunity2.0@gmail.com"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "reuven993@gmail.com",
+      "timestamp": "2025-11-27T16:47:21.158Z"
+    },
+    "created_at": "2025-11-27T16:47:21.520Z",
+    "updated_at": "2025-11-27T16:47:21.520Z"
+  },
+  {
+    "user_id": "reuven993@gmail.com",
+    "item_id": "follow_1764346604294",
+    "data": {
+      "id": "follow_1764346604294",
+      "body": "T00iUzrs15dNoVOLVFntzmgwJwz2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "reuven993@gmail.com",
+      "timestamp": "2025-11-28T16:16:44.294Z"
+    },
+    "created_at": "2025-11-28T16:16:44.450Z",
+    "updated_at": "2025-11-28T16:16:44.450Z"
+  },
+  {
+    "user_id": "evelrap@gmail.com",
+    "item_id": "follow_1764346604601",
+    "data": {
+      "id": "follow_1764346604601",
+      "body": "T00iUzrs15dNoVOLVFntzmgwJwz2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "evelrap@gmail.com",
+      "timestamp": "2025-11-28T16:16:44.601Z"
+    },
+    "created_at": "2025-11-28T16:16:44.659Z",
+    "updated_at": "2025-11-28T16:16:44.659Z"
+  },
+  {
+    "user_id": "karmacommunity2.0@gmail.com",
+    "item_id": "follow_1764504919656",
+    "data": {
+      "id": "follow_1764504919656",
+      "body": "T00iUzrs15dNoVOLVFntzmgwJwz2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "karmacommunity2.0@gmail.com",
+      "timestamp": "2025-11-30T12:15:19.656Z"
+    },
+    "created_at": "2025-11-30T12:15:19.803Z",
+    "updated_at": "2025-11-30T12:15:19.803Z"
+  },
+  {
+    "user_id": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+    "item_id": "follow_1764698116256",
+    "data": {
+      "id": "follow_1764698116256",
+      "body": "BEU3rOaViGQsrTZ7NpNutD3Wg8h1 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "BEU3rOaViGQsrTZ7NpNutD3Wg8h1"
+      },
+      "read": true,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "T00iUzrs15dNoVOLVFntzmgwJwz2",
+      "timestamp": "2025-12-02T17:55:16.256Z"
+    },
+    "created_at": "2025-12-02T17:55:14.990Z",
+    "updated_at": "2025-12-03T16:59:13.981Z"
+  },
+  {
+    "user_id": "maidad.maissel@gmail.com",
+    "item_id": "follow_1765241673688",
+    "data": {
+      "id": "follow_1765241673688",
+      "body": "T00iUzrs15dNoVOLVFntzmgwJwz2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "maidad.maissel@gmail.com",
+      "timestamp": "2025-12-09T00:54:33.688Z"
+    },
+    "created_at": "2025-12-09T00:54:34.148Z",
+    "updated_at": "2025-12-09T00:54:34.148Z"
+  },
+  {
+    "user_id": "ereli123@gmail.com",
+    "item_id": "follow_1765241674051",
+    "data": {
+      "id": "follow_1765241674051",
+      "body": "T00iUzrs15dNoVOLVFntzmgwJwz2 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "T00iUzrs15dNoVOLVFntzmgwJwz2"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "ereli123@gmail.com",
+      "timestamp": "2025-12-09T00:54:34.051Z"
+    },
+    "created_at": "2025-12-09T00:54:34.392Z",
+    "updated_at": "2025-12-09T00:54:34.392Z"
+  },
+  {
+    "user_id": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+    "item_id": "msg_1764191811007",
+    "data": {
+      "id": "msg_1764191811007",
+      "body": "אחי",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "conv_XUczHBaxmBgT4EfiJg4xtZM6dGB2"
+      },
+      "read": true,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "g2s18BxQlTenRmttoWlu5fRNNyR2",
+      "timestamp": "2025-11-26T21:16:51.007Z"
+    },
+    "created_at": "2025-11-26T21:16:51.188Z",
+    "updated_at": "2025-12-11T18:01:45.476Z"
+  },
+  {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "item_id": "follow_1765479949279",
+    "data": {
+      "id": "follow_1765479949279",
+      "body": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-12-11T19:05:49.279Z"
+    },
+    "created_at": "2025-12-11T19:05:49.795Z",
+    "updated_at": "2025-12-11T19:05:49.795Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "74ed470f-d0f4-48ed-8c17-1fd4451cc159",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בירור רישיון Open source",
+      "data": {
+        "taskId": "ef56d7c6-b53d-4749-b786-4bb128df502c"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-23T22:17:33.097Z"
+    },
+    "created_at": "2025-12-23T22:17:33.103Z",
+    "updated_at": "2025-12-23T22:17:33.103Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "3793f3a3-8bd5-479f-9e27-8bf1d427221f",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקת משימה",
+      "data": {
+        "taskId": "3c9ae7f3-b868-4d05-a759-21d087edc083"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-24T01:10:52.795Z"
+    },
+    "created_at": "2025-12-24T01:10:52.840Z",
+    "updated_at": "2025-12-24T01:10:52.840Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "9e8d90fd-22f5-4beb-b814-2af697c3e472",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקת שיוך",
+      "data": {
+        "taskId": "7248a210-ced4-4208-bc69-96597bba2452"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-24T01:21:09.703Z"
+    },
+    "created_at": "2025-12-24T01:21:09.724Z",
+    "updated_at": "2025-12-24T01:21:09.724Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "e19ed14a-8bf5-44bd-8675-0628c9a0a2fd",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: תת משימה",
+      "data": {
+        "taskId": "018c179b-465f-481c-bc03-194911cbc78c"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-24T01:25:01.062Z"
+    },
+    "created_at": "2025-12-24T01:25:01.089Z",
+    "updated_at": "2025-12-24T01:25:01.089Z"
+  },
+  {
+    "user_id": "8acb4594-20ed-4ded-8d78-f789f8bf407f",
+    "item_id": "follow_1766539840245",
+    "data": {
+      "id": "follow_1766539840245",
+      "body": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "8acb4594-20ed-4ded-8d78-f789f8bf407f",
+      "timestamp": "2025-12-24T01:30:40.245Z"
+    },
+    "created_at": "2025-12-24T01:30:40.617Z",
+    "updated_at": "2025-12-24T01:30:40.617Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "3eb23106-5006-4226-b23e-7495f404c990",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: ביגיג",
+      "data": {
+        "taskId": "e04f716a-8e30-410b-bbf9-3b8a66408dd8"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-24T01:44:07.920Z"
+    },
+    "created_at": "2025-12-24T01:44:07.945Z",
+    "updated_at": "2025-12-24T01:44:07.945Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1765665867654",
+    "data": {
+      "id": "msg_1765665867654",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-13T22:44:27.654Z"
+    },
+    "created_at": "2025-12-13T22:44:28.266Z",
+    "updated_at": "2025-12-13T22:44:28.266Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1765665885154",
+    "data": {
+      "id": "msg_1765665885154",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-13T22:44:45.154Z"
+    },
+    "created_at": "2025-12-13T22:44:45.636Z",
+    "updated_at": "2025-12-13T22:44:45.636Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1765965771173",
+    "data": {
+      "id": "msg_1765965771173",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-17T10:02:51.174Z"
+    },
+    "created_at": "2025-12-17T10:02:51.373Z",
+    "updated_at": "2025-12-17T10:02:51.373Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1765965793104",
+    "data": {
+      "id": "msg_1765965793104",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-17T10:03:13.104Z"
+    },
+    "created_at": "2025-12-17T10:03:13.277Z",
+    "updated_at": "2025-12-17T10:03:13.277Z"
+  },
+  {
+    "user_id": "35de96db-0043-4d8f-8844-e67318568ecd",
+    "item_id": "msg_1765738534379",
+    "data": {
+      "id": "msg_1765738534379",
+      "body": "האם טרמפ זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "35de96db-0043-4d8f-8844-e67318568ecd",
+      "timestamp": "2025-12-14T18:55:34.379Z"
+    },
+    "created_at": "2025-12-14T18:55:34.810Z",
+    "updated_at": "2025-12-14T18:55:34.810Z"
+  },
+  {
+    "user_id": "35de96db-0043-4d8f-8844-e67318568ecd",
+    "item_id": "msg_1765738547095",
+    "data": {
+      "id": "msg_1765738547095",
+      "body": "גיא .\n?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "1d5a68eb-a4c4-48c3-bd92-d1cf398d233e"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "35de96db-0043-4d8f-8844-e67318568ecd",
+      "timestamp": "2025-12-14T18:55:47.095Z"
+    },
+    "created_at": "2025-12-14T18:55:47.562Z",
+    "updated_at": "2025-12-14T18:55:47.562Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1765957967285",
+    "data": {
+      "id": "msg_1765957967285",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-17T07:52:47.286Z"
+    },
+    "created_at": "2025-12-17T07:52:47.446Z",
+    "updated_at": "2025-12-17T07:52:47.446Z"
+  },
+  {
+    "user_id": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+    "item_id": "msg_1766070929791",
+    "data": {
+      "id": "msg_1766070929791",
+      "body": "האם פריט זה רלוונטי?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "411b38ab-88c6-445e-bd77-d82f05217a4b"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "37ae0581-ec32-4c57-abb7-cdd60fcd7fbb",
+      "timestamp": "2025-12-18T15:15:29.791Z"
+    },
+    "created_at": "2025-12-18T15:15:30.206Z",
+    "updated_at": "2025-12-18T15:15:30.206Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "msg_1766072636330",
+    "data": {
+      "id": "msg_1766072636330",
+      "body": "היי עדו ניצני! 👋",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "5a713074-2b96-4ebb-8a40-1f1a7086a7a5"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "34684837-8737-446e-8fc7-9185a7ecc01f",
+      "timestamp": "2025-12-18T15:43:56.330Z"
+    },
+    "created_at": "2025-12-18T15:43:56.404Z",
+    "updated_at": "2025-12-18T15:43:56.404Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "follow_1766075284744",
+    "data": {
+      "id": "follow_1766075284744",
+      "body": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T16:28:04.744Z"
+    },
+    "created_at": "2025-12-18T16:28:05.032Z",
+    "updated_at": "2025-12-18T16:28:05.032Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "2068d42a-a01b-4bac-adae-ff3b157870d3",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקת משימה",
+      "data": {
+        "taskId": "1f7da42b-289f-4441-91f6-cb9b93d35848"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-24T01:10:52.200Z"
+    },
+    "created_at": "2025-12-24T01:10:52.238Z",
+    "updated_at": "2025-12-24T01:10:52.238Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "follow_1766075286307",
+    "data": {
+      "id": "follow_1766075286307",
+      "body": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "34684837-8737-446e-8fc7-9185a7ecc01f",
+      "timestamp": "2025-12-18T16:28:06.307Z"
+    },
+    "created_at": "2025-12-18T16:28:06.499Z",
+    "updated_at": "2025-12-18T16:28:06.499Z"
+  },
+  {
+    "user_id": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+    "item_id": "msg_1766084082630",
+    "data": {
+      "id": "msg_1766084082630",
+      "body": "שלום יצחק! מה נשמע?",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "80422c62-4377-4c1c-9311-4db57ba2005d"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "7e2c11a0-5926-4bb0-a016-6f60a19c16b1",
+      "timestamp": "2025-12-18T18:54:42.630Z"
+    },
+    "created_at": "2025-12-18T18:54:42.948Z",
+    "updated_at": "2025-12-18T18:54:42.948Z"
+  },
+  {
+    "user_id": "34684837-8737-446e-8fc7-9185a7ecc01f",
+    "item_id": "msg_1766084330394",
+    "data": {
+      "id": "msg_1766084330394",
+      "body": "היי עדו ניצני! 👋",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "f5f62816-f95c-4b0c-835a-75116f2db162"
+      },
+      "read": false,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "34684837-8737-446e-8fc7-9185a7ecc01f",
+      "timestamp": "2025-12-18T18:58:50.394Z"
+    },
+    "created_at": "2025-12-18T18:58:50.738Z",
+    "updated_at": "2025-12-18T18:58:50.738Z"
+  },
+  {
+    "user_id": "15e3eeed-e4d2-4c43-b6f7-5f2c869de623",
+    "item_id": "follow_1766087786418",
+    "data": {
+      "id": "follow_1766087786418",
+      "body": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "15e3eeed-e4d2-4c43-b6f7-5f2c869de623",
+      "timestamp": "2025-12-18T19:56:26.418Z"
+    },
+    "created_at": "2025-12-18T19:56:26.789Z",
+    "updated_at": "2025-12-18T19:56:26.789Z"
+  },
+  {
+    "user_id": "2d535c83-ceb8-45ec-8f45-acdfadb956f2",
+    "item_id": "follow_1766090784893",
+    "data": {
+      "id": "follow_1766090784893",
+      "body": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9 התחיל לעקוב אחריך",
+      "data": {
+        "followerName": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9"
+      },
+      "read": false,
+      "type": "follow",
+      "title": "עוקב חדש!",
+      "userId": "2d535c83-ceb8-45ec-8f45-acdfadb956f2",
+      "timestamp": "2025-12-18T20:46:24.893Z"
+    },
+    "created_at": "2025-12-18T20:46:25.301Z",
+    "updated_at": "2025-12-18T20:46:25.301Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "msg_1765729061208",
+    "data": {
+      "id": "msg_1765729061208",
+      "body": "יגבר",
+      "data": {
+        "senderName": "משתמש",
+        "conversationId": "4dec1a1f-ab50-4636-908d-8b43cf00df5a"
+      },
+      "read": true,
+      "type": "message",
+      "title": "הודעה חדשה מ-משתמש",
+      "userId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-14T16:17:41.208Z"
+    },
+    "created_at": "2025-12-14T16:17:41.432Z",
+    "updated_at": "2025-12-21T09:27:00.808Z"
+  },
+  {
+    "user_id": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+    "item_id": "eb1b4bc3-1bcc-4072-9f3f-23ec884bbf62",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקה",
+      "data": {
+        "taskId": "d401e10d-583d-4407-b33d-b8f8256778e0"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "2fa67e11-9dd1-458c-b74b-77a8dc5086a9",
+      "timestamp": "2025-12-24T01:19:37.919Z"
+    },
+    "created_at": "2025-12-24T01:19:37.961Z",
+    "updated_at": "2025-12-24T01:19:37.961Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "f7ee797d-e73a-416d-9441-9b6f1b349d9a",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בירור רישיון Open source",
+      "data": {
+        "taskId": "ef56d7c6-b53d-4749-b786-4bb128df502c"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-24T01:21:36.902Z"
+    },
+    "created_at": "2025-12-24T01:21:36.923Z",
+    "updated_at": "2025-12-24T01:21:36.923Z"
+  },
+  {
+    "user_id": "0c42bb55-1499-4822-bbd0-074c2f865830",
+    "item_id": "05b964a1-ef87-4129-9a7d-080af8c35808",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקה",
+      "data": {
+        "taskId": "d401e10d-583d-4407-b33d-b8f8256778e0"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "0c42bb55-1499-4822-bbd0-074c2f865830",
+      "timestamp": "2025-12-24T01:25:23.153Z"
+    },
+    "created_at": "2025-12-24T01:25:23.190Z",
+    "updated_at": "2025-12-24T01:25:23.190Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "6969445d-9918-41a6-bd2e-61472b448818",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: בדיקה",
+      "data": {
+        "taskId": "8058bd80-f663-4c44-9698-2dc4280981c0"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-24T01:43:52.898Z"
+    },
+    "created_at": "2025-12-24T01:43:52.919Z",
+    "updated_at": "2025-12-24T01:43:52.919Z"
+  },
+  {
+    "user_id": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+    "item_id": "3c596692-a34a-4acc-9e0c-2c6ce48a84d3",
+    "data": {
+      "body": "הוקצתה לך משימה חדשה: תתתת",
+      "data": {
+        "taskId": "a998d8d0-d52b-47e1-8cc6-0c098bebed60"
+      },
+      "read": false,
+      "type": "system",
+      "title": "משימה חדשה",
+      "userId": "c556b4fc-a140-4e2b-ba95-d6b27bd7ebfd",
+      "timestamp": "2025-12-24T01:44:15.518Z"
+    },
+    "created_at": "2025-12-24T01:44:15.550Z",
+    "updated_at": "2025-12-24T01:44:15.550Z"
+  }
+]

@@ -5,44 +5,56 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
   ScrollView,
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { db } from '../../src/infrastructure/database.service';
+import { db } from '../../utils/databaseService';
 import { useUser } from '../../stores/userStore';
 import { EditEntryModal } from './EditEntryModal';
-import colors from '../../globals/colors';
-import { FontSizes } from '../../globals/constants';
 import {
   DailyTrackerData,
   DailyTrackerChallenge,
   EntryStatus,
 } from '../../globals/types';
+import colors from '../../globals/colors';
+import { logger } from '../../utils/loggerService';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 interface DailyHabitsQuickViewProps {
   onBrowseChallenges: () => void;
+  /** Increment from parent (e.g. pull-to-refresh) to reload tracker data without remounting. */
+  reloadToken?: number;
+}
+
+/** Calendar YYYY-MM-DD in the device local timezone (avoids UTC day shift from toISOString). */
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getDateRange(mode: ViewMode): string[] {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
   const dates: string[] = [];
   if (mode === 'daily') {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    dates.push(yesterday, today);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    dates.push(toLocalDateString(yesterday), toLocalDateString(now));
   } else if (mode === 'weekly') {
     for (let i = 7; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      dates.push(d.toISOString().split('T')[0]);
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dates.push(toLocalDateString(d));
     }
   } else {
     for (let i = 30; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      dates.push(d.toISOString().split('T')[0]);
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dates.push(toLocalDateString(d));
     }
   }
   return dates;
@@ -50,22 +62,32 @@ function getDateRange(mode: ViewMode): string[] {
 
 export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   onBrowseChallenges,
+  reloadToken,
 }) => {
   const { t } = useTranslation('challenges');
   const { selectedUser: user } = useUser();
   const [data, setData] = useState<DailyTrackerData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<DailyTrackerChallenge | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const editingRef = useRef<{ date: string; value?: number; notes?: string } | null>(null);
-  const today = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateString(new Date());
   const dateRange = getDateRange(viewMode);
   const startDate = dateRange[0];
   const endDate = dateRange[dateRange.length - 1];
+
+  if (__DEV__) {
+    logger.debug('DailyHabitsQuickView', 'Component initialized', {
+      todayStr,
+      viewMode,
+      dateRange,
+      startDate,
+      endDate,
+    });
+  }
 
   const loadTodayData = useCallback(async () => {
     if (!user?.id) {
@@ -78,19 +100,15 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       if (payload && Array.isArray(payload.challenges)) {
         if (__DEV__) {
           const dates = payload.entries_by_date ? Object.keys(payload.entries_by_date) : [];
-          console.log('[DailyHabitsQuickView] Data loaded:', { challenges: payload.challenges.length, dates });
-          dates.forEach(date => {
-            const dateEntries = payload.entries_by_date[date];
-            console.log(`[DailyHabitsQuickView] Entries for ${date}:`, dateEntries);
-            Object.keys(dateEntries).forEach(challengeId => {
-              const entry = dateEntries[challengeId];
-              console.log(`  Challenge ${challengeId}: value=${entry.value}, status=${entry.status}, notes=${entry.notes?.substring(0, 20) || 'none'}`);
-            });
+          logger.debug('DailyHabitsQuickView', 'Data loaded', {
+            challengeCount: payload.challenges.length,
+            dates,
+            entriesByDate: payload.entries_by_date,
           });
-          console.log('[DailyHabitsQuickView] Updating state with new data');
+          logger.debug('DailyHabitsQuickView', 'Updating state with new data');
         }
         setData({ ...payload });
-        if (__DEV__) console.log('[DailyHabitsQuickView] State updated with new object');
+        if (__DEV__) logger.debug('DailyHabitsQuickView', 'State updated with new object');
       } else {
         if (__DEV__) console.warn('[DailyHabitsQuickView] Invalid payload:', { hasPayload: !!payload, challengesIsArray: Array.isArray(payload?.challenges) });
         setData(null);
@@ -100,7 +118,6 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       setData(null);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [user?.id, startDate, endDate]);
 
@@ -110,6 +127,18 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     }, [loadTodayData])
   );
 
+  const prevReloadToken = useRef<number | null>(null);
+  useEffect(() => {
+    if (reloadToken === undefined) return;
+    if (prevReloadToken.current === null) {
+      prevReloadToken.current = reloadToken;
+      return;
+    }
+    if (prevReloadToken.current === reloadToken) return;
+    prevReloadToken.current = reloadToken;
+    if (user?.id) loadTodayData();
+  }, [reloadToken, user?.id, loadTodayData]);
+
   const viewModeRef = useRef(viewMode);
   useEffect(() => {
     if (viewModeRef.current !== viewMode) {
@@ -117,11 +146,6 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       if (user?.id) loadTodayData();
     }
   }, [viewMode, user?.id, loadTodayData]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadTodayData();
-  };
 
   const getCellStatus = (challengeId: string, date: string): EntryStatus => {
     if (!data?.entries_by_date[date]) return 'empty';
@@ -142,18 +166,43 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     setSelectedDate(date);
     setModalVisible(true);
     if (__DEV__) {
-      console.log('[DailyHabitsQuickView] Opening edit:', { challengeId: challenge.id, title: challenge.title, type: challenge.type, goal_value: challenge.goal_value, goal_direction: challenge.goal_direction, date, value, notes, currentStatus });
+      logger.debug('DailyHabitsQuickView', 'CELL PRESSED', {
+        date,
+        todayStr,
+        dateRange,
+        openingEdit: {
+          challengeId: challenge.id,
+          title: challenge.title,
+          type: challenge.type,
+          goal_value: challenge.goal_value,
+          goal_direction: challenge.goal_direction,
+          date,
+          value,
+          notes,
+          currentStatus,
+        },
+        editingRef: editingRef.current,
+      });
     }
   };
 
   const handleSaveEntry = async (value: number, notes: string) => {
     const challengeId = selectedChallenge?.id;
-    const dateToSave = selectedDate || editingRef.current?.date;
+    const dateToSave = editingRef.current?.date || selectedDate;
     if (!challengeId || !user?.id || !dateToSave) {
       if (__DEV__) console.warn('[DailyHabitsQuickView] Save cancelled: missing challenge/user/date', { challengeId, userId: user?.id, dateToSave });
       return;
     }
-    if (__DEV__) console.log('[DailyHabitsQuickView] Saving entry:', { challengeId, date: dateToSave, value, notes });
+    if (__DEV__) {
+      logger.debug('DailyHabitsQuickView', 'SAVING ENTRY', {
+        editingRef: editingRef.current,
+        selectedDate,
+        dateToSave,
+        challengeId,
+        value,
+        notes,
+      });
+    }
     try {
       await db.addChallengeEntry(challengeId, {
         user_id: user.id,
@@ -161,20 +210,29 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
         notes,
         entry_date: dateToSave,
       });
-      if (__DEV__) console.log('[DailyHabitsQuickView] Save succeeded');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Save succeeded');
       editingRef.current = null;
       setModalVisible(false);
-      if (__DEV__) console.log('[DailyHabitsQuickView] Modal closed, refreshing data');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Modal closed, refreshing data');
       await loadTodayData();
-      if (__DEV__) console.log('[DailyHabitsQuickView] Data refreshed successfully');
+      if (__DEV__) logger.debug('DailyHabitsQuickView', 'Data refreshed successfully');
+      try {
+        const { emitDailyChallengeTrackerRefresh } = await import('../../utils/dailyChallengeReminder');
+        emitDailyChallengeTrackerRefresh();
+      } catch {
+        /* optional */
+      }
     } catch (err) {
       if (__DEV__) console.error('[DailyHabitsQuickView] Save error:', err);
       throw err;
     }
   };
 
-  const currentEntry = (selectedChallenge && selectedDate) ? data?.entries_by_date[selectedDate]?.[selectedChallenge.id] : undefined;
-  const modalDate = editingRef.current?.date ?? selectedDate ?? today;
+  const currentEntry =
+    selectedChallenge && selectedDate
+      ? data?.entries_by_date[selectedDate]?.[selectedChallenge.id]
+      : undefined;
+  const modalDate = editingRef.current?.date ?? selectedDate ?? todayStr;
   const modalExistingValue = editingRef.current !== null ? editingRef.current.value : currentEntry?.value;
   const modalExistingNotes = editingRef.current !== null ? editingRef.current.notes : currentEntry?.notes;
 
@@ -187,7 +245,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={colors.success} />
+          <ActivityIndicator size="small" color={colors.habitAccentGreen} />
           <Text style={styles.loadingText}>{t('quickView.loading')}</Text>
         </View>
       </View>
@@ -197,8 +255,8 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
   const hasDailyChallenges = data && data.challenges.length > 0;
 
   const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    if (viewMode === 'daily') return dateStr === today ? t('details.today') : t('details.yesterday');
+    const d = new Date(dateStr + 'T12:00:00');
+    if (viewMode === 'daily') return dateStr === todayStr ? t('details.today') : t('details.yesterday');
     if (viewMode === 'weekly') return d.getDate().toString();
     return d.getDate().toString();
   };
@@ -223,43 +281,38 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
       </View>
 
       {hasDailyChallenges ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
+        <View>
           <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>
-                {data.stats.total_success_rate != null
-                  ? `${Math.round(data.stats.total_success_rate)}%`
-                  : '—'}
-              </Text>
-              <Text style={styles.statLabel}>{t('stats.successRate')}</Text>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>
+                  {data.stats.total_success_rate != null
+                    ? `${Math.round(data.stats.total_success_rate)}%`
+                    : '—'}
+                </Text>
+                <Text style={styles.statLabel}>{t('stats.successRate')}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{calculateOverallStreak()}</Text>
+                <Text style={styles.statLabel}>{t('stats.currentStreak')}</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{calculateOverallStreak()}</Text>
-              <Text style={styles.statLabel}>{t('stats.currentStreak')}</Text>
-            </View>
-          </View>
 
-          <ScrollView
-            horizontal={dateRange.length > 4}
-            showsHorizontalScrollIndicator={dateRange.length > 4}
-            style={dateRange.length > 4 ? styles.tableScroll : undefined}
-            contentContainerStyle={Platform.OS === 'web' && dateRange.length > 4 ? { minWidth: '100%' } : undefined}
-          >
-            <View style={[
-              styles.tableWrapper,
-              Platform.OS === 'web' && dateRange.length > 4 && { minWidth: dateRange.length * 60 + 120 }
-            ]}>
-              <View style={styles.tableHeader}>
-                <View style={styles.tableHeaderLabel} />
-                {dateRange.map((date) => (
+            <ScrollView
+              horizontal={dateRange.length > 4}
+              showsHorizontalScrollIndicator={dateRange.length > 4}
+              style={dateRange.length > 4 ? styles.tableScroll : undefined}
+              contentContainerStyle={Platform.OS === 'web' && dateRange.length > 4 ? { minWidth: '100%' } : undefined}
+            >
+              <View style={[
+                styles.tableWrapper,
+                Platform.OS === 'web' && dateRange.length > 4 && { minWidth: dateRange.length * 60 + 120 }
+              ]}>
+                <View style={styles.tableHeader}>
+                  <View style={styles.tableHeaderLabel} />
+                  {dateRange.map((date) => (
                   <View
                     key={date}
-                    style={[styles.dateCol, date === today && styles.dateColToday]}
+                    style={[styles.dateCol, date === todayStr && styles.dateColToday]}
                   >
                     <Text style={styles.dateColText}>{formatDateLabel(date)}</Text>
                     <Text style={styles.dateColSub}>{date}</Text>
@@ -274,7 +327,7 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                   {dateRange.map((date) => {
                     const status = getCellStatus(challenge.id, date);
                     const cellValue = getCellValue(challenge.id, date);
-
+                    
                     let displayText = '—';
                     if (cellValue !== undefined) {
                       if (challenge.type === 'BOOLEAN') {
@@ -287,17 +340,28 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                         displayText = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}m`;
                       }
                     }
-
+                    
                     const iconColor =
-                      status === 'success' ? colors.success : status === 'failed' ? colors.error : status === 'neutral' ? colors.textSecondary : colors.border;
+                      status === 'success'
+                        ? colors.materialSuccess
+                        : status === 'failed'
+                          ? colors.materialError
+                          : status === 'neutral'
+                            ? colors.neutralWarmGray
+                            : colors.neutralBorderStrong;
 
                     return (
                       <TouchableOpacity
                         key={date}
                         style={[
                           styles.cell,
-                          { backgroundColor: iconColor === colors.border ? colors.backgroundSecondary : `${iconColor}18` },
-                          date === today && styles.cellToday,
+                          {
+                            backgroundColor:
+                              iconColor === colors.neutralBorderStrong
+                                ? colors.surfaceCanvas
+                                : `${iconColor}18`,
+                          },
+                          date === todayStr && styles.cellToday,
                         ]}
                         onPress={() => handleCellPress(challenge, date)}
                         activeOpacity={0.7}
@@ -310,9 +374,9 @@ export const DailyHabitsQuickView: React.FC<DailyHabitsQuickViewProps> = ({
                   })}
                 </View>
               ))}
-            </View>
-          </ScrollView>
-        </ScrollView>
+              </View>
+            </ScrollView>
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>{t('quickView.noChallenges')}</Text>
@@ -354,13 +418,13 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.neutralBorderStrong,
     paddingBottom: 8,
   },
   title: {
-    fontSize: FontSizes.medium,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
     marginBottom: 8,
   },
   toggleRow: {
@@ -371,15 +435,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surfaceStripe,
   },
   toggleBtnActive: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.habitAccentGreen,
   },
   toggleBtnText: {
-    fontSize: FontSizes.small,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.neutralTextBody,
   },
   toggleBtnTextActive: {
     color: colors.white,
@@ -392,8 +456,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    fontSize: FontSizes.small,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: colors.neutralTextBody,
   },
   statsRow: {
     flexDirection: 'row',
@@ -404,26 +468,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: FontSizes.large,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.success,
+    color: colors.habitAccentGreen,
   },
   statLabel: {
-    fontSize: FontSizes.caption,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.neutralTextBody,
     marginTop: 2,
   },
   tableScroll: {
     marginBottom: 8,
     ...(Platform.OS === 'web' && {
-      overflowX: 'auto' as const,
-      WebkitOverflowScrolling: 'touch' as const,
+      overflowX: 'auto' as any,
+      WebkitOverflowScrolling: 'touch' as any,
     }),
   },
   tableWrapper: {
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.neutralBorderSoft,
     borderRadius: 10,
     overflow: 'hidden',
     minWidth: '100%',
@@ -431,9 +495,9 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surfaceCanvas,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.neutralBorderStrong,
     paddingVertical: 10,
     paddingHorizontal: 8,
   },
@@ -447,31 +511,31 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   dateColToday: {
-    backgroundColor: colors.info + '18',
+    backgroundColor: colors.surfaceBlueTint,
   },
   dateColText: {
-    fontSize: FontSizes.small,
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: colors.neutralTextTitle,
   },
   dateColSub: {
-    fontSize: FontSizes.caption,
-    color: colors.textSecondary,
+    fontSize: 10,
+    color: colors.neutralTextBody,
     marginTop: 2,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: colors.backgroundSecondary,
+    borderBottomColor: colors.surfaceStripe,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
   challengeName: {
     width: 100,
     minWidth: 100,
-    fontSize: FontSizes.small,
-    color: colors.textPrimary,
+    fontSize: 13,
+    color: colors.neutralTextTitle,
     marginEnd: 8,
   },
   cell: {
@@ -482,41 +546,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 2,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.neutralBorderSoft,
   },
   cellToday: {
-    borderColor: colors.info,
+    borderColor: colors.materialInfoBlue,
     borderWidth: 1.5,
   },
   cellText: {
-    fontSize: FontSizes.small,
+    fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   expandButton: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surfaceCanvas,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   expandButtonText: {
-    fontSize: FontSizes.small,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.success,
+    color: colors.habitAccentGreen,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 16,
   },
   emptyText: {
-    fontSize: FontSizes.medium,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.neutralTextBody,
     marginBottom: 4,
   },
   emptySubtext: {
-    fontSize: FontSizes.small,
-    color: colors.textTertiary,
+    fontSize: 14,
+    color: colors.neutralTextCaption,
     marginBottom: 12,
     textAlign: 'center',
   },

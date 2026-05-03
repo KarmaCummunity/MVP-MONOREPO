@@ -16,7 +16,6 @@ ignore:
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
   javascript/Sqli:
-    - src/modules/items/items.service.ts:
     - src/items/items.service.ts:
         reason: >
           Table names come from tableFor() which validates against a hard-coded
@@ -31,7 +30,6 @@ ignore:
           used; no string interpolation of user values into SQL.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
-    - src/modules/challenges/controllers/community-group-challenges.controller.ts:
     - src/controllers/community-group-challenges.controller.ts:
         reason: >
           sort_by is validated against an explicit allowlist of column names;
@@ -39,21 +37,13 @@ ignore:
           quoted via pg-format %I before being appended to the query.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
-    - src/modules/admin/controllers/tasks.controller.ts:
-    - src/controllers/tasks.controller.ts:
+    - src/tasks/tasks.controller.ts:
         reason: >
           The WHERE clause is built from fixed column names (status, priority,
           category) whose values are fully parameterised ($1, $2, …). No user
           input is used as a column name or identifier.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
-    - src/modules/items/controllers/items-delivery.controller.ts:
-    - src/modules/items/services/items-delivery.service.ts:
-        reason: >
-          All filter values (category, search, etc.) are passed as query params
-          ($1, $2, ...). sort_by/sort_order validated against allowlist.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-26T00:00:00.000Z
     - src/scripts/run-sql.ts:
         reason: >
           sqlPath is validated: confined to projectRoot, .sql extension
@@ -84,45 +74,45 @@ ignore:
   3f315c45-c6db-4051-8b0c-03548a55821a:
     - '*':
         reason: >-
-          sort_by validated against allowlist; sort_order forced ASC/DESC;
-          identifier quoted via pg-format %I
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:09.539Z
+        created: 2026-02-25T02:29:04.774Z
   388e63db-5124-4619-b730-93f9deb81977:
     - '*':
         reason: >-
-          WHERE clause built from fixed column names; all values parameterised;
-          no user input as identifier
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:15.552Z
+        created: 2026-02-25T02:29:07.625Z
   4fac904c-0806-463e-bf2d-cc14f8fc9448:
     - '*':
         reason: >-
-          tableFor() validates against hard-coded allowlist; all queries use
-          pg-format %I identifier quoting
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:23.414Z
+        created: 2026-02-25T02:29:10.132Z
   28c08764-3823-48f6-a20a-a5bdc5b98f66:
     - '*':
         reason: >-
-          tableFor() validates against hard-coded allowlist; all queries use
-          pg-format %I identifier quoting
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:25.704Z
+        created: 2026-02-25T02:29:12.794Z
   e7f03704-67d2-45f3-a1f2-91d9cdeb1840:
     - '*':
         reason: >-
-          tableFor() validates against hard-coded allowlist; all queries use
-          pg-format %I identifier quoting
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:32.694Z
+        created: 2026-02-25T02:29:15.089Z
   5492b045-fde8-45bb-a6f4-adee689e3cfb:
     - '*':
         reason: >-
-          tableFor() validates against hard-coded allowlist; all queries use
-          pg-format %I identifier quoting
+          False positive: validated via allowlist/pg-format/TLS-terminating
+          proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:32.713Z
+        created: 2026-02-25T02:29:17.696Z
   31ef0db6-6356-408c-b819-cd5167fda42e:
     - '*':
         reason: >-
@@ -130,72 +120,27 @@ ignore:
           proxy. See apps/api/.snyk for full justification.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:29:20.140Z
-  8f2edcce-3eca-439c-ac6d-8fd61f866e0f:
-    - '*':
-        reason: >-
-          False positive: Image source for profile picture avatar, not a
-          redirect. React Native Image component, not network redirection.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T00:00:00.000Z
-  a82f9aeb-ecad-49e4-bb0f-6e443b92f20c:
-    - '*':
-        reason: >-
-          False positive: Image source for profile picture avatar, not a
-          redirect. React Native Image component, not network redirection.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T00:00:00.000Z
-  f10e7ca3-6b7e-4398-b987-4c3b44ec6df5:
-    - '*':
-        reason: >-
-          False positive: Storage key names (AsyncStorage/SecureStore
-          identifiers), not secrets. Actual tokens stored as values, never
-          hardcoded.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T00:00:00.000Z
-  920bd314-6df8-45d8-a0e0-254b6c9423b1:
-    - '*':
-        reason: >-
-          False positive: Mock JWT for unit tests only with intentionally
-          invalid signature. Not used in production code.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T00:00:00.000Z
-  1ef2f6b3-a29e-4e38-b189-400f246e1500:
-    - '*':
-        reason: >-
-          itemsDeliveryService uses parameterized queries. Already marked with
-          snyk ignore comment in code.
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-25T10:47:12.422Z
 patch: {}
 exclude:
   code:
-    - src/modules/items/items.service.ts:
     - src/items/items.service.ts:
         reason: >-
           tableFor() validates against hard-coded allowlist; all queries use
           pg-format %I identifier quoting
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:10.616Z
-    - src/modules/challenges/controllers/community-group-challenges.controller.ts:
     - src/controllers/community-group-challenges.controller.ts:
         reason: >-
           sort_by validated against allowlist; sort_order forced ASC/DESC;
           identifier quoted via pg-format %I
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:13.615Z
-    - src/modules/admin/controllers/tasks.controller.ts:
-    - src/controllers/tasks.controller.ts:
+    - src/tasks/tasks.controller.ts:
         reason: >-
           WHERE clause built from fixed column names; all values parameterised
           ($1,$2,...); no user input as identifier
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:16.452Z
-    - src/modules/items/controllers/items-delivery.controller.ts:
-    - src/modules/items/services/items-delivery.service.ts:
-        reason: >-
-          Filter values passed as query params; sort_by/sort_order allowlisted
-        expires: 2027-06-01T00:00:00.000Z
-        created: 2026-02-26T00:00:00.000Z
     - src/scripts/run-sql.ts:
         reason: >-
           sqlPath validated: confined to projectRoot, .sql extension enforced,
@@ -214,7 +159,6 @@ exclude:
           always HTTPS
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:24.754Z
-    - src/modules/items/items.controller.ts:
     - src/items/items.controller.ts:
         reason: >-
           all SQL queries through itemsService which validates collection

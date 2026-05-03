@@ -1,5 +1,4 @@
 import { Client } from "pg";
-import format from "pg-format";
 import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
@@ -47,14 +46,13 @@ async function exportData() {
         continue;
       }
       console.log(`Exporting table: ${table}...`);
-      const tableData = await client.query(format("SELECT * FROM %I", table));
-      const sanitizedTableName = table.replace(/[^a-zA-Z0-9_-]/g, "_");
-      const filePath = path.join(exportDir, `${sanitizedTableName}.json`);
-      const resolvedPath = path.resolve(filePath);
-      if (!resolvedPath.startsWith(path.resolve(exportDir))) {
-        throw new Error(`Invalid path: ${table}`);
-      }
-      fs.writeFileSync(filePath, JSON.stringify(tableData.rows, null, 2));
+      const tableData = await client.query(`SELECT * FROM "${table}"`);
+      // Use path.basename to ensure no directory traversal in the filename.
+      const safeFilename = path.basename(`${table}.json`);
+      fs.writeFileSync(
+        path.join(exportDir, safeFilename),
+        JSON.stringify(tableData.rows, null, 2),
+      );
     }
 
     console.log(`✅ Export completed! Data saved to ${exportDir}`);

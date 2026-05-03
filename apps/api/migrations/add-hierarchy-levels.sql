@@ -3,16 +3,6 @@
 -- Description: Adds hierarchy_level column, volunteer role, history table, and automatic calculation
 
 -- ============================================
--- Constants (single definition for Sonar/maintainability)
--- ============================================
-CREATE TABLE IF NOT EXISTS _migration_constants (
-    name TEXT PRIMARY KEY,
-    value TEXT
-);
-INSERT INTO _migration_constants (name, value) VALUES ('root_admin_email', 'karmacommunity2.0@gmail.com')
-ON CONFLICT (name) DO NOTHING;
-
--- ============================================
 -- STEP 1: Add hierarchy_level column
 -- ============================================
 DO $$ 
@@ -62,26 +52,27 @@ CREATE OR REPLACE FUNCTION calculate_hierarchy_level(user_id UUID)
 RETURNS INTEGER AS $$
 DECLARE
     level INTEGER;
-    root_admin_email TEXT := (SELECT value FROM _migration_constants WHERE name = 'root_admin_email');
+    root_admin_email TEXT := 'karmacommunity2.0@gmail.com';
     found_root BOOLEAN := false;
     user_parent_id UUID;
 BEGIN
-    -- Root admin has level 0
+    -- אם זה המנהל הראשי, דרגה 0
     IF EXISTS (SELECT 1 FROM user_profiles WHERE id = user_id AND email = root_admin_email) THEN
         RETURN 0;
     END IF;
     
-    -- Get user's parent
+    -- קבל את ה-parent של המשתמש
     SELECT parent_manager_id INTO user_parent_id
     FROM user_profiles
     WHERE id = user_id;
     
-    -- No parent means regular user (no level)
+    -- אם אין parent_manager_id, זה משתמש רגיל
     IF user_parent_id IS NULL THEN
-        RETURN NULL;
+        RETURN NULL; -- משתמש רגיל, אין דרגה
     END IF;
     
-    -- Recursive distance from root admin (walk up from user's parent)
+    -- חישוב רקורסיבי של המרחק מהמנהל הראשי
+    -- אנו מטפסים למעלה מה-parent של המשתמש עד שמגיעים למנהל הראשי
     WITH RECURSIVE hierarchy_path AS (
         -- Base case: start from user's parent (not the user itself)
         SELECT id, parent_manager_id, email, 1 as depth
@@ -103,12 +94,12 @@ BEGIN
     INTO level, found_root
     FROM hierarchy_path hp;
     
-    -- Did not reach root admin: regular user
+    -- אם לא הגענו למנהל הראשי, זה משתמש רגיל
     IF NOT found_root OR level IS NULL THEN
         RETURN NULL;
     END IF;
     
-    -- Level is distance from root (depth already correct from 1)
+    -- הדרגה היא המרחק מהמנהל הראשי (כבר נכון כי התחלנו מ-depth 1)
     RETURN level;
 END;
 $$ LANGUAGE plpgsql;
@@ -121,7 +112,7 @@ RETURNS TRIGGER AS $$
 DECLARE
     new_level INTEGER;
     old_level INTEGER;
-    root_admin_email TEXT := (SELECT value FROM _migration_constants WHERE name = 'root_admin_email');
+    root_admin_email TEXT := 'karmacommunity2.0@gmail.com';
 BEGIN
     -- CRITICAL: Protect root admin - karmacommunity2.0@gmail.com is the KING
     -- Root admin ALWAYS has hierarchy_level = 0 and parent_manager_id = NULL
@@ -136,16 +127,16 @@ BEGIN
         RETURN NEW;
     END IF;
     
-    -- Compute new level
+    -- חשב דרגה חדשה
     new_level := calculate_hierarchy_level(NEW.id);
     
-    -- Keep old level
+    -- שמור את הדרגה הישנה
     old_level := OLD.hierarchy_level;
     
-    -- Update level
+    -- עדכן את הדרגה
     NEW.hierarchy_level := new_level;
     
-    -- If level/parent/roles changed, store history
+    -- אם הדרגה או parent_manager_id השתנו, שמור היסטוריה
     IF (OLD.hierarchy_level IS DISTINCT FROM new_level) 
        OR (OLD.parent_manager_id IS DISTINCT FROM NEW.parent_manager_id)
        OR (OLD.roles IS DISTINCT FROM NEW.roles) THEN
@@ -162,7 +153,7 @@ BEGIN
             change_reason
         ) VALUES (
             NEW.id, 
-            NULL, -- TODO: get from user context if available
+            NULL, -- TODO: לקבל מה-user context אם אפשר
             old_level, 
             new_level,
             OLD.parent_manager_id,
@@ -192,25 +183,25 @@ CREATE TRIGGER trigger_update_hierarchy_level
 -- STEP 6: Initialize hierarchy levels
 -- ============================================
 
--- Level 0: root admin (fully protected)
+-- דרגה 0: מנהל ראשי - המנהל הראשי, מוגן לחלוטין
 UPDATE user_profiles 
 SET hierarchy_level = 0,
-    parent_manager_id = NULL
-WHERE email = (SELECT value FROM _migration_constants WHERE name = 'root_admin_email');
+    parent_manager_id = NULL  -- תמיד NULL - אין אף אחד מעליו
+WHERE email = 'karmacommunity2.0@gmail.com';
 
--- Level 1: super admins (under root admin)
+-- דרגה 1: סופר מנהלים (משויכים למנהל הראשי)
 DO $$
 DECLARE
     root_admin_id UUID;
 BEGIN
-    -- Find root admin ID
+    -- מצא את ה-ID של המנהל הראשי
     SELECT id INTO root_admin_id
     FROM user_profiles
-    WHERE email = (SELECT value FROM _migration_constants WHERE name = 'root_admin_email')
+    WHERE email = 'karmacommunity2.0@gmail.com'
     LIMIT 1;
     
     IF root_admin_id IS NOT NULL THEN
-        -- Update super admins
+        -- עדכן את הסופר מנהלים
         UPDATE user_profiles 
         SET hierarchy_level = 1,
             parent_manager_id = root_admin_id
@@ -223,15 +214,14 @@ BEGIN
     END IF;
 END $$;
 
--- Clear parent_manager_id and admin/volunteer roles for other users
+-- הסרת כל ה-parent_manager_id של שאר המשתמשים
+-- והסרת roles admin/volunteer מהם
 UPDATE user_profiles 
 SET 
     parent_manager_id = NULL,
     hierarchy_level = NULL,
     roles = array_remove(array_remove(roles, 'admin'), 'volunteer')
-WHERE email NOT IN (
-      (SELECT value FROM _migration_constants WHERE name = 'root_admin_email'),
-      'navesarussi@gmail.com', 'mahalalel100@gmail.com')
+WHERE email NOT IN ('karmacommunity2.0@gmail.com', 'navesarussi@gmail.com', 'mahalalel100@gmail.com')
   AND (
       parent_manager_id IS NOT NULL 
       OR 'admin' = ANY(roles) 
@@ -247,20 +237,19 @@ WHERE email NOT IN (
 UPDATE user_profiles 
 SET hierarchy_level = 0,
     parent_manager_id = NULL
-WHERE email = (SELECT value FROM _migration_constants WHERE name = 'root_admin_email')
+WHERE email = 'karmacommunity2.0@gmail.com'
   AND (parent_manager_id IS NOT NULL OR hierarchy_level != 0);
 
 -- ============================================
 -- STEP 8: Calculate hierarchy levels for any remaining users with parent_manager_id
--- (safety net for any remaining users with parent_manager_id)
+-- (במקרה שיש משתמשים עם parent_manager_id שלא טופלו)
+-- זה לא אמור לקרות אחרי STEP 6, אבל זה בטיחות נוספת
 -- ============================================
 UPDATE user_profiles 
 SET hierarchy_level = calculate_hierarchy_level(id)
 WHERE parent_manager_id IS NOT NULL
   AND hierarchy_level IS NULL
-  AND email NOT IN (
-      (SELECT value FROM _migration_constants WHERE name = 'root_admin_email'),
-      'navesarussi@gmail.com', 'mahalalel100@gmail.com');
+  AND email NOT IN ('karmacommunity2.0@gmail.com', 'navesarussi@gmail.com', 'mahalalel100@gmail.com');
 
 -- ============================================
 -- STEP 9: Verify migration
@@ -275,20 +264,20 @@ DECLARE
     users_with_parent_but_no_level INTEGER;
     root_admin_has_parent INTEGER;
 BEGIN
-    -- Check level 0
+    -- בדוק דרגה 0
     SELECT COUNT(*), MAX(email) INTO level_0_count, level_0_email
     FROM user_profiles
     WHERE hierarchy_level = 0;
     
     IF level_0_count != 1 THEN
         RAISE WARNING '⚠️ Expected 1 user with level 0, found %', level_0_count;
-    ELSIF level_0_email != (SELECT value FROM _migration_constants WHERE name = 'root_admin_email') THEN
+    ELSIF level_0_email != 'karmacommunity2.0@gmail.com' THEN
         RAISE WARNING '⚠️ Level 0 user is not karmacommunity2.0@gmail.com, found: %', level_0_email;
     ELSE
         RAISE NOTICE '✅ Level 0: 1 user (root admin: %)', level_0_email;
     END IF;
     
-    -- Check level 1
+    -- בדוק דרגה 1
     SELECT COUNT(*), array_agg(email) INTO level_1_count, level_1_emails
     FROM user_profiles
     WHERE hierarchy_level = 1;
@@ -299,14 +288,14 @@ BEGIN
         RAISE NOTICE '✅ Level 1: 2 users (super admins: %)', array_to_string(level_1_emails, ', ');
     END IF;
     
-    -- Check regular users
+    -- בדוק משתמשים רגילים
     SELECT COUNT(*) INTO null_level_count
     FROM user_profiles
     WHERE hierarchy_level IS NULL;
     
     RAISE NOTICE '✅ Users with NULL level (regular users): %', null_level_count;
     
-    -- Ensure no users have parent_manager_id but NULL hierarchy_level
+    -- בדוק שאין משתמשים עם parent_manager_id אבל בלי hierarchy_level
     SELECT COUNT(*) INTO users_with_parent_but_no_level
     FROM user_profiles
     WHERE parent_manager_id IS NOT NULL
@@ -321,14 +310,14 @@ BEGIN
     -- CRITICAL: Verify root admin has parent_manager_id = NULL
     SELECT COUNT(*) INTO root_admin_has_parent
     FROM user_profiles
-    WHERE email = (SELECT value FROM _migration_constants WHERE name = 'root_admin_email')
+    WHERE email = 'karmacommunity2.0@gmail.com'
       AND parent_manager_id IS NOT NULL;
     
     IF root_admin_has_parent > 0 THEN
         RAISE WARNING '⚠️ CRITICAL: Root admin has parent_manager_id! Fixing...';
         UPDATE user_profiles 
         SET parent_manager_id = NULL
-        WHERE email = (SELECT value FROM _migration_constants WHERE name = 'root_admin_email');
+        WHERE email = 'karmacommunity2.0@gmail.com';
         RAISE NOTICE '✅ Fixed: Root admin now has parent_manager_id = NULL';
     ELSE
         RAISE NOTICE '✅ Root admin correctly has parent_manager_id = NULL (the KING)';

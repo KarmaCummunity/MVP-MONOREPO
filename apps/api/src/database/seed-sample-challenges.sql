@@ -7,17 +7,16 @@
 DO $$
 DECLARE
   sample_user_id UUID;
-  c_tbl CONSTANT TEXT := 'user_profiles';
-  c_email CONSTANT TEXT := 'navesarussi@gmail.com';
 BEGIN
-  SELECT id INTO sample_user_id
-  FROM user_profiles
-  WHERE email = c_email
+  -- Get the first user (or create a sample user)
+  SELECT id INTO sample_user_id 
+  FROM user_profiles 
+  WHERE email = 'navesarussi@gmail.com'
   LIMIT 1;
 
   -- If no user found, use a placeholder (this will fail FK constraint, so handle appropriately)
   IF sample_user_id IS NULL THEN
-    RAISE NOTICE 'No user found with email %. Please update the script with a valid user ID.', c_email;
+    RAISE NOTICE 'No user found with email navesarussi@gmail.com. Please update the script with a valid user ID.';
     RETURN;
   END IF;
 

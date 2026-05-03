@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,72 +10,27 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
+
+type NavigationPropType = NavigationProp<ParamListBase> | any;
 import { Ionicons as Icon } from '@expo/vector-icons';
-
-/** Minimal nav shape for modal: navigate + optional parent/state for nested navigator traversal */
-interface NavState {
-  routes?: { name: string }[];
-  index?: number;
-  routeNames?: string[];
-}
-export interface NavForItemDetailsModal {
-  navigate: (screen: string, params?: Record<string, unknown>) => void;
-  getParent?: () => NavForItemDetailsModal | undefined;
-  getState?: () => NavState | undefined;
-}
-
-/** Item or ride record for modal display */
-export interface ItemOrRideRecord {
-  ownerId?: string;
-  owner_id?: string;
-  driverId?: string;
-  driver_id?: string;
-  createdBy?: string;
-  created_by?: string;
-  title?: string;
-  description?: string;
-  image_base64?: string;
-  category?: string;
-  condition?: string;
-  qty?: number;
-  quantity?: number;
-  city?: string;
-  address?: string;
-  timestamp?: string;
-  created_at?: string;
-  createdAt?: string;
-  from?: string;
-  to?: string;
-  from_location?: { name?: string };
-  to_location?: { name?: string };
-  price?: number;
-  price_per_seat?: number;
-  date?: string;
-  time?: string;
-  departure_time?: string;
-  seats?: number;
-  available_seats?: number;
-  noSmoking?: boolean;
-  petsAllowed?: boolean;
-  kidsFriendly?: boolean;
-}
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
 import { biDiTextAlign, rowDirection } from '../globals/responsive';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
-import { getCategoryLabel } from '../src/utils/helpers/itemCategoryUtils';
-import { sendMessage, createConversation, getConversations } from '../src/services/chat.service';
+import { getCategoryLabel } from '../utils/itemCategoryUtils';
+import { sendMessage, createConversation, getConversations } from '../utils/chatService';
 import { toastService, useToast } from '../utils/toastService';
 import { useTranslation } from 'react-i18next';
 
 export interface ItemDetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  item: ItemOrRideRecord | null;
+  item: any | null;
   type: 'item' | 'ride';
-  navigation: NavForItemDetailsModal;
+  navigation: NavigationPropType;
   showOwnerInfo?: boolean; // Default true - hide owner info when viewing from own profile
 }
 
@@ -100,37 +55,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [sendingMessage, setSendingMessage] = useState(false);
   const { ToastComponent } = useToast();
 
-  const loadItemOwner = useCallback(async (ownerId: string) => {
-    if (!ownerId) return;
-    setLoadingOwner(true);
-    try {
-      const response = await apiService.getUserById(ownerId);
-      const data = response.data as { name?: string; avatar_url?: string; avatar?: string; id?: string } | undefined;
-      if (response.success && data) {
-        setItemOwner({
-          name: data.name ?? t('common:unknownUser'),
-          avatar: data.avatar_url ?? data.avatar ?? '',
-          id: data.id ?? ownerId,
-        });
-      } else {
-        setItemOwner({
-          name: t('common:unknownUser'),
-          avatar: '',
-          id: ownerId,
-        });
-      }
-    } catch (error) {
-      logger.error('ItemDetailsModal', 'Error loading owner details', { error });
-      setItemOwner({
-        name: t('common:unknownUser'),
-        avatar: '',
-        id: ownerId,
-      });
-    } finally {
-      setLoadingOwner(false);
-    }
-  }, [t]);
-
   useEffect(() => {
     if (visible && item) {
       const ownerId = type === 'item'
@@ -142,7 +66,37 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     } else {
       setItemOwner(null);
     }
-  }, [visible, item, type, loadItemOwner]);
+  }, [visible, item, type]);
+
+  const loadItemOwner = async (ownerId: string) => {
+    if (!ownerId) return;
+    setLoadingOwner(true);
+    try {
+      const response = await apiService.getUserById(ownerId);
+      if (response.success && response.data) {
+        setItemOwner({
+          name: response.data.name || 'משתמש',
+          avatar: response.data.avatar_url || response.data.avatar || '',
+          id: response.data.id || ownerId,
+        });
+      } else {
+        setItemOwner({
+          name: 'משתמש',
+          avatar: '',
+          id: ownerId,
+        });
+      }
+    } catch (error) {
+      console.error('❌ שגיאה בטעינת פרטי יוזר:', error);
+      setItemOwner({
+        name: 'משתמש',
+        avatar: '',
+        id: ownerId,
+      });
+    } finally {
+      setLoadingOwner(false);
+    }
+  };
 
   const handleProfilePress = () => {
     if (!itemOwner) return;
@@ -160,10 +114,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         // and navigate to ProfileScreen tab through it
 
         // First, get the parent (HomeTabStack)
-        const homeTabStack = navigation.getParent?.();
+        const homeTabStack = (navigation as any).getParent();
         if (homeTabStack) {
           // Then get the parent of HomeTabStack (BottomNavigator)
-          const bottomNavigator = homeTabStack.getParent?.();
+          const bottomNavigator = homeTabStack.getParent();
           if (bottomNavigator) {
             // Navigate to ProfileScreen tab in BottomNavigator
             bottomNavigator.navigate('ProfileScreen');
@@ -173,7 +127,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         }
 
         // Fallback: try to find BottomNavigator by traversing up
-        let currentNav = navigation.getParent?.();
+        let currentNav = (navigation as any).getParent();
         let depth = 0;
         const maxDepth = 5; // Safety limit
 
@@ -198,7 +152,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
         // If we couldn't find BottomNavigator, fall back to UserProfileScreen
         logger.warn('ItemDetailsModal', 'Could not find BottomNavigator, falling back to UserProfileScreen');
-        const parentNavigator = navigation.getParent?.();
+        const parentNavigator = (navigation as any).getParent();
         if (parentNavigator) {
           parentNavigator.navigate('UserProfileScreen', {
             userId: itemOwner.id,
@@ -206,7 +160,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             characterData: null
           });
         } else {
-          navigation.navigate('UserProfileScreen', {
+          (navigation as any).navigate('UserProfileScreen', {
             userId: itemOwner.id,
             userName: itemOwner.name,
             characterData: null
@@ -216,7 +170,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         logger.error('ItemDetailsModal', 'Error navigating to ProfileScreen tab', { error });
         // Fallback: navigate to UserProfileScreen
         try {
-          const parentNavigator = navigation.getParent?.();
+          const parentNavigator = (navigation as any).getParent();
           if (parentNavigator) {
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,
@@ -224,7 +178,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               characterData: null
             });
           } else {
-            navigation.navigate('UserProfileScreen', {
+            (navigation as any).navigate('UserProfileScreen', {
               userId: itemOwner.id,
               userName: itemOwner.name,
               characterData: null
@@ -238,23 +192,19 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       // Navigate to other user's profile via HomeTabStack to keep bottom bar and top bar visible
       // Try to navigate through HomeScreen first (which is part of BottomNavigator)
       try {
-        // Check if we're already in HomeTabStack context
-        const currentState = navigation.getState?.();
-        const _currentRouteName = currentState?.routes?.[currentState?.index ?? 0]?.name;
-
         // Try to find BottomNavigator
-        let bottomNavigator: NavForItemDetailsModal | null = null;
-        let currentNav: NavForItemDetailsModal | undefined = navigation;
+        let bottomNavigator = null;
+        let currentNav = navigation as any;
         let depth = 0;
         const maxDepth = 5;
-
+        
         while (currentNav && depth < maxDepth) {
           const state = currentNav.getState?.();
           if (state?.routeNames?.includes('HomeScreen')) {
             bottomNavigator = currentNav;
             break;
           }
-          const parent: NavForItemDetailsModal | undefined = currentNav.getParent?.();
+          const parent = currentNav.getParent?.();
           if (parent) {
             currentNav = parent;
             depth++;
@@ -262,7 +212,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             break;
           }
         }
-
+        
         if (bottomNavigator) {
           // Navigate through HomeScreen to UserProfileScreen (which is in HomeTabStack)
           bottomNavigator.navigate('HomeScreen', {
@@ -276,9 +226,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           logger.debug('ItemDetailsModal', 'Navigated to UserProfileScreen via HomeTabStack');
           return;
         }
-
+        
         // Fallback: try direct navigation to HomeScreen if available
-        const parentNavigator = navigation.getParent?.();
+        const parentNavigator = (navigation as any).getParent();
         if (parentNavigator) {
           try {
             parentNavigator.navigate('HomeScreen', {
@@ -288,7 +238,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 userName: itemOwner.name,
                 characterData: null
               }
-            } as { screen: string; params: Record<string, unknown> });
+            });
             return;
           } catch (_e) {
             // If that fails, try UserProfileScreen directly as fallback
@@ -300,7 +250,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           }
         } else {
           // Last resort: direct navigation
-          navigation.navigate('UserProfileScreen', {
+          (navigation as any).navigate('UserProfileScreen', {
             userId: itemOwner.id,
             userName: itemOwner.name,
             characterData: null
@@ -310,7 +260,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         logger.error('ItemDetailsModal', 'Error navigating to UserProfileScreen via HomeTabStack', { error });
         // Fallback to direct navigation
         try {
-          const parentNavigator = navigation.getParent?.();
+          const parentNavigator = (navigation as any).getParent();
           if (parentNavigator) {
             parentNavigator.navigate('UserProfileScreen', {
               userId: itemOwner.id,
@@ -318,7 +268,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               characterData: null
             });
           } else {
-            navigation.navigate('UserProfileScreen', {
+            (navigation as any).navigate('UserProfileScreen', {
               userId: itemOwner.id,
               userName: itemOwner.name,
               characterData: null
@@ -339,9 +289,15 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
     setSendingMessage(true);
     try {
-      const rideText = t('quickMessage:ride');
-      const itemText = t('quickMessage:item');
-      const messageText = type === 'ride' ? rideText : itemText;
+      // Get translation with fallback - ensure we get the actual text, not the key
+      const rideText = t('quickMessage:ride', { defaultValue: 'האם טרמפ זה רלוונטי?' });
+      const itemText = t('quickMessage:item', { defaultValue: 'האם פריט זה רלוונטי?' });
+      let messageText = type === 'ride' ? rideText : itemText;
+      
+      // Fallback if translation returns the key itself or empty
+      if (!messageText || messageText === 'quickMessage:ride' || messageText === 'quickMessage:item' || messageText === 'ride' || messageText === 'item') {
+        messageText = type === 'ride' ? 'האם טרמפ זה רלוונטי?' : 'האם פריט זה רלוונטי?';
+      }
 
       // 1. Try to find existing conversation
       let conversationId = '';
@@ -354,7 +310,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           conversationId = existingConv.id;
         }
       } catch (e) {
-        console.log('Error finding conversation, will create new', e);
+        logger.warn('ItemDetailsModal', 'Error finding conversation, will create new', {
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
 
       // 2. If not found, create new
@@ -373,11 +331,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         status: 'sending'
       });
 
-      toastService.showSuccess(t('quickMessage:success'));
+      toastService.showSuccess(t('quickMessage:success', { defaultValue: 'ההודעה נשלחה בהצלחה' }));
       onClose();
     } catch (error) {
       console.error('❌ Quick message error:', error);
-      toastService.showError(t('quickMessage:error'));
+      toastService.showError(t('quickMessage:error', { defaultValue: 'ההודעה נכשלה' }));
     } finally {
       setSendingMessage(false);
     }
@@ -412,7 +370,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Description */}
           {item.description && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.description')}</Text>
+              <Text style={styles.modalLabel}>תיאור:</Text>
               <Text style={styles.modalDescription}>{item.description}</Text>
             </View>
           )}
@@ -420,27 +378,27 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Condition */}
           {item.condition && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.condition')}</Text>
+              <Text style={styles.modalLabel}>מצב:</Text>
               <Text style={styles.modalText}>
-                {item.condition === 'new' ? t('donations:details.conditions.new') :
-                  item.condition === 'like_new' ? t('donations:details.conditions.like_new') :
-                    item.condition === 'used' ? t('donations:details.conditions.used') : t('donations:details.conditions.parts')}
+                {item.condition === 'new' ? '🆕 חדש' :
+                  item.condition === 'like_new' ? '✨ כמו חדש' :
+                    item.condition === 'used' ? '📦 משומש' : '🔧 לחלפים'}
               </Text>
             </View>
           )}
 
           {/* Quantity */}
-          {(item.qty ?? item.quantity) != null && (item.qty ?? item.quantity)! > 1 && (
+          {(item.qty || item.quantity) && (item.qty || item.quantity) > 1 && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.quantity')}</Text>
-              <Text style={styles.modalText}>{item.qty ?? item.quantity}</Text>
+              <Text style={styles.modalLabel}>כמות:</Text>
+              <Text style={styles.modalText}>{item.qty || item.quantity}</Text>
             </View>
           )}
 
           {/* Location */}
           {(item.city || item.address) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.location')}</Text>
+              <Text style={styles.modalLabel}>מיקום:</Text>
               <Text style={styles.modalText}>
                 📍 {item.city || ''}{item.address ? `, ${item.address}` : ''}
               </Text>
@@ -450,12 +408,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Date and Time */}
           {(item.timestamp || item.created_at || item.createdAt) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.dateTime')}</Text>
+              <Text style={styles.modalLabel}>תאריך ושעה:</Text>
               <Text style={styles.modalText}>
                 📅 {(() => {
-                  const dateStr = item.timestamp || item.created_at || item.createdAt || '';
+                  const dateStr = item.timestamp || item.created_at || item.createdAt;
                   const date = new Date(dateStr);
-                  return date.toLocaleDateString(t('common:locale') === 'en' ? 'en-US' : 'he-IL') + ' ' + date.toLocaleTimeString(t('common:locale') === 'en' ? 'en-US' : 'he-IL', { hour: '2-digit', minute: '2-digit' });
+                  return date.toLocaleDateString('he-IL') + ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
                 })()}
               </Text>
             </View>
@@ -468,34 +426,34 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         <>
           {/* Ride Route */}
           <View style={styles.modalSection}>
-            <Text style={styles.modalItemTitle}>{t('donations:details.ride')}</Text>
+            <Text style={styles.modalItemTitle}>טרמפ</Text>
             <View style={styles.modalBadge}>
-              <Text style={styles.modalBadgeText}>🚗 {t('donations:details.journey')}</Text>
+              <Text style={styles.modalBadgeText}>🚗 נסיעה</Text>
             </View>
           </View>
 
           {/* Route */}
           <View style={styles.modalSection}>
-            <Text style={styles.modalLabel}>{t('donations:details.route')}</Text>
+            <Text style={styles.modalLabel}>מסלול:</Text>
             <Text style={styles.modalText}>
-              📍 {item.from || item.from_location?.name || t('donations:details.notSpecified')} ➝ {item.to || item.to_location?.name || t('donations:details.notSpecified')}
+              📍 {item.from || item.from_location?.name || 'לא צויין'} ➝ {item.to || item.to_location?.name || 'לא צויין'}
             </Text>
           </View>
 
           {/* Price */}
           <View style={styles.modalSection}>
             <Text style={styles.modalPrice}>
-              {(item.price ?? item.price_per_seat ?? 0) === 0 ? t('donations:details.free') : `₪${item.price || item.price_per_seat}`}
+              {(item.price ?? item.price_per_seat ?? 0) === 0 ? 'בחינם' : `₪${item.price || item.price_per_seat}`}
             </Text>
           </View>
 
           {/* Date and Time */}
           {(item.date || item.departure_time) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.dateTime')}</Text>
+              <Text style={styles.modalLabel}>תאריך ושעה:</Text>
               <Text style={styles.modalText}>
                 📅 {item.departure_time
-                  ? new Date(item.departure_time).toLocaleDateString(t('common:locale') === 'en' ? 'en-US' : 'he-IL') + ' ' + new Date(item.departure_time).toLocaleTimeString(t('common:locale') === 'en' ? 'en-US' : 'he-IL', { hour: '2-digit', minute: '2-digit' })
+                  ? new Date(item.departure_time).toLocaleDateString('he-IL') + ' ' + new Date(item.departure_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
                   : item.date + ' ' + (item.time || '')}
               </Text>
             </View>
@@ -504,9 +462,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Seats */}
           {(item.seats || item.available_seats) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.availableSeats')}</Text>
+              <Text style={styles.modalLabel}>מקומות פנויים:</Text>
               <Text style={styles.modalText}>
-                👥 {item.available_seats || item.seats || 0} {t('donations:details.seats')}
+                👥 {item.available_seats || item.seats || 0} מקומות
               </Text>
             </View>
           )}
@@ -514,7 +472,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Description */}
           {item.description && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.notes')}</Text>
+              <Text style={styles.modalLabel}>הערות:</Text>
               <Text style={styles.modalDescription}>{item.description}</Text>
             </View>
           )}
@@ -522,7 +480,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           {/* Tags */}
           {(item.noSmoking || item.petsAllowed || item.kidsFriendly) && (
             <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>{t('donations:details.tags')}</Text>
+              <Text style={styles.modalLabel}>תגיות:</Text>
               <View style={styles.tagsContainer}>
                 {item.noSmoking && <View style={styles.tag}><Text style={styles.tagText}>🚫🚭</Text></View>}
                 {item.petsAllowed && <View style={styles.tag}><Text style={styles.tagText}>🐾</Text></View>}
@@ -536,11 +494,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   };
 
   const getModalTitle = () => {
-    return type === 'item' ? t('donations:details.itemTitle') : t('donations:details.rideTitle');
+    return type === 'item' ? 'פרטי הפריט' : 'פרטי הטרמפ';
   };
 
   const getOwnerLabel = () => {
-    return type === 'item' ? t('donations:details.publishedBy') : t('donations:details.driver');
+    return type === 'item' ? 'פורסם על ידי:' : 'נהג:';
   };
 
   return (
@@ -589,8 +547,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                         <Icon name="chatbubble-ellipses-outline" size={18} color={colors.white} />
                         <Text style={styles.quickMessageText}>
                           {(() => {
-                            const rideText = t('quickMessage:ride');
-                            const itemText = t('quickMessage:item');
+                            const rideText = t('quickMessage:ride', { defaultValue: 'האם טרמפ זה רלוונטי?' });
+                            const itemText = t('quickMessage:item', { defaultValue: 'האם פריט זה רלוונטי?' });
                             return type === 'ride' ? rideText : itemText;
                           })()}
                         </Text>
@@ -619,12 +577,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     )}
                     <View style={styles.ownerInfo}>
                       <Text style={styles.ownerName}>{itemOwner.name}</Text>
-                      <Text style={styles.ownerLink}>{t('donations:details.viewProfile')}</Text>
+                      <Text style={styles.ownerLink}>לחץ לצפייה בפרופיל →</Text>
                     </View>
                     <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.modalText}>{t('donations:details.noInfo')}</Text>
+                  <Text style={styles.modalText}>מידע לא זמין</Text>
                 )}
               </View>
             )}
@@ -787,7 +745,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, // Rounded button
     marginBottom: 12, // Space above profile card
     gap: 8,
-    shadowColor: colors.black,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,

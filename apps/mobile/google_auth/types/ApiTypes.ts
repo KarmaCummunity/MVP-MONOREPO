@@ -1,36 +1,108 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /**
- * API type definitions – domain-specific types extending shared API contract.
- * Base types (BaseApiResponse, PaginationMeta, ApiErrorResponse, type guards) come from @kc/shared-types.
+ * ========================================
+ * API TYPE DEFINITIONS  
+ * ========================================
+ * 
+ * Type definitions for all API operations in the Google Authentication System.
+ * These types ensure type safety for all server communication and data structures.
+ * 
+ * CATEGORIES:
+ * - Request/Response types for all API endpoints
+ * - Data Transfer Objects (DTOs) for validation
+ * - Server response formats and error structures
+ * - Pagination and filtering types
+ * - Real-time communication types
+ * 
+ * AUTHOR: AI Assistant
+ * LAST UPDATED: 2024
  */
 
-import type { ApiResponse, PaginationMeta } from '@kc/shared-types';
-import {
-  isSuccessResponse as isSuccessResponseShared,
-  isErrorResponse as isErrorResponseShared,
-} from '@kc/shared-types';
+// ========================================
+// BASE API TYPES
+// ========================================
 
-/** Alias for code that uses BaseApiResponse naming */
-export type BaseApiResponse<T = unknown> = ApiResponse<T>;
-export type { ApiResponse, PaginationMeta, ApiErrorResponse } from '@kc/shared-types';
-
-/** Paginated response wrapper (data array + pagination meta) */
-export interface PaginatedResponse<TData> extends BaseApiResponse<TData[]> {
-  pagination: PaginationMeta;
+/**
+ * Standard API response wrapper used by all endpoints
+ * Provides consistent response structure across the entire API
+ */
+export interface BaseApiResponse<TData = any> {
+  /** Whether the operation was successful */
+  success: boolean;
+  
+  /** Response data (present when success is true) */
+  data?: TData;
+  
+  /** Error message (present when success is false) */
+  error?: string;
+  
+  /** Additional context message */
+  message?: string;
+  
+  /** Response metadata for debugging and monitoring */
+  metadata?: {
+    /** Unique request identifier for tracing */
+    requestId: string;
+    
+    /** Response timestamp in ISO format */
+    timestamp: string;
+    
+    /** Request processing duration in milliseconds */
+    duration: number;
+    
+    /** API version that handled the request */
+    version?: string;
+    
+    /** Whether response was cached */
+    cached?: boolean;
+    
+    /** Rate limiting information */
+    rateLimit?: {
+      /** Remaining requests in current window */
+      remaining: number;
+      /** When the rate limit window resets */
+      resetTime: number;
+      /** Total request limit per window */
+      limit: number;
+    };
+  };
 }
 
-export const isSuccessResponse = isSuccessResponseShared;
-export const isErrorResponse = isErrorResponseShared;
+/**
+ * Pagination metadata for list responses
+ */
+export interface PaginationMeta {
+  /** Current page number (1-based) */
+  page: number;
+  
+  /** Number of items per page */
+  limit: number;
+  
+  /** Total number of items across all pages */
+  total: number;
+  
+  /** Total number of pages */
+  totalPages: number;
+  
+  /** Whether there are more pages after this one */
+  hasNext: boolean;
+  
+  /** Whether there are pages before this one */
+  hasPrev: boolean;
+  
+  /** Cursor for efficient pagination (if using cursor-based pagination) */
+  cursor?: {
+    next?: string;
+    prev?: string;
+  };
+}
 
-/** Type guard for paginated responses */
-export function isPaginatedResponse<T>(
-  response: BaseApiResponse<T[]>
-): response is PaginatedResponse<T> {
-  return (
-    response.success === true &&
-    Array.isArray(response.data) &&
-    'pagination' in response
-  );
+/**
+ * Paginated response wrapper
+ */
+export interface PaginatedResponse<TData> extends BaseApiResponse<TData[]> {
+  /** Pagination metadata */
+  pagination: PaginationMeta;
 }
 
 // ========================================
@@ -77,7 +149,7 @@ export interface AuthSuccessResponse extends BaseApiResponse<{
     avatar: string;
     roles: string[];
     emailVerified: boolean;
-    settings: Record<string, unknown>;
+    settings: Record<string, any>;
   };
 }> {
   /** Additional authentication metadata */
@@ -167,7 +239,7 @@ export interface UserProfileResponse extends BaseApiResponse<{
     language: string;
     darkMode: boolean;
     notificationsEnabled: boolean;
-    [key: string]: unknown;
+    [key: string]: any;
   };
   stats: {
     postsCount: number;
@@ -202,7 +274,7 @@ export interface UserUpdateRequest {
     language?: string;
     darkMode?: boolean;
     notificationsEnabled?: boolean;
-    [key: string]: unknown;
+    [key: string]: any;
   };
 }
 
@@ -524,7 +596,32 @@ export interface StatsFilters {
   statType?: string;
 }
 
-// ApiErrorResponse is exported from @kc/shared-types (see top of file)
+// ========================================
+// ERROR TYPES
+// ========================================
+
+/**
+ * API error response structure
+ */
+export interface ApiErrorResponse extends BaseApiResponse<never> {
+  /** Always false for error responses */
+  success: false;
+  
+  /** Error message for display to user */
+  error: string;
+  
+  /** Additional error details */
+  details?: {
+    /** Error code for programmatic handling */
+    code?: string;
+    /** Field-specific validation errors */
+    fieldErrors?: Record<string, string[]>;
+    /** Suggestions for fixing the error */
+    suggestions?: string[];
+    /** Documentation link for the error */
+    docsUrl?: string;
+  };
+}
 
 /**
  * Network error information
@@ -723,7 +820,7 @@ export interface PushNotification {
   type: 'system' | 'social' | 'transaction' | 'security' | 'promotional';
   title: string;
   body: string;
-  data?: Record<string, unknown>;
+  data?: Record<string, any>;
   priority: 'low' | 'normal' | 'high' | 'critical';
   scheduledFor?: string;
   sentAt?: string;
@@ -814,7 +911,7 @@ export interface AnalyticsEvent {
   /** User who triggered the event */
   userId?: string;
   /** Event properties */
-  properties: Record<string, unknown>;
+  properties: Record<string, any>;
   /** Event timestamp */
   timestamp: string;
   /** Session identifier */
@@ -901,7 +998,7 @@ export type DeleteResponse = BaseApiResponse<{
 /**
  * Bulk operation response
  */
-export interface BulkOperationResponse<T = unknown> extends BaseApiResponse<{
+export interface BulkOperationResponse<T = any> extends BaseApiResponse<{
   /** Number of items processed successfully */
   successCount: number;
   /** Number of items that failed */
@@ -917,4 +1014,72 @@ export interface BulkOperationResponse<T = unknown> extends BaseApiResponse<{
   }>;
 }> {}
 
-// isSuccessResponse, isErrorResponse from @kc/shared-types; isPaginatedResponse defined above
+// ========================================
+// TYPE GUARDS
+// ========================================
+
+/**
+ * Type guard for successful API responses
+ */
+export function isSuccessResponse<T>(response: BaseApiResponse<T>): response is BaseApiResponse<T> & { 
+  success: true; 
+  data: T 
+} {
+  return response.success === true && response.data !== undefined;
+}
+
+/**
+ * Type guard for error API responses
+ */
+export function isErrorResponse<T>(response: BaseApiResponse<T>): response is ApiErrorResponse {
+  return response.success === false && typeof response.error === 'string';
+}
+
+/**
+ * Type guard for paginated responses
+ */
+export function isPaginatedResponse<T>(response: BaseApiResponse<T[]>): response is PaginatedResponse<T> {
+  return response.success === true && 
+         Array.isArray(response.data) && 
+         'pagination' in response;
+}
+
+// ========================================
+// EXPORT ALL TYPES
+// ========================================
+
+// All types are exported via their interface/type declarations above
+
+/**
+ * ========================================
+ * USAGE EXAMPLES
+ * ========================================
+ * 
+ * // Type-safe API call
+ * const response: UserProfileResponse = await api.getCurrentUser();
+ * if (isSuccessResponse(response)) {
+ *   // logger.debug('ApiTypes', 'User name loaded');
+ * }
+ * 
+ * // Create donation with validation
+ * const donationData: CreateDonationRequest = {
+ *   title: 'ספר לימוד',
+ *   description: 'ספר פיזיקה למכירה',
+ *   category: 'education',
+ *   type: 'item',
+ *   location: {
+ *     city: 'תל אביב',
+ *     country: 'ישראל'
+ *   }
+ * };
+ * 
+ * // Filter rides with type safety
+ * const filters: RideFilters = {
+ *   fromCity: 'תל אביב',
+ *   toCity: 'ירושלים',
+ *   date: '2024-01-15',
+ *   maxPrice: 50
+ * };
+ * 
+ * const rides = await api.getRides(filters);
+ */

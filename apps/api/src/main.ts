@@ -14,6 +14,21 @@
 // ✅ Production-safe error messages (no stack traces in prod)
 // ✅ Helmet.js security headers (XSS, clickjacking, MITM protection)
 // ✅ Global rate limiting via ThrottlerModule
+//
+// TODO: Add request/response logging middleware for audit trail
+// TODO: Add API documentation setup (Swagger/OpenAPI)
+// TODO: Add metrics collection and monitoring setup (Prometheus)
+// TODO: Configure proper timeouts and request size limits
+// TODO: Add CSRF protection for state-changing operations
+
+// MVP: Reduced startup logging (verbose debug banners commented out)
+// console.log('========================================');
+// console.log('🚀 STARTING KC-MVP-SERVER');
+// console.log('📍 Node version:', process.version);
+// console.log('📍 Platform:', process.platform);
+// console.log('📍 CWD:', process.cwd());
+// console.log('========================================');
+// console.log('[DEBUG-H1-H4] Server startup initiated:', JSON.stringify({...}));
 
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
@@ -23,6 +38,12 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import * as dotenv from "dotenv";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
+import "./sanity";
+
+// MVP: Reduced startup logging
+// console.log("🔥🔥🔥 PROCESS STARTING: src/main.ts LOADED 🔥🔥🔥");
+// console.log(`Env PORT: ${process.env.PORT}`);
+// console.log(`Env DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 
 /**
  * Validate required environment variables before server startup
@@ -43,10 +64,13 @@ import * as bodyParser from "body-parser";
  *
  * If any required variable is missing, the process exits with error code 1.
  */
-function validateRequiredEnvVars(logger: Logger): void {
+function validateEnvironment(): void {
+  const logger = new Logger("Bootstrap");
+
   const required = [
     { key: "GOOGLE_CLIENT_ID", fallback: "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" },
     { key: "DATABASE_URL", fallback: null },
+    // REDIS_URL is now optional - removed from required list
     { key: "JWT_SECRET", fallback: null, minLength: 32 },
   ];
 
@@ -64,6 +88,7 @@ function validateRequiredEnvVars(logger: Logger): void {
       }
     }
 
+    // Validate minimum length if specified
     const value = process.env[key];
     if (minLength && value && value.length < minLength) {
       invalid.push({
@@ -75,6 +100,7 @@ function validateRequiredEnvVars(logger: Logger): void {
   }
 
   if (missing.length > 0) {
+    // [MVP] Agent debug log removed
     logger.error(
       `❌ Missing REQUIRED environment variables: ${missing.join(", ")}`,
     );
@@ -104,14 +130,25 @@ function validateRequiredEnvVars(logger: Logger): void {
     }
     process.exit(1);
   }
-}
 
-function validateDatabaseEnvironment(
-  logger: Logger,
-  environment: string,
-  databaseUrl: string,
-): void {
+  // ═══════════════════════════════════════════════════════════════
+  // ENVIRONMENT SEPARATION VALIDATION
+  // ═══════════════════════════════════════════════════════════════
+  // Validate that environment configuration matches the database
+  // This prevents critical errors like connecting dev to prod DB
+
+  const environment =
+    process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
+  const databaseUrl = process.env.DATABASE_URL || "";
+  const redisUrl = process.env.REDIS_URL || "";
+
+  logger.log(
+    `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
+  );
+
+  // Check DATABASE_URL matches environment
   if (environment === "development") {
+    // DEV should use password: mmWLXgvXF... or host: postgres-a3d6beef
     if (databaseUrl.includes("RHkhivARk")) {
       logger.error(
         "🚨 CRITICAL: DATABASE_URL appears to be PRODUCTION but ENVIRONMENT is development!",
@@ -134,6 +171,7 @@ function validateDatabaseEnvironment(
       );
     }
   } else if (environment === "production") {
+    // PROD should use password: RHkhivARk...
     if (
       databaseUrl.includes("mmWLXgvXF") ||
       databaseUrl.includes("postgres-a3d6beef")
@@ -160,13 +198,8 @@ function validateDatabaseEnvironment(
       `⚠️  ENVIRONMENT not set (currently: ${environment}). Set to 'development' or 'production'`,
     );
   }
-}
 
-function validateRedisEnvironment(
-  logger: Logger,
-  environment: string,
-  redisUrl: string,
-): void {
+  // Check if Redis is shared (warning only, not critical)
   const isSharedRedis = redisUrl.includes("deQMolmzgWZsqeAkiEpZPFvejfGjenEm");
   if (isSharedRedis) {
     logger.warn("⚠️  Redis appears to be SHARED between environments!");
@@ -184,24 +217,6 @@ function validateRedisEnvironment(
   } else if (environment === "production" && isSharedRedis) {
     logger.log("✅ Redis: Production");
   }
-}
-
-function validateEnvironment(): void {
-  const logger = new Logger("Bootstrap");
-
-  validateRequiredEnvVars(logger);
-
-  const environment =
-    process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
-  const databaseUrl = process.env.DATABASE_URL || "";
-  const redisUrl = process.env.REDIS_URL || "";
-
-  logger.log(
-    `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
-  );
-
-  validateDatabaseEnvironment(logger, environment, databaseUrl);
-  validateRedisEnvironment(logger, environment, redisUrl);
 
   logger.log("✅ Environment validation passed");
 }
@@ -505,22 +520,8 @@ async function bootstrap(): Promise<void> {
 
 // Start the application
 bootstrap().catch((error) => {
-  const logger = new Logger("Bootstrap");
-
-  if (error instanceof Error) {
-    logger.error("❌ Unhandled bootstrap error:", error.message);
-
-    const environment =
-      process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
-    const isProduction = environment === "production";
-
-    if (error.stack && !isProduction) {
-      logger.error("Stack trace:", error.stack);
-    }
-  } else {
-    logger.error("❌ Unhandled bootstrap error: Unknown error", error);
-  }
-
+  console.error("❌ Unhandled bootstrap error:", error);
+  console.error("Stack:", error?.stack);
   process.exit(1);
 });
 
@@ -577,3 +578,5 @@ process.on("uncaughtException", (error) => {
   logger.error("⚠️  Application will exit due to critical error");
   process.exit(1);
 });
+
+import "./sanity";

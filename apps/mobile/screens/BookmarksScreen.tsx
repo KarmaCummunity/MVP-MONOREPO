@@ -4,17 +4,8 @@
 // - Provides: Loads bookmarks by user, pull-to-refresh, remove single bookmark, clear all (client-side for now).
 // - Reads from context: `useUser()` -> `selectedUser`.
 // - External deps/services: `bookmarksService` (get/remove), i18n translations.
-
-// TODO: Add comprehensive error handling with user-friendly messages
-// TODO: Implement proper loading states and skeleton screens
-// TODO: Add bookmark synchronization with backend when available
-// TODO: Implement proper pagination for large bookmark lists
-// TODO: Add bookmark categories and filtering functionality
-// TODO: Implement proper offline support with cache management
-// TODO: Add comprehensive accessibility support
-// TODO: Replace console.log with proper logging service
-// TODO: Add unit tests for all bookmark operations
-// TODO: Implement proper image loading and caching for bookmark thumbnails
+// - Possible future work (tracked in product backlog): richer errors/toasts, skeleton loaders,
+//   pagination, offline cache, categories, expanded a11y, tests.
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -23,29 +14,51 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   RefreshControl,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useUser } from '../stores/userStore';
-import { getBookmarks, removeBookmark, Bookmark } from '../utils/bookmarksService';
-import colors from '../globals/colors';
 import { logger } from '../utils/loggerService';
+
+const BookmarksScreen_LOG = 'BookmarksScreen';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useUser } from '../stores/userStore';
+import {
+  getBookmarks,
+  removeBookmark,
+  clearAllBookmarks,
+  Bookmark,
+} from '../utils/bookmarksService';
+import colors from '../globals/colors';
 import { FontSizes, IconSizes } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
+import type { FeedItem } from '../types/feed';
+
+function bookmarkToInitialFeedItem(bookmark: Bookmark): FeedItem {
+  const pd = bookmark.postData;
+  return {
+    id: bookmark.postId,
+    type: 'post',
+    title: pd.title ?? '',
+    description: pd.description ?? '',
+    thumbnail: pd.thumbnail?.trim() ? pd.thumbnail : null,
+    timestamp: bookmark.timestamp,
+    user: {
+      id: pd.user?.id ?? '',
+      name: pd.user?.name ?? undefined,
+      avatar: pd.user?.avatar ?? undefined,
+    },
+    likes: 0,
+    comments: 0,
+    isLiked: false,
+  };
+}
 
 export default function BookmarksScreen() {
-  // TODO: Extract state management to custom hook (useBookmarksState)
-  // TODO: Add proper TypeScript interfaces for all props and state
-  // TODO: Implement proper error boundaries for crash prevention
-  // TODO: Add comprehensive analytics tracking for bookmark actions
-  const _navigation = useNavigation();
   const { selectedUser } = useUser();
+  const navigation = useNavigation<any>();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [, setRefreshKey] = useState(0);
   const { t } = useTranslation(['bookmarks','common']);
 
   const loadBookmarks = useCallback(async () => {
@@ -58,34 +71,21 @@ export default function BookmarksScreen() {
       const userBookmarks = await getBookmarks(selectedUser.id);
       setBookmarks(userBookmarks);
     } catch (error) {
-      logger.error('BookmarksScreen', 'Load bookmarks error', { error });
+      console.error('❌ Load bookmarks error:', error);
       Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
     }
   }, [selectedUser, t]);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      if (!selectedUser) return;
-      try {
-        const userBookmarks = await getBookmarks(selectedUser.id);
-        if (!cancelled) setBookmarks(userBookmarks);
-      } catch (error) {
-        if (!cancelled) {
-          logger.error('BookmarksScreen', 'Load bookmarks error', { error });
-          Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
-        }
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [selectedUser, t]);
+    loadBookmarks();
+  }, [loadBookmarks]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      logger.logScreenOpened('BookmarksScreen');
+      logger.debug(BookmarksScreen_LOG, '🔖 BookmarksScreen - Screen focused, refreshing bookmarks...');
       loadBookmarks();
-      setRefreshKey(prev => prev + 1);
     }, [loadBookmarks])
   );
 
@@ -95,51 +95,62 @@ export default function BookmarksScreen() {
     setRefreshing(false);
   };
 
-  const handleRemoveBookmark = async (bookmark: Bookmark) => {
+  const performRemoveBookmark = useCallback(
+    async (bookmark: Bookmark) => {
+      if (!selectedUser) return;
+      try {
+        await removeBookmark(selectedUser.id, bookmark.postId);
+        setBookmarks(prev => prev.filter(b => b.id !== bookmark.id));
+        logger.debug(BookmarksScreen_LOG, '✅ Bookmark removed');
+      } catch (error) {
+        console.error('❌ Remove bookmark error:', error);
+        Alert.alert(t('common:errorTitle'), t('bookmarks:removeError'));
+      }
+    },
+    [selectedUser, t],
+  );
+
+  const handleRemoveBookmark = (bookmark: Bookmark) => {
     if (!selectedUser) return;
 
-    Alert.alert(
-      t('bookmarks:removeTitle'),
-      t('bookmarks:removeMessage'),
-      [
-        { text: t('common:cancel'), style: 'cancel' },
-        {
-          text: t('bookmarks:removeConfirm'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeBookmark(selectedUser.id, bookmark.postId);
-              setBookmarks(prev => prev.filter(b => b.id !== bookmark.id));
-              logger.info('BookmarksScreen', 'Bookmark removed');
-            } catch (error) {
-              logger.error('BookmarksScreen', 'Remove bookmark error', { error });
-              Alert.alert(t('common:errorTitle'), t('bookmarks:removeError'));
-            }
-          }
-        }
-      ]
-    );
+    Alert.alert(t('bookmarks:removeTitle'), t('bookmarks:removeMessage'), [
+      { text: t('common:cancel'), style: 'cancel' },
+      {
+        text: t('bookmarks:removeConfirm'),
+        style: 'destructive',
+        onPress: () => {
+          performRemoveBookmark(bookmark).catch(() => {});
+        },
+      },
+    ]);
   };
 
-  const handleClearAll = () => {
+  const performClearAllBookmarks = useCallback(async () => {
+    if (!selectedUser) return;
+    try {
+      await clearAllBookmarks(selectedUser.id);
+      setBookmarks([]);
+      logger.debug(BookmarksScreen_LOG, '✅ All bookmarks cleared');
+    } catch (error) {
+      console.error('❌ Clear all bookmarks error:', error);
+      Alert.alert(t('common:errorTitle'), t('bookmarks:loadError'));
+    }
+  }, [selectedUser, t]);
+
+  const handleClearAll = useCallback(() => {
     if (!selectedUser) return;
 
-    Alert.alert(
-      t('bookmarks:clearTitle'),
-      t('bookmarks:clearMessage'),
-      [
-        { text: t('common:cancel'), style: 'cancel' },
-        {
-          text: t('bookmarks:clearConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            setBookmarks([]);
-            console.log('✅ All bookmarks cleared');
-          }
-        }
-      ]
-    );
-  };
+    Alert.alert(t('bookmarks:clearTitle'), t('bookmarks:clearMessage'), [
+      { text: t('common:cancel'), style: 'cancel' },
+      {
+        text: t('bookmarks:clearConfirm'),
+        style: 'destructive',
+        onPress: () => {
+          performClearAllBookmarks().catch(() => {});
+        },
+      },
+    ]);
+  }, [selectedUser, t, performClearAllBookmarks]);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -151,8 +162,24 @@ export default function BookmarksScreen() {
     return date.toLocaleDateString();
   };
 
+  const openPost = useCallback(
+    (bookmark: Bookmark) => {
+      navigation.navigate('PostDetailScreen', {
+        postId: bookmark.postId,
+        initialItem: bookmarkToInitialFeedItem(bookmark),
+      });
+    },
+    [navigation],
+  );
+
   const renderBookmark = ({ item }: { item: Bookmark }) => (
-    <View style={styles.bookmarkContainer}>
+    <TouchableOpacity
+      style={styles.bookmarkContainer}
+      activeOpacity={0.75}
+      onPress={() => openPost(item)}
+      accessibilityRole="button"
+      accessibilityLabel={item.postData.title}
+    >
       <Image source={{ uri: item.postData.thumbnail }} style={styles.thumbnail} />
       
       <View style={styles.contentContainer}>
@@ -168,6 +195,8 @@ export default function BookmarksScreen() {
           <TouchableOpacity 
             style={styles.removeButton}
             onPress={() => handleRemoveBookmark(item)}
+            accessibilityRole="button"
+            accessibilityLabel={t('bookmarks:removeConfirm')}
           >
             <Ionicons name="close-circle" size={IconSizes.small} color={colors.error} />
           </TouchableOpacity>
@@ -178,33 +207,35 @@ export default function BookmarksScreen() {
           {item.postData.description}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
+  );
+
+  const listHeader = useCallback(
+    () => (
+      <View style={styles.actionsRow}>
+        <TouchableOpacity onPress={handleClearAll} style={styles.clearButton}>
+          <Ionicons name="trash-outline" size={IconSizes.xsmall} color={colors.error} />
+          <Text style={styles.clearButtonText}>{t('bookmarks:clearConfirm')}</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleClearAll, t],
   );
 
   if (!selectedUser) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.emptyContainer}>
           <Ionicons name="person-outline" size={IconSizes.xxlarge} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>{t('bookmarks:selectUserTitle')}</Text>
           <Text style={styles.emptySubtitle}>{t('bookmarks:selectUserSubtitle')}</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('bookmarks:title')}</Text>
-        {bookmarks.length > 0 && (
-          <TouchableOpacity onPress={handleClearAll} style={styles.clearButton}>
-            <Ionicons name="trash-outline" size={IconSizes.xsmall} color={colors.error} />
-            <Text style={styles.clearButtonText}>{t('bookmarks:clearConfirm')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
+    <View style={styles.container}>
       {bookmarks.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="bookmark-outline" size={IconSizes.xxlarge} color={colors.textSecondary} />
@@ -216,6 +247,7 @@ export default function BookmarksScreen() {
           data={bookmarks}
           renderItem={renderBookmark}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeader}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -223,7 +255,7 @@ export default function BookmarksScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -232,47 +264,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    //TODO: change padding to be relative to the screen size
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  headerTitle: {
-    fontSize: FontSizes.large,
-    //TODO: change font size to be relative to the screen size
-    //TODO: move font to globals
-    fontWeight: 'bold',
-    color: colors.textPrimary,
+    paddingBottom: 8,
   },
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    //TODO: change padding to be relative to the screen size
     padding: 8,
   },
   clearButtonText: {
     fontSize: FontSizes.small,
     color: colors.error,
-    //TODO: change margin to be relative to the screen size
     marginLeft: 4,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    //TODO: change padding to be relative to the screen size
     padding: 32,
   },
   emptyTitle: {
     fontSize: FontSizes.large,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    //TODO: change margin to be relative to the screen size
     marginTop: 16,
     marginBottom: 8,
   },
@@ -282,7 +299,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContainer: {
-    //TODO: change padding to be relative to the screen size
     padding: 16,
   },
   bookmarkContainer: {

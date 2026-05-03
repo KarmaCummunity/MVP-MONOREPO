@@ -1,0 +1,632 @@
+[
+  {
+    "id": "6d7cb77c-2bda-4d6d-8b1a-f2e0140ea6a6",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.282Z",
+    "updated_at": "2025-12-24T12:29:23.282Z"
+  },
+  {
+    "id": "f04dbe0e-d4ce-4bab-bb4d-3eb2b1493f48",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.289Z",
+    "updated_at": "2025-12-24T12:29:23.289Z"
+  },
+  {
+    "id": "541c1007-ea28-48cb-9e1b-473c072e50b1",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.298Z",
+    "updated_at": "2025-12-24T12:29:23.298Z"
+  },
+  {
+    "id": "0960ecf6-13dd-4dac-bd82-4e842d7253f5",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.305Z",
+    "updated_at": "2025-12-24T12:29:23.305Z"
+  },
+  {
+    "id": "8fa03616-3e57-4dd3-bf66-cb9fe15cd036",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.311Z",
+    "updated_at": "2025-12-24T12:29:23.311Z"
+  },
+  {
+    "id": "3cb25d83-146b-4f13-a31e-c49223016325",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.317Z",
+    "updated_at": "2025-12-24T12:29:23.317Z"
+  },
+  {
+    "id": "3e64937a-9c60-47ba-a403-771dea046574",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.324Z",
+    "updated_at": "2025-12-24T12:29:23.324Z"
+  },
+  {
+    "id": "53023c82-fb0d-4c99-bcae-d814cd9994a8",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.331Z",
+    "updated_at": "2025-12-24T12:29:23.331Z"
+  },
+  {
+    "id": "a3fcf64e-65cb-4ae9-9337-fbe6f19ef319",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:29:23.337Z",
+    "updated_at": "2025-12-24T12:29:23.337Z"
+  },
+  {
+    "id": "61249d9b-48db-47a0-baf7-e1a1bb855ea0",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.553Z",
+    "updated_at": "2025-12-24T12:40:47.553Z"
+  },
+  {
+    "id": "bb38320a-977b-480f-ba7f-b7316036a7c2",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.556Z",
+    "updated_at": "2025-12-24T12:40:47.556Z"
+  },
+  {
+    "id": "b222ffee-ed72-4292-a13e-bccf0bbc617a",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.557Z",
+    "updated_at": "2025-12-24T12:40:47.557Z"
+  },
+  {
+    "id": "56b86193-3149-4b6f-90b4-ecb799e8526a",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.558Z",
+    "updated_at": "2025-12-24T12:40:47.558Z"
+  },
+  {
+    "id": "06be8a86-8c1f-4416-9d5b-c6e71e4ca5d6",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.560Z",
+    "updated_at": "2025-12-24T12:40:47.560Z"
+  },
+  {
+    "id": "936a8a02-5388-4f5a-adca-99743bac9b22",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.561Z",
+    "updated_at": "2025-12-24T12:40:47.561Z"
+  },
+  {
+    "id": "d70a5cfa-cd7d-4e1a-a7d5-cc91ed20105c",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.562Z",
+    "updated_at": "2025-12-24T12:40:47.562Z"
+  },
+  {
+    "id": "b08450f7-7cda-419b-8af2-5b98c33f7686",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.563Z",
+    "updated_at": "2025-12-24T12:40:47.563Z"
+  },
+  {
+    "id": "f04961ab-f33b-4544-a0e0-52c1c2700365",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:40:47.565Z",
+    "updated_at": "2025-12-24T12:40:47.565Z"
+  },
+  {
+    "id": "e6ceb404-2142-4add-92e3-129832cf0fe7",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.080Z",
+    "updated_at": "2025-12-24T12:41:46.080Z"
+  },
+  {
+    "id": "38198fd7-6250-4bfb-a343-acf0952e7ca5",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.087Z",
+    "updated_at": "2025-12-24T12:41:46.087Z"
+  },
+  {
+    "id": "0553e44c-c24a-4a6e-b2d5-11398909deef",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.092Z",
+    "updated_at": "2025-12-24T12:41:46.092Z"
+  },
+  {
+    "id": "4c57f115-bc14-4acf-969a-49985bce2822",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.098Z",
+    "updated_at": "2025-12-24T12:41:46.098Z"
+  },
+  {
+    "id": "1e9493a4-4f88-4a2a-a134-45891a1a40e9",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.104Z",
+    "updated_at": "2025-12-24T12:41:46.104Z"
+  },
+  {
+    "id": "81cc195d-93d4-423a-bf04-835dfe2d29fa",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.110Z",
+    "updated_at": "2025-12-24T12:41:46.110Z"
+  },
+  {
+    "id": "b1edb643-7430-40ae-a7b9-d2aed934c00d",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.116Z",
+    "updated_at": "2025-12-24T12:41:46.116Z"
+  },
+  {
+    "id": "f6a80a12-c264-42bc-b15d-0976b6c1c4b5",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.122Z",
+    "updated_at": "2025-12-24T12:41:46.122Z"
+  },
+  {
+    "id": "66c473cd-847c-4135-83b8-f40cf83e1975",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:41:46.127Z",
+    "updated_at": "2025-12-24T12:41:46.127Z"
+  },
+  {
+    "id": "fa744bbb-a53e-476c-8b20-6a7d259791ce",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.507Z",
+    "updated_at": "2025-12-24T12:47:30.507Z"
+  },
+  {
+    "id": "f332814c-b199-4d77-996c-d7a066f89535",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.515Z",
+    "updated_at": "2025-12-24T12:47:30.515Z"
+  },
+  {
+    "id": "a91b554e-4ad1-40bc-aaf3-9bb6bc6d9ec8",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.522Z",
+    "updated_at": "2025-12-24T12:47:30.522Z"
+  },
+  {
+    "id": "c1ced495-d150-4a9b-a029-8b25c4bb977e",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.529Z",
+    "updated_at": "2025-12-24T12:47:30.529Z"
+  },
+  {
+    "id": "29515599-0da8-460c-85dc-18972a499f5e",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.537Z",
+    "updated_at": "2025-12-24T12:47:30.537Z"
+  },
+  {
+    "id": "f44e5b0a-2a58-4ca9-a3a6-17f13d6d4194",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.543Z",
+    "updated_at": "2025-12-24T12:47:30.543Z"
+  },
+  {
+    "id": "5ae4be9e-750d-4670-a22a-f86082e3ee79",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.550Z",
+    "updated_at": "2025-12-24T12:47:30.550Z"
+  },
+  {
+    "id": "30dc8ab5-4bc3-43d7-ba42-d4329cff0e24",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.556Z",
+    "updated_at": "2025-12-24T12:47:30.556Z"
+  },
+  {
+    "id": "55261d90-0b76-41c9-83c6-5f42fbbbccdb",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T12:47:30.562Z",
+    "updated_at": "2025-12-24T12:47:30.562Z"
+  },
+  {
+    "id": "9a73d7a5-875d-4230-ac85-25d437eef629",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.032Z",
+    "updated_at": "2025-12-24T13:53:22.032Z"
+  },
+  {
+    "id": "e3ca92ce-87eb-4e3f-87af-a282d0d4aa36",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.040Z",
+    "updated_at": "2025-12-24T13:53:22.040Z"
+  },
+  {
+    "id": "c04b22bc-ccac-4ac4-b858-fbaf550c0b08",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.046Z",
+    "updated_at": "2025-12-24T13:53:22.046Z"
+  },
+  {
+    "id": "777166ec-6258-4cb0-aa41-381efa8949d7",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.052Z",
+    "updated_at": "2025-12-24T13:53:22.052Z"
+  },
+  {
+    "id": "e26d79ed-ced8-4243-9040-c86b8c1064da",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.059Z",
+    "updated_at": "2025-12-24T13:53:22.059Z"
+  },
+  {
+    "id": "5336ee93-9af5-49a9-9f42-5e2912413a9e",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.066Z",
+    "updated_at": "2025-12-24T13:53:22.066Z"
+  },
+  {
+    "id": "885c24a6-1030-453f-b26b-b376e48e0cf7",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.072Z",
+    "updated_at": "2025-12-24T13:53:22.072Z"
+  },
+  {
+    "id": "0f07cd18-0bac-43e4-b15a-879298a73544",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.079Z",
+    "updated_at": "2025-12-24T13:53:22.079Z"
+  },
+  {
+    "id": "18126098-8bf5-4c49-9fc5-61dc0e501d59",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T13:53:22.085Z",
+    "updated_at": "2025-12-24T13:53:22.085Z"
+  },
+  {
+    "id": "b9da92b1-006b-48ed-a3de-ad583c7217e6",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.392Z",
+    "updated_at": "2025-12-24T14:06:49.392Z"
+  },
+  {
+    "id": "3efa166e-b78b-4ea6-9214-277d211eb518",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.398Z",
+    "updated_at": "2025-12-24T14:06:49.398Z"
+  },
+  {
+    "id": "c65ce30c-518d-482e-aa95-ca4067712f7f",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.404Z",
+    "updated_at": "2025-12-24T14:06:49.404Z"
+  },
+  {
+    "id": "98fbb0ed-0552-4ce7-8b42-c1467cd25288",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.409Z",
+    "updated_at": "2025-12-24T14:06:49.409Z"
+  },
+  {
+    "id": "d4849d54-246e-4b72-9ec5-70cd80bf2c66",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.414Z",
+    "updated_at": "2025-12-24T14:06:49.414Z"
+  },
+  {
+    "id": "34a57a2b-58e1-4b9c-8491-deb5c3e7484f",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.420Z",
+    "updated_at": "2025-12-24T14:06:49.420Z"
+  },
+  {
+    "id": "5ab0ea7f-f240-4fb0-b094-e01810830b13",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.425Z",
+    "updated_at": "2025-12-24T14:06:49.425Z"
+  },
+  {
+    "id": "51efe863-e4e4-4cb4-b511-0b2eaac681d0",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.430Z",
+    "updated_at": "2025-12-24T14:06:49.430Z"
+  },
+  {
+    "id": "132e5bb4-81a5-4523-9361-1d6df9134583",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:06:49.436Z",
+    "updated_at": "2025-12-24T14:06:49.436Z"
+  },
+  {
+    "id": "5328fe9f-7c8c-405e-a081-6dfaafac2415",
+    "stat_type": "site_visits",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.891Z",
+    "updated_at": "2025-12-24T14:10:11.891Z"
+  },
+  {
+    "id": "ff9cef22-25c1-4656-8dd5-a038f315f91e",
+    "stat_type": "money_donations",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.899Z",
+    "updated_at": "2025-12-24T14:10:11.899Z"
+  },
+  {
+    "id": "6a439951-aca7-47cd-bbd6-b647a7a975c4",
+    "stat_type": "volunteer_hours",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.904Z",
+    "updated_at": "2025-12-24T14:10:11.904Z"
+  },
+  {
+    "id": "3c2802e6-bd8c-4e03-85b4-9dd41090ca48",
+    "stat_type": "rides_completed",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.910Z",
+    "updated_at": "2025-12-24T14:10:11.910Z"
+  },
+  {
+    "id": "9a276e89-a9b8-4fbc-80d2-2abf213c370f",
+    "stat_type": "events_created",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.916Z",
+    "updated_at": "2025-12-24T14:10:11.916Z"
+  },
+  {
+    "id": "9806577d-2e0f-4934-a272-6cf9c5558c9d",
+    "stat_type": "active_members",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.922Z",
+    "updated_at": "2025-12-24T14:10:11.922Z"
+  },
+  {
+    "id": "7071c0ac-1adf-47ee-b958-4789cc2b7fd1",
+    "stat_type": "food_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.928Z",
+    "updated_at": "2025-12-24T14:10:11.928Z"
+  },
+  {
+    "id": "e084119f-ad99-4925-839d-ebf01870ed04",
+    "stat_type": "clothing_kg",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.933Z",
+    "updated_at": "2025-12-24T14:10:11.933Z"
+  },
+  {
+    "id": "42a386f7-023b-4da7-ab58-1d225eddccd3",
+    "stat_type": "books_donated",
+    "stat_value": "0",
+    "city": null,
+    "date_period": "2025-12-23T22:00:00.000Z",
+    "metadata": null,
+    "created_at": "2025-12-24T14:10:11.939Z",
+    "updated_at": "2025-12-24T14:10:11.939Z"
+  }
+]

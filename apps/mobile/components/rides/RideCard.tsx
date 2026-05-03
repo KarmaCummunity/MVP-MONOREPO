@@ -4,23 +4,9 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
 
-interface RideCardItem {
-    image?: string;
-    driverName: string;
-    from: string;
-    to: string;
-    price?: number | string;
-    time: string;
-    date: string;
-    seats: number;
-    noSmoking?: boolean;
-    petsAllowed?: boolean;
-    kidsFriendly?: boolean;
-}
-
 interface RideCardProps {
-    ride: RideCardItem;
-    onPress: (ride: RideCardItem) => void;
+    ride: any;
+    onPress: (ride: any) => void;
 }
 
 const RideCard: React.FC<RideCardProps> = ({ ride, onPress }) => {

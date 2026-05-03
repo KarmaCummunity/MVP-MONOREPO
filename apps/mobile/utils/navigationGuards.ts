@@ -58,7 +58,7 @@ const profileScreenGuard: NavigationGuard = {
           return {
             allowed: false,
             reason: 'Profile screen is not available in guest mode',
-            redirectTo: 'HomeScreen',
+            redirectTo: 'HomeStack',
           };
         }
       }
@@ -81,7 +81,7 @@ const adminTabGuard: NavigationGuard = {
           return {
             allowed: false,
             reason: 'Admin screens are only available to administrators',
-            redirectTo: 'HomeScreen',
+            redirectTo: 'HomeStack',
           };
         }
       }
@@ -101,8 +101,6 @@ const authenticatedRouteGuard: NavigationGuard = {
     // Routes that require authentication (not guest mode)
     const authenticatedRoutes = [
       'EditProfileScreen',
-      'OrgOnboardingScreen',
-      'OrgDashboardScreen',
     ];
 
     if (action.type === 'navigate' || action.type === 'replace') {
@@ -228,7 +226,7 @@ export const checkNavigationGuards = async (
 ): Promise<GuardResult> => {
   logger.debug(LOG_SOURCE, 'Checking navigation guards', {
     actionType: action.type,
-    routeName: (action as { routeName?: string }).routeName,
+    routeName: (action as any).routeName,
     context: {
       isAuthenticated: context.isAuthenticated,
       isGuestMode: context.isGuestMode,

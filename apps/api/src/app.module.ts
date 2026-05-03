@@ -1,12 +1,24 @@
 // File overview:
 // - Purpose: Root Nest module wiring configuration with enhanced security features.
 // - Reached from: `main.ts` NestFactory.create(AppModule).
-// - Provides: Feature modules for health, places, auth, donations, rides, users, stats, etc.
-// - Imports: ConfigModule, DatabaseModule, RedisModule, ThrottlerModule (rate limiting).
+// - Provides: Controllers for health, places, chat, auth, donations, rides, users, stats.
+// - Imports: ConfigModule, DatabaseModule, RedisModule, AuthModule, ThrottlerModule (rate limiting).
 // - Providers: `DatabaseInit` runs schema/compat setup on startup.
 // - Security: Global rate limiting enabled via ThrottlerModule to prevent abuse.
 //
-// Refactored per docs/refactoring/MONOREPO_REFACTORING_PLAN.md Phase 1
+// SECURITY IMPROVEMENTS:
+// ✅ Added ThrottlerModule for global rate limiting (60 requests per minute per IP)
+// ✅ ConfigModule configured as global for easy environment variable access
+// ✅ Structured imports with proper organization
+//
+// TODO: Add proper module organization - group related controllers into feature modules
+// TODO: Add health check module with proper database/redis connectivity checks
+// TODO: Implement proper module imports/exports structure
+// TODO: Add API versioning support
+// TODO: Add comprehensive logging module (Winston, etc.)
+// TODO: Add API documentation module (Swagger/OpenAPI)
+// TODO: Remove test controllers from production builds
+// TODO: Add metrics and monitoring module (Prometheus, etc.)
 
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
@@ -18,20 +30,36 @@ import { DatabaseInit } from "./database/database.init";
 import { RedisModule } from "./redis/redis.module";
 import { RedisCacheModule } from "./redis/redis-cache.module";
 
-// Feature modules
-import { AuthModule } from "./modules/auth/auth.module";
-import { UsersModule } from "./modules/users/users.module";
-import { ItemsModule } from "./modules/items/items.module";
-import { DonationsModule } from "./modules/donations/donations.module";
-import { RidesModule } from "./modules/rides/rides.module";
-import { PostsModule } from "./modules/posts/posts.module";
-import { StatsModule } from "./modules/stats/stats.module";
-import { AdminModule } from "./modules/admin/admin.module";
-import { ChallengesModule } from "./modules/challenges/challenges.module";
-import { ChatModule } from "./modules/chat/chat.module";
-import { NotificationsModule } from "./modules/notifications/notifications.module";
-import { SyncModule } from "./modules/sync/sync.module";
-import { SharedModule } from "./shared/shared.module";
+// Authentication module
+import { AuthModule } from "./auth/auth.module";
+import { ItemsModule } from "./items/items.module";
+import { ServicesModule } from "./services/services.module";
+
+// Controllers
+import { HealthController } from "./controllers/health.controller";
+import { PlacesController } from "./controllers/places.controller";
+import { ChatController } from "./controllers/chat.controller";
+import { AuthController } from "./auth/controllers/auth.controller";
+import { SessionController } from "./auth/controllers/session.controller";
+import { RateLimitController } from "./controllers/rate-limit.controller";
+import { DonationsController } from "./controllers/donations.controller";
+import { RidesController } from "./controllers/rides.controller";
+import { UsersController } from "./controllers/users.controller";
+import { StatsController } from "./controllers/stats.controller";
+import { RedisTestController } from "./controllers/redis-test.controller";
+import { TasksModule } from "./tasks/tasks.module";
+import { ChallengesController } from "./controllers/challenges.controller";
+import { CommunityGroupChallengesController } from "./controllers/community-group-challenges.controller";
+import { ItemsDeliveryController } from "./controllers/items-delivery.controller";
+import { ItemsDeliveryService } from "./controllers/items-delivery.service";
+import { CommunityMembersController } from "./controllers/community-members.controller";
+import { SyncController } from "./controllers/sync.controller";
+import { CrmController } from "./controllers/crm.controller";
+import { AdminFilesController } from "./controllers/admin-files.controller";
+import { AdminTablesController } from "./controllers/admin-tables.controller";
+import { PostsController } from "./controllers/posts.controller";
+import { NotificationsController } from "./controllers/notifications.controller";
+import { AdminTablesService } from "./services/admin-tables.service";
 
 @Module({
   imports: [
@@ -39,10 +67,12 @@ import { SharedModule } from "./shared/shared.module";
     ConfigModule.forRoot({ isGlobal: true }),
 
     // Rate limiting module - prevents abuse by limiting requests per IP
+    // Default: 60 requests per minute per IP address
+    // Can be overridden per controller/route with @Throttle() decorator
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 60,
+        ttl: 60000, // Time window in milliseconds (1 minute)
+        limit: 60, // Maximum number of requests in the time window
       },
     ]),
 
@@ -53,22 +83,51 @@ import { SharedModule } from "./shared/shared.module";
 
     // Feature modules
     AuthModule,
-    UsersModule,
     ItemsModule,
-    DonationsModule,
-    RidesModule,
-    PostsModule,
-    StatsModule,
-    AdminModule,
-    ChallengesModule,
-    ChatModule,
-    NotificationsModule,
-    SyncModule,
-    SharedModule,
+    ServicesModule, // User resolution and other shared services
+    TasksModule,
+  ],
+  controllers: [
+    // Core functionality
+    HealthController, // Health check endpoints
+    PlacesController, // Google Places API integration
+
+    // Authentication and session management
+    AuthController, // User registration, login, Google OAuth
+    SessionController, // Session management
+
+    // Communication
+    ChatController, // Chat and messaging
+
+    // Main features
+    DonationsController, // Donation CRUD operations
+    RidesController, // Ride sharing functionality
+    ItemsDeliveryController, // Items delivery and search
+    UsersController, // User profile management
+    PostsController, // Posts management
+    NotificationsController, // Notifications management
+
+    // Analytics and monitoring
+    StatsController, // Statistics and analytics
+    RateLimitController, // Rate limit status endpoint
+    ChallengesController, // Personal challenges/timers for admins
+    CommunityGroupChallengesController, // Community group challenges
+    CommunityMembersController, // Community members management
+    SyncController, // Firebase users sync
+    CrmController, // CRM / Relationship management
+    AdminFilesController, // Admin shared files
+    AdminTablesController, // Admin dynamic tables
+
+    // H2: Test controllers only loaded in non-production
+    ...(process.env.NODE_ENV !== "production" ? [RedisTestController] : []),
   ],
   providers: [
     // Database initialization - creates tables and runs migrations on startup
     DatabaseInit,
+    // Items delivery service
+    ItemsDeliveryService,
+    // Admin tables service
+    AdminTablesService,
   ],
 })
 export class AppModule {}

@@ -20,7 +20,7 @@ import {
     Platform,
     UIManager
 } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -28,29 +28,28 @@ import { FontSizes, LAYOUT_CONSTANTS } from '../globals/constants';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '../stores/userStore';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
-import { apiService } from '../src/api/api.service';
+import { apiService } from '../utils/apiService';
 import { scaleSize } from '../globals/responsive';
 import { createShadowStyle } from '../globals/styles';
-import ItemDetailsModal, { ItemOrRideRecord } from '../components/ItemDetailsModal';
+import ItemDetailsModal from '../components/ItemDetailsModal';
 import { useToast } from '../utils/toastService';
-import { logger } from '../utils/loggerService';
+import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
+import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type SearchTab = 'All' | 'Rides' | 'Donations' | 'Users' | 'Hashtags';
-
-type SearchTabConfig = { id: SearchTab; label: string; icon: keyof typeof Ionicons.glyphMap };
-
 // Simple debounce implementation
-function debounce<T extends (a: string, b: SearchTab) => void>(func: T, wait: number) {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    return function (nextQuery: string, nextTab: SearchTab) {
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
+    let timeout: any;
+    return function (this: any, ...args: Parameters<T>) {
         clearTimeout(timeout);
-        timeout = setTimeout(() => func(nextQuery, nextTab), wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
+
+type SearchTab = 'All' | 'Rides' | 'Donations' | 'Users' | 'Hashtags';
 
 interface SearchResult {
     id: string;
@@ -61,13 +60,14 @@ interface SearchResult {
     image?: string;         // Avatar or Item image
     meta?: string;          // Extra info (seats, location, etc.)
     highlight?: boolean;
-    rawData: unknown;        // Original object for navigation/details
+    rawData: any;           // Original object for navigation/details
 }
 
 const SearchScreen = () => {
-    const navigation = useNavigation<{ navigate: (name: string, params?: object) => void }>();
+    useLogScreenOpened('SearchScreen');
+    const navigation = useNavigation<any>();
     const route = useRoute();
-    const tabBarHeight = useBottomTabBarHeight();
+    const tabBarHeight = useSafeBottomTabBarHeight();
     const { t } = useTranslation(['search', 'common', 'donations', 'trump']);
     const { selectedUser: _selectedUser } = useUser();
     const { ToastComponent } = useToast();
@@ -81,7 +81,7 @@ const SearchScreen = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false); // To show "start typing" vs "no results"
-    const [selectedItem, setSelectedItem] = useState<ItemOrRideRecord | null>(null);
+    const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [showItemModal, setShowItemModal] = useState(false);
     const [selectedItemType, setSelectedItemType] = useState<'item' | 'ride'>('item');
 
@@ -95,9 +95,9 @@ const SearchScreen = () => {
     }, [routeParams?.q, query]);
 
     // Tabs configuration
-    const tabs: SearchTabConfig[] = [
+    const tabs: { id: SearchTab; label: string; icon: any }[] = [
         { id: 'All', label: t('search:tabs.all'), icon: 'grid-outline' },
-        { id: 'Rides', label: t('trump:menu.history'), icon: 'car-sport-outline' },
+        { id: 'Rides', label: t('trump:menu.history'), icon: 'car-sport-outline' }, // Using history label as approximation or custom
         { id: 'Donations', label: t('search:tabs.donations'), icon: 'heart-outline' },
         { id: 'Users', label: t('search:tabs.users'), icon: 'people-outline' },
         { id: 'Hashtags', label: '#', icon: 'pricetag-outline' },
@@ -140,14 +140,14 @@ const SearchScreen = () => {
                                 id: r.id,
                                 type: 'ride' as const,
                                 title: `${r.from} ➝ ${r.to}`,
-                                subtitle: `${new Date(String(r.departure_time || r.date || '')).toLocaleDateString()} ${new Date(String(r.departure_time || r.time || '')).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-                                description: (r.description as string) ?? '',
-                                image: (r.driverImage as string) || undefined,
+                                subtitle: `${new Date((r.departure_time || r.date) as any).toLocaleDateString()} ${new Date((r.departure_time || r.time) as any).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                                description: r.description as string,
+                                image: (r.driverImage as any) || undefined,
                                 meta: `${r.available_seats} מושבים`,
                                 rawData: r
                             }));
                     }).catch(e => {
-                        logger.warn('SearchScreen', 'Search rides failed', { error: e });
+                        console.warn('Search rides failed', e);
                         return [];
                     })
                 );
@@ -159,16 +159,16 @@ const SearchScreen = () => {
                     enhancedDB.getDonations({ search: searchQuery }).then(donations => {
                         return donations.map(d => ({
                             id: d.id,
-                            type: 'donation' as const,
+                            type: 'donation',
                             title: d.title,
                             subtitle: d.category,
                             description: d.description,
-                            image: (d as { image?: string }).image,
-                            meta: String(d.location || (d as { city?: string }).city || ''),
+                            image: (d as any).image, // Assuming image property exists
+                            meta: d.location || (d as any).city,
                             rawData: d
                         }));
                     }).catch(e => {
-                        logger.warn('SearchScreen', 'Search donations failed', { error: e });
+                        console.warn('Search donations failed', e);
                         return [];
                     })
                 );
@@ -180,18 +180,18 @@ const SearchScreen = () => {
                     apiService.getUsers({ search: searchQuery }).then(res => {
                         if (!res.success || !res.data) return [];
                         // Assuming res.data.users or res.data is array
-                        const users = Array.isArray(res.data) ? res.data : (res.data as { users?: unknown[] }).users || [];
-                        return users.map((u: { id?: string; name?: string; role?: string; bio?: string; avatar?: string; image?: string }, idx: number) => ({
-                            id: u.id ?? `user_${idx}`,
-                            type: 'user' as const,
+                        const users = Array.isArray(res.data) ? res.data : (res.data as any).users || [];
+                        return users.map((u: any) => ({
+                            id: u.id,
+                            type: 'user',
                             title: u.name || t('search:typeLabels.user'),
-                            subtitle: (u.role || u.bio || t('search:userDefaultBio')) ?? '',
+                            subtitle: u.role || u.bio || t('search:userDefaultBio'),
                             image: u.avatar || u.image,
                             meta: 'חבר קהילה',
                             rawData: u
                         }));
                     }).catch(e => {
-                        logger.warn('SearchScreen', 'Search users failed', { error: e });
+                        console.warn('Search users failed', e);
                         return [];
                     })
                 );
@@ -236,7 +236,7 @@ const SearchScreen = () => {
             setResults(flattened);
 
         } catch (err) {
-            logger.error('SearchScreen', 'Global search error', { error: err });
+            console.error('Global search error:', err);
         } finally {
             setIsSearching(false);
         }
@@ -307,15 +307,14 @@ const SearchScreen = () => {
     const handleResultPress = (item: SearchResult) => {
         // Open modal for rides and donations (items)
         if (item.type === 'ride' || item.type === 'donation') {
-            setSelectedItem(item.rawData as ItemOrRideRecord);
+            setSelectedItem(item.rawData);
             setSelectedItemType(item.type === 'ride' ? 'ride' : 'item');
             setShowItemModal(true);
         } else if (item.type === 'user') {
             // Navigate to user profile
-            const userData = item.rawData as { id?: string; name?: string };
             navigation.navigate('UserProfileScreen', {
-                userId: userData.id,
-                userName: userData.name || item.title,
+                userId: item.rawData.id,
+                userName: item.rawData.name || item.title,
                 characterData: item.rawData
             });
         } else if (item.type === 'hashtag') {
@@ -342,13 +341,13 @@ const SearchScreen = () => {
                     <Image source={{ uri: item.image }} style={styles.resultImage} />
                 ) : (
                     <View style={[styles.placeholderImage, { backgroundColor: renderColorForType(item.type) + '15' }]}>
-                        <Ionicons name={renderIconForType(item.type) as keyof typeof Ionicons.glyphMap} size={24} color={renderColorForType(item.type)} />
+                        <Ionicons name={renderIconForType(item.type) as any} size={24} color={renderColorForType(item.type)} />
                     </View>
                 )}
                 {/* Type Icon Badge (small overlay) */}
                 {!item.image && item.type !== 'hashtag' && (
                     <View style={styles.typeBadge}>
-                        <Ionicons name={renderIconForType(item.type) as keyof typeof Ionicons.glyphMap} size={10} color={colors.white} />
+                        <Ionicons name={renderIconForType(item.type) as any} size={10} color={colors.white} />
                     </View>
                 )}
             </View>
@@ -460,7 +459,7 @@ const SearchScreen = () => {
                     // No Results
                     <View style={styles.centerContainer}>
                         <Image
-                            source={require('../assets/images/favicon.png')} // eslint-disable-line @typescript-eslint/no-require-imports -- React Native requires require() for static assets
+                            source={require('../assets/images/favicon.png')} // Fallback or use a generic "empty" asset if available
                             style={[styles.emptyImage, { opacity: 0.3, width: 60, height: 60, tintColor: colors.textSecondary }]}
                         />
                         <Text style={styles.noResultsText}>{t('search:noResultsFound')}</Text>
@@ -481,7 +480,7 @@ const SearchScreen = () => {
             <TouchableOpacity
                 style={styles.aiButton}
                 onPress={() => {
-                    navigation.navigate('ChatDetailScreen', {
+                    navigateToChatDetail(navigation, {
                         conversationId: 'ai_simulation',
                         userName: t('search:ai.title') || 'AI Assistant', // Use localized title
                         otherUserId: 'ai_bot',

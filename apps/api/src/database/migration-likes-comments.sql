@@ -56,11 +56,14 @@ CREATE INDEX IF NOT EXISTS idx_comment_likes_user_id ON comment_likes(user_id);
 -- Function to update post likes count
 CREATE OR REPLACE FUNCTION update_post_likes_count()
 RETURNS TRIGGER AS $$
+DECLARE
+    op_insert CONSTANT TEXT := 'INSERT';
+    op_delete CONSTANT TEXT := 'DELETE';
 BEGIN
-    IF TG_OP = 'INSERT' THEN
+    IF TG_OP = op_insert THEN
         UPDATE posts SET likes = likes + 1, updated_at = NOW() WHERE id = NEW.post_id;
         RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
+    ELSIF TG_OP = op_delete THEN
         UPDATE posts SET likes = GREATEST(0, likes - 1), updated_at = NOW() WHERE id = OLD.post_id;
         RETURN OLD;
     END IF;
@@ -71,11 +74,14 @@ $$ LANGUAGE plpgsql;
 -- Function to update post comments count
 CREATE OR REPLACE FUNCTION update_post_comments_count()
 RETURNS TRIGGER AS $$
+DECLARE
+    op_insert CONSTANT TEXT := 'INSERT';
+    op_delete CONSTANT TEXT := 'DELETE';
 BEGIN
-    IF TG_OP = 'INSERT' THEN
+    IF TG_OP = op_insert THEN
         UPDATE posts SET comments = comments + 1, updated_at = NOW() WHERE id = NEW.post_id;
         RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
+    ELSIF TG_OP = op_delete THEN
         UPDATE posts SET comments = GREATEST(0, comments - 1), updated_at = NOW() WHERE id = OLD.post_id;
         RETURN OLD;
     END IF;
@@ -86,11 +92,14 @@ $$ LANGUAGE plpgsql;
 -- Function to update comment likes count
 CREATE OR REPLACE FUNCTION update_comment_likes_count()
 RETURNS TRIGGER AS $$
+DECLARE
+    op_insert CONSTANT TEXT := 'INSERT';
+    op_delete CONSTANT TEXT := 'DELETE';
 BEGIN
-    IF TG_OP = 'INSERT' THEN
+    IF TG_OP = op_insert THEN
         UPDATE post_comments SET likes_count = likes_count + 1, updated_at = NOW() WHERE id = NEW.comment_id;
         RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
+    ELSIF TG_OP = op_delete THEN
         UPDATE post_comments SET likes_count = GREATEST(0, likes_count - 1), updated_at = NOW() WHERE id = OLD.comment_id;
         RETURN OLD;
     END IF;
@@ -116,7 +125,6 @@ CREATE TRIGGER trigger_update_comment_likes_count
     AFTER INSERT OR DELETE ON comment_likes
     FOR EACH ROW
     EXECUTE FUNCTION update_comment_likes_count();
-
 
 
 

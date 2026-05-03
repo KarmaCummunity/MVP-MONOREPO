@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import colors from '../../globals/colors';
-import { FontSizes, LAYOUT_CONSTANTS } from '../../globals/constants';
 
 interface HabitsStatsCardProps {
   successRate: number | null;
@@ -47,13 +46,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.MEDIUM,
-    padding: LAYOUT_CONSTANTS.SPACING.MD,
-    marginHorizontal: LAYOUT_CONSTANTS.SPACING.MD,
-    marginVertical: LAYOUT_CONSTANTS.SPACING.SM,
-    ...LAYOUT_CONSTANTS.SHADOW.LIGHT,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 12,
     shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
   statItem: {
@@ -61,19 +62,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: FontSizes.heading1,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.success,
-    marginBottom: LAYOUT_CONSTANTS.SPACING.XS,
+    color: colors.habitAccentGreen,
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: FontSizes.small,
-    color: colors.textTertiary,
+    fontSize: 12,
+    color: colors.neutralTextBody,
     textAlign: 'center',
   },
   divider: {
     width: 1,
     height: 40,
-    backgroundColor: colors.border,
+    backgroundColor: colors.neutralBorderStrong,
   },
 });

@@ -85,7 +85,7 @@ async function updateSalaryAndSeniority() {
     console.log(`   Users with NULL seniority_start_date: ${null_seniority}\n`);
 
     // Update salary to 0 if NULL
-    if (parseInt(String(null_salary), 10) > 0) {
+    if (parseInt(null_salary) > 0) {
       console.log("💰 Updating salary to 0 for NULL values...");
       const salaryResult = await client.query(`
                 UPDATE user_profiles 
@@ -100,7 +100,7 @@ async function updateSalaryAndSeniority() {
     }
 
     // Update seniority_start_date to CURRENT_DATE if NULL
-    if (parseInt(String(null_seniority), 10) > 0) {
+    if (parseInt(null_seniority) > 0) {
       console.log(
         "📅 Updating seniority_start_date to CURRENT_DATE for NULL values...",
       );

@@ -8,65 +8,93 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
-import { logger } from '../utils/loggerService';
 import { FontSizes } from '../globals/constants';
 import { scaleSize } from '../globals/responsive';
 import { useUser } from '../stores/userStore';
-import { Linking } from 'react-native';
+import { apiService } from '../utils/apiService';
+import { mapKnowledgeCommunityLinkApiError } from './knowledgeDonationApiMessages';
+import { toastService } from '../utils/toastService';
 import { useFocusEffect } from '@react-navigation/native';
-
-/** Shape of a link record used in state and callbacks */
-export interface LinkRecord {
-  id: string;
-  url: string;
-  description?: string;
-  type: 'group' | 'organization';
-  category?: string;
-  createdAt?: string;
-  createdBy?: string;
-}
+import { isSafeExternalUrl, preferHttpsUrl } from '../utils/urlValidator';
 
 interface AddLinkComponentProps {
-  onLinkAdded?: (link: LinkRecord) => void;
+  onLinkAdded?: (link: any) => void;
   category?: string; // Category to filter links (e.g., 'trump', 'items', 'knowledge')
+  hideLinksList?: boolean;
 }
 
 type LinkType = 'group' | 'organization';
 
-export default function AddLinkComponent({ onLinkAdded, category }: AddLinkComponentProps) {
+function mapKnowledgeCommunityApiRows(rows: any[]): any[] {
+  return rows.map((row: any) => ({
+    id: row.id,
+    url: row.url,
+    description: row.description || '',
+    type: row.linkType === 'organization' ? 'organization' : 'group',
+    createdBy: row.createdByUserId,
+  }));
+}
+
+export default function AddLinkComponent({
+  onLinkAdded,
+  category,
+  hideLinksList = false,
+}: Readonly<AddLinkComponentProps>) {
   const { t } = useTranslation(['common', 'trump']);
-  const { selectedUser } = useUser();
+  const { selectedUser, isAdmin } = useUser();
+  const isKnowledge = category === 'knowledge';
   const [modalVisible, setModalVisible] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
   const [linkType, setLinkType] = useState<LinkType>('group');
-  const [allLinks, setAllLinks] = useState<LinkRecord[]>([]);
+  const [allLinks, setAllLinks] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadAllLinks = React.useCallback(async () => {
+    if (isKnowledge && hideLinksList) {
+      setAllLinks([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      // NOTE: Links functionality has been removed - links table was deleted
-      // All user data is now unified in user_profiles table with UUID identifiers
-      // TODO: Implement alternative storage if links functionality is still needed
-      logger.warn('AddLinkComponent', 'Links functionality has been removed');
+      if (!isKnowledge) {
+        setAllLinks([]);
+        return;
+      }
 
-      // Filter by category if provided
-      const filteredLinks: LinkRecord[] = [];
+      const res = await apiService.getKnowledgeCommunityLinks();
+      if (res.success && Array.isArray(res.data)) {
+        setAllLinks(mapKnowledgeCommunityApiRows(res.data));
+        return;
+      }
 
-      setAllLinks(filteredLinks);
-    } catch (error) {
-      logger.error('AddLinkComponent', 'Error loading links', { error });
       setAllLinks([]);
+      if (res.success === false && res.error) {
+        toastService.showError(mapKnowledgeCommunityLinkApiError(res.error), 3500);
+      }
+    } catch (error) {
+      console.error('Error loading links:', error);
+      setAllLinks([]);
+      if (!isKnowledge) {
+        return;
+      }
+      toastService.showError(
+        mapKnowledgeCommunityLinkApiError(
+          error instanceof Error ? error.message : 'Network error - please check your connection',
+        ),
+        3500,
+      );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [hideLinksList, isKnowledge]);
 
   // Load all links when component mounts or screen is focused
   useFocusEffect(
@@ -85,6 +113,15 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     setLinkUrl('');
     setLinkDescription('');
     setLinkType('group');
+  };
+
+  const showLinkValidationMessage = (msg: string) => {
+    const title = t('common:errorTitle', { defaultValue: 'שגיאה' }) as string;
+    if (isKnowledge) {
+      toastService.showError(msg);
+      return;
+    }
+    Alert.alert(title, msg);
   };
 
   const validateUrl = (url: string): boolean => {
@@ -106,74 +143,143 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = 'https://' + formattedUrl;
     }
-    return formattedUrl;
+    return preferHttpsUrl(formattedUrl);
+  };
+
+  type SavedLinkPayload = {
+    id?: string;
+    url: string;
+    description: string;
+    type: LinkType;
+    category: string;
+    createdAt?: string;
+    createdBy?: string;
+  };
+
+  const buildLocalLinkData = (formattedUrl: string): SavedLinkPayload => {
+    const uid = selectedUser?.id || 'guest';
+    const linkId = `link_${Date.now()}`;
+    return {
+      id: linkId,
+      url: formattedUrl,
+      description: linkDescription.trim() || '',
+      type: linkType,
+      category: category || 'general',
+      createdAt: new Date().toISOString(),
+      createdBy: uid,
+    };
+  };
+
+  const createKnowledgeLinkPayload = async (
+    formattedUrl: string,
+  ): Promise<SavedLinkPayload | null> => {
+    const res = await apiService.createKnowledgeCommunityLink({
+      url: formattedUrl,
+      description: linkDescription.trim() || undefined,
+      linkType: linkType,
+      createdByUserId: selectedUser?.id ?? null,
+      displayName:
+        (selectedUser?.name || selectedUser?.email || '').trim() || null,
+    });
+    if (!res.success) {
+      toastService.showError(mapKnowledgeCommunityLinkApiError(res.error), 3500);
+      return null;
+    }
+    const saved = res.data as Record<string, unknown> | undefined;
+    return {
+      id: saved?.id as string | undefined,
+      url: (saved?.url as string) ?? formattedUrl,
+      description:
+        (saved?.description as string) ?? linkDescription.trim(),
+      type: linkType,
+      category: 'knowledge',
+      createdAt: saved?.createdAt as string | undefined,
+      createdBy: selectedUser?.id,
+    };
+  };
+
+  const notifyLinkSavedSuccess = () => {
+    const savedMsg = t('trump:success.linkSaved', {
+      defaultValue: 'הקישור נשמר בהצלחה',
+    }) as string;
+    if (isKnowledge) {
+      toastService.showSuccess(savedMsg, 3200);
+      return;
+    }
+    Alert.alert(
+      t('trump:success.title', { defaultValue: 'הצלחה' }) as string,
+      savedMsg,
+    );
+  };
+
+  const notifySaveLinkFailure = (error: unknown) => {
+    console.error('Error saving link:', error);
+    const fail = t('trump:errors.saveFailed', {
+      defaultValue: 'שמירת הקישור נכשלה',
+    }) as string;
+    const title = t('common:errorTitle', { defaultValue: 'שגיאה' }) as string;
+    if (isKnowledge) {
+      const raw =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Network error - please check your connection';
+      toastService.showError(mapKnowledgeCommunityLinkApiError(raw) || fail, 3500);
+      return;
+    }
+    Alert.alert(title, fail);
   };
 
   const handleSaveLink = async () => {
     if (!linkUrl.trim()) {
-      Alert.alert(
-        t('common:errorTitle', { defaultValue: 'שגיאה' }) as string,
-        t('trump:errors.fillLink', { defaultValue: 'אנא הזן קישור' }) as string
+      showLinkValidationMessage(
+        t('trump:errors.fillLink', { defaultValue: 'אנא הזן קישור' }) as string,
       );
       return;
     }
 
     if (!validateUrl(linkUrl)) {
-      Alert.alert(
-        t('common:errorTitle', { defaultValue: 'שגיאה' }) as string,
-        t('trump:errors.invalidLink', { defaultValue: 'הקישור אינו תקין' }) as string
+      showLinkValidationMessage(
+        t('trump:errors.invalidLink', { defaultValue: 'הקישור אינו תקין' }) as string,
       );
       return;
     }
 
     setIsSaving(true);
     try {
-      const uid = selectedUser?.id || 'guest';
-      const linkId = `link_${Date.now()}`;
       const formattedUrl = formatUrl(linkUrl);
-
-      const linkData = {
-        id: linkId,
-        url: formattedUrl,
-        description: linkDescription.trim() || '',
-        type: linkType,
-        category: category || 'general', // Save category with link
-        createdAt: new Date().toISOString(),
-        createdBy: uid,
-      };
-
-      // NOTE: Links functionality has been removed - links table was deleted
-      // All user data is now unified in user_profiles table with UUID identifiers
-      // TODO: Implement alternative storage if links functionality is still needed
-      logger.warn('AddLinkComponent', 'Links functionality has been removed - link not saved');
-
-      // Reload all links to show the new one
-      await loadAllLinks();
-
-      // Notify parent component
-      if (onLinkAdded) {
-        onLinkAdded(linkData);
+      let linkData: SavedLinkPayload | null;
+      if (isKnowledge) {
+        linkData = await createKnowledgeLinkPayload(formattedUrl);
+      } else {
+        linkData = buildLocalLinkData(formattedUrl);
+      }
+      if (!linkData) {
+        return;
       }
 
-      Alert.alert(
-        t('trump:success.title', { defaultValue: 'הצלחה' }) as string,
-        t('trump:success.linkSaved', { defaultValue: 'הקישור נשמר בהצלחה' }) as string
-      );
+      if (!hideLinksList || !isKnowledge) {
+        await loadAllLinks();
+      }
 
+      onLinkAdded?.(linkData);
+      notifyLinkSavedSuccess();
       handleCloseModal();
     } catch (error) {
-      logger.error('AddLinkComponent', 'Error saving link', { error });
-      Alert.alert(
-        t('common:errorTitle', { defaultValue: 'שגיאה' }) as string,
-        t('trump:errors.saveFailed', { defaultValue: 'שמירת הקישור נכשלה' }) as string
-      );
+      notifySaveLinkFailure(error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleOpenLink = async (link: LinkRecord) => {
+  const handleOpenLink = async (link: any) => {
     if (!link?.url) return;
+    if (!isSafeExternalUrl(link.url)) {
+      Alert.alert(
+        t('common:error', { defaultValue: 'שגיאה' }) as string,
+        t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string,
+      );
+      return;
+    }
 
     try {
       const supported = await Linking.canOpenURL(link.url);
@@ -185,66 +291,101 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
           t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string
         );
       }
-    } catch (_error) {
+    } catch (error) {
+      console.error('Error opening link:', error);
       Alert.alert(
         t('common:error', { defaultValue: 'שגיאה' }) as string,
-        t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string
+        t('common:cannotOpenLink', { defaultValue: 'לא ניתן לפתוח את הקישור' }) as string,
       );
     }
   };
 
-  const renderLinkCard = (link: LinkRecord) => (
-    <TouchableOpacity
+  const confirmDeleteKnowledgeLink = (link: { id?: string }) => {
+    if (!link.id || !isAdmin) return;
+    Alert.alert(
+      t('common:confirm', { defaultValue: 'אישור' }) as string,
+      t('trump:addLink.confirmDelete', { defaultValue: 'למחוק את הקישור?' }) as string,
+      [
+        { text: t('common:cancel', { defaultValue: 'ביטול' }) as string, style: 'cancel' },
+        {
+          text: t('common:delete', { defaultValue: 'מחק' }) as string,
+          style: 'destructive',
+          onPress: async () => {
+            const res = await apiService.deleteKnowledgeCommunityLink(link.id!);
+            if (res.success) {
+              toastService.showSuccess('הקישור נמחק', 2000);
+              await loadAllLinks();
+            } else {
+              toastService.showError((res.error as string) || 'מחיקה נכשלה', 3000);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const renderLinkCard = (link: any) => (
+    <View
       key={link.id || `${link.createdBy}_${link.url}`}
       style={styles.linkCard}
-      onPress={() => handleOpenLink(link)}
     >
-      <View style={styles.linkCardContent}>
-        <View style={styles.linkCardHeader}>
-          <Ionicons
-            name={link.type === 'group' ? 'people' : 'business'}
-            size={scaleSize(20)}
-            color={colors.buttonPrimary}
-          />
-          <Text style={styles.linkCardType}>
-            {link.type === 'group'
-              ? t('trump:addLink.group', { defaultValue: 'קבוצה' })
-              : t('trump:addLink.organization', { defaultValue: 'עמותה' })}
+      <TouchableOpacity
+        style={styles.linkCardMain}
+        onPress={() => handleOpenLink(link)}
+        activeOpacity={0.75}
+      >
+        <View style={styles.linkCardContent}>
+          <View style={styles.linkCardHeader}>
+            <Ionicons
+              name={link.type === 'group' ? 'people' : 'business'}
+              size={scaleSize(20)}
+              color={colors.buttonPrimary}
+            />
+            <Text style={styles.linkCardType}>
+              {link.type === 'group'
+                ? t('trump:addLink.group', { defaultValue: 'קבוצה' })
+                : t('trump:addLink.organization', { defaultValue: 'עמותה' })}
+            </Text>
+          </View>
+          {link.description ? (
+            <Text style={styles.linkCardDescription} numberOfLines={2}>
+              {link.description}
+            </Text>
+          ) : null}
+          <Text style={styles.linkCardUrl} numberOfLines={1}>
+            {link.url}
           </Text>
         </View>
-        {link.description ? (
-          <Text style={styles.linkCardDescription} numberOfLines={2}>
-            {link.description}
-          </Text>
-        ) : null}
-        <Text style={styles.linkCardUrl} numberOfLines={1}>
-          {link.url}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={scaleSize(16)} color={colors.textSecondary} />
-    </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={scaleSize(16)} color={colors.textSecondary} />
+      </TouchableOpacity>
+      {isKnowledge && isAdmin && link.id ? (
+        <TouchableOpacity
+          style={styles.linkDeleteBtn}
+          onPress={() => confirmDeleteKnowledgeLink(link)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="trash-outline" size={scaleSize(22)} color={colors.destructiveAction} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 
   // Filter links by type (group or organization)
   const groupLinks = allLinks.filter(link => link.type === 'group');
   const organizationLinks = allLinks.filter(link => link.type === 'organization');
 
-  return (
-    <View style={styles.container}>
-      {/* Add link button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleOpenModal}
-      >
-        <Ionicons name="add-circle-outline" size={scaleSize(24)} color={colors.buttonPrimary} />
-      </TouchableOpacity>
+  const showLocalList = !hideLinksList || !isKnowledge;
 
-      {/* Show all links in a scrollable list */}
-      {isLoading ? (
+  let linksListSection: React.ReactNode = null;
+  if (showLocalList) {
+    if (isLoading) {
+      linksListSection = (
         <Text style={styles.loadingText}>
           {t('common:loading', { defaultValue: 'טוען...' })}
         </Text>
-      ) : allLinks.length > 0 ? (
+      );
+    } else if (allLinks.length > 0) {
+      linksListSection = (
         <View style={styles.linksContainer}>
           {groupLinks.length > 0 && (
             <View style={styles.linksSection}>
@@ -263,11 +404,27 @@ export default function AddLinkComponent({ onLinkAdded, category }: AddLinkCompo
             </View>
           )}
         </View>
-      ) : (
+      );
+    } else {
+      linksListSection = (
         <Text style={styles.noLinksText}>
           {t('trump:addLink.noLinks', { defaultValue: 'אין קישורים עדיין' })}
         </Text>
-      )}
+      );
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Add link button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={handleOpenModal}
+      >
+        <Ionicons name="add-circle-outline" size={scaleSize(24)} color={colors.buttonPrimary} />
+      </TouchableOpacity>
+
+      {linksListSection}
 
       {/* Modal with form */}
       <Modal
@@ -424,10 +581,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.moneyFormBorder,
     borderRadius: 10,
-    padding: 12,
+    paddingVertical: 8,
+    paddingLeft: 8,
+    paddingRight: 4,
     marginBottom: 8,
     width: '100%',
+    gap: 4,
+  },
+  linkCardMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  linkDeleteBtn: {
+    padding: 8,
   },
   linkCardContent: {
     flex: 1,
@@ -469,7 +637,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayBlack50,
     justifyContent: 'flex-end',
   },
   modalContent: {

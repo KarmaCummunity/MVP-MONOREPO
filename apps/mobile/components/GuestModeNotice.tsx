@@ -1,6 +1,5 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import colors from '../globals/colors';
 import { useUser } from '../stores/userStore';
 import { useWebMode } from '../stores/webModeStore';
@@ -14,11 +13,10 @@ interface GuestModeNoticeProps {
   showLoginButton?: boolean;
 }
 
-const GuestModeNotice: React.FC<GuestModeNoticeProps> = ({
+const GuestModeNotice: React.FC<GuestModeNoticeProps> = ({ 
   variant: _variant = 'default',
-  showLoginButton = true
+  showLoginButton = true 
 }) => {
-  const _navigation = useNavigation();
   const { signOut } = useUser();
   const { mode } = useWebMode();
   const { t } = useTranslation(['common']);

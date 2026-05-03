@@ -39,7 +39,8 @@
     "noSmoking": "No smoking",
     "withPets": "With pets",
     "withKids": "With kids",
-    "includePast": "Include past rides"
+    "includePast": "Include past rides",
+    "includeRequests": "Show requests"
   },
   "category": {
     "other": "Other"
@@ -95,7 +96,10 @@
     "searchPlaceholder": {
       "offer": "Where to? Destination...",
       "seek": "Find a ride: destination..."
-    }
+    },
+    "requestCta": "Didn't find what you need? Post a request →",
+    "openRequestsList": "Open requests list",
+    "noOpenRequests": "No open requests right now."
   },
   "menu": {
     "history": "History",

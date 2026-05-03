@@ -38,7 +38,7 @@ async function verify() {
       const countResult = await client.query(
         format(`SELECT COUNT(*) FROM %I`, tableName),
       );
-      const count = parseInt(String(countResult.rows[0].count), 10);
+      const count = parseInt(countResult.rows[0].count);
 
       if (count > 0) {
         console.log(

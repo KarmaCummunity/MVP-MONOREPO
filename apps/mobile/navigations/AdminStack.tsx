@@ -1,34 +1,30 @@
 // File overview:
 // - Purpose: Stack navigator for admin screens (dashboard, money management, people, review) and top bar screens.
-// - Reached from: `BottomNavigator` -> Tab 'AdminTab' (only visible to admins).
-// - Provides: Admin dashboard and management screens, plus top bar screens (Settings, Notifications, About, Chat screens, LandingSiteScreen).
+// - Reached from: `MainNavigator` -> `AdminStack` (accessed via TopBarNavigator, only visible to admins).
+// - Provides: Admin dashboard and management screens, plus top bar screens (Settings, Notifications, About, Chat screens). Marketing landing opens via `navigateToAuthenticatedLandingSite` on Home tab only.
 // - Header: Uses `TopBarNavigator`; can be hidden per-screen with route param `hideTopBar`.
 import React from "react";
 import { Platform } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { useFocusEffect } from "@react-navigation/native";
-import AdminDashboardScreen from "../screens/AdminDashboardScreen";
-import AdminMoneyScreen from "../screens/AdminMoneyScreen";
-import AdminPeopleScreen from "../screens/AdminPeopleScreen";
-import AdminReviewScreen from "../screens/AdminReviewScreen";
-import AdminAdminsScreen from "../screens/AdminAdminsScreen";
-import AdminTasksScreen from "../screens/AdminTasksScreen";
-import AdminCRMScreen from "../screens/AdminCRMScreen";
-import AdminFilesScreen from "../screens/AdminFilesScreen";
-import AdminTimeManagementScreen from "../screens/AdminTimeManagementScreen";
-import AdminTablesScreen from "../screens/AdminTablesScreen";
-import AdminTableRowsScreen from "../screens/AdminTableRowsScreen";
+import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminMoneyScreen from "../screens/admin/AdminMoneyScreen";
+import AdminPeopleScreen from "../screens/admin/AdminPeopleScreen";
+import AdminReviewScreen from "../screens/admin/AdminReviewScreen";
+import AdminAdminsScreen from "../screens/admin/AdminAdminsScreen";
+import AdminTasksScreen from "../screens/admin/AdminTasksScreen";
+import AdminCRMScreen from "../screens/admin/AdminCRMScreen";
+import AdminFilesScreen from "../screens/admin/AdminFilesScreen";
+import AdminTimeManagementScreen from "../screens/admin/AdminTimeManagementScreen";
 import ChatListScreen from "../topBarScreens/ChatListScreen";
 import ChatDetailScreen from "../screens/ChatDetailScreen";
 import NewChatScreen from "../screens/NewChatScreen";
 import SettingsScreen from "../topBarScreens/SettingsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import AboutKarmaCommunityScreen from "../topBarScreens/AboutKarmaCommunityScreen";
-import LandingSiteScreen from "../screens/Landing/LandingSiteScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
 import TopBarNavigator from "./TopBarNavigator";
 import { AdminStackParamList } from "../globals/types";
-import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { logger } from "../utils/loggerService";
 
 const Stack = createStackNavigator<AdminStackParamList>();
@@ -36,7 +32,7 @@ const Stack = createStackNavigator<AdminStackParamList>();
 export default function AdminStack() {
   useFocusEffect(
     React.useCallback(() => {
-      logger.debug('AdminStack', 'Navigator focused');
+      logger.debug('AdminStack', 'Navigator focused', undefined, { periodic: true });
     }, [])
   );
 
@@ -49,8 +45,8 @@ export default function AdminStack() {
         headerShown: true,
         header: () => (
           <TopBarNavigator
-            navigation={navigation as NavigationProp<ParamListBase>}
-            hideTopBar={(route?.params as { hideTopBar?: boolean })?.hideTopBar === true}
+            navigation={navigation as any}
+            hideTopBar={(route?.params as any)?.hideTopBar === true}
           />
         ),
         // Fix for aria-hidden warning: prevent focus on inactive screens
@@ -70,8 +66,6 @@ export default function AdminStack() {
       <Stack.Screen name="AdminCRM" component={AdminCRMScreen} />
       <Stack.Screen name="AdminFiles" component={AdminFilesScreen} />
       <Stack.Screen name="AdminTimeManagement" component={AdminTimeManagementScreen} />
-      <Stack.Screen name="AdminTables" component={AdminTablesScreen} />
-      <Stack.Screen name="AdminTableRows" component={AdminTableRowsScreen} />
       <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
       <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
       <Stack.Screen name="NewChatScreen" component={NewChatScreen} />
@@ -79,7 +73,6 @@ export default function AdminStack() {
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
       <Stack.Screen name="DiscoverPeopleScreen" component={DiscoverPeopleScreen} />
-      <Stack.Screen name="LandingSiteScreen" component={LandingSiteScreen} />
     </Stack.Navigator>
   );
 }

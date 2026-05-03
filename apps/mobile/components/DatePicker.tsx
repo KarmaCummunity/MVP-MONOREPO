@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   Modal,
   ScrollView,
   Platform,
+  I18nManager,
 } from 'react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import colors from '../globals/colors';
 import { FontSizes } from '../globals/constants';
+import { HEBREW_MONTH_NAMES_LONG } from '../globals/monthNames';
 import { useTranslation } from 'react-i18next';
 import { Ionicons as Icon } from '@expo/vector-icons';
-import { I18nManager } from 'react-native';
 
 interface DatePickerProps {
   value: Date | null;
@@ -27,7 +28,7 @@ interface DatePickerProps {
 
 // Helper function to format date to Hebrew locale
 const formatDate = (date: Date | null): string => {
-  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+  if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) {
     return '';
   }
   return date.toLocaleDateString('he-IL', {
@@ -40,7 +41,7 @@ const formatDate = (date: Date | null): string => {
 // Helper function to validate and create Date
 const ensureValidDate = (date: Date | null | undefined): Date => {
   if (!date) return new Date();
-  if (date instanceof Date && !isNaN(date.getTime())) {
+  if (date instanceof Date && !Number.isNaN(date.getTime())) {
     return date;
   }
   return new Date();
@@ -54,11 +55,17 @@ export default function DatePicker({
   minimumDate,
   maximumDate,
   disabled = false,
-}: DatePickerProps) {
+}: Readonly<DatePickerProps>) {
   const { t } = useTranslation(['common', 'trump']);
   const [isVisible, setIsVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => ensureValidDate(value));
   const [showNativePicker, setShowNativePicker] = useState(false);
+
+  // Update selected date when value prop changes
+  useEffect(() => {
+    const validDate = ensureValidDate(value);
+    setSelectedDate(validDate);
+  }, [value]);
 
   const handleOpen = () => {
     if (disabled) return;
@@ -83,7 +90,7 @@ export default function DatePicker({
     setShowNativePicker(false);
   };
 
-  const handleNativeDateChange = (_event: DateTimePickerEvent, date?: Date) => {
+  const handleNativeDateChange = (event: any, date?: Date) => {
     setShowNativePicker(false);
     if (Platform.OS === 'android') {
       // Android closes automatically
@@ -96,10 +103,7 @@ export default function DatePicker({
   // Generate date options for custom picker (web)
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
-  const months = [
-    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
-  ];
+  const months = HEBREW_MONTH_NAMES_LONG;
   const daysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -217,7 +221,7 @@ export default function DatePicker({
                     >
                       {months.map((month, index) => (
                         <TouchableOpacity
-                          key={index}
+                          key={month}
                           style={[
                             styles.pickerItem,
                             selectedMonth === index && styles.selectedItem,

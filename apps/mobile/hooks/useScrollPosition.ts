@@ -4,7 +4,7 @@
 // Session-only persistence - position is cleared when app closes
 
 import { useEffect, useRef, useCallback } from 'react';
-import { Platform, ScrollView, FlatList, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { Platform, ScrollView, FlatList } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../stores/userStore';
@@ -53,10 +53,10 @@ interface UseScrollPositionOptions {
 export const useScrollPosition = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
-): React.MutableRefObject<ScrollView | FlatList<unknown> | null> => {
+): React.RefObject<ScrollView | FlatList> => {
   const { enabled = true, debounceDelay = 200 } = options;
   const { selectedUser } = useUser();
-  const scrollRef = useRef<ScrollView | FlatList<unknown>>(null);
+  const scrollRef = useRef<ScrollView | FlatList>(null);
   const debounce = useRef(createDebouncer()).current;
   const isRestoringRef = useRef(false);
   const lastSavedPositionRef = useRef<number>(0);
@@ -87,7 +87,7 @@ export const useScrollPosition = (
             const position = parseFloat(savedPosition);
             if (!isNaN(position) && position > 0 && scrollRef.current) {
               isRestoringRef.current = true;
-
+              
               // Small delay to ensure ScrollView is fully rendered
               setTimeout(() => {
                 try {
@@ -97,7 +97,7 @@ export const useScrollPosition = (
                       scrollRef.current.scrollTo({ y: position, animated: false });
                     } else if ('scrollToOffset' in scrollRef.current) {
                       // FlatList
-                      (scrollRef.current as FlatList<unknown>).scrollToOffset({
+                      (scrollRef.current as FlatList<any>).scrollToOffset({
                         offset: position,
                         animated: false,
                       });
@@ -124,7 +124,7 @@ export const useScrollPosition = (
       };
 
       restorePosition();
-    }, [screenKey, selectedUser, enabled])
+    }, [screenKey, selectedUser?.id, enabled])
   );
 
   // Save position when scrolling
@@ -135,8 +135,6 @@ export const useScrollPosition = (
 
     // For ScrollView - attach scroll event handler
     if ('scrollTo' in scrollRef.current) {
-      const _scrollView = scrollRef.current as ScrollView;
-
       // Note: ScrollView's onScroll event needs to be passed as a prop
       // We'll need to handle this differently - see usage example
       // For now, we'll save on blur/focus change
@@ -203,10 +201,10 @@ export const useScrollPosition = (
 
         savePosition();
       };
-    }, [screenKey, selectedUser, enabled, debounceDelay, debounce])
+    }, [screenKey, selectedUser?.id, enabled, debounce, debounceDelay])
   );
 
-  return scrollRef as React.MutableRefObject<FlatList<unknown> | null>;
+  return scrollRef;
 };
 
 /**
@@ -221,17 +219,17 @@ export const useScrollPositionWithHandler = (
   screenKey: string,
   options: UseScrollPositionOptions = {}
 ): {
-  ref: React.MutableRefObject<ScrollView | FlatList<unknown> | null>;
-  onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  ref: React.RefObject<ScrollView | FlatList>;
+  onScroll: (event: any) => void;
 } => {
   const { enabled = true, debounceDelay = 200 } = options;
   const { selectedUser } = useUser();
-  const scrollRef = useRef<ScrollView | FlatList<unknown>>(null);
+  const scrollRef = useRef<ScrollView | FlatList>(null);
   const debounce = useRef(createDebouncer()).current;
   const lastSavedPositionRef = useRef<number>(0);
 
   const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    (event: any) => {
       if (!enabled) {
         return;
       }
@@ -270,7 +268,7 @@ export const useScrollPositionWithHandler = (
         }
       }, debounceDelay);
     },
-    [screenKey, selectedUser, enabled, debounceDelay, debounce]
+    [screenKey, selectedUser?.id, enabled, debounceDelay, debounce]
   );
 
   // Load saved position when screen gains focus
@@ -302,7 +300,7 @@ export const useScrollPositionWithHandler = (
                     if ('scrollTo' in scrollRef.current) {
                       scrollRef.current.scrollTo({ y: position, animated: false });
                     } else if ('scrollToOffset' in scrollRef.current) {
-                      (scrollRef.current as FlatList<unknown>).scrollToOffset({
+                      (scrollRef.current as FlatList<any>).scrollToOffset({
                         offset: position,
                         animated: false,
                       });
@@ -324,7 +322,7 @@ export const useScrollPositionWithHandler = (
       };
 
       restorePosition();
-    }, [screenKey, selectedUser, enabled])
+    }, [screenKey, selectedUser?.id, enabled])
   );
 
   return {

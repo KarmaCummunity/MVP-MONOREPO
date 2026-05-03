@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../stores/userStore';
-import { getUnreadNotificationCount, subscribeToNotificationEvents } from '../src/services/notification.service';
-import { logger } from '../utils/loggerService';
+import { getUnreadNotificationCount, subscribeToNotificationEvents } from '../utils/notificationService';
+
+/** Skip redundant fetches on rapid focus/navigation (same throttle bucket as API Throttler per IP). */
+const UNREAD_COUNT_MIN_INTERVAL_MS = 12_000;
 
 /**
  * Hook to get and maintain the count of unread notifications for the current user.
@@ -13,49 +15,52 @@ import { logger } from '../utils/loggerService';
 export const useUnreadNotificationsCount = (): number => {
   const { selectedUser } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
+  const lastFetchAtRef = useRef(0);
 
-  const loadUnreadCount = useCallback(async () => {
-    if (!selectedUser) {
-      setUnreadCount(0);
-      return;
-    }
-
-    try {
-      const count = await getUnreadNotificationCount(selectedUser.id);
-      setUnreadCount(count);
-    } catch (error) {
-      logger.error('useUnreadNotificationsCount', 'Failed to load unread notification count', { error });
-      setUnreadCount(0);
-    }
-  }, [selectedUser]);
-
-  // Load initial count when user changes (async in effect so setState runs in callback)
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+  const loadUnreadCount = useCallback(
+    async (force = false) => {
       if (!selectedUser) {
         setUnreadCount(0);
         return;
       }
+
+      const now = Date.now();
+      if (!force && now - lastFetchAtRef.current < UNREAD_COUNT_MIN_INTERVAL_MS) {
+        return;
+      }
+      lastFetchAtRef.current = now;
+
       try {
         const count = await getUnreadNotificationCount(selectedUser.id);
-        if (!cancelled) setUnreadCount(count);
+        setUnreadCount(count);
       } catch (error) {
-        if (!cancelled) {
-          logger.error('useUnreadNotificationsCount', 'Failed to load unread notification count', { error });
-          setUnreadCount(0);
-        }
+        console.error('❌ Failed to load unread notification count:', error);
+        setUnreadCount(0);
       }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [selectedUser]);
+    },
+    [selectedUser],
+  );
 
-  // Refresh count when screen comes into focus
+  /** Fire-and-forget: errors are logged inside loadUnreadCount. */
+  const enqueueUnreadCountLoad = useCallback(
+    (force: boolean) => {
+      loadUnreadCount(force).catch(() => {
+        /* errors handled in loadUnreadCount */
+      });
+    },
+    [loadUnreadCount],
+  );
+
+  // Load initial count when user changes (always fetch)
+  useEffect(() => {
+    enqueueUnreadCountLoad(true);
+  }, [selectedUser?.id, enqueueUnreadCountLoad]);
+
+  // Refresh when screen comes into focus (throttled to reduce API burst)
   useFocusEffect(
     useCallback(() => {
-      loadUnreadCount();
-    }, [loadUnreadCount])
+      enqueueUnreadCountLoad(false);
+    }, [enqueueUnreadCountLoad]),
   );
 
   // Subscribe to real-time notification events
@@ -72,13 +77,13 @@ export const useUnreadNotificationsCount = (): number => {
 
       // Reload count to ensure accuracy when notifications change
       // This is more reliable than trying to track individual notification states
-      loadUnreadCount();
+      enqueueUnreadCountLoad(true);
     });
 
     return () => {
       unsubscribe?.();
     };
-  }, [selectedUser, loadUnreadCount]);
+  }, [selectedUser, enqueueUnreadCountLoad]);
 
   return unreadCount;
 };
