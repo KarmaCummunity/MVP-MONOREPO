@@ -301,11 +301,16 @@ export class TasksController {
       }
       const parsedDueDate = dueRes.parsed;
 
-      const assigneeUUIDs = await this.createPrep.gatherCreateTaskAssigneeUUIDs(
-        assignees,
-        assigneesEmails,
-        createdByUuid,
-      );
+      const assigneeUUIDsRes =
+        await this.createPrep.gatherCreateTaskAssigneeUUIDs(
+          assignees,
+          assigneesEmails,
+          createdByUuid,
+        );
+      if (!assigneeUUIDsRes.success) {
+        return assigneeUUIDsRes;
+      }
+      const assigneeUUIDs = assigneeUUIDsRes.uuids;
 
       const hierErr = await this.createPrep.assertCreateTaskAssigneeHierarchy(
         createdByUuid,

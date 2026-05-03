@@ -17,13 +17,25 @@ import ReportPostModal from '../../components/Feed/ReportPostModal';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
 import { logger } from '../../utils/loggerService';
-export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string, user?: any, onHeightChange?: (height: number) => void }) => {
+export const ClosedRoute = ({
+  userId,
+  user,
+  onHeightChange,
+  onLoadedContentCount,
+}: {
+  userId?: string;
+  user?: any;
+  onHeightChange?: (height: number) => void;
+  onLoadedContentCount?: (count: number) => void;
+}) => {
   const { t } = useTranslation(['profile']);
   const navigation = useNavigation();
   const { selectedUser } = useUser();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { db } = require('../../utils/databaseService');
+  const onCountRef = React.useRef(onLoadedContentCount);
+  onCountRef.current = onLoadedContentCount;
 
   // Post menu hook
   const {
@@ -60,9 +72,11 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
     const loadClosedContent = async () => {
       if (!targetUserId) {
         setLoading(false);
+        onCountRef.current?.(0);
         return;
       }
 
+      let loadedCount = 0;
       try {
         setLoading(true);
         logger.debug('ClosedRoute', 'Loading closed content for userId', { targetUserId });
@@ -388,12 +402,15 @@ export const ClosedRoute = ({ userId, user, onHeightChange }: { userId?: string,
         }
 
         logger.debug('ClosedRoute', 'Total closed content', { count: allContent.length });
+        loadedCount = allContent.length;
         setPosts(allContent);
       } catch (error) {
         console.error('Error loading closed content:', error);
+        loadedCount = 0;
         setPosts([]);
       } finally {
         setLoading(false);
+        onCountRef.current?.(loadedCount);
       }
     };
 

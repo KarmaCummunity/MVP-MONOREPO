@@ -21,6 +21,8 @@ export interface TaskData {
     estimated_hours?: number;
     due_date?: string;
     assignees?: TaskAssignee[];
+    /** Task opener (`tasks.created_by`), distinct from post author for delegation posts. */
+    creator?: TaskAssignee;
 }
 
 /** Rich ride / trump fields from API `ride_data` or `metadata.ride` (post detail & feed). */

@@ -3,7 +3,11 @@
   "tabs": {
     "posts": "פוסטים",
     "reels": "רילס",
-    "tagged": "תיוגים"
+    "tagged": "תיוגים",
+    "open": "פתוח",
+    "closed": "סגור",
+    "openWithCount": "פתוח ({{count}})",
+    "closedWithCount": "סגור ({{count}})"
   },
   "stats": {
     "posts": "פוסטים",

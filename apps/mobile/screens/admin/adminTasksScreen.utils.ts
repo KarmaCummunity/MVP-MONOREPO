@@ -1,4 +1,9 @@
 import type { AdminCreateTaskFormFields, AdminTask, TaskPriority, TaskStatus } from './adminTasksScreen.types';
+import {
+  TASK_LIST_CATEGORY_OPTIONS,
+  TASK_LIST_PRIORITY_VALUES,
+  TASK_LIST_STATUS_OPTIONS,
+} from './adminTasksScreen.constants';
 
 /** True when list query is narrowed by search text or header filters (not default "all tasks" view). */
 export function hasActiveAdminTaskListFilters(
@@ -16,11 +21,6 @@ export function hasActiveAdminTaskListFilters(
     || filterCategories.length > 0
   );
 }
-import {
-  TASK_LIST_CATEGORY_OPTIONS,
-  TASK_LIST_PRIORITY_VALUES,
-  TASK_LIST_STATUS_OPTIONS,
-} from './adminTasksScreen.constants';
 
 const CANONICAL_CATEGORY_VALUES = new Set(TASK_LIST_CATEGORY_OPTIONS.map((o) => o.value));
 const ALLOWED_TASK_PRIORITIES = new Set<string>(TASK_LIST_PRIORITY_VALUES);
@@ -66,6 +66,21 @@ export function normalizeAdminTaskFromApi(task: AdminTask): AdminTask {
   return { ...task, status: nextStatus, category: canonCat || null, priority: nextPriority };
 }
 
+function appendStatusOrReportCategory(
+  raw: string,
+  statuses: TaskStatus[],
+  categories: string[],
+): void {
+  if (raw === 'reports') {
+    categories.push('דיווח');
+    return;
+  }
+  const statusRaw = raw as TaskStatus;
+  if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === statusRaw)) {
+    statuses.push(statusRaw);
+  }
+}
+
 export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   assignee: 'all' | 'me';
   statuses: TaskStatus[];
@@ -79,27 +94,21 @@ export function parseAdminTaskHeaderFilters(filterKeys: string[] | undefined): {
   for (const key of filterKeys ?? []) {
     if (key === 'task_assign_me') {
       assignee = 'me';
+      continue;
     }
     if (key.startsWith('task_status_')) {
-      const raw = key.slice('task_status_'.length);
-      if (raw === 'reports') {
-        categories.push('דיווח');
-      } else {
-        const statusRaw = raw as TaskStatus;
-        if (TASK_LIST_STATUS_OPTIONS.some((o) => o.value === statusRaw)) {
-          statuses.push(statusRaw);
-        }
-      }
+      appendStatusOrReportCategory(key.slice('task_status_'.length), statuses, categories);
+      continue;
     }
     if (key.startsWith('task_priority_')) {
       const raw = key.slice('task_priority_'.length);
       if (ALLOWED_TASK_PRIORITIES.has(raw)) {
         priorities.push(raw as TaskPriority);
       }
+      continue;
     }
     if (key.startsWith('task_category_')) {
-      const raw = key.slice('task_category_'.length);
-      categories.push(raw);
+      categories.push(key.slice('task_category_'.length));
     }
   }
   return { assignee, statuses, priorities, categories };

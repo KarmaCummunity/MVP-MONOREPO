@@ -96,7 +96,6 @@ export const VALID_ROOT_ROUTES: string[] = [
   'LandingSiteScreen',
   'WebViewScreen',
   'PostsReelsScreen',
-  'BookmarksScreen',
   'UserProfileScreen',
   'FollowersScreen',
   'DiscoverPeopleScreen',
@@ -153,6 +152,7 @@ export const VALID_SEARCH_TAB_STACK_ROUTES: string[] = [
 export const VALID_PROFILE_TAB_STACK_ROUTES: string[] = [
   'ProfileMain',
   'PostDetailScreen',
+  'BookmarksScreen',
   'SettingsScreen',
   'ChatListScreen',
   'ChatDetailScreen',

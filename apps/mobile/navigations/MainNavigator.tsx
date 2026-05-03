@@ -13,13 +13,11 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { createStackNavigator } from "@react-navigation/stack";
+import { createStackNavigator, type StackHeaderProps } from "@react-navigation/stack";
 import { useFocusEffect } from "@react-navigation/native";
 import BottomNavigator from "./BottomNavigator";
 import WebViewScreen from "../screens/WebViewScreen";
 import PostsReelsScreenWrapper from "../components/PostsReelsScreenWrapper";
-import BookmarksScreen from "../screens/BookmarksScreen";
 // Removed UserProfileScreen import - it should only be accessed via HomeTabStack or SearchTabStack
 import FollowersScreen from "../screens/FollowersScreen";
 import DiscoverPeopleScreen from "../screens/DiscoverPeopleScreen";
@@ -43,9 +41,20 @@ import { computeMainNavigatorStackKey } from './mainNavigatorStackKey';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+function MainNavigatorAdminDashboardHeader({
+  navigation,
+  route,
+}: Readonly<StackHeaderProps>) {
+  return (
+    <TopBarNavigator
+      navigation={navigation as any}
+      hideTopBar={(route.params as any)?.hideTopBar === true}
+    />
+  );
+}
+
 export default function MainNavigator() {
   const { selectedUser, isLoading, isGuestMode, isAuthenticated } = useUser();
-  const { t } = useTranslation(['common', 'profile']);
   const { mode } = useWebMode();
 
   // Log render state for debugging (periodic — avoids noisy storage in tight re-render loops)
@@ -83,19 +92,13 @@ export default function MainNavigator() {
       key={stackKey}
       id={undefined}
       detachInactiveScreens={true}
-      screenOptions={({ navigation, route }) => ({
-        headerShown: route.name === 'AdminDashboard' ? true : false,
-        header: route.name === 'AdminDashboard' ? () => (
-          <TopBarNavigator
-            navigation={navigation as any}
-            hideTopBar={(route?.params as any)?.hideTopBar === true}
-          />
-        ) : undefined,
+      screenOptions={{
+        headerShown: false,
         // Fix for aria-hidden warning: prevent focus on inactive screens
         cardStyle: Platform.OS === 'web' ? {
           // On web, ensure inactive screens don't interfere with focus
         } : undefined,
-      })}
+      }}
     >
       {isAuthenticated || isGuestMode ? (
         // ==================================================================
@@ -119,15 +122,7 @@ export default function MainNavigator() {
             }}
           />
 
-          <Stack.Screen
-            name="BookmarksScreen"
-            component={BookmarksScreen}
-            options={{
-              title: t('profile:menu.bookmarks'),
-              headerTitleAlign: 'center',
-              headerShown: true,
-            }}
-          />
+          {/* Bookmarked posts: `BookmarksScreen` lives in `HomeTabStack` and `ProfileTabStack` so the bottom tab bar stays visible. */}
 
           {/* Removed UserProfileScreen from MainNavigator - it should only be accessed via HomeTabStack or SearchTabStack 
               to ensure bottom bar and top bar remain visible */}
@@ -146,7 +141,14 @@ export default function MainNavigator() {
           <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
 
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+          <Stack.Screen
+            name="AdminDashboard"
+            component={AdminDashboardScreen}
+            options={{
+              headerShown: true,
+              header: MainNavigatorAdminDashboardHeader,
+            }}
+          />
         </Stack.Group>
       ) : (
         // ==================================================================

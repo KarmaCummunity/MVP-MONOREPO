@@ -117,6 +117,7 @@ export type SearchTabStackParamList = {
 export type ProfileTabStackParamList = {
   ProfileMain: { userId?: string } | undefined;
   PostDetailScreen: { postId: string; initialItem?: FeedItem };
+  BookmarksScreen: undefined;
   SettingsScreen: undefined;
   ChatListScreen: undefined;
   ChatDetailScreen: ChatDetailScreenParams | undefined;
@@ -197,7 +198,6 @@ export type RootStackParamList = {
   InactiveScreen: undefined;
   WebViewScreen: undefined;
   PostsReelsScreen: undefined; // ADD THIS LINE - this was probably missing
-  BookmarksScreen: undefined;
   UserProfileScreen: {
     userId: string;
     userName: string;

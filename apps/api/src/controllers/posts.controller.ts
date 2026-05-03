@@ -900,6 +900,18 @@ export class PostsController {
                             ))
                             FROM user_profiles u_assignee
                             WHERE u_assignee.id = ANY(t.assignees)
+                        ),
+                        'creator', (
+                            SELECT json_build_object(
+                                'id', uc.id,
+                                'name', uc.name,
+                                'avatar', uc.avatar_url
+                            )
+                            FROM user_profiles uc
+                            WHERE uc.id::text = t.created_by::text
+                               OR uc.firebase_uid = t.created_by::text
+                               OR uc.google_id = t.created_by::text
+                            LIMIT 1
                         )
                     ) ELSE NULL END as task,
                     CASE 
@@ -1067,6 +1079,18 @@ export class PostsController {
                             ))
                             FROM user_profiles u_assignee
                             WHERE u_assignee.id = ANY(t.assignees)
+                        ),
+                        'creator', (
+                            SELECT json_build_object(
+                                'id', uc.id,
+                                'name', uc.name,
+                                'avatar', uc.avatar_url
+                            )
+                            FROM user_profiles uc
+                            WHERE uc.id::text = t.created_by::text
+                               OR uc.firebase_uid = t.created_by::text
+                               OR uc.google_id = t.created_by::text
+                            LIMIT 1
                         )
                     ) ELSE NULL END as task,
                     CASE 
@@ -1841,6 +1865,18 @@ export class PostsController {
                             ))
                             FROM user_profiles u_assignee
                             WHERE u_assignee.id = ANY(t.assignees)
+                        ),
+                        'creator', (
+                            SELECT json_build_object(
+                                'id', uc.id,
+                                'name', uc.name,
+                                'avatar', uc.avatar_url
+                            )
+                            FROM user_profiles uc
+                            WHERE uc.id::text = t.created_by::text
+                               OR uc.firebase_uid = t.created_by::text
+                               OR uc.google_id = t.created_by::text
+                            LIMIT 1
                         )
                     ) ELSE NULL END as task,
                     CASE 
