@@ -10,6 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 COPY packages/shared-types/package*.json ./packages/shared-types/
+COPY packages/shared-types/tsconfig.json ./packages/shared-types/tsconfig.json
+COPY packages/shared-types/src ./packages/shared-types/src
 
 # Install all dependencies (including dev deps for build)
 RUN npm ci --include=dev
@@ -21,7 +23,8 @@ COPY . .
 RUN npm run build --workspace @kc/api
 
 # Verify build succeeded
-RUN test -f ./apps/api/dist/main.js || (echo "ERROR: apps/api/dist/main.js missing after build" && ls -la apps/api/ && exit 1)
+RUN test -f ./apps/api/dist/main.js || \
+  (echo "ERROR: apps/api/dist/main.js missing after build" && ls -la apps/api/ && exit 1)
 
 # Production stage
 FROM node:20
@@ -33,6 +36,8 @@ LABEL Name="kc-mvp-server" Version="1.5.0"
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 COPY packages/shared-types/package*.json ./packages/shared-types/
+COPY packages/shared-types/tsconfig.json ./packages/shared-types/tsconfig.json
+COPY packages/shared-types/src ./packages/shared-types/src
 
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
