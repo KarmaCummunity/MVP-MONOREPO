@@ -41,16 +41,26 @@ export const useUnreadNotificationsCount = (): number => {
     [selectedUser],
   );
 
+  /** Fire-and-forget: errors are logged inside loadUnreadCount. */
+  const enqueueUnreadCountLoad = useCallback(
+    (force: boolean) => {
+      loadUnreadCount(force).catch(() => {
+        /* errors handled in loadUnreadCount */
+      });
+    },
+    [loadUnreadCount],
+  );
+
   // Load initial count when user changes (always fetch)
   useEffect(() => {
-    void loadUnreadCount(true);
-  }, [selectedUser?.id, loadUnreadCount]);
+    enqueueUnreadCountLoad(true);
+  }, [selectedUser?.id, enqueueUnreadCountLoad]);
 
   // Refresh when screen comes into focus (throttled to reduce API burst)
   useFocusEffect(
     useCallback(() => {
-      void loadUnreadCount(false);
-    }, [loadUnreadCount]),
+      enqueueUnreadCountLoad(false);
+    }, [enqueueUnreadCountLoad]),
   );
 
   // Subscribe to real-time notification events
@@ -67,13 +77,13 @@ export const useUnreadNotificationsCount = (): number => {
 
       // Reload count to ensure accuracy when notifications change
       // This is more reliable than trying to track individual notification states
-      void loadUnreadCount(true);
+      enqueueUnreadCountLoad(true);
     });
 
     return () => {
       unsubscribe?.();
     };
-  }, [selectedUser, loadUnreadCount]);
+  }, [selectedUser, enqueueUnreadCountLoad]);
 
   return unreadCount;
 };

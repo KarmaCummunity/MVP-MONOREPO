@@ -1,6 +1,7 @@
 /**
  * One-off / CI helper: fetch SonarCloud issues and print English priority markdown to stdout.
- * Requires SONAR_TOKEN. Project keys must match sonar-project.properties.
+ * Requires SONAR_TOKEN, SONAR_PROJECT_KEY_API, and SONAR_PROJECT_KEY_MOBILE
+ * (SonarCloud project keys; same values as in each app sonar-project.properties).
  *
  * Optional branch filter: set SONAR_BRANCH to a SonarCloud branch name (e.g. `dev`).
  * Many SonarCloud org/plan tiers return HTTP 403 for `branch` ≠ main on `/api/issues/search`
@@ -143,8 +144,15 @@ function topFiles(byFile, n = 10) {
     .slice(0, n);
 }
 
-const API_KEY = 'KarmaCummunity_KC-MVP-server';
-const MOBILE_KEY = 'KarmaCummunity_MVP';
+const API_KEY = process.env.SONAR_PROJECT_KEY_API?.trim();
+const MOBILE_KEY = process.env.SONAR_PROJECT_KEY_MOBILE?.trim();
+if (!API_KEY || !MOBILE_KEY) {
+  console.error(
+    'Set SONAR_PROJECT_KEY_API and SONAR_PROJECT_KEY_MOBILE to match sonar.projectKey in ' +
+      'apps/api/sonar-project.properties and apps/mobile/sonar-project.properties.',
+  );
+  process.exit(1);
+}
 
 const [apiIssues, mobileIssues] = await Promise.all([
   fetchAllIssues(API_KEY, SONAR_BRANCH),

@@ -9,8 +9,8 @@
   "scripts": {
     "dev:api": "npm run start:dev --workspace @kc/api",
     "dev:api:debug": "npm run start:debug --workspace @kc/api",
-    "dev:mobile": "npm run start --workspace @kc/mobile",
-    "dev:mobile:web": "npm run web --workspace @kc/mobile",
+    "dev:mobile": "EXPO_NO_METRO_WORKSPACE_ROOT=1 npm run start --workspace @kc/mobile",
+    "dev:mobile:web": "EXPO_NO_METRO_WORKSPACE_ROOT=1 npm run web --workspace @kc/mobile",
     "e2e:local": "npm run e2e:local --workspace @kc/mobile",
     "e2e:maestro": "npm run e2e:maestro --workspace @kc/mobile",
     "build": "npm run build --workspaces --if-present",
@@ -33,6 +33,9 @@
   "overrides": {
     "react-native": "0.79.5",
     "ajv": "^8.18.0",
+    "expo-dev-launcher": {
+      "ajv": "^8.18.0"
+    },
     "undici": "^6.24.0",
     "cross-spawn": "^7.0.6",
     "adm-zip": "^0.5.11",
@@ -40,7 +43,10 @@
     "tar": "^7.5.11",
     "fast-xml-parser": "^5.3.6",
     "ws": "^8.18.1",
-    "lodash": "^4.17.23",
+    "lodash": "^4.18.1",
+    "follow-redirects": "1.16.0",
+    "protobufjs": "7.5.5",
+    "picomatch": "^3.0.2",
     "test-exclude": {
       "minimatch": "3.1.3"
     },
@@ -63,6 +69,8 @@
     "react": "19.0.0"
   },
   "devDependencies": {
-    "@types/pg-format": "^1.0.5"
+    "@types/pg-format": "^1.0.5",
+    "follow-redirects": "1.16.0",
+    "protobufjs": "7.5.5"
   }
 }

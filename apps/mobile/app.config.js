@@ -33,6 +33,9 @@ const colors = {
   backgroundTertiary: '#E3F2FD', // Very light blue for highlights
 };
 
+/** ASCII filename only — Metro/tooling can fail on non-Latin paths in monorepo roots. */
+const brandIcon = './assets/images/new_logo_black.png';
+
 
 
 export default {
@@ -41,13 +44,13 @@ export default {
     slug: "karma-community",
     version: APP_VERSION,
     orientation: "portrait",
-    icon: "./assets/images/לוגו_חדש_שחור.png",
+    icon: brandIcon,
     scheme: "karma-community",
     userInterfaceStyle: "automatic",
     // שמירה על primaryColor שהיה ב-app.json
     primaryColor: colors.secondary,
     splash: {
-      image: "./assets/images/לוגו_חדש_שחור.png",
+      image: brandIcon,
       resizeMode: "contain",
       backgroundColor: colors.backgroundTertiary
     },
@@ -78,7 +81,7 @@ export default {
       // (avoids focus loss / layout fights with KeyboardAvoidingView).
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
-        foregroundImage: "./assets/images/לוגו_חדש_שחור.png",
+        foregroundImage: brandIcon,
         backgroundColor: colors.backgroundTertiary
       },
       package: "com.navesarussi1.KarmaCommunity",
@@ -133,7 +136,7 @@ export default {
       [
         "expo-notifications",
         {
-          icon: "./assets/images/לוגו_חדש_שחור.png",
+          icon: brandIcon,
           color: colors.secondary,
           mode: "production",
           androidMode: "default",
