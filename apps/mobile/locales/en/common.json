@@ -188,5 +188,22 @@
     "genderFemale": "Women only",
     "genderMale": "Men only",
     "rideRecurrenceUnitRequired": "Choose how often the recurring ride repeats (day / week / month)."
+  },
+  "tasks": {
+    "status": {
+      "new": "New task",
+      "new_for_you": "A new task was created for you",
+      "open": "Open task",
+      "completed": "Task completed"
+    },
+    "view_details": "View details",
+    "task_completed": "Task completed!"
+  },
+  "task": {
+    "opened_by": "Opened by",
+    "performer": "Assigned to",
+    "unassigned": "Not assigned yet",
+    "duration": "Duration",
+    "delegation_intro": "This task was assigned to you by {{manager}}."
   }
 }

@@ -1,4 +1,4 @@
-import type { FeedItem, FeedRideExtended } from '../types/feed';
+import type { FeedItem, FeedRideExtended, TaskAssignee, TaskData } from '../types/feed';
 import { mapCommunityChallengeFeedFields } from './mapCommunityChallengeFeedFields';
 import { parsePostMetadata } from './parsePostMetadata';
 import { mergeFeedRideExtended, rideExtendedFromRideBlock, rideExtendedFromRideDataJoin } from './rideFeedExtendedFields';
@@ -217,6 +217,48 @@ function normalizePostAuthor(raw: unknown): Record<string, unknown> {
     return {};
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- API task join shape
+function mapApiTaskJoinToTaskData(task: any): TaskData | undefined {
+    if (!task || typeof task !== 'object' || !task.id) {
+        return undefined;
+    }
+    const assigneesRaw = task.assignees;
+    let assignees: TaskAssignee[] | undefined;
+    if (Array.isArray(assigneesRaw)) {
+        assignees = assigneesRaw
+            .filter((a: unknown): a is Record<string, unknown> => !!a && typeof a === 'object')
+            .map((a) => ({
+                id: typeof a.id === 'string' ? a.id : '',
+                name: typeof a.name === 'string' ? a.name : '',
+                avatar: typeof a.avatar === 'string' ? a.avatar : undefined,
+            }))
+            .filter((a) => a.id.length > 0);
+        if (assignees.length === 0) {
+            assignees = undefined;
+        }
+    }
+    const cr = task.creator as Record<string, unknown> | null | undefined;
+    const creator =
+        cr && typeof cr.id === 'string' && cr.id.length > 0
+            ? {
+                  id: cr.id,
+                  name: typeof cr.name === 'string' ? cr.name : '',
+                  avatar: typeof cr.avatar === 'string' ? cr.avatar : undefined,
+              }
+            : undefined;
+
+    return {
+        id: String(task.id),
+        title: String(task.title ?? ''),
+        description: typeof task.description === 'string' ? task.description : undefined,
+        status: String(task.status ?? ''),
+        estimated_hours: typeof task.estimated_hours === 'number' ? task.estimated_hours : undefined,
+        due_date: typeof task.due_date === 'string' ? task.due_date : undefined,
+        assignees,
+        creator,
+    };
+}
+
 /** Maps a single API post row to a FeedItem (home feed). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API row shape
 export function mapApiPostToFeedItem(post: any): FeedItem {
@@ -288,13 +330,7 @@ export function mapApiPostToFeedItem(post: any): FeedItem {
         comments: Number.parseInt(post.comments || '0', 10),
         isLiked: post.is_liked || false,
         timestamp: created,
-        taskData: post.task
-            ? {
-                  id: post.task.id,
-                  title: post.task.title,
-                  status: post.task.status,
-              }
-            : undefined,
+        taskData: mapApiTaskJoinToTaskData(post.task),
         status: itemStatus,
         itemId: finalItemId,
         rideId: post.ride_id || post.ride_data?.id,

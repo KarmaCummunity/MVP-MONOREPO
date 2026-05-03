@@ -25,6 +25,21 @@ export class TasksCreatePrepService {
     });
   }
 
+  /** Dedupe UUID strings while preserving first-seen casing (for PostgreSQL UUID[]). */
+  private dedupeUuidsPreserveOrder(ids: string[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const id of ids) {
+      const n = id.trim().toLowerCase();
+      if (seen.has(n)) {
+        continue;
+      }
+      seen.add(n);
+      out.push(id.trim());
+    }
+    return out;
+  }
+
   async resolveCreateTaskCreatorUuid(
     created_by: string | null | undefined,
   ): Promise<
@@ -57,7 +72,9 @@ export class TasksCreatePrepService {
     assignees: unknown,
     assigneesEmails: unknown,
     createdByUuid: string,
-  ): Promise<string[]> {
+  ): Promise<
+    { success: false; error: string } | { success: true; uuids: string[] }
+  > {
     let assigneeUUIDs: string[] = [];
 
     if (Array.isArray(assigneesEmails) && assigneesEmails.length > 0) {
@@ -78,22 +95,36 @@ export class TasksCreatePrepService {
       }
     } else if (Array.isArray(assignees) && assignees.length > 0) {
       this.logger.log("👥 Processing assignees (POST):", assignees);
-      assigneeUUIDs = assignees as string[];
+      const rawList = assignees.filter(
+        (id): id is string => typeof id === "string" && id.trim().length > 0,
+      );
+      const resolved: string[] = [];
+      for (const raw of rawList) {
+        const uuid = await this.resolveUserIdToUUID(raw.trim());
+        if (!uuid) {
+          return {
+            success: false,
+            error:
+              "Could not resolve one or more assignees to a user profile UUID",
+          };
+        }
+        resolved.push(uuid);
+      }
+      assigneeUUIDs = this.dedupeUuidsPreserveOrder(resolved);
     }
 
     if (assigneeUUIDs.length === 0) {
       this.logger.log(
-        "📋 No assignees provided - setting default (creator + super admin)",
+        "📋 No assignees provided - defaulting assignee to task creator",
       );
       assigneeUUIDs.push(createdByUuid);
-      const superAdminId = await this.permissions.getSuperAdminId();
-      if (superAdminId && superAdminId !== createdByUuid) {
-        assigneeUUIDs.push(superAdminId);
-      }
       this.logger.log("📋 Default assignees set:", assigneeUUIDs);
     }
 
-    return assigneeUUIDs;
+    return {
+      success: true,
+      uuids: this.dedupeUuidsPreserveOrder(assigneeUUIDs),
+    };
   }
 
   async assertCreateTaskAssigneeHierarchy(

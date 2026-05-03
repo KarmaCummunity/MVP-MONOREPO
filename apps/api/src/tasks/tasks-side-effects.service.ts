@@ -5,6 +5,11 @@ import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { ItemsService } from "../items/items.service";
 import { TasksSchemaService } from "./tasks-schema.service";
+import {
+  hasNonCreatorPerformer,
+  isSoloSelfComplete,
+  resolvePerformerIdsForTaskCompletion,
+} from "./task-completion-participants";
 
 /**
  * Notifications, assignment/completion posts, and related cache invalidation.
@@ -19,6 +24,49 @@ export class TasksSideEffectsService {
     private readonly itemsService: ItemsService,
     private readonly schema: TasksSchemaService,
   ) {}
+
+  /** Stable compare for UUID strings from DB vs clients (case / whitespace). */
+  private normalizeUserId(id: string): string {
+    return id.trim().toLowerCase();
+  }
+
+  /** True when at least one assignee is not the task creator (delegation / multi-assignee). */
+  private isDelegatedAssignment(
+    assigneeUUIDs: string[],
+    createdByUuid: string | null,
+  ): boolean {
+    if (!createdByUuid) {
+      return false;
+    }
+    const c = this.normalizeUserId(createdByUuid);
+    return assigneeUUIDs.some((id) => this.normalizeUserId(id) !== c);
+  }
+
+  /**
+   * Unique assignee IDs preserving first-seen casing (for DB writes).
+   * When delegated, drops the creator so they do not get a performer feed post or notification.
+   */
+  private assigneeTargetsExcludingCreatorWhenDelegated(
+    assigneeUUIDs: string[],
+    createdByUuid: string | null,
+    delegated: boolean,
+  ): string[] {
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const raw of assigneeUUIDs) {
+      const n = this.normalizeUserId(raw);
+      if (seen.has(n)) {
+        continue;
+      }
+      seen.add(n);
+      deduped.push(raw);
+    }
+    if (!delegated || !createdByUuid) {
+      return deduped;
+    }
+    const cn = this.normalizeUserId(createdByUuid);
+    return deduped.filter((id) => this.normalizeUserId(id) !== cn);
+  }
 
   async clearTaskCaches(): Promise<void> {
     try {
@@ -174,7 +222,20 @@ export class TasksSideEffectsService {
 
       const postCreatedFor = new Set<string>();
 
-      if (createdByUuid) {
+      const delegatedToOthers = this.isDelegatedAssignment(
+        assigneeUUIDs,
+        createdByUuid,
+      );
+      const performerAssigneeIds =
+        this.assigneeTargetsExcludingCreatorWhenDelegated(
+          assigneeUUIDs,
+          createdByUuid,
+          delegatedToOthers,
+        );
+
+      // Solo / self-work: one "יצרת משימה" card on the creator's profile.
+      // Delegation: only real performers get feed posts — never the opening manager.
+      if (!delegatedToOthers && createdByUuid) {
         await this.insertCreatorAssignmentPostForNewTask(
           newTask,
           createdByUuid,
@@ -185,7 +246,7 @@ export class TasksSideEffectsService {
 
       await this.insertAssigneesAssignmentPostsForNewTask(
         newTask,
-        assigneeUUIDs,
+        performerAssigneeIds,
         postCreatedFor,
         postResults,
       );
@@ -225,11 +286,30 @@ export class TasksSideEffectsService {
       `🔔 Preparing to notify ${assigneeUUIDs.length} assignees...`,
     );
 
-    await this.sendNewTaskNotificationsToAssignees(
-      newTask,
+    const delegatedToOthers = this.isDelegatedAssignment(
       assigneeUUIDs,
-      timestamp,
+      createdByUuid,
     );
+    const notifyAssigneeIds = this.assigneeTargetsExcludingCreatorWhenDelegated(
+      assigneeUUIDs,
+      createdByUuid,
+      delegatedToOthers,
+    );
+
+    const soleSelfAssignment =
+      createdByUuid != null &&
+      assigneeUUIDs.length === 1 &&
+      this.normalizeUserId(assigneeUUIDs[0]) ===
+        this.normalizeUserId(createdByUuid);
+
+    if (!soleSelfAssignment && notifyAssigneeIds.length > 0) {
+      await this.sendNewTaskNotificationsToAssignees(
+        newTask,
+        notifyAssigneeIds,
+        timestamp,
+      );
+    }
+
     await this.createAssignmentPostsForNewTask(
       newTask,
       assigneeUUIDs,
@@ -342,81 +422,171 @@ export class TasksSideEffectsService {
     }
   }
 
-  private async insertCreatorTaskCompletionPost(task: {
-    id: string;
+  /** Copy shown on the performer's profile when a task is marked done. */
+  private performerCompletionPostCopy(task: {
     title: string;
     description: string | null;
-    created_by: string;
-  }): Promise<boolean> {
+  }): { title: string; description: string } {
+    const title = `ביצעתי משימה: ${task.title}`;
+    const description = task.description
+      ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
+      : `השלמתי את המשימה "${task.title}" בהצלחה!`;
+    return { title, description };
+  }
+
+  /**
+   * Turn the existing assignment post into a completion post when possible
+   * (same row → feed continuity); otherwise insert a completion row (legacy / edge cases).
+   */
+  private async finalizePerformerCompletionPost(
+    task: { id: string; title: string; description: string | null },
+    performerId: string,
+  ): Promise<boolean> {
+    const { title, description } = this.performerCompletionPostCopy(task);
     try {
+      const updated = await this.pool.query(
+        `
+        UPDATE posts
+        SET title = $3,
+            description = $4,
+            post_type = 'task_completion',
+            updated_at = NOW()
+        WHERE task_id = $1
+          AND author_id = $2
+          AND post_type = 'task_assignment'
+          AND (
+            title LIKE 'משימה חדשה:%'
+            OR title LIKE 'יצרת משימה חדשה:%'
+          )
+        `,
+        [task.id, performerId, title, description],
+      );
+      if ((updated.rowCount ?? 0) > 0) {
+        this.logger.log(
+          `✅ Assignment post updated to completion for performer ${performerId}`,
+        );
+        return true;
+      }
+
       await this.pool.query(
         `
-                INSERT INTO posts (author_id, task_id, title, description, post_type)
-                VALUES ($1, $2, $3, $4, 'task_completion')
-              `,
-        [
-          task.created_by,
-          task.id,
-          `משימה הושלמה: ${task.title}`,
-          task.description
-            ? `המשימה "${task.title}" הושלמה בהצלחה! ${task.description}`
-            : `המשימה "${task.title}" הושלמה בהצלחה!`,
-        ],
+        INSERT INTO posts (author_id, task_id, title, description, post_type)
+        VALUES ($1, $2, $3, $4, 'task_completion')
+        `,
+        [performerId, task.id, title, description],
       );
       this.logger.log(
-        `✅ Completion post created for creator ${task.created_by}`,
+        `✅ Completion post inserted (no matching assignment row) for performer ${performerId}`,
       );
       return true;
-    } catch (creatorPostError) {
+    } catch (err) {
       this.logger.error(
-        `❌ Failed to create completion post for creator ${task.created_by}:`,
-        creatorPostError,
+        `❌ Failed to finalize completion post for performer ${performerId}:`,
+        err,
       );
       return false;
     }
   }
 
-  private async insertAssigneeTaskCompletionPosts(task: {
-    id: string;
+  /** When assignees finish the task, close the creator's "יצרת משימה" card without implying they performed it. */
+  private creatorMirrorCompletionCopy(task: {
     title: string;
     description: string | null;
-    created_by: string | null;
-    assignees: string[];
-  }): Promise<{ created: number; failed: number }> {
-    let created = 0;
-    let failed = 0;
-    for (const assigneeId of task.assignees) {
-      if (assigneeId === task.created_by) {
-        continue;
-      }
-      try {
-        await this.pool.query(
-          `
-                    INSERT INTO posts (author_id, task_id, title, description, post_type)
-                    VALUES ($1, $2, $3, $4, 'task_completion')
-                  `,
-          [
-            assigneeId,
-            task.id,
-            `ביצעתי משימה: ${task.title}`,
-            task.description
-              ? `השלמתי את המשימה "${task.title}" בהצלחה! ${task.description}`
-              : `השלמתי את המשימה "${task.title}" בהצלחה!`,
-          ],
-        );
-        created++;
-        this.logger.log(
-          `✅ Completion post created for assignee ${assigneeId}`,
-        );
-      } catch (assigneePostError) {
-        failed++;
-        this.logger.error(
-          `❌ Failed to create completion post for assignee ${assigneeId}:`,
-          assigneePostError,
-        );
-      }
+  }): { title: string; description: string } {
+    const title = `המשימה שהוקצתה הושלמה: ${task.title}`;
+    const description = task.description
+      ? `משימה שהקצית הושלמה בהצלחה. ${task.description}`
+      : `משימה שהקצית הושלמה בהצלחה.`;
+    return { title, description };
+  }
+
+  private async finalizeCreatorOpenedTaskPostWhenCompletedByOthers(
+    task: {
+      id: string;
+      title: string;
+      description: string | null;
+      created_by: string | null;
+    },
+    performerIds: string[],
+  ): Promise<boolean> {
+    if (!task.created_by || performerIds.length === 0) {
+      return false;
     }
-    return { created, failed };
+    const completedByAssigneesOtherThanCreator = hasNonCreatorPerformer(
+      performerIds,
+      task.created_by,
+    );
+    if (!completedByAssigneesOtherThanCreator) {
+      return false;
+    }
+
+    const { title, description } = this.creatorMirrorCompletionCopy(task);
+    try {
+      const res = await this.pool.query(
+        `
+        UPDATE posts
+        SET title = $3,
+            description = $4,
+            post_type = 'task_completion',
+            updated_at = NOW()
+        WHERE task_id = $1
+          AND author_id = $2
+          AND post_type = 'task_assignment'
+          AND title LIKE 'יצרת משימה חדשה:%'
+        `,
+        [task.id, task.created_by, title, description],
+      );
+      if ((res.rowCount ?? 0) > 0) {
+        this.logger.log(
+          `✅ Creator assignment post closed after task ${task.id} completion`,
+        );
+        return true;
+      }
+    } catch (err) {
+      this.logger.error(
+        `❌ Failed to close creator assignment post for task ${task.id}:`,
+        err,
+      );
+    }
+    return false;
+  }
+
+  /** Notify task creator when assignees finished the work (not solo self-complete). */
+  private async sendTaskCompletedNotificationToCreator(payload: {
+    id: string;
+    title: string;
+    created_by: string | null;
+    performerIds: string[];
+  }): Promise<void> {
+    const { id, title, created_by: creatorId, performerIds } = payload;
+    if (!creatorId) {
+      return;
+    }
+    const soloSelfComplete = isSoloSelfComplete(performerIds, creatorId);
+    if (soloSelfComplete) {
+      return;
+    }
+
+    try {
+      const timestamp = new Date().toISOString();
+      await this.itemsService.create("notifications", creatorId, randomUUID(), {
+        title: "משימה הושלמה",
+        body: `המשימה "${title}" סומנה כהושלמה`,
+        type: "system",
+        timestamp,
+        read: false,
+        userId: creatorId,
+        data: { taskId: id },
+      });
+      this.logger.log(
+        `✅ Task completion notification sent to creator ${creatorId}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `❌ Failed to notify creator ${creatorId} of task completion`,
+        err,
+      );
+    }
   }
 
   async runUpdateTaskCompletionPosts(task: {
@@ -426,45 +596,56 @@ export class TasksSideEffectsService {
     created_by: string | null;
     assignees: string[] | null;
   }): Promise<void> {
-    const completionPostResults = { created: 0, failed: 0 };
+    const performerIds = resolvePerformerIdsForTaskCompletion(
+      task.assignees ?? [],
+      task.created_by,
+    );
+
+    let finalized = 0;
+    let failed = 0;
 
     try {
       await this.schema.ensurePostsTable();
 
-      this.logger.log(`📝 Creating completion posts for task ${task.id}...`);
+      this.logger.log(`📝 Finalizing completion posts for task ${task.id}...`);
 
-      if (task.created_by) {
-        const ok = await this.insertCreatorTaskCompletionPost({
-          ...task,
-          created_by: task.created_by,
-        });
+      for (const performerId of performerIds) {
+        const ok = await this.finalizePerformerCompletionPost(
+          task,
+          performerId,
+        );
         if (ok) {
-          completionPostResults.created++;
+          finalized++;
         } else {
-          completionPostResults.failed++;
+          failed++;
         }
       }
 
-      if (task.assignees && task.assignees.length > 0) {
-        const assigneeResults = await this.insertAssigneeTaskCompletionPosts({
-          id: task.id,
-          title: task.title,
-          description: task.description,
-          created_by: task.created_by,
-          assignees: task.assignees,
-        });
-        completionPostResults.created += assigneeResults.created;
-        completionPostResults.failed += assigneeResults.failed;
+      const creatorMirrorOk =
+        await this.finalizeCreatorOpenedTaskPostWhenCompletedByOthers(
+          task,
+          performerIds,
+        );
+      if (creatorMirrorOk) {
+        finalized++;
       }
+
+      await this.sendTaskCompletedNotificationToCreator({
+        id: task.id,
+        title: task.title,
+        created_by: task.created_by,
+        performerIds,
+      });
+
       this.logger.log(
-        `📊 Completion post summary: ${completionPostResults.created} created, ${completionPostResults.failed} failed`,
+        `📊 Completion post summary: ${finalized} finalized, ${failed} failed`,
       );
 
-      if (completionPostResults.created > 0) {
+      if (finalized > 0) {
         try {
           await this.clearPostsCaches();
           this.logger.log(
-            "✅ Posts caches cleared after completion post creation",
+            "✅ Posts caches cleared after completion post finalization",
           );
         } catch (cacheErr) {
           this.logger.warn(

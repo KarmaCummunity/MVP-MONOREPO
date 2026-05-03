@@ -17,7 +17,7 @@ export default function ProfileScreen(props: any) {
 
   // On Web, handle refresh (F5) by restoring params from localStorage if route params are missing
   const STORAGE_KEY = 'profileScreenParams';
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && !routeParams && !props?.userId) {
+  if (Platform.OS === 'web' && globalThis.window !== undefined && !routeParams && !props?.userId) {
     // Try to restore from localStorage when route params are missing (after refresh)
     try {
       const stored = localStorage.getItem(STORAGE_KEY);

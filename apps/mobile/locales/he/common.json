@@ -156,6 +156,13 @@
     "view_details": "הצג פרטים",
     "task_completed": "משימה בוצעה!"
   },
+  "task": {
+    "opened_by": "נוצר ע\"י",
+    "performer": "מבצע",
+    "unassigned": "טרם שובץ",
+    "duration": "משך זמן",
+    "delegation_intro": "המשימה הוקצתה אליך על ידי {{manager}}."
+  },
   "give": "לתת",
   "receive": "לקבל",
   "request": "לבקש",
