@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { db } from '../../utils/databaseService';
@@ -23,6 +24,7 @@ export function useItemsScreenData(
   const routeParams = route?.params as RouteParams;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
   const [mode, setMode] = useState(initialMode);
+  const [isModeLoaded, setIsModeLoaded] = useState(false);
 
   const [allItems, setAllItems] = useState<DonationItem[]>([]);
   const [allPosts, setAllPosts] = useState<FeedItem[]>([]);
@@ -37,12 +39,37 @@ export function useItemsScreenData(
   // Otherwise: user taps "offer" → setMode(false) while URL is still "search" → this effect
   // runs (because `mode` changed), reads stale URL, setMode(true) → fight / max update depth.
   useEffect(() => {
-    if (!routeParams?.mode || routeParams.mode === 'undefined' || routeParams.mode === 'null') {
-      return;
-    }
-    const wantsSearch = routeParams.mode === 'search';
-    setMode((prev) => (prev !== wantsSearch ? wantsSearch : prev));
+    const loadMode = async () => {
+      if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
+        const wantsSearch = routeParams.mode === 'search';
+        setMode((prev) => (prev !== wantsSearch ? wantsSearch : prev));
+        setIsModeLoaded(true);
+        return;
+      }
+
+      try {
+        const savedMode = await AsyncStorage.getItem('items_screen_mode');
+        if (savedMode === 'offer') {
+          setMode(false);
+        } else if (savedMode === 'search') {
+          setMode(true);
+        }
+      } catch (e) {
+        console.error('Failed to load items screen mode', e);
+      } finally {
+        setIsModeLoaded(true);
+      }
+    };
+    loadMode();
   }, [routeParams?.mode]);
+
+  useEffect(() => {
+    if (isModeLoaded) {
+      AsyncStorage.setItem('items_screen_mode', mode ? 'search' : 'offer').catch(e => 
+        console.error('Failed to save items screen mode', e)
+      );
+    }
+  }, [mode, isModeLoaded]);
 
   useEffect(() => {
     const newMode = mode ? 'search' : 'offer';

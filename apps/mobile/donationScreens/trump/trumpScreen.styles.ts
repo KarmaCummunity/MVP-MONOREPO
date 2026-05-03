@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import colors from '../../globals/colors';
 import { FontSizes } from '../../globals/constants';
+import { rowDirection } from '../../globals/responsive';
 
 export const trumpScreenStyles = StyleSheet.create({
   safeArea: {
@@ -62,7 +63,7 @@ export const trumpScreenStyles = StyleSheet.create({
   },
   /** Matches search grid `COLUMN_GAP` in TrumpScreen — horizontal space between two cards per row. */
   columnWrapper: {
-    gap: 12,
+    gap: 8,
   },
   offerButton: {
     backgroundColor: colors.accent,
@@ -78,15 +79,24 @@ export const trumpScreenStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
   openRequestsToggle: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
+    flexDirection: rowDirection('row-reverse'),
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     paddingVertical: 8,
     paddingHorizontal: 4,
+    gap: 8,
   },
   recentItemWrapper: {
     marginBottom: 8,
     width: '100%',
+  },
+  gridContainer: {
+    flexDirection: rowDirection('row-reverse'),
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  gridItemWrapper: {
+    marginBottom: 8,
   },
 });

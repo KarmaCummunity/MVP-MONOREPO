@@ -105,6 +105,7 @@ export class TasksListQueryService {
     categoryList: string[] | undefined;
     assignee: string | undefined;
     searchQuery: string | undefined;
+    rootOnly?: boolean;
   }): Promise<{ success: true; data: unknown[] }> {
     const {
       cacheKey,
@@ -116,6 +117,7 @@ export class TasksListQueryService {
       categoryList,
       assignee,
       searchQuery,
+      rootOnly = true,
     } = params;
 
     const filters: string[] = [];
@@ -131,6 +133,14 @@ export class TasksListQueryService {
 
     await this.appendListAssigneeFilter(assignee, filters, sqlParams);
 
+    const hasAnyFilter = !!(
+      (statusList && statusList.length > 0) ||
+      (priorityList && priorityList.length > 0) ||
+      (categoryList && categoryList.length > 0) ||
+      assignee ||
+      searchQuery?.trim()
+    );
+
     if (searchQuery?.trim()) {
       const searchTerm = `%${searchQuery.trim()}%`;
       sqlParams.push(searchTerm);
@@ -138,6 +148,10 @@ export class TasksListQueryService {
       filters.push(
         `(title ILIKE $${searchParamIndex} OR description ILIKE $${searchParamIndex})`,
       );
+    }
+
+    if (!hasAnyFilter && rootOnly) {
+      filters.push("parent_task_id IS NULL");
     }
 
     const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";

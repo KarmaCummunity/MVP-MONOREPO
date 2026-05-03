@@ -419,25 +419,38 @@ export const styles = StyleSheet.create({
   },
   menuOverlay: {
     position: 'absolute',
-    top: 100,
-    left: 16,
+    top: scaleSize(45),
+    right: LAYOUT_CONSTANTS.SPACING.MD,
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 8,
-    ...createShadowStyle(colors.shadow, { width: 0, height: 4 }, 0.2, 8),
+    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.MEDIUM,
+    width: scaleSize(220),
+    padding: LAYOUT_CONSTANTS.SPACING.XS,
+    ...createShadowStyle(colors.shadow, { width: 0, height: 8 }, 0.25, 12),
     zIndex: 1001,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   menuItem: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse', // Align items for Hebrew/RTL feel if needed, but the text is on the left of the icon in current code. 
+    // Actually the current code has icon then text. In RTL it should probably be text then icon? 
+    // Let's stick to consistent direction. 
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: LAYOUT_CONSTANTS.SPACING.MD,
+    paddingVertical: LAYOUT_CONSTANTS.SPACING.MD,
+    borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.SMALL,
   },
   menuItemText: {
     fontSize: FontSizes.body,
     color: colors.textPrimary,
-    marginLeft: 12,
+    marginRight: scaleSize(12),
+    textAlign: 'right',
+    flex: 1,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: scaleSize(4),
+    marginHorizontal: scaleSize(12),
   },
   // Styles for other user's profile
   header: {

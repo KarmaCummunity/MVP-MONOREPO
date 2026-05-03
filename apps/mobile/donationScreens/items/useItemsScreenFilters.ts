@@ -22,6 +22,12 @@ export function useItemsScreenFilters(data: ItemsScreenFilterDataSlice, itemType
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedSorts, setSelectedSorts] = useState<string[]>([]);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    categories: [] as string[],
+    condition: [] as string[],
+    address: '',
+    radius: 10,
+  });
 
   const sortLabels = useMemo(() => buildItemsSortLabels(t), [t]);
   const conditionLabels = useMemo(() => buildItemsConditionFilterLabels(t), [t]);
@@ -41,11 +47,12 @@ export function useItemsScreenFilters(data: ItemsScreenFilterDataSlice, itemType
       searchQuery,
       selectedFilters,
       selectedSorts,
+      advancedFilters,
       sortLabels,
       conditionLabels,
       t,
     }) as FeedItem[];
-  }, [mode, allPosts, allItems, searchQuery, selectedFilters, selectedSorts, sortLabels, conditionLabels, t]);
+  }, [mode, allPosts, allItems, searchQuery, selectedFilters, selectedSorts, advancedFilters, sortLabels, conditionLabels, t]);
 
   const handleSearch = useCallback(
     (query: string, filters: string[] = [], sorts: string[] = []) => {
@@ -60,6 +67,12 @@ export function useItemsScreenFilters(data: ItemsScreenFilterDataSlice, itemType
     setSearchQuery('');
     setSelectedFilters([]);
     setSelectedSorts([]);
+    setAdvancedFilters({
+      categories: [],
+      condition: [],
+      address: '',
+      radius: 10,
+    });
   }, []);
 
   return {
@@ -69,6 +82,8 @@ export function useItemsScreenFilters(data: ItemsScreenFilterDataSlice, itemType
     filterOptions,
     sortOptions,
     filteredPosts,
+    advancedFilters,
+    setAdvancedFilters,
     handleSearch,
     handleClearAll,
   };

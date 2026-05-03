@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Modal, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Modal, SafeAreaView, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import colors from '../../globals/colors';
 import { Ionicons } from '@expo/vector-icons';
 import UserSelector from '../../components/UserSelector';
@@ -54,6 +54,8 @@ export default function AdminTasksScreen() {
     closeHoursModal,
     pendingTask,
     listLoading,
+    loadMore,
+    loading,
   } = useAdminTasksScreen();
 
   return (
@@ -141,6 +143,15 @@ export default function AdminTasksScreen() {
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={true}
           removeClippedSubviews={Platform.OS !== 'web'}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loading && rootTasksForList.length > 0 ? (
+              <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null
+          }
           style={styles.flatList}
         />
       </View>

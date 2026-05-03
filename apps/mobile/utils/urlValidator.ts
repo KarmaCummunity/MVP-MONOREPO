@@ -8,7 +8,7 @@
 const ALLOWED_SCHEMES = ['https:', 'http:'];
 
 /** Allowed schemes for image sources (must be HTTPS in production). */
-const ALLOWED_IMAGE_SCHEMES = ['https:', 'http:'];
+const ALLOWED_IMAGE_SCHEMES = ['https:', 'http:', 'file:', 'data:', 'blob:'];
 
 /**
  * Returns true when the URL is safe to use as an Image source URI.
@@ -16,6 +16,13 @@ const ALLOWED_IMAGE_SCHEMES = ['https:', 'http:'];
  */
 export function isSafeImageUrl(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
+  
+  // Fast check for allowed schemes (more robust for some React Native environments)
+  const lowerUrl = url.toLowerCase().trim();
+  if (ALLOWED_IMAGE_SCHEMES.some(scheme => lowerUrl.startsWith(scheme))) {
+    return true;
+  }
+
   try {
     const parsed = new URL(url);
     return ALLOWED_IMAGE_SCHEMES.includes(parsed.protocol);

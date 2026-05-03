@@ -52,6 +52,7 @@ interface HeaderSectionProps {
   sanitizeSelectedFilters?: (filters: string[]) => string[];
   /** Map filter storage key to chip/modal label; defaults to trump then search i18n keys. */
   formatFilterLabel?: (filterKey: string) => string;
+  onFilterPress?: () => void;
 }
 
 const HeaderComp: React.FC<HeaderSectionProps> = ({
@@ -73,6 +74,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
   initialSelectedSorts,
   sanitizeSelectedFilters,
   formatFilterLabel: formatFilterLabelProp,
+  onFilterPress,
 }) => {
   const { isGuestMode } = useUser();
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -151,6 +153,7 @@ const HeaderComp: React.FC<HeaderSectionProps> = ({
             hideFilterButton={hideFilterButton}
             sanitizeSelectedFilters={sanitizeSelectedFilters}
             formatFilterLabel={formatFilterLabel}
+            onFilterPress={onFilterPress}
           />
         </View>
         {!hideModeToggle && (

@@ -63,7 +63,7 @@ export function ProfileScreenContent(
   const { tabBarHeight, manualParams, forceOtherProfile } = props;
   const route = useRoute();
   const { t } = useTranslation(['profile', 'common']);
-  const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth } = useUser();
+  const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth, signOut } = useUser();
   const navigation = useNavigation();
   const rootNavigation = navigation as NavigationProp<RootStackParamList>;
   const { ToastComponent } = useToast();
@@ -373,7 +373,14 @@ export function ProfileScreenContent(
     </View>
   );
 
-  const safeAvatarUri = sanitiseAvatarUrl(displayUser?.avatar);
+  // Prepare avatar source with validation and fallbacks
+  const avatarUrl = displayUser?.avatar || (displayUser as any)?.avatar_url;
+  const safeAvatarUri = sanitiseAvatarUrl(avatarUrl);
+  
+  if (__DEV__ && avatarUrl && !safeAvatarUri) {
+    logger.warn('ProfileScreenContent', 'Avatar URL rejected by validator', { avatarUrl });
+  }
+
   const avatarSource = safeAvatarUri ? { uri: safeAvatarUri } : defaultLogo;
 
   const handleToggleFollow = useCallback(async () => {
@@ -472,6 +479,7 @@ export function ProfileScreenContent(
     setViewingUser,
     onToggleFollow: handleToggleFollow,
     onOpenChat: handleOpenChat,
+    onSignOut: signOut,
   };
 
   if (!isOwnProfile && !loadingUser && !viewingUser) {

@@ -35,6 +35,8 @@ import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import { useWebMode } from '../stores/webModeStore';
 import { logger } from '../utils/loggerService';
 import TopBarNavigator from './TopBarNavigator';
+import AdminOrgApprovalsScreen from '../screens/admin/AdminOrgApprovalsScreen';
+import OrgDashboardScreen from '../screens/org/OrgDashboardScreen';
 
 import { RootStackParamList } from '../globals/types';
 import { computeMainNavigatorStackKey } from './mainNavigatorStackKey';
@@ -138,9 +140,8 @@ export default function MainNavigator() {
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
           <Stack.Screen name="ChatListScreen" component={ChatListScreen} />
           <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
-          <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
-
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+          <Stack.Screen name="AboutKarmaCommunityScreen" component={AboutKarmaCommunityScreen} />
           <Stack.Screen
             name="AdminDashboard"
             component={AdminDashboardScreen}
@@ -149,6 +150,8 @@ export default function MainNavigator() {
               header: MainNavigatorAdminDashboardHeader,
             }}
           />
+          <Stack.Screen name="AdminOrgApprovalsScreen" component={AdminOrgApprovalsScreen} />
+          <Stack.Screen name="OrgDashboardScreen" component={OrgDashboardScreen} />
         </Stack.Group>
       ) : (
         // ==================================================================

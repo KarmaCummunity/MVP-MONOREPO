@@ -48,7 +48,17 @@ const ComposerTaskForm = forwardRef<ComposerTaskFormHandle, Props>(function Comp
   { visible, userId, onCreated, onSubmittingChange },
   ref,
 ) {
-  const { t } = useTranslation(['common', 'search', 'admin']);
+  const { i18n, t } = useTranslation(['common', 'search', 'admin']);
+  const isRTL = i18n.language === 'he';
+  const textAlign = isRTL ? 'right' : 'left';
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const getFieldStyle = (fieldName: string) => [
+    composerInput,
+    { textAlign },
+    focusedField === fieldName && { borderColor: colors.primary, backgroundColor: colors.white }
+  ];
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
@@ -150,17 +160,23 @@ const ComposerTaskForm = forwardRef<ComposerTaskFormHandle, Props>(function Comp
       showsVerticalScrollIndicator={false}
     >
       <TextInput
-        style={composerInput}
+        style={getFieldStyle('title')}
         placeholder={t('admin:tasks.title')}
+        placeholderTextColor={colors.textTertiary}
         value={title}
         onChangeText={setTitle}
+        onFocus={() => setFocusedField('title')}
+        onBlur={() => setFocusedField(null)}
         editable={!submitting}
       />
       <TextInput
-        style={[composerInput, { minHeight: 72, textAlignVertical: 'top' }]}
+        style={[getFieldStyle('description'), { minHeight: 72, textAlignVertical: 'top' }]}
         placeholder={t('admin:tasks.description')}
+        placeholderTextColor={colors.textTertiary}
         value={description}
         onChangeText={setDescription}
+        onFocus={() => setFocusedField('description')}
+        onBlur={() => setFocusedField(null)}
         multiline
         editable={!submitting}
       />
@@ -200,24 +216,33 @@ const ComposerTaskForm = forwardRef<ComposerTaskFormHandle, Props>(function Comp
       />
 
       <TextInput
-        style={composerInput}
+        style={getFieldStyle('dueDate')}
         placeholder={t('admin:tasks.dueDatePlaceholder')}
+        placeholderTextColor={colors.textTertiary}
         value={dueDate}
         onChangeText={setDueDate}
+        onFocus={() => setFocusedField('dueDate')}
+        onBlur={() => setFocusedField(null)}
         editable={!submitting}
       />
       <TextInput
-        style={composerInput}
+        style={getFieldStyle('tags')}
         placeholder={t('admin:tasks.tags')}
+        placeholderTextColor={colors.textTertiary}
         value={tagsText}
         onChangeText={setTagsText}
+        onFocus={() => setFocusedField('tags')}
+        onBlur={() => setFocusedField(null)}
         editable={!submitting}
       />
       <TextInput
-        style={composerInput}
+        style={getFieldStyle('estimatedHours')}
         placeholder={t('admin:tasks.estimatedHours')}
+        placeholderTextColor={colors.textTertiary}
         value={estimatedHours}
         onChangeText={setEstimatedHours}
+        onFocus={() => setFocusedField('estimatedHours')}
+        onBlur={() => setFocusedField(null)}
         keyboardType="decimal-pad"
         editable={!submitting}
       />
@@ -226,15 +251,15 @@ const ComposerTaskForm = forwardRef<ComposerTaskFormHandle, Props>(function Comp
 });
 
 const composerInput = {
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderRadius: 10,
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  marginBottom: 10,
+  backgroundColor: colors.surfaceGrayBlue,
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  marginBottom: 16,
   color: colors.textPrimary,
-  textAlign: 'right' as const,
-  writingDirection: 'rtl' as const,
+  fontSize: 16,
+  borderWidth: 1,
+  borderColor: 'transparent',
 };
 
 export default ComposerTaskForm;

@@ -41,7 +41,7 @@ export const itemsScreenStyles = StyleSheet.create({
   itemsGridContainer: {},
   /** Matches search grid `COLUMN_GAP` in ItemsScreen — horizontal space between two cards per row. */
   columnWrapper: {
-    gap: 12,
+    gap: 8,
   },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   emptyStateTitle: { fontSize: FontSizes.body, fontWeight: 'bold', color: colors.textPrimary, marginTop: 16, marginBottom: 8 },
@@ -210,5 +210,23 @@ export const itemsScreenStyles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  gridContainer: {
+    flexDirection: rowDirection('row-reverse'),
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  gridItemWrapper: {
+    marginBottom: 8,
+  },
+  openRequestsToggle: {
+    flexDirection: rowDirection('row-reverse'),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    gap: 8,
+    width: '100%',
   },
 });

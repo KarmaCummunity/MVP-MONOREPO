@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import DonationsScreen from "../bottomBarScreens/DonationsScreen";
 import TrumpScreen from "../donationScreens/TrumpScreen";
 import ItemsScreen from "../donationScreens/ItemsScreen";
+import ItemsHistoryScreen from "../donationScreens/items/ItemsHistoryScreen";
 import CommunityChallengesScreen from "../donationScreens/CommunityChallengesScreen";
 import ChallengeDetailsScreen from "../screens/ChallengeDetailsScreen";
 import ChallengeStatisticsScreen from "../screens/ChallengeStatisticsScreen";
@@ -63,6 +64,7 @@ export default function DonationsStack() {
     >
       <Stack.Screen name="DonationsScreen" component={DonationsScreen} />
       <Stack.Screen name="ItemsScreen" component={ItemsScreen} />
+      <Stack.Screen name="ItemsHistoryScreen" component={ItemsHistoryScreen} />
       <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} />
       <Stack.Screen name="TrumpScreen" component={TrumpScreen} />
       <Stack.Screen name="CommunityChallengesScreen" component={CommunityChallengesScreen} />

@@ -54,7 +54,10 @@
       "pickup": "Self pickup",
       "paidDelivery": "Paid delivery",
       "accessibility": "Accessibility",
-      "includeRequests": "Show requests"
+      "includeRequests": "Show requests",
+      "new": "New",
+      "location": "Location & Radius",
+      "radius": "Radius (km)"
     },
     "sorts": {
       "alphabetical": "Alphabetical",
@@ -123,6 +126,13 @@
       "settings": "Settings",
       "help": "Help",
       "contact": "Contact"
+    },
+    "history": {
+      "given": "Given",
+      "received": "Received",
+      "open": "Open",
+      "closed": "Closed",
+      "empty": "No items to show"
     }
   }
 }

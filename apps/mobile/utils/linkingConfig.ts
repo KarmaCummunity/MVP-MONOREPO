@@ -158,7 +158,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
               },
             },
           },
-          
           // Admin Tab (only visible to admins)
           AdminTab: {
             screens: {
@@ -241,7 +240,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       
       // Login Screen
       LoginScreen: 'login',
-      
+
       // Legacy/Inactive Screen
       InactiveScreen: 'inactive',
     },

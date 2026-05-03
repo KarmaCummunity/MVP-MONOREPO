@@ -3,17 +3,18 @@
 // - Reached from: `MainNavigator` route 'HomeStack'.
 // - Provides: Tab bar with custom styling, responsive insets, icons per route; hides tab bar when nested route sets `hideBottomBar` param.
 // - Reads from context: `useUser()` -> `isGuestMode`; tab re-press resets the active tab's nested stack via `buildBottomTabBarResetPreservingOtherTabs` (preserves all tabs — same UX as native bottom bar). Mobile Web tab bar uses safe-area `paddingBottom` + `useWindowDimensions` for resize.
-// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`, `AdminStack` (tab hidden from bar; opened from top bar).
+// - Child stacks: `HomeTabStack`, `SearchTabStack`, `DonationsStack` (DonationsTab only), `CreatePostTabPlaceholder`, `ProfileTabStack`.
 // - Navigation params pattern: nested screens can pass `{ hideBottomBar: true }` to hide tab bar.
 // - External deps: react-navigation/bottom-tabs, Ionicons, responsive helpers, colors/constants; pure tab helpers in `bottomTabNavigationUtils.ts`.
 // BottomNavigator.tsx
 
 import React from "react";
 import { Animated, Easing, View, StyleSheet, Platform, Pressable, useWindowDimensions } from "react-native";
-import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import { createBottomTabNavigator, BottomTabNavigationOptions, BottomTabBarButtonProps, BottomTabBar } from "@react-navigation/bottom-tabs";
 import { PlatformPressable } from "@react-navigation/elements";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, CommonActions, useNavigationState } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 import type { NavigationState } from "@react-navigation/native";
 import type { EdgeInsets } from "react-native-safe-area-context";
 import HomeTabStack from "./HomeTabStack";
@@ -22,7 +23,7 @@ import ProfileTabStack from "./ProfileTabStack";
 import DonationsStack from "./DonationsStack";
 import AdminStack from "./AdminStack";
 import colors from "../globals/colors"; // Adjust path if needed
-import { vw, getScreenInfo, isLandscape, isMobileWeb } from "../globals/responsive";
+import { vw, getScreenInfo, isLandscape } from "../globals/responsive";
 import { LAYOUT_CONSTANTS } from "../globals/constants";
 import { useUser } from "../stores/userStore";
 import { useWebMode } from "../stores/webModeStore";
@@ -165,17 +166,17 @@ function hideDueToSiteMode(mode: string): boolean {
 }
 
 function getHorizontalInset(): number {
-  const { isTablet, isDesktop } = getScreenInfo();
-  if (isDesktop) return vw(20);
+  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
+  if (isLargeDesktop || isDesktop) return vw(18);
   if (isTablet) return vw(10);
   return LAYOUT_CONSTANTS.SPACING.MD;
 }
 
-function getBottomTabBarHeight(landscape: boolean, isDesktop: boolean, isTablet: boolean): number {
-  if (landscape) return 40;
-  if (isDesktop) return 56;
-  if (isTablet) return 54;
-  return 44;
+function getBottomTabBarHeight(landscape: boolean, isDesktop: boolean, isTablet: boolean, isLargeDesktop: boolean): number {
+  if (landscape) return 44;
+  if (isLargeDesktop || isDesktop) return 64;
+  if (isTablet) return 60;
+  return 56; // Increased for a more premium, spacious look
 }
 
 /** Default tab bar buttons use flex-start; align icons toward the bar bottom so the pill sits tighter to the screen edge. */
@@ -187,9 +188,9 @@ function bottomAlignedTabBarButton(props: BottomTabBarButtonProps): React.ReactE
       style={[
         style,
         {
-          justifyContent: "flex-end",
-          paddingTop: 0,
-          paddingBottom: 2,
+          justifyContent: "center", // Center vertically in the bar
+          alignItems: "center",
+          paddingBottom: 4,
         },
       ]}
     />
@@ -259,8 +260,9 @@ function createPostTabBarButton(options: {
   isAdmin: boolean;
   composerCategory: string;
   openComposer: (params?: ComposerOpenArg) => void;
+  t: (key: string) => string;
 }) {
-  const { isAdmin, composerCategory, openComposer } = options;
+  const { isAdmin, composerCategory, openComposer, t } = options;
 
   return function PostTabBarButton(props: BottomTabBarButtonProps): React.ReactElement {
     const p = props as Record<string, unknown>;
@@ -271,7 +273,7 @@ function createPostTabBarButton(options: {
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={isAdmin ? "Create post or admin task" : "Create give or request post"}
+        accessibilityLabel={isAdmin ? t("accessibility.createPostAdmin") : t("accessibility.createPostUser")}
         accessibilityState={accessibilityState}
         testID={testID}
         delayLongPress={delayLongPress}
@@ -280,13 +282,13 @@ function createPostTabBarButton(options: {
         style={({ pressed }) => [
           tabStyle,
           {
-            marginTop: -10,
-            marginBottom: -2,
-            justifyContent: "flex-end",
+            marginTop: -16, // Elevated slightly more for a professional look
+            marginBottom: 0,
+            justifyContent: "center",
             alignItems: "center",
-            minWidth: 56,
-            minHeight: 52,
-            paddingBottom: 0,
+            minWidth: 64,
+            minHeight: 56,
+            paddingBottom: 4,
           },
           Platform.OS === "web" && ({ cursor: "pointer" } as const),
           Platform.OS === "web" && pressed ? { opacity: 0.88 } : null,
@@ -303,16 +305,14 @@ function computeBottomTabScreenOptions(
   mode: string,
   insets: EdgeInsets,
 ): BottomTabNavigationOptions {
+  const { isTablet, isDesktop, isLargeDesktop } = getScreenInfo();
   const activeParams = getActiveNestedParams(route) || {};
   const hideBottomBar = activeParams.hideBottomBar === true;
   const siteModeHidesBar = hideDueToSiteMode(mode);
   const shouldHideTabBar = hideBottomBar || siteModeHidesBar;
   const horizontalInset = getHorizontalInset();
-  const { isTablet, isDesktop } = getScreenInfo();
   const landscape = isLandscape();
-  const barHeight = getBottomTabBarHeight(landscape, isDesktop, isTablet);
-  const webMobile = Platform.OS === "web" && isMobileWeb();
-  const tabBarBottomInset = webMobile ? Math.max(insets.bottom, 4) : 0;
+  const barHeight = getBottomTabBarHeight(landscape, isDesktop, isTablet, isLargeDesktop);
   const routeName = route.name;
 
   return {
@@ -322,7 +322,7 @@ function computeBottomTabScreenOptions(
         routeName={routeName}
         focused={focused}
         color={color}
-        size={size}
+        size={size + 4} // Slightly larger for better visibility and premium feel
       />
     ),
     tabBarActiveTintColor: colors.bottomNavActive,
@@ -333,12 +333,13 @@ function computeBottomTabScreenOptions(
       position: "absolute",
       left: horizontalInset,
       right: horizontalInset,
-      bottom: 0,
+      bottom: Math.max(insets.bottom, 12), // Float the bar above the bottom for a modern dock look
       borderRadius: LAYOUT_CONSTANTS.BORDER_RADIUS.XLARGE,
       elevation: LAYOUT_CONSTANTS.SHADOW.MEDIUM.elevation,
-      height: barHeight + tabBarBottomInset,
-      paddingBottom: tabBarBottomInset,
+      height: barHeight,
+      paddingHorizontal: 24, // Equalize gaps from edges and between icons
       backgroundColor: colors.cardBackground,
+      borderTopWidth: 0, // Remove the default top border for a cleaner look
       display: shouldHideTabBar ? ("none" as const) : ("flex" as const),
       ...tabBarZIndexWhenVisible(shouldHideTabBar),
       ...webTabBarPointerStyles(shouldHideTabBar),
@@ -369,14 +370,17 @@ export default function BottomNavigator(): React.ReactElement {
     ),
   );
 
+  const { t } = useTranslation('common');
+
   const createPostTabBarButtonEl = React.useMemo(
     () =>
       createPostTabBarButton({
         isAdmin,
         composerCategory,
         openComposer,
+        t,
       }),
-    [isAdmin, composerCategory, openComposer],
+    [isAdmin, composerCategory, openComposer, t],
   );
 
   // Log when the navigator receives focus (periodic to avoid log spam).
@@ -438,6 +442,35 @@ export default function BottomNavigator(): React.ReactElement {
     <Tab.Navigator
       id={undefined}
       initialRouteName="HomeScreen"
+      tabBar={(props) => {
+        // Professional fix: filter out AdminTab from the rendered bar so it doesn't take up any space.
+        // This keeps the bar identical for all users while keeping the bottom bar visible in admin screens.
+        // We must also adjust the index to avoid "Cannot read properties of undefined (reading 'key')" crash
+        // when the active route is the one we filtered out (AdminTab).
+        const { state } = props;
+        const adminIndex = state.routes.findIndex((r) => r.name === 'AdminTab');
+        const filteredRoutes = state.routes.filter((r) => r.name !== 'AdminTab');
+
+        let newIndex = state.index;
+        if (adminIndex !== -1) {
+          if (state.index === adminIndex) {
+            // When on AdminTab (which is filtered out), we point the index to HomeScreen
+            // so that BottomTabBar doesn't crash trying to access routes[index].
+            const homeIdx = filteredRoutes.findIndex((r) => r.name === 'HomeScreen');
+            newIndex = homeIdx !== -1 ? homeIdx : 0;
+          } else if (state.index > adminIndex) {
+            // Shift index if AdminTab was before the current tab
+            newIndex--;
+          }
+        }
+
+        const filteredState = {
+          ...state,
+          routes: filteredRoutes,
+          index: newIndex,
+        };
+        return <BottomTabBar {...props} state={filteredState as any} />;
+      }}
       screenOptions={({ route }): BottomTabNavigationOptions =>
         computeBottomTabScreenOptions(
           route as NestedRouteLike & { name: keyof BottomTabNavigatorParamList },
@@ -492,14 +525,12 @@ export default function BottomNavigator(): React.ReactElement {
           component={AdminStack}
           options={{ 
             tabBarButton: () => null,
-            tabBarItemStyle: { display: 'none' }
           }}
           listeners={({ navigation, route }) => ({
             tabPress: (e) => handleTabPress(e, navigation, route.name),
           })}
         />
       )}
-
     </Tab.Navigator>
     <CreatePostComposerModal />
     </>

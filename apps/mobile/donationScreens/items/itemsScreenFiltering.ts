@@ -84,6 +84,7 @@ function getFilteredPostsForItemsSearchMode(
   selectedFilters: string[],
   selectedSorts: string[],
   sortLabels: ItemsScreenSortLabels,
+  advancedFilters: { categories: string[]; condition: string[]; address: string; radius: number } | undefined,
   t: ItemsScreenTranslate,
 ): FeedItem[] {
   let filtered = [...allPosts];
@@ -111,6 +112,22 @@ function getFilteredPostsForItemsSearchMode(
     });
   }
 
+  // Advanced Filters
+  if (advancedFilters) {
+    if (advancedFilters.categories.length > 0) {
+      filtered = filtered.filter((p) => p.category && advancedFilters.categories.includes(p.category));
+    }
+    if (advancedFilters.condition.length > 0) {
+      filtered = filtered.filter((p) => p.condition && advancedFilters.condition.includes(p.condition));
+    }
+    if (advancedFilters.address) {
+      const addr = advancedFilters.address.toLowerCase();
+      filtered = filtered.filter((p) =>
+        (p.city || '').toLowerCase().includes(addr) || (p.address || '').toLowerCase().includes(addr)
+      );
+    }
+  }
+
   const selectedSort = selectedSorts[0];
   if (selectedSort === sortLabels.alphabetical) {
     filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
@@ -130,6 +147,7 @@ function getFilteredDonationItemsOfferMode(
   selectedSorts: string[],
   sortLabels: ItemsScreenSortLabels,
   conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>,
+  advancedFilters: { categories: string[]; condition: string[]; address: string; radius: number } | undefined,
   t: ItemsScreenTranslate,
 ): DonationItem[] {
   let filtered = [...allItems];
@@ -187,6 +205,22 @@ function getFilteredDonationItemsOfferMode(
     });
   }
 
+  // Advanced Filters
+  if (advancedFilters) {
+    if (advancedFilters.categories.length > 0) {
+      filtered = filtered.filter((i) => i.category && advancedFilters.categories.includes(i.category));
+    }
+    if (advancedFilters.condition.length > 0) {
+      filtered = filtered.filter((i) => i.condition && advancedFilters.condition.includes(i.condition));
+    }
+    if (advancedFilters.address) {
+      const addr = advancedFilters.address.toLowerCase();
+      filtered = filtered.filter((i) =>
+        (i.city || '').toLowerCase().includes(addr) || (i.address || '').toLowerCase().includes(addr)
+      );
+    }
+  }
+
   const selectedSort = selectedSorts[0];
   if (selectedSort === sortLabels.alphabetical) {
     filtered.sort((a, b) => a.title.localeCompare(b.title, 'he'));
@@ -205,9 +239,9 @@ export function getFilteredItemsForItemsScreen(params: {
   mode: boolean;
   allPosts: FeedItem[];
   allItems: DonationItem[];
-  searchQuery: string;
   selectedFilters: string[];
   selectedSorts: string[];
+  advancedFilters?: { categories: string[]; condition: string[]; address: string; radius: number };
   sortLabels: ItemsScreenSortLabels;
   conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>;
   t: ItemsScreenTranslate;
@@ -219,6 +253,7 @@ export function getFilteredItemsForItemsScreen(params: {
     searchQuery,
     selectedFilters,
     selectedSorts,
+    advancedFilters,
     sortLabels,
     conditionLabels,
     t,
@@ -231,6 +266,7 @@ export function getFilteredItemsForItemsScreen(params: {
       selectedFilters,
       selectedSorts,
       sortLabels,
+      advancedFilters,
       t,
     );
   }
@@ -242,6 +278,7 @@ export function getFilteredItemsForItemsScreen(params: {
     selectedSorts,
     sortLabels,
     conditionLabels,
+    advancedFilters,
     t,
   );
 }

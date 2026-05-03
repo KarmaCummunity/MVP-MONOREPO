@@ -1,6 +1,6 @@
 // File overview:
 // - Purpose: Stack navigator for admin screens (dashboard, money management, people, review) and top bar screens.
-// - Reached from: `BottomNavigator` -> Tab 'AdminTab' (only visible to admins).
+// - Reached from: `MainNavigator` -> `AdminStack` (accessed via TopBarNavigator, only visible to admins).
 // - Provides: Admin dashboard and management screens, plus top bar screens (Settings, Notifications, About, Chat screens). Marketing landing opens via `navigateToAuthenticatedLandingSite` on Home tab only.
 // - Header: Uses `TopBarNavigator`; can be hidden per-screen with route param `hideTopBar`.
 import React from "react";

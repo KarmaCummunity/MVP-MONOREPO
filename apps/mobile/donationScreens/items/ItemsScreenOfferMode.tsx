@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   Image,
   Modal,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import type { RefObject } from 'react';
 import type { ItemsScreenTranslate } from './itemsScreenFiltering';
@@ -17,10 +17,10 @@ import ScrollContainer from '../../components/ScrollContainer';
 import AddLinkComponent from '../../components/AddLinkComponent';
 import PostReelItem from '../../components/Feed/PostReelItem';
 import type { FeedItem } from '../../types/feed';
+import { computeFeedCellWidth } from '../../utils/feedLayout';
 import { ITEM_CATEGORY_DEFS } from './itemCategoryDefs';
 import type { ItemType } from './itemsScreen.types';
 import { itemsScreenStyles } from './itemsScreen.styles';
-import { logger } from '../../utils/loggerService';
 
 type Styles = typeof itemsScreenStyles;
 
@@ -93,7 +93,9 @@ export function ItemsScreenOfferMode({
   onPostClosed,
   onPostPress,
 }: ItemsScreenOfferModeProps) {
-  const { width } = Dimensions.get('window');
+  const { width } = useWindowDimensions();
+  const [gridWidth, setGridWidth] = useState(0);
+  const [recentItemsExpanded, setRecentItemsExpanded] = useState(false);
 
   const conditionOpts: { key: 'new' | 'like_new' | 'used' | 'for_parts'; labelKey: string }[] = [
     { key: 'new', labelKey: 'donationScreen.offer.conditionNew' },
@@ -110,27 +112,48 @@ export function ItemsScreenOfferMode({
       showsVerticalScrollIndicator={false}
     >
       <View style={s.formContainer}>
-        <TouchableOpacity style={s.section} onPress={onToggleOpenRequests}>
-          <Text style={s.sectionTitle}>{t('donationScreen.offer.openRequestsList')}</Text>
-          <Text style={s.emptyStateText}>{openRequestsExpanded ? '▲' : '▼'}</Text>
+        <TouchableOpacity style={s.openRequestsToggle} onPress={onToggleOpenRequests}>
+          <Text style={[s.sectionTitle, { marginBottom: 0, textAlign: 'right' }]}>{t('donationScreen.offer.openRequestsList')}</Text>
+          <Icon name={openRequestsExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
         </TouchableOpacity>
         {openRequestsExpanded && (
-          <View style={s.section}>
+          <View style={[s.section, { width: '100%' }]}>
             {openRequestPosts.length === 0 ? (
               <Text style={s.emptyStateText}>{t('donationScreen.offer.noOpenRequests')}</Text>
             ) : (
-              openRequestPosts.map((post) => (
-                <View key={post.id} style={s.recentItemWrapper}>
-                  <PostReelItem
-                    item={post}
-                    cardWidth={width - 64}
-                    numColumns={1}
-                    onPress={onPostPress}
-                    onMorePress={onMorePress}
-                    onPostClosed={onPostClosed}
-                  />
-                </View>
-              ))
+              <View
+                style={s.gridContainer}
+                onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+              >
+                {gridWidth > 0 &&
+                  openRequestPosts.map((post, index) => {
+                    const itemWidth =
+                      Math.floor(
+                        computeFeedCellWidth({
+                          windowWidth: gridWidth,
+                          horizontalPadding: 0,
+                          numColumns: 2,
+                          columnGap: 8,
+                        })
+                      ) - 1;
+                    const isEven = index % 2 === 0;
+                    return (
+                      <View
+                        key={post.id}
+                        style={[s.gridItemWrapper, { width: itemWidth, marginLeft: isEven ? 0 : 8 }]}
+                      >
+                        <PostReelItem
+                          item={post}
+                          cardWidth={itemWidth}
+                          numColumns={2}
+                          onPress={onPostPress}
+                          onMorePress={onMorePress}
+                          onPostClosed={onPostClosed}
+                        />
+                      </View>
+                    );
+                  })}
+              </View>
             )}
           </View>
         )}
@@ -300,35 +323,40 @@ export function ItemsScreenOfferMode({
           <Text style={s.offerButtonText}>{t('donationScreen.offer.publishButton')}</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>{t('donationScreen.offer.recentSectionTitle')}</Text>
-        {recentPosts.length === 0 ? (
-          <Text style={s.emptyStateText}>{t('donationScreen.offer.noRecentPosts')}</Text>
-        ) : (
-          <View style={s.recentContainer}>
-            {recentPosts.map((post) => {
-              const totalPadding = 16 + 16 + 8;
-              const recentCardWidth = width - totalPadding * 2;
-              return (
-                <View key={post.id} style={s.recentItemWrapper}>
-                  <PostReelItem
-                    item={post}
-                    cardWidth={recentCardWidth}
-                    numColumns={1}
-                    onPress={onPostPress}
-                    onCommentPress={(feedItem) => {
-                      logger.debug('ItemsScreenOfferMode', 'Comment pressed', { feedItemId: feedItem.id });
-                    }}
-                    onMorePress={onMorePress}
-                    onPostClosed={onPostClosed}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
+      <TouchableOpacity
+        style={s.openRequestsToggle}
+        onPress={() => setRecentItemsExpanded((prev) => !prev)}
+        activeOpacity={0.7}
+      >
+        <Text style={[s.sectionTitle, { marginBottom: 0, textAlign: 'right' }]}>{t('donationScreen.offer.recentSectionTitle')}</Text>
+        <Icon name={recentItemsExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
+      </TouchableOpacity>
+      {recentItemsExpanded && (
+        <View style={s.section}>
+          {recentPosts.length === 0 ? (
+            <Text style={s.emptyStateText}>{t('donationScreen.offer.noRecentPosts')}</Text>
+          ) : (
+            <View style={s.recentContainer}>
+              {recentPosts.map((post) => {
+                const totalPadding = 16 + 16 + 8;
+                const recentCardWidth = width - totalPadding * 2;
+                return (
+                  <View key={post.id} style={s.recentItemWrapper}>
+                    <PostReelItem
+                      item={post}
+                      cardWidth={recentCardWidth}
+                      numColumns={1}
+                      onPress={onPostPress}
+                      onMorePress={onMorePress}
+                      onPostClosed={onPostClosed}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={s.section}>
         <Text style={s.sectionTitle}>{t('donationScreen.offer.usefulLinks')}</Text>

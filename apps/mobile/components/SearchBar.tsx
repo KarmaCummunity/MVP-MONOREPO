@@ -44,6 +44,7 @@ interface SearchBarProps {
   sanitizeSelectedFilters?: (filters: string[]) => string[];
   /** Map filter option id/label to display text (screen supplies i18n; default: trump then search keys). */
   formatFilterLabel?: (filterKey: string) => string;
+  onFilterPress?: () => void;
 }
 
 const SearchBar = ({
@@ -65,6 +66,7 @@ const SearchBar = ({
   hideFilterButton = false,
   sanitizeSelectedFilters,
   formatFilterLabel: formatFilterLabelProp,
+  onFilterPress,
 }: SearchBarProps) => {
   const [searchText, setSearchText] = useState(() => initialSearchText ?? "");
   const { t } = useTranslation(['search', 'common', 'trump']);
@@ -342,7 +344,7 @@ const SearchBar = ({
         {!hideFilterButton && (
           <TouchableOpacity
             style={localStyles.buttonContainer}
-            onPress={() => setIsFilterModalVisible(true)}
+            onPress={() => onFilterPress ? onFilterPress() : setIsFilterModalVisible(true)}
           >
             <Text style={localStyles.buttonText}>{t('search:filterTitle')}</Text>
           </TouchableOpacity>
