@@ -21,6 +21,7 @@ import { apiService } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { pickDocument, validateFile, FileData, formatFileSize } from '../../utils/fileService';
 import { uploadFileWithProgress, buildAdminFilePath } from '../../utils/storageService';
+import { generateId } from '../../utils/chat/id';
 import { isSafeExternalUrl } from '../../utils/urlValidator';
 
 type AdminFilesScreenProps = Readonly<{
@@ -125,8 +126,7 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
         setUploadProgress(0);
 
         try {
-            // Generate file ID
-            const fileId = `file_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+            const fileId = generateId('file');
             
             // Build file path in Firebase Storage
             const fullPath = buildAdminFilePath(currentFolder, fileId, selectedFile.name);

@@ -4,28 +4,73 @@
  * before being used as Image sources or in Linking.openURL().
  */
 
-/** Allowed schemes for safe external links. */
-const ALLOWED_SCHEMES = ['https:', 'http:'];
+/** Allowed schemes for safe external links (http only in dev builds). */
+const ALLOWED_SCHEMES_RELEASE = ['https:'];
+const ALLOWED_SCHEMES_DEV = ['https:', 'http:'];
 
-/** Allowed schemes for image sources (must be HTTPS in production). */
-const ALLOWED_IMAGE_SCHEMES = ['https:', 'http:', 'file:', 'data:', 'blob:'];
+/** Allowed schemes for image sources; remote http only in dev builds. */
+const ALLOWED_IMAGE_SCHEMES_REMOTE_RELEASE = ['https:'];
+const ALLOWED_IMAGE_SCHEMES_REMOTE_DEV = ['https:', 'http:'];
+const ALLOWED_IMAGE_LOCAL_SCHEMES = ['file:', 'data:', 'blob:'];
+
+function allowInsecureHttp(): boolean {
+  return typeof __DEV__ !== 'undefined' && __DEV__;
+}
+
+function remoteImageSchemes(): readonly string[] {
+  return allowInsecureHttp()
+    ? ALLOWED_IMAGE_SCHEMES_REMOTE_DEV
+    : ALLOWED_IMAGE_SCHEMES_REMOTE_RELEASE;
+}
+
+function externalLinkSchemes(): readonly string[] {
+  return allowInsecureHttp()
+    ? ALLOWED_SCHEMES_DEV
+    : ALLOWED_SCHEMES_RELEASE;
+}
+
+/**
+ * Prefer https for persisted/opened links in release builds (cleartext HTTP hotspot mitigation).
+ */
+export function preferHttpsUrl(url: string): string {
+  const trimmed = url.trim();
+  if (allowInsecureHttp()) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:') {
+      parsed.protocol = 'https:';
+      return parsed.toString();
+    }
+  } catch {
+    return trimmed;
+  }
+  return trimmed;
+}
 
 /**
  * Returns true when the URL is safe to use as an Image source URI.
- * Accepts only http/https URLs. Falls back to false on any parsing error.
+ * Accepts https (release), http only in dev, plus file/data/blob. Falls back to false on parse errors.
  */
 export function isSafeImageUrl(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
-  
-  // Fast check for allowed schemes (more robust for some React Native environments)
+
   const lowerUrl = url.toLowerCase().trim();
-  if (ALLOWED_IMAGE_SCHEMES.some(scheme => lowerUrl.startsWith(scheme))) {
+  const remote = remoteImageSchemes();
+  if (remote.some((scheme) => lowerUrl.startsWith(scheme))) {
+    return true;
+  }
+  if (ALLOWED_IMAGE_LOCAL_SCHEMES.some((scheme) => lowerUrl.startsWith(scheme))) {
     return true;
   }
 
   try {
     const parsed = new URL(url);
-    return ALLOWED_IMAGE_SCHEMES.includes(parsed.protocol);
+    if (ALLOWED_IMAGE_LOCAL_SCHEMES.includes(parsed.protocol)) {
+      return true;
+    }
+    return remote.includes(parsed.protocol);
   } catch {
     return false;
   }
@@ -42,13 +87,13 @@ export function sanitiseAvatarUrl(url: string | null | undefined): string | null
 
 /**
  * Returns true when the URL is safe to pass to Linking.openURL().
- * Only http and https URLs are allowed.
+ * Release builds allow https only; dev builds also allow http (e.g. local tooling).
  */
 export function isSafeExternalUrl(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
   try {
     const parsed = new URL(url);
-    return ALLOWED_SCHEMES.includes(parsed.protocol);
+    return externalLinkSchemes().includes(parsed.protocol);
   } catch {
     return false;
   }

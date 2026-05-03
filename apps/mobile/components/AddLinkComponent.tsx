@@ -20,7 +20,7 @@ import { apiService } from '../utils/apiService';
 import { mapKnowledgeCommunityLinkApiError } from './knowledgeDonationApiMessages';
 import { toastService } from '../utils/toastService';
 import { useFocusEffect } from '@react-navigation/native';
-import { isSafeExternalUrl } from '../utils/urlValidator';
+import { isSafeExternalUrl, preferHttpsUrl } from '../utils/urlValidator';
 
 interface AddLinkComponentProps {
   onLinkAdded?: (link: any) => void;
@@ -143,7 +143,7 @@ export default function AddLinkComponent({
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = 'https://' + formattedUrl;
     }
-    return formattedUrl;
+    return preferHttpsUrl(formattedUrl);
   };
 
   type SavedLinkPayload = {

@@ -70,6 +70,9 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
     const controller = new AbortController();
 
     const checkUrl = async (url: string): Promise<boolean> => {
+      if (!isSafeExternalUrl(url)) {
+        return false;
+      }
       try {
         const timeout = setTimeout(() => controller.abort(), 5000);
         // Some servers block HEAD; try HEAD then GET fallback
