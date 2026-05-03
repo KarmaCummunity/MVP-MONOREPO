@@ -1,6 +1,3 @@
-export type PostType = 'post' | 'reel' | 'task_post';
-export type TaskSubtype = 'task_assignment' | 'task_completion' | string;
-
 export interface FeedUser {
     id: string;
     name?: string | null;
@@ -26,6 +23,26 @@ export interface TaskData {
     assignees?: TaskAssignee[];
 }
 
+/** Rich ride / trump fields from API `ride_data` or `metadata.ride` (post detail & feed). */
+export interface FeedRideExtended {
+  /** Free-text notes stored on `metadata.ride` (dedicated trump) or ride description (offers). */
+  notes?: string;
+  /** Parsed from `rides.requirements` (comma-separated codes). */
+  requirementCodes?: string[];
+  isRecurring?: boolean;
+  recurrenceFrequency?: number;
+  recurrenceUnit?: string | null;
+  fuelParticipation?: string;
+  fuelMaxNis?: number;
+  smokingPreference?: string;
+  genderPreference?: string;
+  preferences?: {
+    noSmoking?: boolean;
+    petsAllowed?: boolean;
+    kidsFriendly?: boolean;
+  };
+}
+
 /** Snapshot for community challenge feed posts (from API join or post metadata). */
 export interface ChallengeFeedData {
     id?: string;
@@ -40,8 +57,9 @@ export interface ChallengeFeedData {
 
 export interface FeedItem {
     id: string;
-    type: PostType;
-    subtype?: TaskSubtype;
+    type: 'post' | 'reel' | 'task_post';
+    /** API `post_type` / subtype (e.g. task_assignment, task_completion, ride, donation). */
+    subtype?: string;
 
     // Content
     title: string;
@@ -77,6 +95,9 @@ export interface FeedItem {
     time?: string;
     seats?: number;
     price?: number;
+
+    /** Recurrence, fuel, smoking, gender, tags — from `metadata.ride` or ride join. */
+    rideExtended?: FeedRideExtended;
 
     // Item specific (optional)
     category?: string;

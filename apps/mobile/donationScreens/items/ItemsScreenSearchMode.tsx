@@ -43,11 +43,6 @@ export function ItemsScreenSearchMode({
         <Text style={s.offerButtonText}>{t('donationScreen.search.requestCta')}</Text>
       </TouchableOpacity>
       <View style={s.headerRow}>
-        <Text style={s.sectionTitle}>
-          {searchQuery || selectedFilters.length > 0
-            ? t('donationScreen.search.sectionFiltered')
-            : t('donationScreen.search.sectionRecommended')}
-        </Text>
         {Boolean(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
           <TouchableOpacity style={s.clearButton} onPress={onClearAll}>
             <Text style={s.clearButtonText}>{t('donationScreen.search.clearAll')}</Text>

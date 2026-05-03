@@ -1,25 +1,10 @@
 // File overview:
-// - Purpose: Entry screen for the Donations tab, surfacing category shortcuts (Popular/For You/All) and quick actions.
+// - Purpose: Entry screen for the Donations tab, surfacing category shortcuts and quick actions.
 // - Reached from: `DonationsStack` -> initial route 'DonationsScreen'.
-// - Provides: Navigation to category screens, tracks category analytics, persists recent categories, shows footer stats.
+// - Provides: Navigation to category screens, category analytics, footer stats (placeholders until API).
 // - Reads from context: `useUser()` -> isGuestMode, isRealAuth for behaviour and analytics source.
-// - Storage/services: AsyncStorage for recents; `EnhancedStatsService` or legacy `restAdapter` for analytics, `USE_BACKEND` switch.
+// - Storage/services: `EnhancedStatsService` or legacy `restAdapter` for analytics, `USE_BACKEND` switch.
 // - Params: None required; navigation uses route names listed in `BASE_CATEGORIES` mapping.
-
-// TODO: CRITICAL - This file is extremely long (871 lines). Split into smaller components:
-//   - CategoryGrid component for category layout
-//   - CategoryCard component for individual categories  
-//   - RecentCategoriesSection component
-//   - PopularCategoriesSection component
-//   - CategoryAnalytics service for tracking
-// TODO: Remove hardcoded category data - move to configuration service
-// TODO: Add comprehensive error handling for all async operations
-// TODO: Implement proper loading states and skeleton screens
-// TODO: Add comprehensive TypeScript interfaces instead of basic types
-// TODO: Replace fake data with real backend integration
-// TODO: Add proper caching mechanism for categories and analytics
-// TODO: Implement proper accessibility for all interactive elements
-// TODO: Add comprehensive unit tests for all category logic
 import { logger } from '../utils/loggerService';
 // Removed console.log statements - using proper logging service
 import React, { useCallback } from 'react';
@@ -35,7 +20,7 @@ import {
   Dimensions,
 } from 'react-native';
 import ScrollContainer from '../components/ScrollContainer';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { NavigationProp, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,10 +38,6 @@ import { EnhancedStatsService } from '../utils/statsService';
 import { USE_BACKEND } from '../utils/dbConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Placeholder datasets (purged demo) – replace with real API data
-const donations: any[] = [];
-const charities: any[] = [];
-
 interface DonationsScreenProps {
   navigation: NavigationProp<DonationsStackParamList>;
 }
@@ -65,11 +46,6 @@ const ANALYTICS_USER_ID = 'global';
 const ANALYTICS_COLLECTION = 'analytics';
 const ANALYTICS_ITEM_PREFIX = 'category:';
 
-// TODO: URGENT - Move this hardcoded configuration to proper data service
-// TODO: Implement proper category management system with backend sync
-// TODO: Add internationalization for category names and descriptions
-// TODO: Create proper category icon management system
-// TODO: Add category access control and permissions
 /** Donation tab categories shown on DonationsScreen (subset per product scope). */
 const BASE_CATEGORIES = [
   { id: 'items',      icon: 'cube-outline',        color: colors.secondary, bgColor: colors.pinkLight, screen: 'ItemsScreen' },
@@ -81,18 +57,29 @@ type CategoryId = typeof BASE_CATEGORIES[number]['id'];
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+function getPrimaryCardWidth(
+  platformOs: typeof Platform.OS,
+  isDesktopScreen: boolean,
+  isTabletScreen: boolean,
+  landscapeMode: boolean,
+): string {
+  if (platformOs === 'web') {
+    if (isDesktopScreen) return '22%';
+    if (isTabletScreen) return '30%';
+    return '45%';
+  }
+  if (isTabletScreen || landscapeMode) return '30%';
+  return '45%';
+}
+
 const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
-  // TODO: Extract state management to custom hooks (useDonationsState, useCategoryAnalytics)
-  // TODO: Implement proper state validation and error boundaries
-  // TODO: Add comprehensive performance optimization with React.memo and useMemo
-  // TODO: Remove Hebrew comment - implement proper internationalization
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const { isGuestMode, isRealAuth } = useUser();
   const { t } = useTranslation(['donations','common']);
 
-  // חישוב מידות responsive לכרטיסים
+  // Responsive layout for category cards
   const { isTablet: isTabletScreen, isDesktop: isDesktopScreen } = getScreenInfo();
   const landscapeMode = isLandscape();
   
@@ -122,10 +109,10 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
         const itemId = `${ANALYTICS_ITEM_PREFIX}${categoryId}`;
         const existing = await restAdapter.read<any>(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId).catch(() => null);
         const next = { id: itemId, categoryId, count: Number(existing?.count ?? 0) + 1, updatedAt: new Date().toISOString() };
-        if (!existing) {
-          await restAdapter.create(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId, next);
-        } else {
+        if (existing) {
           await restAdapter.update(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId, next);
+        } else {
+          await restAdapter.create(ANALYTICS_COLLECTION, ANALYTICS_USER_ID, itemId, next);
         }
       }
     } catch (e) {
@@ -160,7 +147,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     .filter((c): c is typeof BASE_CATEGORIES[number] => Boolean(c));
 
   const otherCategories = BASE_CATEGORIES.filter(
-    (c) => !primaryCategoryIds.includes(c.id as CategoryId)
+    (c) => !primaryCategoryIds.includes(c.id)
   );
   
   logger.info('DonationsScreen', 'Categories organized', {
@@ -168,12 +155,10 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
     other: otherCategories.length,
   });
 
-  // חישוב מידות responsive לכרטיסים
   const iconSize = responsiveSpacing(48, 56, 64);
   const iconInnerSize = responsiveSpacing(32, 40, 48);
   const cardGap = responsiveSpacing(12, 16, 24);
   const sectionPadding = responsiveSpacing(20, 28, 36);
-  // ריווח responsive לסעיף השני - גדל עם המסך
   const otherCategoriesGap = responsiveSpacing(12, 20, 28);
 
   return (
@@ -182,21 +167,17 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
       {isGuestMode && <GuestModeNotice showLoginButton={false} />}
       
       <ScrollContainer style={styles.scrollContainer} contentStyle={styles.scrollContent}>
-        {/* סעיף ראשון - 4 קטגוריות מועדפות */}
+        {/* Primary category shortcuts */}
         <View style={[styles.modernSection, { padding: sectionPadding }]}>
           <View style={[styles.modernGrid, { gap: cardGap }]}>
             {primaryCategories.map((category) => {
               const { title, subtitle } = getCategoryText(category.id);
-              // חישוב רוחב responsive לכרטיס
-              const cardWidth = Platform.OS === 'web'
-                ? isDesktopScreen
-                  ? '22%'
-                  : isTabletScreen
-                    ? '30%'
-                    : '45%'
-                : isTabletScreen || landscapeMode
-                  ? '30%'
-                  : '45%';
+              const cardWidth = getPrimaryCardWidth(
+                Platform.OS,
+                isDesktopScreen,
+                isTabletScreen,
+                landscapeMode,
+              );
               return (
                 <TouchableOpacity
                   key={`primary-${category.id}`}
@@ -207,7 +188,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
                       width: cardWidth,
                       minWidth: cardWidth,
                       maxWidth: cardWidth,
-                      backgroundColor: colors.infoLight, // רקע אחיד כמו הטרמפים
+                      backgroundColor: colors.infoLight,
                     },
                   ]}
                   onPress={() => handleCategoryPress(category)}
@@ -261,7 +242,7 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
           </Text>
           <View style={[styles.modernOtherGrid, { gap: otherCategoriesGap }]}>
             {otherCategories.map((category) => {
-              const { title, subtitle } = getCategoryText(category.id as CategoryId);
+              const { title, subtitle } = getCategoryText(category.id);
               const smallCardWidth = "25%";
               return (
                 <TouchableOpacity
@@ -326,27 +307,15 @@ const DonationsScreen: React.FC<DonationsScreenProps> = ({ navigation }) => {
         </View>
         ) : null}
 
-      {/* Stats Section */}
-      {(() => {
-        const now = Date.now();
-        const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-        const weeklyDonations = donations.filter((d: any) => {
-          const t = new Date(d.createdAt || Date.now()).getTime();
-          return t >= weekAgo;
-        }).length;
-        const activeDonors = new Set(donations.map((d: any) => d.createdBy).filter(Boolean)).size;
-        const activeCharities = charities.length;
-        return (
-            <DonationStatsFooter
-              compact={isCompact}
-              stats={[
-                { label: t('donations:activeDonors'), value: activeDonors, icon: 'people-outline' },
-                { label: t('donations:weeklyDonations'), value: weeklyDonations, icon: 'heart-outline' },
-                { label: t('donations:activeCharities'), value: activeCharities, icon: 'business-outline' },
-              ]}
-            />
-        );
-      })()}
+      {/* Footer stats: wire to API when donation aggregates are available */}
+      <DonationStatsFooter
+        compact={isCompact}
+        stats={[
+          { label: t('donations:activeDonors'), value: 0, icon: 'people-outline' },
+          { label: t('donations:weeklyDonations'), value: 0, icon: 'heart-outline' },
+          { label: t('donations:activeCharities'), value: 0, icon: 'business-outline' },
+        ]}
+      />
       </ScrollContainer>
     </SafeAreaView>
   );

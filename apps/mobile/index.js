@@ -1,3 +1,5 @@
+// Firebase Auth / Web Crypto APIs expect `crypto.getRandomValues` (Hermes lacks it until polyfilled).
+import 'react-native-get-random-values';
 import { registerRootComponent } from 'expo';
 import App from './App';
 

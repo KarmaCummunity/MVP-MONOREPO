@@ -164,6 +164,11 @@ export class RidesController {
             departure_time: rideData.departure_time,
             available_seats: rideData.available_seats,
             price_per_seat: rideData.price_per_seat,
+            description: rideData.description ?? null,
+            requirements: rideData.requirements ?? null,
+            ...(rideData.metadata && typeof rideData.metadata === "object"
+              ? rideData.metadata
+              : {}),
           }),
           rideData.images || [],
         ],

@@ -49,7 +49,7 @@ export interface CommentLikeResponse {
 }
 
 class PostsService {
-  private baseURL: string;
+  private readonly baseURL: string;
 
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -143,6 +143,7 @@ class PostsService {
    * @param postType - Optional: filter by post type (e.g., 'item', 'ride', 'donation')
    * @param itemId - Optional: filter by item_id
    * @param rideId - Optional: filter by ride_id
+   * @param feedScope - `friends`: only posts by viewer and users they follow (requires `userId` as viewer).
    */
   async getPosts(
     limit = 20,
@@ -150,11 +151,12 @@ class PostsService {
     userId?: string,
     postType?: string,
     itemId?: string,
-    rideId?: string
+    rideId?: string,
+    feedScope?: 'friends',
   ): Promise<PostsApiResponse<any[]>> {
     let url = `/api/posts?limit=${limit}&offset=${offset}`;
     if (userId) {
-      url += `&user_id=${userId}`;
+      url += `&user_id=${encodeURIComponent(userId)}`;
     }
     if (postType) {
       url += `&post_type=${encodeURIComponent(postType)}`;
@@ -164,6 +166,9 @@ class PostsService {
     }
     if (rideId) {
       url += `&ride_id=${encodeURIComponent(rideId)}`;
+    }
+    if (feedScope === 'friends') {
+      url += `&feed_scope=friends`;
     }
     return this.request<any[]>(url);
   }

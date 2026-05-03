@@ -3,16 +3,33 @@
  * Verifies that admin access is role-based only (no hardcoded emails)
  */
 
-describe("AdminAuthGuard RBAC Logic (SEC-003.1)", () => {
-  // Test the admin check logic directly — the same logic used in AdminAuthGuard
-  function checkAdminAccess(user: { roles: string[]; email: string }): boolean {
-    return (
-      user.roles.includes("admin") ||
-      user.roles.includes("org_admin") ||
-      user.roles.includes("super_admin")
-    );
-  }
+function checkAdminAccess(user: { roles: string[]; email: string }): boolean {
+  return (
+    user.roles.includes("admin") ||
+    user.roles.includes("org_admin") ||
+    user.roles.includes("super_admin")
+  );
+}
 
+function checkOperatorAccess(roles: string[]): boolean {
+  return (
+    roles.includes("operator") ||
+    roles.includes("admin") ||
+    roles.includes("super_admin")
+  );
+}
+
+function validateOwnership(
+  authUserId: string,
+  requestedUserId: string,
+  roles: string[],
+): boolean {
+  const isOwner = authUserId === requestedUserId;
+  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
+  return isOwner || isAdmin;
+}
+
+describe("AdminAuthGuard RBAC Logic (SEC-003.1)", () => {
   it("should allow super_admin role", () => {
     expect(
       checkAdminAccess({
@@ -34,10 +51,13 @@ describe("AdminAuthGuard RBAC Logic (SEC-003.1)", () => {
     ).toBe(true);
   });
 
-  it("should DENY regular user — even with admin email (no email bypass)", () => {
-    // This is the critical test: navesarussi@gmail.com with only 'user' role should NOT get admin access
+  it("should DENY regular user — even with personal email (no email bypass)", () => {
+    // Critical: role-only admin — personal email with only 'user' must NOT get admin API access
     expect(
-      checkAdminAccess({ roles: ["user"], email: "navesarussi@gmail.com" }),
+      checkAdminAccess({
+        roles: ["user"],
+        email: "founder.personal@example.com",
+      }),
     ).toBe(false);
   });
 
@@ -70,14 +90,6 @@ describe("AdminAuthGuard RBAC Logic (SEC-003.1)", () => {
 });
 
 describe("OperatorAuthGuard RBAC Logic (SRS §2.14)", () => {
-  function checkOperatorAccess(roles: string[]): boolean {
-    return (
-      roles.includes("operator") ||
-      roles.includes("admin") ||
-      roles.includes("super_admin")
-    );
-  }
-
   it("should allow operator role", () => {
     expect(checkOperatorAccess(["user", "operator"])).toBe(true);
   });
@@ -100,17 +112,6 @@ describe("OperatorAuthGuard RBAC Logic (SRS §2.14)", () => {
 });
 
 describe("Notification Ownership Validation (SEC-003.2)", () => {
-  // Test the ownership logic used in NotificationsController
-  function validateOwnership(
-    authUserId: string,
-    requestedUserId: string,
-    roles: string[],
-  ): boolean {
-    const isOwner = authUserId === requestedUserId;
-    const isAdmin = roles.includes("admin") || roles.includes("super_admin");
-    return isOwner || isAdmin;
-  }
-
   it("should allow user to access own notifications", () => {
     expect(validateOwnership("user-123", "user-123", ["user"])).toBe(true);
   });

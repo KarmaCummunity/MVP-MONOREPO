@@ -15,7 +15,7 @@ import {
     Dimensions,
     StatusBar,
 } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../../hooks/useSafeBottomTabBarHeight';
 import { NavigationProp, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';
@@ -25,9 +25,10 @@ import { useUser } from '../../stores/userStore';
 import { logger } from '../../utils/loggerService';
 import { apiService } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
+import { useTranslation } from 'react-i18next';
 
 interface AdminCRMScreenProps {
-    navigation: NavigationProp<AdminStackParamList>;
+    readonly navigation: NavigationProp<AdminStackParamList>;
 }
 
 interface CrmContact {
@@ -54,13 +55,16 @@ interface ContactFormData {
 
 const LOG_SOURCE = 'AdminCRMScreen';
 
+const CRM_STATUS_FILTER_KEYS = ['all', 'active', 'inactive'] as const;
+
 export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScreenProps) {
+    const { t, i18n } = useTranslation('admin');
     const route = useRoute();
     const routeParams = (route.params as any) || {};
     const viewOnly = routeParams?.viewOnly === true;
     useAdminProtection(true);
     const { selectedUser } = useUser();
-    const tabBarHeight = useBottomTabBarHeight() || 0;
+    const tabBarHeight = useSafeBottomTabBarHeight();
     const [contacts, setContacts] = useState<CrmContact[]>([]);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -89,7 +93,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
         try {
             setIsLoading(true);
             const res = await apiService.crm.getAll({
-                status: statusFilter !== 'all' ? statusFilter : undefined,
+                status: statusFilter === 'all' ? undefined : statusFilter,
                 search: searchQuery || undefined,
             });
 
@@ -100,11 +104,11 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
             }
         } catch (error) {
             logger.error(LOG_SOURCE, 'Error loading contacts', { error });
-            Alert.alert('שגיאה', 'לא ניתן לטעון את רשימת הקשרים');
+            Alert.alert(t('crm.alertTitle'), t('crm.errLoadList'));
         } finally {
             setIsLoading(false);
         }
-    }, [statusFilter, searchQuery]);
+    }, [statusFilter, searchQuery, t]);
 
     useEffect(() => {
         loadContacts();
@@ -141,10 +145,10 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
     };
 
     const handleDelete = (contact: CrmContact) => {
-        Alert.alert('מחיקת איש קשר', `האם למחוק את ${contact.name}?`, [
-            { text: 'ביטול', style: 'cancel' },
+        Alert.alert(t('crm.deleteTitle'), t('crm.deleteConfirm', { name: contact.name }), [
+            { text: t('tasks.cancel'), style: 'cancel' },
             {
-                text: 'מחק',
+                text: t('crm.alertDelete'),
                 style: 'destructive',
                 onPress: async () => {
                     try {
@@ -153,10 +157,11 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                         if (res.success) {
                             loadContacts();
                         } else {
-                            Alert.alert('שגיאה', 'מחיקה נכשלה');
+                            Alert.alert(t('crm.alertTitle'), t('crm.errDeleteFailed'));
                         }
-                    } catch (_e) {
-                        Alert.alert('שגיאה', 'אירעה שגיאה במחיקה');
+                    } catch (error) {
+                        logger.error(LOG_SOURCE, 'Delete contact failed', { error });
+                        Alert.alert(t('crm.alertTitle'), t('crm.errDeleteGeneric'));
                     } finally {
                         setIsMutating(false);
                     }
@@ -167,7 +172,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
 
     const handleSave = async () => {
         if (!formData.name.trim()) {
-            Alert.alert('שגיאה', 'שם הוא שדה חובה');
+            Alert.alert(t('crm.alertTitle'), t('crm.errNameRequired'));
             return;
         }
 
@@ -189,10 +194,11 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                 setIsModalVisible(false);
                 loadContacts();
             } else {
-                Alert.alert('שגיאה', res.error || 'שמירה נכשלה');
+                Alert.alert(t('crm.alertTitle'), res.error || t('crm.errSaveFailed'));
             }
-        } catch (_e) {
-            Alert.alert('שגיאה', 'אירעה שגיאה בשמירה');
+        } catch (error) {
+            logger.error(LOG_SOURCE, 'Save contact failed', { error });
+            Alert.alert(t('crm.alertTitle'), t('crm.errSaveGeneric'));
         } finally {
             setIsMutating(false);
         }
@@ -210,11 +216,11 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                     }
                 }}
             >
-                <Text style={styles.title}>ניהול קשרים</Text>
+                <Text style={styles.title}>{t('crm.screenTitle')}</Text>
                 {!viewOnly && (
                     <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
                         <Ionicons name="add" size={24} color={colors.white} />
-                        <Text style={styles.addButtonText}>הוסף</Text>
+                        <Text style={styles.addButtonText}>{t('crm.addButton')}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -234,19 +240,19 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                         style={styles.searchInput}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        placeholder="חפש שם, יכולות..."
+                        placeholder={t('crm.searchPlaceholder')}
                         placeholderTextColor={colors.textTertiary}
                     />
                 </View>
                 <View style={styles.statusFilterContainer}>
-                    {['all', 'active', 'inactive'].map((s) => (
+                    {CRM_STATUS_FILTER_KEYS.map((s) => (
                         <TouchableOpacity
                             key={s}
                             style={[styles.filterButton, statusFilter === s && styles.filterButtonActive]}
-                            onPress={() => setStatusFilter(s as any)}
+                            onPress={() => setStatusFilter(s)}
                         >
                             <Text style={[styles.filterButtonText, statusFilter === s && styles.filterButtonTextActive]}>
-                                {s === 'all' ? 'הכל' : s === 'active' ? 'פעיל' : 'לא פעיל'}
+                                {t(`crm.statusFilter.${s}`)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -277,7 +283,7 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                             <View style={styles.cardHeader}>
                                 <View>
                                     <Text style={styles.cardTitle}>{c.name}</Text>
-                                    <Text style={styles.cardDate}>{new Date(c.created_at).toLocaleDateString('he-IL')}</Text>
+                                    <Text style={styles.cardDate}>{new Date(c.created_at).toLocaleDateString(i18n.language)}</Text>
                                 </View>
                                 <View style={styles.cardActions}>
                                     {!viewOnly && (
@@ -294,22 +300,22 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                             </View>
 
                             <View style={styles.cardDetails}>
-                                {c.capabilities ? <Text style={styles.detailText}><Text style={styles.bold}>יכולות:</Text> {c.capabilities}</Text> : null}
-                                {c.desire ? <Text style={styles.detailText}><Text style={styles.bold}>רצון:</Text> {c.desire}</Text> : null}
-                                {c.time_availability ? <Text style={styles.detailText}><Text style={styles.bold}>זמן:</Text> {c.time_availability}</Text> : null}
-                                {c.source ? <Text style={styles.detailText}><Text style={styles.bold}>מקור:</Text> {c.source}</Text> : null}
-                                {c.referrer ? <Text style={styles.detailText}><Text style={styles.bold}>מפנה:</Text> {c.referrer}</Text> : null}
+                                {c.capabilities ? <Text style={styles.detailText}><Text style={styles.bold}>{t('crm.detailCapabilities')}</Text> {c.capabilities}</Text> : null}
+                                {c.desire ? <Text style={styles.detailText}><Text style={styles.bold}>{t('crm.detailDesire')}</Text> {c.desire}</Text> : null}
+                                {c.time_availability ? <Text style={styles.detailText}><Text style={styles.bold}>{t('crm.detailTime')}</Text> {c.time_availability}</Text> : null}
+                                {c.source ? <Text style={styles.detailText}><Text style={styles.bold}>{t('crm.detailSource')}</Text> {c.source}</Text> : null}
+                                {c.referrer ? <Text style={styles.detailText}><Text style={styles.bold}>{t('crm.detailReferrer')}</Text> {c.referrer}</Text> : null}
                             </View>
 
                             <View style={[styles.statusBadge, c.status === 'active' ? styles.statusActive : styles.statusInactive]}>
                                 <Text style={[styles.statusText, c.status === 'active' ? styles.statusTextActive : styles.statusTextInactive]}>
-                                    {c.status === 'active' ? 'פעיל' : 'לא פעיל'}
+                                    {t(`crm.statusFilter.${c.status}`)}
                                 </Text>
                             </View>
                         </View>
                     ))}
                     {contacts.length === 0 && (
-                        <Text style={styles.emptyText}>לא נמצאו אנשי קשר</Text>
+                        <Text style={styles.emptyText}>{t('crm.emptyList')}</Text>
                     )}
                     </ScrollView>
                 )}
@@ -319,37 +325,37 @@ export default function AdminCRMScreen({ navigation: _navigation }: AdminCRMScre
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{isEditMode ? 'ערוך' : 'הוסף'}</Text>
+                            <Text style={styles.modalTitle}>{isEditMode ? t('crm.modalTitleEdit') : t('crm.modalTitleAdd')}</Text>
                             <TouchableOpacity onPress={() => setIsModalVisible(false)}>
                                 <Ionicons name="close" size={24} color={colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
                         <ScrollView style={styles.modalForm}>
-                            <FormInput label="שם *" value={formData.name} onChange={(v: string) => setFormData({ ...formData, name: v })} />
-                            <FormInput label="יכולות" value={formData.capabilities} onChange={(v: string) => setFormData({ ...formData, capabilities: v })} multiline />
-                            <FormInput label="רצון" value={formData.desire} onChange={(v: string) => setFormData({ ...formData, desire: v })} multiline />
-                            <FormInput label="זמן / זמינות" value={formData.time_availability} onChange={(v: string) => setFormData({ ...formData, time_availability: v })} />
-                            <FormInput label="מאיפה הגענו (מקור)" value={formData.source} onChange={(v: string) => setFormData({ ...formData, source: v })} />
-                            <FormInput label="מי הפעיל/הביא (מפנה)" value={formData.referrer} onChange={(v: string) => setFormData({ ...formData, referrer: v })} />
+                            <FormInput label={t('crm.fieldName')} value={formData.name} onChange={(v: string) => setFormData({ ...formData, name: v })} />
+                            <FormInput label={t('crm.fieldCapabilities')} value={formData.capabilities} onChange={(v: string) => setFormData({ ...formData, capabilities: v })} multiline />
+                            <FormInput label={t('crm.fieldDesire')} value={formData.desire} onChange={(v: string) => setFormData({ ...formData, desire: v })} multiline />
+                            <FormInput label={t('crm.fieldTimeAvailability')} value={formData.time_availability} onChange={(v: string) => setFormData({ ...formData, time_availability: v })} />
+                            <FormInput label={t('crm.fieldSource')} value={formData.source} onChange={(v: string) => setFormData({ ...formData, source: v })} />
+                            <FormInput label={t('crm.fieldReferrer')} value={formData.referrer} onChange={(v: string) => setFormData({ ...formData, referrer: v })} />
 
-                            <Text style={styles.label}>סטטוס</Text>
+                            <Text style={styles.label}>{t('crm.statusSection')}</Text>
                             <View style={styles.statusSwitches}>
                                 <TouchableOpacity
                                     style={[styles.statusSwitch, formData.status === 'active' && styles.statusSwitchActive]}
                                     onPress={() => setFormData({ ...formData, status: 'active' })}
                                 >
-                                    <Text style={formData.status === 'active' ? styles.wt : styles.bt}>פעיל</Text>
+                                    <Text style={formData.status === 'active' ? styles.wt : styles.bt}>{t('crm.statusFilter.active')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[styles.statusSwitch, formData.status === 'inactive' && styles.statusSwitchActive]}
                                     onPress={() => setFormData({ ...formData, status: 'inactive' })}
                                 >
-                                    <Text style={formData.status === 'inactive' ? styles.wt : styles.bt}>לא פעיל</Text>
+                                    <Text style={formData.status === 'inactive' ? styles.wt : styles.bt}>{t('crm.statusFilter.inactive')}</Text>
                                 </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isMutating}>
-                                {isMutating ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveButtonText}>שמור</Text>}
+                                {isMutating ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveButtonText}>{t('tasks.save')}</Text>}
                             </TouchableOpacity>
                         </ScrollView>
                     </View>

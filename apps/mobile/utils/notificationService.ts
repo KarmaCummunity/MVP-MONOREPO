@@ -621,8 +621,7 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
       logger.debug(NotificationService_LOG, '🌐 Web platform - getting unread notification count for user:', userId);
     }
 
-    const notifications = await getNotifications(userId);
-    const unreadCount = notifications.filter(notification => !notification.read).length;
+    const unreadCount = await db.getUnreadNotificationsCount(userId);
     let extra = 0;
     try {
       const { getPendingDailyReportCount } = await import('./dailyChallengeReminder');
@@ -690,7 +689,7 @@ export const startNotificationListener = (userId: string) => {
     clearInterval(notificationPollingInterval);
   }
 
-  // Poll every 5 seconds
+  // Poll every 15s (was 5s) — reduces server load vs Throttler limits; see SRS gaps on polling.
   notificationPollingInterval = setInterval(async () => {
     try {
       const notifications = await getNotifications(userId);
@@ -730,7 +729,7 @@ export const startNotificationListener = (userId: string) => {
     } catch (error) {
       console.warn('⚠️ Notification listener polling error:', error);
     }
-  }, 5000);
+  }, 15_000);
 
   return () => {
     if (notificationPollingInterval) {

@@ -15,7 +15,7 @@ import { useUser } from '../../stores/userStore';
 import AdminHierarchyTree from '../../components/AdminHierarchyTree';
 
 interface AdminDashboardScreenProps {
-  navigation: NavigationProp<AdminStackParamList>;
+  readonly navigation: NavigationProp<AdminStackParamList>;
 }
 
 interface AdminButton {
@@ -89,6 +89,7 @@ const adminButtons: AdminButton[] = [
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { logger } from '../../utils/loggerService';
 import { useLogScreenOpened } from '../../hooks/useLogScreenOpened';
+import { KC_ORGANIZATION_ROOT_EMAIL } from '../../utils/org.constants';
 
 export default function AdminDashboardScreen({ navigation }: AdminDashboardScreenProps) {
   useLogScreenOpened('AdminDashboard');
@@ -158,7 +159,7 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
           ))}
 
           {/* Admin management - visible to all admins (admin or super_admin role) */}
-          {(selectedUser?.roles?.includes('admin') || selectedUser?.roles?.includes('super_admin') || selectedUser?.email?.toLowerCase() === 'navesarussi@gmail.com' || selectedUser?.email?.toLowerCase() === 'karmacommunity2.0@gmail.com') && (
+          {(selectedUser?.roles?.includes('admin') || selectedUser?.roles?.includes('super_admin') || (selectedUser?.email || '').toLowerCase() === KC_ORGANIZATION_ROOT_EMAIL.toLowerCase()) && (
             <TouchableOpacity
               key="admins"
               style={[styles.button, { backgroundColor: colors.errorLight }]}

@@ -37,7 +37,7 @@ import apiService from '../utils/apiService';
 
 import { getScreenInfo, isLandscape } from '../globals/responsive';
 import { IS_DEVELOPMENT } from '../utils/dbConfig';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { navigateToChatDetail } from '../navigations/chatDetailNavigation';
 import { createLogger } from '../utils/loggerService';
 import { useLogScreenOpened } from '../hooks/useLogScreenOpened';
@@ -114,7 +114,7 @@ export default function DiscoverPeopleScreen() {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { isTablet, isDesktop } = getScreenInfo();
   const landscape = isLandscape();
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const estimatedTabBarHeight = landscape ? 40 : (isDesktop ? 56 : isTablet ? 54 : 46);
   const bottomPadding = (Platform.OS === 'web' ? estimatedTabBarHeight : tabBarHeight) + 24;
   const { selectedUser } = useUser();

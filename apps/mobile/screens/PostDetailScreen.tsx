@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -40,7 +39,7 @@ export default function PostDetailScreen(): React.ReactElement {
     async (isRefresh: boolean) => {
       if (!postId) return;
       if (isRefresh) setRefreshing(true);
-      else if (!(initialItem && initialItem.id === postId)) setLoading(true);
+      else if (initialItem?.id !== postId) setLoading(true);
       setFetchError(null);
       try {
         const res = await postsService.getPostById(postId, selectedUser?.id);
@@ -48,14 +47,14 @@ export default function PostDetailScreen(): React.ReactElement {
           setItem(mapApiPostToFeedItem(res.data));
         } else {
           setFetchError(res.error || t('postDetail:loadError'));
-          if (initialItem && initialItem.id === postId) {
+          if (initialItem?.id === postId) {
             setItem((prev) => prev ?? initialItem);
           }
         }
       } catch (e) {
         logger.error('PostDetailScreen', 'load failed', { e, postId });
         setFetchError(t('postDetail:loadError'));
-        if (initialItem && initialItem.id === postId) {
+        if (initialItem?.id === postId) {
           setItem((prev) => prev ?? initialItem);
         }
       } finally {
@@ -151,6 +150,6 @@ const styles = StyleSheet.create({
   errorText: { marginTop: 12, color: colors.textPrimary, fontSize: 16, textAlign: 'center' },
   retryBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },
   retryBtnText: { color: colors.white, fontWeight: '600' },
-  banner: { backgroundColor: colors.surfaceAlice, padding: 10 },
+  banner: { backgroundColor: colors.surfaceAliceBlue, padding: 10 },
   bannerText: { color: colors.textPrimary, textAlign: 'center', fontSize: 13 },
 });

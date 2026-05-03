@@ -93,7 +93,7 @@ AppModule
 | `ValidationPipe` | NestJS Global | Request validation |
 | `ThrottleGuard` | NestJS | Rate limiting per controller
 
-### 5.4 Authentication & Authorization Flow### 5.4 Authentication & Authorization Flow
+### 5.4 Authentication & Authorization Flow
 
 ```
 Client Request
@@ -126,6 +126,12 @@ Try JWT verification (HMAC-SHA256)
     ▼
 Controller handler executes
 ```
+
+### 5.5 API localization
+
+User-facing strings returned by the API (errors, validation messages, templated notifications) SHOULD match the **active client locale** (`he` | `en`), consistent with mobile i18next defaults (SRS §4). Locale SHOULD be resolved from **`Accept-Language`** and, where appropriate, from **persisted user settings** for authenticated requests and async delivery.
+
+**Implementation detail:** See [CODE_QUALITY: API internationalization](../CODE_QUALITY/api-internationalization.md).
 
 ---
 

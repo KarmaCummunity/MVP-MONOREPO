@@ -106,8 +106,9 @@ export class FirebaseAdminService implements OnModuleInit {
             "Firebase Admin SDK initialized with application default credentials",
           );
         } else {
-          this.logger.error(
-            "Firebase Admin: configure FIREBASE_SERVICE_ACCOUNT, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS with FIREBASE_PROJECT_ID (or GOOGLE_CLOUD_PROJECT).",
+          // Admin SDK is optional locally: token verify can use public JWKS (see file header).
+          this.logger.warn(
+            "Firebase Admin: no service account / ADC configured; ID token verify uses JWKS only. Set FIREBASE_SERVICE_ACCOUNT, FIREBASE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS with FIREBASE_PROJECT_ID (or GOOGLE_CLOUD_PROJECT) to initialize the Admin SDK.",
           );
         }
       }
@@ -162,12 +163,12 @@ export class FirebaseAdminService implements OnModuleInit {
 
     const audRaw = payload.aud;
     const iss = payload.iss;
-    const projectIdFromToken =
-      typeof audRaw === "string"
-        ? audRaw
-        : Array.isArray(audRaw) && typeof audRaw[0] === "string"
-          ? audRaw[0]
-          : "";
+    let projectIdFromToken = "";
+    if (typeof audRaw === "string") {
+      projectIdFromToken = audRaw;
+    } else if (Array.isArray(audRaw) && typeof audRaw[0] === "string") {
+      projectIdFromToken = audRaw[0];
+    }
     const expectedIss = `https://securetoken.google.com/${projectIdFromToken}`;
     if (!projectIdFromToken || iss !== expectedIss) {
       throw new Error("Invalid Firebase ID token: issuer/audience mismatch");
@@ -198,12 +199,15 @@ export class FirebaseAdminService implements OnModuleInit {
       audience: projectId,
     });
 
-    const uid =
-      typeof payload.sub === "string"
-        ? payload.sub
-        : typeof (payload as { user_id?: unknown }).user_id === "string"
-          ? String((payload as { user_id: string }).user_id)
-          : "";
+    let uid = "";
+    if (typeof payload.sub === "string") {
+      uid = payload.sub;
+    } else {
+      const userId = (payload as { user_id?: unknown }).user_id;
+      if (typeof userId === "string") {
+        uid = userId;
+      }
+    }
     if (!uid) {
       throw new Error("Invalid Firebase ID token: missing subject");
     }
@@ -238,7 +242,7 @@ export class FirebaseAdminService implements OnModuleInit {
   async verifyIdToken(token: string): Promise<admin.auth.DecodedIdToken> {
     const adminReady =
       this.firebaseApp !== null ||
-      (typeof admin.apps !== "undefined" && admin.apps.length > 0);
+      (admin.apps !== undefined && admin.apps.length > 0);
 
     if (adminReady) {
       try {

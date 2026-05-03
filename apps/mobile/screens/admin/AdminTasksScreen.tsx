@@ -45,6 +45,7 @@ export default function AdminTasksScreen() {
     formData,
     setFormData,
     editingId,
+    isModalSubmitBusy,
     saveEdit,
     createTask,
     resetForm,
@@ -206,7 +207,11 @@ export default function AdminTasksScreen() {
               <TouchableOpacity style={[styles.modalBtn, styles.modalCancel]} onPress={() => { setShowForm(false); resetForm(); }}>
                 <Text style={styles.modalBtnText}>{t('admin:tasks.cancel')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalSave]} onPress={editingId ? saveEdit : createTask}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalSave, isModalSubmitBusy && { opacity: 0.55 }]}
+                disabled={isModalSubmitBusy}
+                onPress={editingId ? saveEdit : createTask}
+              >
                 <Text style={styles.modalBtnText}>{editingId ? t('admin:tasks.save') : t('admin:tasks.create')}</Text>
               </TouchableOpacity>
             </View>

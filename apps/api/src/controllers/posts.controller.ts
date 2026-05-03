@@ -12,11 +12,10 @@ import {
   Req,
   Logger,
 } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { SessionTokenPayload } from "../auth/services/jwt.service";
 
 interface LikeBody {
   user_id: string;
@@ -32,6 +31,14 @@ interface UpdateCommentBody {
   text: string;
 }
 
+function parsePositiveIntWithDefault(
+  value: string | undefined,
+  defaultValue: number,
+): number {
+  const n = Number.parseInt(String(value ?? ""), 10);
+  return n > 0 ? n : defaultValue;
+}
+
 @Controller("api/posts")
 export class PostsController {
   private readonly logger = new Logger(PostsController.name);
@@ -42,6 +49,125 @@ export class PostsController {
     private readonly redisCache: RedisCacheService,
   ) {
     this.logger.log("🔄 PostsController initialized");
+  }
+
+  private getSessionUserId(req: import("express").Request): string | undefined {
+    const user = req.user;
+    if (!user || typeof user !== "object") {
+      return undefined;
+    }
+    const candidate = (user as { userId?: unknown }).userId;
+    return typeof candidate === "string" ? candidate : undefined;
+  }
+
+  /**
+   * Patch posts table when it exists with valid id/author_id.
+   * @returns `patched` — caller should return; `recreate` — table was dropped, run CREATE.
+   */
+  private async migrateExistingPostsTableColumns(
+    columns: Set<string>,
+  ): Promise<"patched" | "recreate"> {
+    const hasId = columns.has("id");
+    const hasAuthorId = columns.has("author_id");
+    if (!hasId || !hasAuthorId) {
+      this.logger.log(
+        "⚠️  Detected legacy posts table structure - recreating...",
+      );
+      this.logger.log(`   - Has id column: ${hasId}`);
+      this.logger.log(`   - Has author_id column: ${hasAuthorId}`);
+      await this.pool.query("DROP TABLE IF EXISTS posts CASCADE;");
+      return "recreate";
+    }
+
+    if (!columns.has("post_type")) {
+      this.logger.log("📝 Adding post_type column to posts table...");
+      await this.pool.query(
+        "ALTER TABLE posts ADD COLUMN post_type VARCHAR(50) DEFAULT 'task_completion';",
+      );
+      await this.pool.query(
+        "CREATE INDEX IF NOT EXISTS idx_posts_post_type ON posts(post_type);",
+      );
+    }
+
+    if (!columns.has("task_id")) {
+      this.logger.log("📝 Adding task_id column to posts table...");
+      await this.pool.query(
+        "ALTER TABLE posts ADD COLUMN task_id UUID REFERENCES tasks(id) ON DELETE SET NULL;",
+      );
+      await this.pool.query(
+        "CREATE INDEX IF NOT EXISTS idx_posts_task_id ON posts(task_id);",
+      );
+    }
+
+    if (!columns.has("ride_id")) {
+      this.logger.log("📝 Adding ride_id column to posts table...");
+      await this.pool.query(
+        "ALTER TABLE posts ADD COLUMN ride_id UUID REFERENCES rides(id) ON DELETE CASCADE;",
+      );
+      await this.pool.query(
+        "CREATE INDEX IF NOT EXISTS idx_posts_ride_id ON posts(ride_id);",
+      );
+
+      this.logger.log(
+        "📝 Migrating existing ride posts to use ride_id column...",
+      );
+      await this.pool.query(`
+                            UPDATE posts 
+                            SET ride_id = (metadata->>'ride_id')::uuid 
+                            WHERE post_type = 'ride' 
+                            AND metadata->>'ride_id' IS NOT NULL
+                            AND ride_id IS NULL;
+                        `);
+    }
+
+    if (!columns.has("item_id")) {
+      this.logger.log("📝 Adding item_id column to posts table...");
+      await this.pool.query("ALTER TABLE posts ADD COLUMN item_id TEXT;");
+      await this.pool.query(
+        "CREATE INDEX IF NOT EXISTS idx_posts_item_id ON posts(item_id);",
+      );
+
+      this.logger.log(
+        "📝 Migrating existing item/donation posts to use item_id column...",
+      );
+      await this.pool.query(`
+                            UPDATE posts 
+                            SET item_id = metadata->>'item_id'
+                            WHERE post_type IN ('item', 'donation') 
+                            AND metadata->>'item_id' IS NOT NULL
+                            AND item_id IS NULL;
+                        `);
+    }
+
+    if (!columns.has("metadata")) {
+      this.logger.log("📝 Adding metadata column to posts table...");
+      await this.pool.query(
+        "ALTER TABLE posts ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb;",
+      );
+    }
+
+    if (!columns.has("status")) {
+      this.logger.log("📝 Adding status column to posts table...");
+      await this.pool.query(
+        "ALTER TABLE posts ADD COLUMN status VARCHAR(50) DEFAULT 'active';",
+      );
+      await this.pool.query(
+        "CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);",
+      );
+    }
+
+    try {
+      await this.pool.query(
+        "ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_item_id_fkey;",
+      );
+      await this.pool.query(
+        "ALTER TABLE posts ALTER COLUMN item_id TYPE TEXT;",
+      );
+    } catch (e) {
+      this.logger.log("ℹ️  Note: item_id fix check:", (e as Error).message);
+    }
+
+    return "patched";
   }
 
   /**
@@ -61,124 +187,17 @@ export class PostsController {
             `);
 
       if (tableCheck.rows[0]?.exists) {
-        // Check for critical columns
         const columnsCheck = await this.pool.query(`
                     SELECT column_name 
                     FROM information_schema.columns 
                     WHERE table_name = 'posts' AND table_schema = 'public'
                 `);
 
-        const columns = columnsCheck.rows.map((r) => r.column_name);
-
-        // If id or author_id is missing, the table structure is fundamentally wrong (legacy)
-        // We can't add id column later since it's the primary key
-        if (!columns.includes("id") || !columns.includes("author_id")) {
-          this.logger.log(
-            "⚠️  Detected legacy posts table structure - recreating...",
-          );
-          this.logger.log(`   - Has id column: ${columns.includes("id")}`);
-          this.logger.log(
-            `   - Has author_id column: ${columns.includes("author_id")}`,
-          );
-          await this.pool.query("DROP TABLE IF EXISTS posts CASCADE;");
-        } else {
-          // Check for new columns and add them if missing
-          if (!columns.includes("post_type")) {
-            this.logger.log("📝 Adding post_type column to posts table...");
-            await this.pool.query(
-              "ALTER TABLE posts ADD COLUMN post_type VARCHAR(50) DEFAULT 'task_completion';",
-            );
-            await this.pool.query(
-              "CREATE INDEX IF NOT EXISTS idx_posts_post_type ON posts(post_type);",
-            );
-          }
-
-          if (!columns.includes("task_id")) {
-            this.logger.log("📝 Adding task_id column to posts table...");
-            await this.pool.query(
-              "ALTER TABLE posts ADD COLUMN task_id UUID REFERENCES tasks(id) ON DELETE SET NULL;",
-            );
-            await this.pool.query(
-              "CREATE INDEX IF NOT EXISTS idx_posts_task_id ON posts(task_id);",
-            );
-          }
-
-          if (!columns.includes("ride_id")) {
-            this.logger.log("📝 Adding ride_id column to posts table...");
-            await this.pool.query(
-              "ALTER TABLE posts ADD COLUMN ride_id UUID REFERENCES rides(id) ON DELETE CASCADE;",
-            );
-            await this.pool.query(
-              "CREATE INDEX IF NOT EXISTS idx_posts_ride_id ON posts(ride_id);",
-            );
-
-            // Migrate existing ride posts from metadata to ride_id column
-            this.logger.log(
-              "📝 Migrating existing ride posts to use ride_id column...",
-            );
-            await this.pool.query(`
-                            UPDATE posts 
-                            SET ride_id = (metadata->>'ride_id')::uuid 
-                            WHERE post_type = 'ride' 
-                            AND metadata->>'ride_id' IS NOT NULL
-                            AND ride_id IS NULL;
-                        `);
-          }
-
-          if (!columns.includes("item_id")) {
-            this.logger.log("📝 Adding item_id column to posts table...");
-            // item_id must be TEXT because items.id is TEXT (to support various ID formats)
-            await this.pool.query("ALTER TABLE posts ADD COLUMN item_id TEXT;");
-            await this.pool.query(
-              "CREATE INDEX IF NOT EXISTS idx_posts_item_id ON posts(item_id);",
-            );
-
-            // Migrate existing item/donation posts from metadata to item_id column
-            this.logger.log(
-              "📝 Migrating existing item/donation posts to use item_id column...",
-            );
-            await this.pool.query(`
-                            UPDATE posts 
-                            SET item_id = metadata->>'item_id'
-                            WHERE post_type IN ('item', 'donation') 
-                            AND metadata->>'item_id' IS NOT NULL
-                            AND item_id IS NULL;
-                        `);
-          }
-
-          if (!columns.includes("metadata")) {
-            this.logger.log("📝 Adding metadata column to posts table...");
-            await this.pool.query(
-              "ALTER TABLE posts ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb;",
-            );
-          }
-
-          if (!columns.includes("status")) {
-            this.logger.log("📝 Adding status column to posts table...");
-            await this.pool.query(
-              "ALTER TABLE posts ADD COLUMN status VARCHAR(50) DEFAULT 'active';",
-            );
-            await this.pool.query(
-              "CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);",
-            );
-          }
-
-          // Ensure item_id is TEXT (fix for previous failed migrations)
-          try {
-            await this.pool.query(
-              "ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_item_id_fkey;",
-            );
-            await this.pool.query(
-              "ALTER TABLE posts ALTER COLUMN item_id TYPE TEXT;",
-            );
-          } catch (e) {
-            this.logger.log(
-              "ℹ️  Note: item_id fix check:",
-              (e as Error).message,
-            );
-          }
-
-          // Table exists and is patched
+        const columns = new Set(
+          columnsCheck.rows.map((r) => String(r.column_name)),
+        );
+        const outcome = await this.migrateExistingPostsTableColumns(columns);
+        if (outcome === "patched") {
           return;
         }
       }
@@ -275,28 +294,7 @@ export class PostsController {
                 ) AS exists;
             `);
 
-      if (!likesTableCheck.rows[0]?.exists) {
-        this.logger.log("📝 Creating post_likes table...");
-        await this.pool.query(`
-                    CREATE TABLE post_likes (
-                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-                        user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-                        created_at TIMESTAMPTZ DEFAULT NOW(),
-                        UNIQUE(post_id, user_id)
-                    );
-                `);
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id);`,
-        );
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id);`,
-        );
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_likes_created_at ON post_likes(created_at DESC);`,
-        );
-        this.logger.log("✅ post_likes table created");
-      } else {
+      if (likesTableCheck.rows[0]?.exists) {
         // Check if id column exists
         const idColumnCheck = await this.pool.query(`
                     SELECT EXISTS (
@@ -329,6 +327,27 @@ export class PostsController {
           );
           this.logger.log("✅ post_likes table recreated");
         }
+      } else {
+        this.logger.log("📝 Creating post_likes table...");
+        await this.pool.query(`
+                    CREATE TABLE post_likes (
+                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                        user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        UNIQUE(post_id, user_id)
+                    );
+                `);
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id);`,
+        );
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id);`,
+        );
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_likes_created_at ON post_likes(created_at DESC);`,
+        );
+        this.logger.log("✅ post_likes table created");
       }
 
       // Check if post_comments table exists and has correct structure
@@ -339,30 +358,7 @@ export class PostsController {
                 ) AS exists;
             `);
 
-      if (!commentsTableCheck.rows[0]?.exists) {
-        this.logger.log("📝 Creating post_comments table...");
-        await this.pool.query(`
-                    CREATE TABLE post_comments (
-                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-                        user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-                        text TEXT NOT NULL CHECK (char_length(text) > 0 AND char_length(text) <= 2000),
-                        likes_count INTEGER DEFAULT 0,
-                        created_at TIMESTAMPTZ DEFAULT NOW(),
-                        updated_at TIMESTAMPTZ DEFAULT NOW()
-                    );
-                `);
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);`,
-        );
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id);`,
-        );
-        await this.pool.query(
-          `CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC);`,
-        );
-        this.logger.log("✅ post_comments table created");
-      } else {
+      if (commentsTableCheck.rows[0]?.exists) {
         // Check if id column exists
         const idColumnCheck = await this.pool.query(`
                     SELECT EXISTS (
@@ -398,6 +394,29 @@ export class PostsController {
           );
           this.logger.log("✅ post_comments table recreated");
         }
+      } else {
+        this.logger.log("📝 Creating post_comments table...");
+        await this.pool.query(`
+                    CREATE TABLE post_comments (
+                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                        post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                        user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+                        text TEXT NOT NULL CHECK (char_length(text) > 0 AND char_length(text) <= 2000),
+                        likes_count INTEGER DEFAULT 0,
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                `);
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);`,
+        );
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id);`,
+        );
+        await this.pool.query(
+          `CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC);`,
+        );
+        this.logger.log("✅ post_comments table created");
       }
 
       // Check if comment_likes table exists
@@ -576,6 +595,234 @@ export class PostsController {
     }
   }
 
+  /**
+   * Friends feed filters reference `user_follows`. If the table is missing (older DBs),
+   * the main feed query fails and the fallback mapper strips real author names.
+   */
+  private async ensureUserFollowsTable() {
+    try {
+      const check = await this.pool.query(`
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_name = 'user_follows' AND table_schema = 'public'
+                ) AS exists;
+            `);
+      if (check.rows[0]?.exists) {
+        return;
+      }
+      this.logger.log(
+        "📝 Creating user_follows table (required for friends feed)...",
+      );
+      await this.pool.query(`
+                CREATE TABLE IF NOT EXISTS user_follows (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    follower_id UUID,
+                    following_id UUID,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    UNIQUE(follower_id, following_id)
+                );
+            `);
+      await this.pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);`,
+      );
+      await this.pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id);`,
+      );
+      this.logger.log("✅ user_follows table ensured");
+    } catch (error) {
+      this.logger.error("❌ Failed to ensure user_follows table:", error);
+    }
+  }
+
+  private async isPublicTableDefined(tableName: string): Promise<boolean> {
+    try {
+      const res = await this.pool.query(
+        `
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_name = $1 AND table_schema = 'public'
+                ) AS exists;
+            `,
+        [tableName],
+      );
+      return Boolean(res.rows[0]?.exists);
+    } catch {
+      return false;
+    }
+  }
+
+  private async runGetPostsQueryWithFallback(
+    query: string,
+    params: unknown[],
+    limit: number,
+    offset: number,
+  ): Promise<Record<string, unknown>[]> {
+    try {
+      const { rows } = await this.pool.query(query, params);
+      this.logger.log(
+        `✅ [getPosts] Query returned ${rows.length} posts (limit: ${limit}, offset: ${offset})`,
+      );
+
+      const taskPostsInResults = rows.filter(
+        (p) =>
+          p.post_type === "task_assignment" ||
+          p.post_type === "task_completion",
+      ).length;
+      this.logger.log(
+        `📊 Task-related posts in results: ${taskPostsInResults}/${rows.length}`,
+      );
+
+      if (rows.length > 0) {
+        const samplePosts = rows.slice(0, 3).map((p) => ({
+          id: p.id?.substring(0, 8),
+          title: p.title?.substring(0, 30),
+          post_type: p.post_type,
+          author_id: p.author_id?.substring(0, 8),
+          has_author: !!p.author,
+          author_id_in_author: p.author?.id?.substring(0, 8),
+        }));
+        this.logger.log("📋 Sample posts:", samplePosts);
+      } else {
+        this.logger.warn("⚠️ getPosts returned 0 posts!");
+      }
+
+      return rows;
+    } catch (queryError) {
+      this.logger.error(`❌ [getPosts] Primary query failed:`, queryError);
+      this.logger.log("⚠️ [getPosts] Attempting fallback query...");
+
+      try {
+        const fallbackQuery = `
+                        SELECT 
+                            id, author_id, title, description, images, likes, comments, created_at,
+                            post_type, metadata, ride_id, item_id
+                        FROM posts
+                        ORDER BY created_at DESC
+                        LIMIT $1 OFFSET $2
+                    `;
+        const fallbackParams = [limit, offset];
+        const fallbackRes = await this.pool.query(
+          fallbackQuery,
+          fallbackParams,
+        );
+
+        const mappedRows = fallbackRes.rows.map(
+          (row: Record<string, unknown>) => ({
+            ...row,
+            author: {
+              id: row.author_id,
+              name: "משתמש",
+              avatar_url: "",
+              email_verified: false,
+            },
+            task: null,
+            is_liked: false,
+            ride_data: null,
+            item_data: null,
+          }),
+        );
+
+        this.logger.log(
+          `✅[getPosts] Fallback query returned ${mappedRows.length} posts`,
+        );
+        return mappedRows;
+      } catch {
+        this.logger.warn("⚠️ [getPosts] Fallback query also failed");
+        throw queryError;
+      }
+    }
+  }
+
+  private buildGetPostsWhereState(
+    postType: string | undefined,
+    itemId: string | undefined,
+    rideId: string | undefined,
+    feedScopeFriends: boolean,
+    userId: string | undefined,
+    limit: number,
+    offset: number,
+  ): {
+    whereConditions: string[];
+    params: unknown[];
+    paramIndex: number;
+    viewerOrLikesParamIndex: number | null;
+  } {
+    const whereConditions: string[] = [];
+    const params: unknown[] = [limit, offset];
+    let paramIndex = 3;
+
+    whereConditions.push(`(p.status IS NULL OR p.status != 'hidden')`);
+
+    if (postType) {
+      whereConditions.push(`p.post_type = $${paramIndex}`);
+      params.push(postType);
+      paramIndex++;
+    }
+
+    if (itemId) {
+      whereConditions.push(`p.item_id = $${paramIndex}`);
+      params.push(itemId);
+      paramIndex++;
+    }
+
+    if (rideId) {
+      whereConditions.push(`p.ride_id = $${paramIndex}`);
+      params.push(rideId);
+      paramIndex++;
+    }
+
+    let viewerOrLikesParamIndex: number | null = null;
+
+    if (feedScopeFriends && userId) {
+      whereConditions.push(
+        `(p.author_id = $${paramIndex} OR p.author_id IN (SELECT uf.following_id FROM user_follows uf WHERE uf.follower_id = $${paramIndex}))`,
+      );
+      viewerOrLikesParamIndex = paramIndex;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    return {
+      whereConditions,
+      params,
+      paramIndex,
+      viewerOrLikesParamIndex,
+    };
+  }
+
+  private appendIsLikedToGetPostsQuery(
+    baseQuery: string,
+    userId: string | undefined,
+    postLikesExists: boolean,
+    viewerOrLikesParamIndex: number | null,
+    paramIndex: number,
+    params: unknown[],
+  ): { query: string; paramIndex: number } {
+    if (!userId || !postLikesExists) {
+      return {
+        query: `${baseQuery},
+                    false as is_liked`,
+        paramIndex,
+      };
+    }
+
+    if (viewerOrLikesParamIndex === null) {
+      const likesAt = paramIndex;
+      params.push(userId);
+      return {
+        query: `${baseQuery},
+                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${likesAt}) as is_liked`,
+        paramIndex: paramIndex + 1,
+      };
+    }
+
+    return {
+      query: `${baseQuery},
+                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${viewerOrLikesParamIndex}) as is_liked`,
+      paramIndex,
+    };
+  }
+
   // ============================================
   // POSTS ENDPOINTS
   // ============================================
@@ -588,13 +835,22 @@ export class PostsController {
     @Query("post_type") postType?: string,
     @Query("item_id") itemId?: string,
     @Query("ride_id") rideId?: string,
+    /** When `friends`, restrict to posts by the viewer and users they follow (`user_follows`). Requires `user_id` (viewer). */
+    @Query("feed_scope") feedScope?: string,
   ) {
     try {
       await this.ensurePostsTable();
       await this.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 20;
-      const offset = parseInt(offsetArg) || 0;
+      const limit = parsePositiveIntWithDefault(limitArg, 20);
+      const offset = Number.parseInt(String(offsetArg ?? ""), 10) || 0;
+      const feedScopeFriends =
+        String(feedScope || "")
+          .trim()
+          .toLowerCase() === "friends";
+      if (feedScopeFriends && userId) {
+        await this.ensureUserFollowsTable();
+      }
 
       // Build query with optional user_id for checking if user liked each post
       // Use explicit column names to avoid conflicts in JOIN queries
@@ -654,7 +910,10 @@ export class PostsController {
                             'departure_time', r.departure_time,
                             'available_seats', r.available_seats,
                             'price_per_seat', r.price_per_seat,
-                            'status', r.status
+                            'status', r.status,
+                            'description', r.description,
+                            'requirements', r.requirements,
+                            'metadata', r.metadata
                         ) 
                         ELSE NULL 
                     END as ride_data,
@@ -681,59 +940,28 @@ export class PostsController {
                     END as community_challenge
             `;
 
-      // Check if post_likes table exists before using it
-      let postLikesExists = false;
-      try {
-        const res = await this.pool.query(`
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = 'post_likes' AND table_schema = 'public'
-                    ) AS exists;
-                `);
-        postLikesExists = res.rows[0]?.exists;
-      } catch {
-        // Ignore
-      }
+      const postLikesExists = await this.isPublicTableDefined("post_likes");
 
-      // Build WHERE conditions first to know param count
-      const whereConditions: string[] = [];
-      const params: unknown[] = [limit, offset];
-      let paramIndex = 3;
+      const { whereConditions, params, paramIndex, viewerOrLikesParamIndex } =
+        this.buildGetPostsWhereState(
+          postType,
+          itemId,
+          rideId,
+          feedScopeFriends,
+          userId,
+          limit,
+          offset,
+        );
 
-      // Filter out hidden posts by default (unless viewing own profile)
-      whereConditions.push(`(p.status IS NULL OR p.status != 'hidden')`);
-
-      if (postType) {
-        whereConditions.push(`p.post_type = $${paramIndex}`);
-        params.push(postType);
-        paramIndex++;
-      }
-
-      if (itemId) {
-        whereConditions.push(`p.item_id = $${paramIndex}`);
-        params.push(itemId);
-        paramIndex++;
-      }
-
-      if (rideId) {
-        whereConditions.push(`p.ride_id = $${paramIndex}`);
-        params.push(rideId);
-        paramIndex++;
-      }
-
-      // Now we know the param index for userId
-      const userIdParamIndex = paramIndex;
-
-      if (userId && postLikesExists) {
-        query += `,
-                    EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdParamIndex}) as is_liked
-                `;
-        params.push(userId);
-      } else {
-        query += `,
-                    false as is_liked
-                `;
-      }
+      const withLiked = this.appendIsLikedToGetPostsQuery(
+        query,
+        userId,
+        postLikesExists,
+        viewerOrLikesParamIndex,
+        paramIndex,
+        params,
+      );
+      query = withLiked.query;
 
       query += `
                 FROM posts p
@@ -758,88 +986,17 @@ export class PostsController {
         offset,
         userId,
         hasUserId: !!userId,
+        feedScope,
+        feedScopeFriends,
       });
 
-      try {
-        const { rows } = await this.pool.query(query, params);
-        this.logger.log(
-          `✅ [getPosts] Query returned ${rows.length} posts (limit: ${limit}, offset: ${offset})`,
-        );
-
-        // Count task-related posts in results
-        const taskPostsInResults = rows.filter(
-          (p) =>
-            p.post_type === "task_assignment" ||
-            p.post_type === "task_completion",
-        ).length;
-        this.logger.log(
-          `📊 Task-related posts in results: ${taskPostsInResults}/${rows.length}`,
-        );
-
-        if (rows.length > 0) {
-          // Show first few posts for debugging
-          const samplePosts = rows.slice(0, 3).map((p) => ({
-            id: p.id?.substring(0, 8),
-            title: p.title?.substring(0, 30),
-            post_type: p.post_type,
-            author_id: p.author_id?.substring(0, 8),
-            has_author: !!p.author,
-            author_id_in_author: p.author?.id?.substring(0, 8),
-          }));
-          this.logger.log("📋 Sample posts:", samplePosts);
-        } else {
-          this.logger.warn("⚠️ getPosts returned 0 posts!");
-        }
-
-        return { success: true, data: rows };
-      } catch (queryError) {
-        this.logger.error(`❌ [getPosts] Primary query failed:`, queryError);
-
-        // Fallback query if main query fails (e.g. issues with joins or columns)
-        // Try simplest possible query without joins first to diagnose
-        this.logger.log("⚠️ [getPosts] Attempting fallback query...");
-
-        try {
-          const fallbackQuery = `
-                        SELECT 
-                            id, author_id, title, description, images, likes, comments, created_at,
-                            post_type, metadata, ride_id, item_id
-                        FROM posts
-                        ORDER BY created_at DESC
-                        LIMIT $1 OFFSET $2
-                    `;
-          const fallbackParams = [limit, offset];
-          const fallbackRes = await this.pool.query(
-            fallbackQuery,
-            fallbackParams,
-          );
-
-          // Map fallback results to expected format
-          const mappedRows = fallbackRes.rows.map(
-            (row: Record<string, unknown>) => ({
-              ...row,
-              author: {
-                id: row.author_id,
-                name: "משתמש",
-                avatar_url: "",
-                email_verified: false,
-              },
-              task: null,
-              is_liked: false,
-              ride_data: null,
-              item_data: null,
-            }),
-          );
-
-          this.logger.log(
-            `✅[getPosts] Fallback query returned ${mappedRows.length} posts`,
-          );
-          return { success: true, data: mappedRows };
-        } catch {
-          this.logger.warn("⚠️ [getPosts] Fallback query also failed");
-          throw queryError;
-        }
-      }
+      const rows = await this.runGetPostsQueryWithFallback(
+        query,
+        params,
+        limit,
+        offset,
+      );
+      return { success: true, data: rows };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -861,7 +1018,7 @@ export class PostsController {
       await this.ensurePostsTable();
       await this.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 20;
+      const limit = parsePositiveIntWithDefault(limitArg, 20);
 
       // Use explicit column names to avoid conflicts in JOIN queries
       let query = `
@@ -920,7 +1077,10 @@ export class PostsController {
                             'departure_time', r.departure_time,
                             'available_seats', r.available_seats,
                             'price_per_seat', r.price_per_seat,
-                            'status', r.status
+                            'status', r.status,
+                            'description', r.description,
+                            'requirements', r.requirements,
+                            'metadata', r.metadata
                         ) 
                         ELSE NULL 
                     END as ride_data,
@@ -999,6 +1159,155 @@ export class PostsController {
     }
   }
 
+  private async notifyAuthorOfNewPostLike(
+    client: PoolClient,
+    post: { author_id: string; post_type: string; title: string },
+    liker: { name: string | null },
+    likerUserId: string,
+    postId: string,
+  ): Promise<void> {
+    if (post.author_id === likerUserId) {
+      return;
+    }
+    const likerName = liker.name || "משתמש";
+    const postType =
+      post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
+    await client.query(
+      `
+                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
+                VALUES($1, $2, $3, $4, $5, $6)
+                        ON CONFLICT DO NOTHING
+                    `,
+      [
+        post.author_id,
+        "לייק חדש!",
+        `${likerName} אהב / ה את ה${postType} שלך: "${post.title}"`,
+        "like",
+        postId,
+        { liker_id: likerUserId, post_id: postId },
+      ],
+    );
+  }
+
+  private async notifyAuthorOfNewComment(
+    client: PoolClient,
+    post: { author_id: string; post_type: string },
+    commenter: { name: string | null },
+    commenterUserId: string,
+    postId: string,
+    text: string,
+    commentId: string,
+  ): Promise<void> {
+    if (post.author_id === commenterUserId) {
+      return;
+    }
+    const commenterName = commenter.name || "משתמש";
+    const postType =
+      post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
+    await client.query(
+      `
+                    INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
+                VALUES($1, $2, $3, $4, $5, $6)
+                `,
+      [
+        post.author_id,
+        "תגובה חדשה!",
+        `${commenterName} הגיב / ה על ה${postType} שלך: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
+        "comment",
+        postId,
+        {
+          commenter_id: commenterUserId,
+          post_id: postId,
+          comment_id: commentId,
+        },
+      ],
+    );
+  }
+
+  private async notifyCommentAuthorOfLike(
+    client: PoolClient,
+    comment: { user_id: string; text: string },
+    liker: { name: string | null },
+    likerUserId: string,
+    postId: string,
+    commentId: string,
+  ): Promise<void> {
+    if (comment.user_id === likerUserId) {
+      return;
+    }
+    const likerName = liker.name || "משתמש";
+    await client.query(
+      `
+                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
+                VALUES($1, $2, $3, $4, $5, $6)
+                        ON CONFLICT DO NOTHING
+                    `,
+      [
+        comment.user_id,
+        "לייק לתגובה!",
+        `${likerName} אהב / ה את התגובה שלך: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? "..." : ""}"`,
+        "like",
+        postId,
+        { liker_id: likerUserId, post_id: postId, comment_id: commentId },
+      ],
+    );
+  }
+
+  private async executeDeletePostSideEffects(
+    client: PoolClient,
+    postId: string,
+    post: {
+      post_type: string;
+      ride_id?: string | null;
+      item_id?: string | null;
+      task_id?: string | null;
+    },
+  ): Promise<{ deletionStrategy: string; relatedEntityDeleted: boolean }> {
+    switch (post.post_type) {
+      case "ride":
+        if (post.ride_id) {
+          await client.query("DELETE FROM rides WHERE id = $1", [post.ride_id]);
+          this.logger.log(
+            `✅ Deleted ride ${post.ride_id} (post auto-deleted via CASCADE)`,
+          );
+          return {
+            deletionStrategy: "ride_cascade",
+            relatedEntityDeleted: true,
+          };
+        }
+        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
+        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
+
+      case "item":
+      case "donation":
+        if (post.item_id) {
+          await client.query("DELETE FROM items WHERE id = $1", [post.item_id]);
+          this.logger.log(
+            `✅ Deleted item ${post.item_id} (post auto-deleted via CASCADE)`,
+          );
+          return {
+            deletionStrategy: "item_cascade",
+            relatedEntityDeleted: true,
+          };
+        }
+        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
+        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
+
+      case "task_completion":
+      case "task_assignment":
+        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
+        this.logger.log(
+          `✅ Deleted task post ${postId} (task ${post.task_id} preserved)`,
+        );
+        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
+
+      default:
+        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
+        this.logger.log(`✅ Deleted general post ${postId}`);
+        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
+    }
+  }
+
   // ============================================
   // LIKES ENDPOINTS
   // ============================================
@@ -1064,31 +1373,13 @@ export class PostsController {
         );
         isLiked = true;
 
-        // Send notification to post author if it's not the same user
-        const post = postCheck.rows[0];
-        const user = userCheck.rows[0];
-
-        if (post.author_id !== user_id) {
-          const likerName = user.name || "משתמש";
-          const postType =
-            post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-          await client.query(
-            `
-                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT DO NOTHING
-                    `,
-            [
-              post.author_id,
-              "לייק חדש!",
-              `${likerName} אהב / ה את ה${postType} שלך: "${post.title}"`,
-              "like",
-              postId,
-              { liker_id: user_id, post_id: postId },
-            ],
-          );
-        }
+        await this.notifyAuthorOfNewPostLike(
+          client,
+          postCheck.rows[0],
+          userCheck.rows[0],
+          user_id,
+          postId,
+        );
       }
 
       // Calculate likes count from post_likes table (more reliable than reading from posts.likes)
@@ -1154,8 +1445,8 @@ export class PostsController {
     try {
       await this.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 50;
-      const offset = parseInt(offsetArg) || 0;
+      const limit = parsePositiveIntWithDefault(limitArg, 50);
+      const offset = Number.parseInt(String(offsetArg ?? ""), 10) || 0;
 
       const { rows } = await this.pool.query(
         `
@@ -1185,7 +1476,7 @@ export class PostsController {
       return {
         success: true,
         data: rows,
-        total: parseInt(countResult.rows[0]?.total || "0"),
+        total: Number.parseInt(String(countResult.rows[0]?.total ?? "0"), 10),
       };
     } catch (error) {
       const errorMessage =
@@ -1357,29 +1648,15 @@ export class PostsController {
       );
 
       // Send notification to post author if not same user
-      const post = postCheck.rows[0];
-      const user = userCheck.rows[0];
-
-      if (post.author_id !== user_id) {
-        const commenterName = user.name || "משתמש";
-        const postType =
-          post.post_type === "task_completion" ? "השלמת משימה" : "פוסט";
-
-        await client.query(
-          `
-                    INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                `,
-          [
-            post.author_id,
-            "תגובה חדשה!",
-            `${commenterName} הגיב / ה על ה${postType} שלך: "${text.substring(0, 30)}${text.length > 30 ? "..." : ""}"`,
-            "comment",
-            postId,
-            { commenter_id: user_id, post_id: postId, comment_id: comment.id },
-          ],
-        );
-      }
+      await this.notifyAuthorOfNewComment(
+        client,
+        postCheck.rows[0],
+        userCheck.rows[0],
+        user_id,
+        postId,
+        text,
+        comment.id,
+      );
 
       await client.query("COMMIT");
 
@@ -1432,8 +1709,8 @@ export class PostsController {
     try {
       await this.ensureLikesCommentsTable();
 
-      const limit = parseInt(limitArg) || 50;
-      const offset = parseInt(offsetArg) || 0;
+      const limit = parsePositiveIntWithDefault(limitArg, 50);
+      const offset = Number.parseInt(String(offsetArg ?? ""), 10) || 0;
 
       let query = `
                 SELECT
@@ -1484,7 +1761,7 @@ export class PostsController {
       return {
         success: true,
         data: rows,
-        total: parseInt(countResult.rows[0]?.total || "0"),
+        total: Number.parseInt(String(countResult.rows[0]?.total ?? "0"), 10),
       };
     } catch (error) {
       const errorMessage =
@@ -1574,7 +1851,10 @@ export class PostsController {
                             'departure_time', r.departure_time,
                             'available_seats', r.available_seats,
                             'price_per_seat', r.price_per_seat,
-                            'status', r.status
+                            'status', r.status,
+                            'description', r.description,
+                            'requirements', r.requirements,
+                            'metadata', r.metadata
                         ) 
                         ELSE NULL 
                     END as ride_data,
@@ -1894,29 +2174,14 @@ export class PostsController {
         );
         isLiked = true;
 
-        // Send notification to comment author if not same user
-        const comment = commentCheck.rows[0];
-        const user = userCheck.rows[0];
-
-        if (comment.user_id !== user_id) {
-          const likerName = user.name || "משתמש";
-
-          await client.query(
-            `
-                        INSERT INTO user_notifications(user_id, title, content, notification_type, related_id, metadata)
-                VALUES($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT DO NOTHING
-                    `,
-            [
-              comment.user_id,
-              "לייק לתגובה!",
-              `${likerName} אהב / ה את התגובה שלך: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? "..." : ""}"`,
-              "like",
-              postId,
-              { liker_id: user_id, post_id: postId, comment_id: commentId },
-            ],
-          );
-        }
+        await this.notifyCommentAuthorOfLike(
+          client,
+          commentCheck.rows[0],
+          userCheck.rows[0],
+          user_id,
+          postId,
+          commentId,
+        );
       }
 
       // Calculate likes count from comment_likes table (more reliable than reading from post_comments.likes_count)
@@ -2318,12 +2583,7 @@ export class PostsController {
       await client.query("BEGIN");
 
       // Get user_id from authenticated request (more secure/reliable than body)
-      // JwtAuthGuard populates req.user with SessionTokenPayload which uses 'userId'
-      const payload = req.user as SessionTokenPayload | undefined;
-      const user_id =
-        payload?.userId ||
-        (payload as unknown as Record<string, unknown>)?.id ||
-        (payload as unknown as Record<string, unknown>)?.sub;
+      const user_id = this.getSessionUserId(req);
 
       if (!user_id) {
         await client.query("ROLLBACK");
@@ -2374,65 +2634,8 @@ export class PostsController {
         `🗑️ Deleting post ${postId} (type: ${post.post_type}) by user ${user_id} (owner: ${isOwner}, admin: ${isSuperAdmin})`,
       );
 
-      // Handle deletion based on post type
-      let deletionStrategy = "post_only";
-      let relatedEntityDeleted = false;
-
-      switch (post.post_type) {
-        case "ride":
-          if (post.ride_id) {
-            // Delete the ride - post will be auto-deleted via CASCADE
-            await client.query("DELETE FROM rides WHERE id = $1", [
-              post.ride_id,
-            ]);
-            deletionStrategy = "ride_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `✅ Deleted ride ${post.ride_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            // Orphaned ride post - delete post only
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-            deletionStrategy = "post_only";
-          }
-          break;
-
-        case "item":
-        case "donation":
-          if (post.item_id) {
-            // Delete the item - post will be auto-deleted via CASCADE
-            await client.query("DELETE FROM items WHERE id = $1", [
-              post.item_id,
-            ]);
-            deletionStrategy = "item_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `✅ Deleted item ${post.item_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            // Orphaned item post - delete post only
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-            deletionStrategy = "post_only";
-          }
-          break;
-
-        case "task_completion":
-        case "task_assignment":
-          // For tasks, only delete the post, not the task itself
-          // Tasks can have multiple posts and should be managed separately
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          deletionStrategy = "post_only";
-          this.logger.log(
-            `✅ Deleted task post ${postId} (task ${post.task_id} preserved)`,
-          );
-          break;
-
-        default:
-          // General posts or unknown types - delete post only
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          deletionStrategy = "post_only";
-          this.logger.log(`✅ Deleted general post ${postId}`);
-      }
+      const { deletionStrategy, relatedEntityDeleted } =
+        await this.executeDeletePostSideEffects(client, postId, post);
 
       // Track deletion activity
       await client.query(
@@ -2484,9 +2687,7 @@ export class PostsController {
         message: errorMessage,
         stack: errorStack,
         postId,
-        userId:
-          (req?.user as SessionTokenPayload | undefined)?.userId ||
-          (req?.user as unknown as Record<string, unknown>)?.id,
+        userId: this.getSessionUserId(req),
       });
       return {
         success: false,

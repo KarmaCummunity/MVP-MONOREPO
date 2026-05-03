@@ -86,6 +86,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
     const loadInitialOrRefresh = useCallback(
         async (isRefresh: boolean) => {
             const viewerId = feedMode === 'friends' ? currentUser?.id : undefined;
+            const feedScope =
+                feedMode === 'friends' && viewerId ? ('friends' as const) : undefined;
             initialLoadCompleteRef.current = false;
             if (isRefresh) {
                 setRefreshing(true);
@@ -105,7 +107,15 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                     pageSize: POSTS_PAGE_SIZE,
                 });
 
-                const postsResponse = await postsService.getPosts(POSTS_PAGE_SIZE, 0, viewerId);
+                const postsResponse = await postsService.getPosts(
+                    POSTS_PAGE_SIZE,
+                    0,
+                    viewerId,
+                    undefined,
+                    undefined,
+                    undefined,
+                    feedScope,
+                );
                 if (!postsResponse.success) {
                     logger.warn('useFeedData', 'First page posts request failed', {
                         error: postsResponse.error,
@@ -127,7 +137,11 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
                 );
 
                 const existingIds = new Set(mappedPosts.map((item) => item.id));
-                const taskItems = await fetchStandaloneTasksAsFeedItems(postedTaskIds, existingIds);
+                // Standalone tasks are global — only merge into discovery feed (friends feed is scoped server-side).
+                const taskItems =
+                    feedMode === 'friends'
+                        ? []
+                        : await fetchStandaloneTasksAsFeedItems(postedTaskIds, existingIds);
 
                 const merged = sortFeedByTimestampDesc([...mappedPosts, ...taskItems]);
                 setFeed(merged);
@@ -158,6 +172,8 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
         }
 
         const viewerId = feedMode === 'friends' ? currentUser?.id : undefined;
+        const feedScope =
+            feedMode === 'friends' && viewerId ? ('friends' as const) : undefined;
         loadMoreInFlightRef.current = true;
         setLoadingMore(true);
         setLoadMoreError(null);
@@ -166,7 +182,15 @@ export const useFeedData = (feedMode: 'friends' | 'discovery') => {
             const offset = postsOffsetRef.current;
             logger.debug('useFeedData', 'Loading more posts', { offset, pageSize: POSTS_PAGE_SIZE });
 
-            const postsResponse = await postsService.getPosts(POSTS_PAGE_SIZE, offset, viewerId);
+            const postsResponse = await postsService.getPosts(
+                POSTS_PAGE_SIZE,
+                offset,
+                viewerId,
+                undefined,
+                undefined,
+                undefined,
+                feedScope,
+            );
             if (!postsResponse.success) {
                 logger.warn('useFeedData', 'Load more posts request failed', {
                     offset,

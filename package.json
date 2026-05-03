@@ -9,9 +9,10 @@
   "scripts": {
     "dev:api": "npm run start:dev --workspace @kc/api",
     "dev:api:debug": "npm run start:debug --workspace @kc/api",
-    "dev:mobile": "npm run start --workspace @kc/mobile",
-    "dev:mobile:web": "npm run web --workspace @kc/mobile",
+    "dev:mobile": "EXPO_NO_METRO_WORKSPACE_ROOT=1 npm run start --workspace @kc/mobile",
+    "dev:mobile:web": "EXPO_NO_METRO_WORKSPACE_ROOT=1 npm run web --workspace @kc/mobile",
     "e2e:local": "npm run e2e:local --workspace @kc/mobile",
+    "e2e:maestro": "npm run e2e:maestro --workspace @kc/mobile",
     "build": "npm run build --workspaces --if-present",
     "start": "npm run start --workspace @kc/api",
     "lint": "npm run lint --workspaces --if-present",
@@ -22,7 +23,9 @@
     "quality:sonar:compare": "node tools/quality/sonar/compare-results.js",
     "quality:sonar:stats": "node tools/quality/sonar/analyze-stats-controller.js",
     "quality:sonar:users": "node tools/quality/sonar/analyze-users-controller.js",
-    "quality:sonar:priority-doc": "node tools/quality/sonar/create-priority-doc.js"
+    "quality:sonar:priority-doc": "node tools/quality/sonar/create-priority-doc.js",
+    "android": "npm run android --workspace @kc/mobile",
+    "ios": "npm run ios --workspace @kc/mobile"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -30,14 +33,44 @@
   "overrides": {
     "react-native": "0.79.5",
     "ajv": "^8.18.0",
-    "undici": "^6.21.1",
+    "expo-dev-launcher": {
+      "ajv": "^8.18.0"
+    },
+    "undici": "^6.24.0",
     "cross-spawn": "^7.0.6",
     "adm-zip": "^0.5.11",
     "node-forge": "^1.3.2",
-    "tar": "^7.5.8",
+    "tar": "^7.5.11",
     "fast-xml-parser": "^5.3.6",
     "ws": "^8.18.1",
-    "lodash": "^4.17.23",
+    "lodash": "^4.18.1",
+    "follow-redirects": "1.16.0",
+    "protobufjs": "7.5.5",
+    "picomatch": "^3.0.2",
+    "test-exclude": {
+      "minimatch": "3.1.3"
+    },
+    "@expo/cli": {
+      "minimatch": "9.0.9"
+    },
+    "@expo/config-plugins@^10.0.0": {
+      "minimatch": "9.0.9"
+    },
+    "@expo/config@^11.0.0": {
+      "minimatch": "9.0.9"
+    },
+    "@expo/fingerprint": {
+      "minimatch": "9.0.9"
+    },
+    "@expo/metro-config": {
+      "minimatch": "9.0.9"
+    },
+    "expo-modules-autolinking": {
+      "minimatch": "9.0.9"
+    },
+    "@xmldom/xmldom": "^0.8.13",
+    "uuid": "^11.1.1",
+    "postcss": "^8.5.10",
     "@nestjs/common": "11.1.19",
     "@nestjs/core": "11.1.19",
     "@nestjs/platform-express": "11.1.19",
@@ -49,9 +82,13 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
-    "react-native": "0.79.5"
+    "react-native": "0.79.5",
+    "expo": "~53.0.27",
+    "react": "19.0.0"
   },
   "devDependencies": {
-    "@types/pg-format": "^1.0.5"
+    "@types/pg-format": "^1.0.5",
+    "follow-redirects": "1.16.0",
+    "protobufjs": "7.5.5"
   }
 }

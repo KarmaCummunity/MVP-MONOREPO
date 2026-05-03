@@ -4,9 +4,10 @@
 // - Used by: NavigationContainer in App.tsx
 // - Domain: karma-community-kc.com
 
-import { LinkingOptions } from '@react-navigation/native';
-import { getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
+import { LinkingOptions, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
 import { RootStackParamList } from '../globals/types';
+import { mergeOverlayNavigationStateWithHomeStack } from './linkingHomeStackOverlay';
+import { useUserStore } from '../stores/userStore';
 
 /**
  * Deep linking configuration for the entire app
@@ -36,26 +37,33 @@ export const linking: LinkingOptions<RootStackParamList> = {
     const cleanPath = pathnamePart.split('#')[0];
     const normalized = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
 
+    let resolved: ReturnType<typeof defaultGetStateFromPath>;
+
     // Legacy web URLs: /CommunityChallengesScreen?mode=search|offer
     if (/^\/CommunityChallengesScreen\/?$/i.test(normalized)) {
       const params = new URLSearchParams(queryPart);
       const mode = params.get('mode') === 'offer' ? 'offer' : 'search';
-      return defaultGetStateFromPath(
+      resolved = defaultGetStateFromPath(
         `/donations/community-challenges/${mode}`,
         options,
       );
+    } else {
+      // Handle paths without mode - redirect to /search
+      const categoryMatch = /^\/donations\/(money|time|knowledge|rides|items)$/.exec(
+        normalized,
+      );
+      if (categoryMatch) {
+        const category = categoryMatch[1];
+        const pathWithMode = `/donations/${category}/search`;
+        resolved = defaultGetStateFromPath(pathWithMode, options);
+      } else {
+        resolved = defaultGetStateFromPath(path, options);
+      }
     }
 
-    // Handle paths without mode - redirect to /search
-    const categoryMatch = normalized.match(
-      /^\/donations\/(money|time|knowledge|rides|items)$/,
-    );
-    if (categoryMatch) {
-      const category = categoryMatch[1];
-      const pathWithMode = `/donations/${category}/search`;
-      return defaultGetStateFromPath(pathWithMode, options);
-    }
-    return defaultGetStateFromPath(path, options);
+    const { isAuthenticated, isGuestMode } = useUserStore.getState();
+    const allowsHomeStack = isAuthenticated || isGuestMode;
+    return mergeOverlayNavigationStateWithHomeStack(resolved, options, allowsHomeStack);
   },
   
   config: {
@@ -80,6 +88,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
                   postId: (postId: string) => postId || '',
                 },
               },
+              /** Same paths as previous root entries — nested here so refresh keeps BottomNavigator visible. */
+              SettingsScreen: 'settings',
+              NotificationsScreen: 'notifications',
+              ChatListScreen: 'chat',
+              AboutKarmaCommunityScreen: 'about',
+              BookmarksScreen: 'bookmarks',
+              DiscoverPeopleScreen: 'discover',
             },
           },
           
@@ -196,24 +211,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       
       // New Chat Screen
       NewChatScreen: 'chat/new',
-      
-      // Notifications Screen
-      NotificationsScreen: 'notifications',
-      
-      // Settings Screen
-      SettingsScreen: 'settings',
-      
-      // Chat List Screen
-      ChatListScreen: 'chat',
-      
-      // About Screen
-      AboutKarmaCommunityScreen: 'about',
-      
-      // Bookmarks Screen
-      BookmarksScreen: 'bookmarks',
-      
-      // Discover People Screen
-      DiscoverPeopleScreen: 'discover',
+
+      // Notifications / Settings / Chat list / About / Bookmarks / Discover — mapped under HomeStack → HomeScreen → HomeTabStack (see above).
       
       // Edit Profile Screen
       EditProfileScreen: 'profile/edit',

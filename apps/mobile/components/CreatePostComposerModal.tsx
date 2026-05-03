@@ -1,19 +1,20 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform, ScrollView, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo, useState, useRef } from 'react';
+import { Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import colors from '../globals/colors';
-import { db } from '../utils/databaseService';
 import { useUser } from '../stores/userStore';
 import { usePostComposerStore, PostIntent } from '../stores/postComposerStore';
-import ComposerTaskForm, { type ComposerTaskFormHandle } from './ComposerTaskForm';
-import TimeInput from './TimeInput';
+import { type ComposerTaskFormHandle } from './ComposerTaskForm';
+import type { RecurrenceUnit } from '../utils/buildTrumpRideRequestMetadata';
+import { createPostComposerModalStyles as styles } from './createPostComposerModalStyles';
+import ComposerModalChrome from './ComposerModalChrome';
+import { useComposerFormReset } from './useComposerFormReset';
+import { useDedicatedPostComposerSubmit } from './useDedicatedPostComposerSubmit';
 
 const POST_CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'time', 'challenges'] as const;
 const TASK_CATEGORY_SLUG = 'tasks' as const;
 
 export default function CreatePostComposerModal(): React.ReactElement {
-  const { t } = useTranslation(['common', 'donations', 'admin']);
+  const { t } = useTranslation(['common', 'donations', 'admin', 'trump']);
   const { selectedUser, isAdmin } = useUser();
   const { visible, initialCategory, initialIntent, composerMode, closeComposer } = usePostComposerStore();
 
@@ -22,14 +23,45 @@ export default function CreatePostComposerModal(): React.ReactElement {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
-  /** Ride request (trump + request): origin / destination text; departure defaults to "now". */
   const [rideFrom, setRideFrom] = useState('');
   const [rideTo, setRideTo] = useState('');
-  const [rideDeparture, setRideDeparture] = useState<Date>(() => new Date());
+  const [rideDeparture, setRideDeparture] = useState<Date | null>(() => new Date());
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState(1);
+  const [recurrenceUnit, setRecurrenceUnit] = useState<RecurrenceUnit | null>(null);
+  const [seats, setSeats] = useState(1);
+  const [fuelMode, setFuelMode] = useState<'none' | 'yes' | 'up_to'>('none');
+  const [fuelCapNis, setFuelCapNis] = useState('');
+  const [smokingPref, setSmokingPref] = useState<'no_smokers' | 'smokers_ok' | 'any'>('any');
+  const [genderPref, setGenderPref] = useState<'any' | 'female' | 'male'>('any');
   const [quantity, setQuantity] = useState('1');
   const [amount, setAmount] = useState('');
   const [taskSubmitting, setTaskSubmitting] = useState(false);
   const taskFormRef = useRef<ComposerTaskFormHandle>(null);
+
+  useComposerFormReset(visible, initialCategory, initialIntent, composerMode, {
+    setIntent,
+    setCategory,
+    setTitle,
+    setDescription,
+    setCity,
+    setRideFrom,
+    setRideTo,
+    setRideDeparture,
+    setAdvancedOpen,
+    setIsRecurring,
+    setRecurrenceFrequency,
+    setRecurrenceUnit,
+    setSeats,
+    setFuelMode,
+    setFuelCapNis,
+    setSmokingPref,
+    setGenderPref,
+    setQuantity,
+    setAmount,
+    setTaskSubmitting,
+  });
 
   const categoryChips = useMemo(
     () => (isAdmin ? [...POST_CATEGORIES, TASK_CATEGORY_SLUG] : [...POST_CATEGORIES]),
@@ -37,100 +69,51 @@ export default function CreatePostComposerModal(): React.ReactElement {
   );
 
   const contentIsTask = isAdmin && category === TASK_CATEGORY_SLUG;
+  const showAmountField = contentIsTask === false && category === 'money';
+  const showQuantityField = contentIsTask === false && category === 'items';
+  const showTrumpRideFields = contentIsTask === false && category === 'trump';
 
-  useEffect(() => {
-    if (!visible) return;
-    setIntent(initialIntent);
-    setCategory(composerMode === 'task' ? TASK_CATEGORY_SLUG : initialCategory);
-    setTitle('');
-    setDescription('');
-    setCity('');
-    setRideFrom('');
-    setRideTo('');
-    setRideDeparture(new Date());
-    setQuantity('1');
-    setAmount('');
-    setTaskSubmitting(false);
-  }, [visible, initialCategory, initialIntent, composerMode]);
+  const departureValid =
+    rideDeparture instanceof Date && !Number.isNaN(rideDeparture.getTime());
 
-  const showAmountField = !contentIsTask && category === 'money';
-  const showQuantityField = !contentIsTask && category === 'items';
-  const showTrumpRideRequestFields = !contentIsTask && category === 'trump' && intent === 'request';
-
-  const canPublishPost = showTrumpRideRequestFields
-    ? rideFrom.trim().length > 0 && rideTo.trim().length > 0
+  const canPublishPost = showTrumpRideFields
+    ? rideFrom.trim().length > 0 && rideTo.trim().length > 0 && departureValid
     : title.trim().length > 0;
 
-  const submitPost = async () => {
-    if (!selectedUser?.id) {
-      Alert.alert(t('common:error'), t('common:guestLoginHint'));
-      return;
-    }
-    const fromTrim = rideFrom.trim();
-    const toTrim = rideTo.trim();
-    let resolvedTitle = title.trim();
-    if (showTrumpRideRequestFields) {
-      if (!fromTrim || !toTrim) {
-        Alert.alert(t('common:error'), t('common:postComposer.rideRequestFromToRequired'));
-        return;
-      }
-      if (!resolvedTitle) {
-        resolvedTitle = t('common:postComposer.rideRequestTitleTemplate', { from: fromTrim, to: toTrim });
-      }
-    } else if (!resolvedTitle) {
-      Alert.alert(t('common:error'), t('common:postComposer.titleRequired'));
-      return;
-    }
-
-    const departureIso =
-      showTrumpRideRequestFields && rideDeparture instanceof Date && !Number.isNaN(rideDeparture.getTime())
-        ? rideDeparture.toISOString()
-        : new Date().toISOString();
-
-    const trumpRequestMetadata = showTrumpRideRequestFields
-      ? {
-          ride: {
-            from_location: fromTrim,
-            to_location: toTrim,
-            departure_time: departureIso,
-            category: 'trump',
-          },
-          category: 'trump',
-        }
-      : undefined;
-
-    try {
-      await db.createDedicatedItem({
-        owner_id: selectedUser.id,
-        title: resolvedTitle,
-        description: description.trim() || undefined,
-        category,
-        city: showTrumpRideRequestFields ? fromTrim : city.trim() || undefined,
-        address: showTrumpRideRequestFields ? toTrim : undefined,
-        quantity: showQuantityField ? Math.max(1, Number(quantity) || 1) : 1,
-        price: showAmountField ? Math.max(0, Number(amount) || 0) : 0,
-        condition: 'used',
-        status: 'available',
-        intent,
-        ...(trumpRequestMetadata ? { metadata: trumpRequestMetadata } : {}),
-      });
-
-      Alert.alert(
-        t('common:confirm'),
-        intent === 'request' ? t('common:postComposer.requestPublished') : t('common:postComposer.givePublished'),
-      );
-      closeComposer();
-    } catch (_e) {
-      Alert.alert(t('common:error'), t('common:genericTryAgain'));
-    }
-  };
+  const submitDedicatedPost = useDedicatedPostComposerSubmit({
+    t: t as (k: string, o?: Record<string, string>) => string,
+    closeComposer,
+    userId: selectedUser?.id,
+    showTrumpRideFields,
+    rideFrom,
+    rideTo,
+    departureValid,
+    rideDeparture,
+    intent,
+    title,
+    isRecurring,
+    recurrenceUnit,
+    fuelMode,
+    fuelCapNis,
+    recurrenceFrequency,
+    seats,
+    smokingPref,
+    genderPref,
+    description,
+    category,
+    city,
+    showQuantityField,
+    showAmountField,
+    quantity,
+    amount,
+  });
 
   const onPressPublish = () => {
     if (contentIsTask) {
       void taskFormRef.current?.submit();
       return;
     }
-    void submitPost();
+    void submitDedicatedPost();
   };
 
   const titleText = useMemo(() => {
@@ -143,170 +126,81 @@ export default function CreatePostComposerModal(): React.ReactElement {
   const publishDisabled = contentIsTask ? taskSubmitting : !canPublishPost;
   const publishLabel = contentIsTask ? t('admin:tasks.create') : t('common:postComposer.publish');
 
+  const chip = (active: boolean) => [styles.chip, active && styles.chipActive];
+
+  const recurrenceUnitLabelFn = useMemo(
+    () => (u: RecurrenceUnit) => {
+      if (u === 'day') return t('trump:ui.recurrenceDay');
+      if (u === 'week') return t('trump:ui.recurrenceWeek');
+      return t('trump:ui.recurrenceMonth');
+    },
+    [t],
+  );
+
+  const submitRequestHighlight = contentIsTask === false && intent === 'request';
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={closeComposer}>
-      <View style={[styles.backdrop, Platform.OS === 'web' && styles.backdropWeb]}>
-        <TouchableOpacity style={styles.backdropTouch} onPress={closeComposer} accessibilityRole="button" />
-        <View
-          style={[
-            styles.sheet,
-            Platform.OS === 'web' && styles.sheetWeb,
-            contentIsTask && styles.sheetTask,
-          ]}
-        >
-          <View style={styles.handle} />
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{titleText}</Text>
-            <TouchableOpacity onPress={closeComposer}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          {!contentIsTask ? (
-            <View style={styles.toggleRow}>
-              <TouchableOpacity style={[styles.toggleBtn, intent === 'give' && styles.toggleBtnActive]} onPress={() => setIntent('give')}>
-                <Text style={styles.toggleText}>{t('common:give')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.toggleBtn, intent === 'request' && styles.requestBtnActive]} onPress={() => setIntent('request')}>
-                <Text style={styles.toggleText}>{t('common:request')}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          <View style={styles.categoriesRow}>
-            {categoryChips.map((c) => (
-              <TouchableOpacity key={c} style={[styles.categoryChip, category === c && styles.categoryChipActive]} onPress={() => setCategory(c)}>
-                <Text style={styles.categoryText}>{t(`donations:categories.${c}.title`, { defaultValue: c })}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {contentIsTask && selectedUser?.id ? (
-            <View style={styles.taskFormWrap}>
-              <ComposerTaskForm
-                ref={taskFormRef}
-                visible={visible}
-                userId={selectedUser.id}
-                onCreated={closeComposer}
-                onSubmittingChange={setTaskSubmitting}
-              />
-            </View>
-          ) : contentIsTask && !selectedUser?.id ? (
-            <Text style={styles.hintText}>{t('common:guestLoginHint')}</Text>
-          ) : (
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-              {showTrumpRideRequestFields ? (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={t('common:postComposer.rideFromPlaceholder')}
-                    value={rideFrom}
-                    onChangeText={setRideFrom}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={t('common:postComposer.rideToPlaceholder')}
-                    value={rideTo}
-                    onChangeText={setRideTo}
-                  />
-                  <TimeInput
-                    value={rideDeparture}
-                    onChange={(d) => setRideDeparture(d ?? new Date())}
-                    label={t('common:postComposer.rideDepartureLabel')}
-                    placeholder={t('common:time.now')}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={t('common:postComposer.titleOptional')}
-                    value={title}
-                    onChangeText={setTitle}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.multiline]}
-                    placeholder={t('common:postComposer.description')}
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                  />
-                </>
-              ) : (
-                <>
-                  <TextInput style={styles.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={setTitle} />
-                  <TextInput
-                    style={[styles.input, styles.multiline]}
-                    placeholder={t('common:postComposer.description')}
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                  />
-                  <TextInput style={styles.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={setCity} />
-                </>
-              )}
-              {showQuantityField ? (
-                <TextInput style={styles.input} placeholder={t('common:postComposer.quantity')} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
-              ) : null}
-              {showAmountField ? (
-                <TextInput style={styles.input} placeholder={t('common:postComposer.amount')} value={amount} onChangeText={setAmount} keyboardType="number-pad" />
-              ) : null}
-            </ScrollView>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              !contentIsTask && intent === 'request' && styles.submitRequest,
-              publishDisabled && styles.submitBtnDisabled,
-            ]}
-            onPress={onPressPublish}
-            disabled={publishDisabled}
-            accessibilityState={{ disabled: publishDisabled }}
-          >
-            {contentIsTask && taskSubmitting ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.submitText}>{publishLabel}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ComposerModalChrome
+        styles={styles}
+        closeComposer={closeComposer}
+        contentIsTask={contentIsTask}
+        titleText={titleText}
+        categoryChips={categoryChips}
+        category={category}
+        setCategory={setCategory}
+        t={t}
+        intent={intent}
+        setIntent={setIntent}
+        taskFormRef={taskFormRef}
+        visible={visible}
+        selectedUserId={selectedUser?.id}
+        setTaskSubmitting={setTaskSubmitting}
+        showTrumpRideFields={showTrumpRideFields}
+        showQuantityField={showQuantityField}
+        showAmountField={showAmountField}
+        title={title}
+        description={description}
+        city={city}
+        quantity={quantity}
+        amount={amount}
+        setTitle={setTitle}
+        setDescription={setDescription}
+        setCity={setCity}
+        setQuantity={setQuantity}
+        setAmount={setAmount}
+        rideFrom={rideFrom}
+        rideTo={rideTo}
+        rideDeparture={rideDeparture}
+        setRideFrom={setRideFrom}
+        setRideTo={setRideTo}
+        setRideDeparture={setRideDeparture}
+        advancedOpen={advancedOpen}
+        setAdvancedOpen={setAdvancedOpen}
+        chip={chip}
+        recurrenceUnitLabel={recurrenceUnitLabelFn}
+        isRecurring={isRecurring}
+        setIsRecurring={setIsRecurring}
+        setRecurrenceUnit={setRecurrenceUnit}
+        setRecurrenceFrequency={setRecurrenceFrequency}
+        recurrenceFrequency={recurrenceFrequency}
+        recurrenceUnit={recurrenceUnit}
+        seats={seats}
+        setSeats={setSeats}
+        fuelMode={fuelMode}
+        setFuelMode={setFuelMode}
+        fuelCapNis={fuelCapNis}
+        setFuelCapNis={setFuelCapNis}
+        smokingPref={smokingPref}
+        setSmokingPref={setSmokingPref}
+        genderPref={genderPref}
+        setGenderPref={setGenderPref}
+        submitRequestHighlight={submitRequestHighlight}
+        publishDisabled={publishDisabled}
+        publishLabel={publishLabel}
+        publishButtonShowsSpinner={contentIsTask && taskSubmitting}
+        onPressPublish={onPressPublish}
+      />
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
-  backdropWeb: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 2147483000,
-  } as const,
-  backdropTouch: { flex: 1 },
-  sheet: { maxHeight: '85%', backgroundColor: colors.white, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16 },
-  sheetTask: { height: '85%', maxHeight: '85%' },
-  taskFormWrap: { flex: 1, minHeight: 200, marginBottom: 4 },
-  sheetWeb: { zIndex: 2147483001 },
-  handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 12, backgroundColor: colors.border, marginBottom: 8 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  title: { fontWeight: '700', color: colors.textPrimary, fontSize: 18 },
-  toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  toggleBtn: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, alignItems: 'center' },
-  toggleBtnActive: { backgroundColor: colors.successLight, borderColor: colors.success },
-  requestBtnActive: { backgroundColor: colors.warningLight, borderColor: colors.warning },
-  toggleText: { fontWeight: '600', color: colors.textPrimary },
-  categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  categoryChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
-  categoryChipActive: { backgroundColor: colors.infoLight, borderColor: colors.primary },
-  categoryText: { color: colors.textPrimary, fontSize: 12 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10, color: colors.textPrimary },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  hintText: { color: colors.textSecondary, marginBottom: 12, textAlign: 'center' },
-  submitBtn: { marginTop: 8, backgroundColor: colors.success, paddingVertical: 12, borderRadius: 12, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
-  submitRequest: { backgroundColor: colors.warning },
-  submitBtnDisabled: { opacity: 0.45 },
-  submitText: { color: colors.white, fontWeight: '700' },
-});

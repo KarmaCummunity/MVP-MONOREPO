@@ -37,7 +37,7 @@ ignore:
           quoted via pg-format %I before being appended to the query.
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T00:00:00.000Z
-    - src/controllers/tasks.controller.ts:
+    - src/tasks/tasks.controller.ts:
         reason: >
           The WHERE clause is built from fixed column names (status, priority,
           category) whose values are fully parameterised ($1, $2, …). No user
@@ -135,7 +135,7 @@ exclude:
           identifier quoted via pg-format %I
         expires: 2027-06-01T00:00:00.000Z
         created: 2026-02-25T02:26:13.615Z
-    - src/controllers/tasks.controller.ts:
+    - src/tasks/tasks.controller.ts:
         reason: >-
           WHERE clause built from fixed column names; all values parameterised
           ($1,$2,...); no user input as identifier

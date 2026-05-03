@@ -36,4 +36,28 @@ describe('mapApiPostToFeedItem images', () => {
     expect(item.images).toBeNull();
     expect(item.thumbnail).toBeNull();
   });
+
+  it('parses stringified JSON author (feed rows)', () => {
+    const row = {
+      id: 'p3',
+      post_type: 'post',
+      title: 'T',
+      description: '',
+      likes: '0',
+      comments: '0',
+      is_liked: false,
+      created_at: '2026-01-01T12:00:00.000Z',
+      author: JSON.stringify({
+        id: 'u2',
+        name: 'שרה',
+        avatar_url: 'https://a.example/ava.jpg',
+        email_verified: true,
+      }),
+    };
+    const item = mapApiPostToFeedItem(row);
+    expect(item.user.id).toBe('u2');
+    expect(item.user.name).toBe('שרה');
+    expect(item.user.avatar).toBe('https://a.example/ava.jpg');
+    expect(item.user.emailVerified).toBe(true);
+  });
 });

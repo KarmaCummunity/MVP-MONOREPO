@@ -20,7 +20,7 @@ import {
     Platform,
     UIManager
 } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../hooks/useSafeBottomTabBarHeight';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -67,7 +67,7 @@ const SearchScreen = () => {
     useLogScreenOpened('SearchScreen');
     const navigation = useNavigation<any>();
     const route = useRoute();
-    const tabBarHeight = useBottomTabBarHeight();
+    const tabBarHeight = useSafeBottomTabBarHeight();
     const { t } = useTranslation(['search', 'common', 'donations', 'trump']);
     const { selectedUser: _selectedUser } = useUser();
     const { ToastComponent } = useToast();

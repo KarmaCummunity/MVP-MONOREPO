@@ -12,7 +12,7 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeBottomTabBarHeight } from '../../hooks/useSafeBottomTabBarHeight';
 import { NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../globals/colors';
@@ -21,9 +21,10 @@ import { AdminStackParamList } from '../../globals/types';
 import { useUser } from '../../stores/userStore';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { apiService } from '../../utils/apiService';
+import { formatYearMonthPeriodHebrew } from '../../globals/monthNames';
 
 interface AdminTimeManagementScreenProps {
-  navigation: NavigationProp<AdminStackParamList>;
+  readonly navigation: NavigationProp<AdminStackParamList>;
 }
 
 interface HoursReport {
@@ -48,7 +49,7 @@ interface HoursReport {
 export default function AdminTimeManagementScreen({ navigation }: AdminTimeManagementScreenProps) {
   useAdminProtection(true);
   const { selectedUser } = useUser();
-  const tabBarHeight = useBottomTabBarHeight() || 0;
+  const tabBarHeight = useSafeBottomTabBarHeight();
   const [report, setReport] = useState<HoursReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,16 +92,6 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
 
   const formatHours = (hours: number) => {
     return hours.toFixed(1);
-  };
-
-  const formatPeriod = (period: string) => {
-    // period format: "YYYY-MM"
-    const [year, month] = period.split('-');
-    const months = [
-      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
-    ];
-    return `${months[parseInt(month) - 1]} ${year}`;
   };
 
   return (
@@ -229,7 +220,7 @@ export default function AdminTimeManagementScreen({ navigation }: AdminTimeManag
                     {report.by_period.map((item, index) => (
                       <View key={item.period} style={styles.listItem}>
                         <View style={styles.listItemContent}>
-                          <Text style={styles.listItemTitle}>{formatPeriod(item.period)}</Text>
+                          <Text style={styles.listItemTitle}>{formatYearMonthPeriodHebrew(item.period)}</Text>
                           <Text style={styles.listItemValue}>{formatHours(item.hours)} שעות</Text>
                         </View>
                         {index < report.by_period.length - 1 && <View style={styles.separator} />}
