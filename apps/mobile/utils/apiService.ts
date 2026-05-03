@@ -785,6 +785,11 @@ class ApiService {
     return this.request(url);
   }
 
+  /** Total post rows in `posts` for this author (author_id). */
+  async getUserPostsCount(userId: string): Promise<ApiResponse> {
+    return this.request(`/api/posts/user/${userId}/count`);
+  }
+
   async deletePost(postId: string, _userId: string): Promise<ApiResponse> {
     return this.request(`/api/posts/${postId}`, {
       method: 'DELETE',

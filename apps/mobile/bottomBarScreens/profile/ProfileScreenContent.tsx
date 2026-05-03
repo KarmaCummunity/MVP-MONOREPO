@@ -1,7 +1,7 @@
 /**
  * Main profile body (own vs other user). Extracted from ProfileScreen.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,10 @@ import { createSampleChatData, createConversation, conversationExists } from '..
 import { enhancedDB } from '../../utils/enhancedDatabaseService';
 import { apiService } from '../../utils/apiService';
 import { USE_BACKEND } from '../../utils/dbConfig';
+import {
+  loadProfileOpenClosedTabContent,
+  type ProfileTabBucketState,
+} from './profileTabContentLoader';
 import { useToast } from '../../utils/toastService';
 import { sanitiseAvatarUrl } from '../../utils/urlValidator';
 import { getRoleDisplayName } from './profileScreenHelpers';
@@ -140,6 +144,7 @@ export function ProfileScreenContent({
     totalDonations: 0,
   });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [profileTabBuckets, setProfileTabBuckets] = useState<ProfileTabBucketState>('idle');
   const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
 
@@ -291,8 +296,20 @@ export function ProfileScreenContent({
       const currentUserStats = await getFollowStats(userIdToUse, userIdToUse);
       const userToUse = isOwnProfile ? selectedUser : viewingUser;
 
+      let postsTotal = (userToUse as { postsCount?: number } | null)?.postsCount ?? 0;
+      if (USE_BACKEND) {
+        try {
+          const countRes = await apiService.getUserPostsCount(userIdToUse);
+          if (countRes.success && countRes.data && typeof (countRes.data as { total?: number }).total === 'number') {
+            postsTotal = (countRes.data as { total: number }).total;
+          }
+        } catch (_e) {
+          // keep profile postsCount
+        }
+      }
+
       setUserStats({
-        posts: (userToUse as any)?.postsCount || 0,
+        posts: postsTotal,
         followers: currentUserStats.followersCount,
         following: currentUserStats.followingCount,
         karmaPoints: userToUse?.karmaPoints || 0,
@@ -497,7 +514,7 @@ export function ProfileScreenContent({
         console.error('Error loading tasks:', error);
       }
 
-      // Sort by time (newest first) and limit to 10
+      // Sort by time (newest first) and limit to 5
       activities.sort((a, b) => {
         const timeA = new Date(a.time).getTime();
         const timeB = new Date(b.time).getTime();
@@ -505,7 +522,7 @@ export function ProfileScreenContent({
       });
 
       // Format time for display
-      const formattedActivities = activities.slice(0, 10).map(activity => {
+      const formattedActivities = activities.slice(0, 5).map(activity => {
         const activityTime = new Date(activity.time);
         const now = new Date();
         const diffMs = now.getTime() - activityTime.getTime();
@@ -539,6 +556,39 @@ export function ProfileScreenContent({
     }
   }, [isOwnProfile, selectedUser]);
 
+  const loadProfileTabBuckets = React.useCallback(async () => {
+    if (!targetUserId) {
+      setProfileTabBuckets('idle');
+      return;
+    }
+    setProfileTabBuckets('loading');
+    try {
+      const { db } = require('../../utils/databaseService');
+      const profileUser =
+        displayUser && displayUser.id
+          ? {
+              id: displayUser.id,
+              name: displayUser.name,
+              avatar: displayUser.avatar,
+              karmaPoints: displayUser.karmaPoints,
+            }
+          : null;
+      const { openItems, closedItems } = await loadProfileOpenClosedTabContent({
+        targetUserId,
+        viewerId: selectedUser?.id,
+        user: profileUser,
+        db,
+      });
+      setProfileTabBuckets({
+        open: openItems as any[],
+        closed: closedItems as any[],
+      });
+    } catch (e) {
+      console.error('ProfileScreenContent loadProfileTabBuckets', e);
+      setProfileTabBuckets({ open: [], closed: [] });
+    }
+  }, [targetUserId, displayUser, selectedUser?.id]);
+
   // Function to select a random user (demo mode only - disabled)
   const selectRandomUser = () => {
     if (isRealAuth) {
@@ -562,12 +612,30 @@ export function ProfileScreenContent({
     await createSampleFollowData();
     await createSampleChatData(selectedUser.id);
     updateUserStats();
+    void loadProfileTabBuckets();
     Alert.alert(t('profile:alerts.sampleDataTitle'), t('profile:alerts.sampleDataCreated'));
   };
-  const [routes] = useState<TabRoute[]>([
-    { key: 'open', title: 'פתוח' },
-    { key: 'closed', title: 'סגור' },
-  ]);
+
+  const routes = useMemo<TabRoute[]>(() => {
+    const hasCounts =
+      profileTabBuckets !== 'idle' && profileTabBuckets !== 'loading';
+    const openCount = hasCounts ? profileTabBuckets.open.length : 0;
+    const closedCount = hasCounts ? profileTabBuckets.closed.length : 0;
+    return [
+      {
+        key: 'open',
+        title: hasCounts
+          ? t('profile:tabs.openWithCount', { count: openCount })
+          : t('profile:tabs.open'),
+      },
+      {
+        key: 'closed',
+        title: hasCounts
+          ? t('profile:tabs.closedWithCount', { count: closedCount })
+          : t('profile:tabs.closed'),
+      },
+    ];
+  }, [t, profileTabBuckets]);
 
   // Update stats when user changes
   useEffect(() => {
@@ -586,7 +654,9 @@ export function ProfileScreenContent({
         await updateUserStats();
         if (isOwnProfile) {
           await loadRecentActivities();
-        } else if (viewingUser && selectedUser) {
+        }
+        await loadProfileTabBuckets();
+        if (!isOwnProfile && viewingUser && selectedUser) {
           // Refresh follow stats for other user's profile
           try {
             const [stats, counts] = await Promise.all([
@@ -609,7 +679,7 @@ export function ProfileScreenContent({
         }));
       };
       refreshStats();
-    }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities])
+    }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities, loadProfileTabBuckets])
   );
 
   // Load activities when selectedUser changes (only for own profile)
@@ -619,12 +689,30 @@ export function ProfileScreenContent({
     }
   }, [selectedUser, isOwnProfile, loadRecentActivities]);
 
+  useEffect(() => {
+    void loadProfileTabBuckets();
+  }, [loadProfileTabBuckets]);
+
   const renderScene = ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
     switch (sceneRoute.key) {
       case 'open':
-        return <OpenRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('open', h)} />;
+        return (
+          <OpenRoute
+            userId={targetUserId}
+            user={displayUser}
+            sharedTabBuckets={profileTabBuckets}
+            onHeightChange={(h) => handleTabHeightChange('open', h)}
+          />
+        );
       case 'closed':
-        return <ClosedRoute userId={targetUserId} user={displayUser} onHeightChange={(h) => handleTabHeightChange('closed', h)} />;
+        return (
+          <ClosedRoute
+            userId={targetUserId}
+            user={displayUser}
+            sharedTabBuckets={profileTabBuckets}
+            onHeightChange={(h) => handleTabHeightChange('closed', h)}
+          />
+        );
       default:
         return null;
     }

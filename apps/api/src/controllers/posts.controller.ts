@@ -851,6 +851,34 @@ export class PostsController {
     }
   }
 
+  /**
+   * Row count of posts authored by this user (matches feed `posts` table).
+   * Used by mobile profile so the posts stat matches real data, not a stale profile counter.
+   */
+  @Get("user/:userId/count")
+  async getUserPostsCount(@Param("userId") userId: string) {
+    try {
+      await this.ensurePostsTable();
+      const { rows } = await this.pool.query(
+        `SELECT COUNT(*)::int AS total FROM posts p WHERE p.author_id = $1`,
+        [userId],
+      );
+      const total = rows[0]?.total ?? 0;
+      return { success: true, data: { total } };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error("Get user posts count error:", {
+        message: errorMessage,
+        userId,
+      });
+      return {
+        success: false,
+        error: `Failed to count posts: ${errorMessage}`,
+      };
+    }
+  }
+
   @Get("user/:userId")
   async getUserPosts(
     @Param("userId") userId: string,
