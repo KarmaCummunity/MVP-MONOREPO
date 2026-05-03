@@ -55,30 +55,32 @@ async function refreshFollowStatsForUser(
   setIsFollowing(stats.isFollowing);
 }
 
-async function toggleFollowAction(
-  isFollowing: boolean,
+async function unfollowProfileUser(
   selectedUserId: string,
   displayUserId: string,
   setIsFollowing: (v: boolean) => void,
   setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
 ): Promise<void> {
-  if (isFollowing) {
-    const success = await unfollowUser(selectedUserId, displayUserId);
-    if (success) {
-      setIsFollowing(false);
-      const newCounts = await getUpdatedFollowCounts(displayUserId);
-      setUpdatedCounts(newCounts);
-      Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
-    }
-  } else {
-    const success = await followUser(selectedUserId, displayUserId);
-    if (success) {
-      setIsFollowing(true);
-      const newCounts = await getUpdatedFollowCounts(displayUserId);
-      setUpdatedCounts(newCounts);
-      Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
-    }
-  }
+  const success = await unfollowUser(selectedUserId, displayUserId);
+  if (!success) return;
+  setIsFollowing(false);
+  const newCounts = await getUpdatedFollowCounts(displayUserId);
+  setUpdatedCounts(newCounts);
+  Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+}
+
+async function followProfileUser(
+  selectedUserId: string,
+  displayUserId: string,
+  setIsFollowing: (v: boolean) => void,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+): Promise<void> {
+  const success = await followUser(selectedUserId, displayUserId);
+  if (!success) return;
+  setIsFollowing(true);
+  const newCounts = await getUpdatedFollowCounts(displayUserId);
+  setUpdatedCounts(newCounts);
+  Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
 }
 
 async function loadFollowStatsAction(
@@ -147,6 +149,182 @@ type UserStatsState = Readonly<{
   totalDonations: number;
   refreshTimestamp?: number;
 }>;
+
+async function refreshProfileScreenOnFocus(params: {
+  isOwnProfile: boolean;
+  targetUserId: string | undefined;
+  viewingUser: CharacterType | null;
+  selectedUser: CharacterType | null | undefined;
+  updateUserStats: () => Promise<void>;
+  loadRecentActivities: () => Promise<void>;
+  setUpdatedCounts: React.Dispatch<React.SetStateAction<{ followersCount: number; followingCount: number }>>;
+  setIsFollowing: React.Dispatch<React.SetStateAction<boolean>>;
+  setUserStats: React.Dispatch<React.SetStateAction<UserStatsState>>;
+}): Promise<void> {
+  const {
+    isOwnProfile,
+    targetUserId,
+    viewingUser,
+    selectedUser,
+    updateUserStats,
+    loadRecentActivities,
+    setUpdatedCounts,
+    setIsFollowing,
+    setUserStats,
+  } = params;
+
+  logger.logScreenOpened('ProfileScreen');
+  logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', {
+    isOwnProfile,
+    targetUserId,
+  });
+  await updateUserStats();
+  if (isOwnProfile) {
+    await loadRecentActivities();
+  } else if (viewingUser && selectedUser) {
+    try {
+      await refreshFollowStatsForUser(
+        viewingUser.id,
+        selectedUser.id,
+        setUpdatedCounts,
+        setIsFollowing,
+      );
+    } catch (error) {
+      console.error('❌ Refresh follow stats error:', error);
+    }
+  }
+
+  const refreshTimestamp = Date.now();
+  setUserStats((prevStats) => ({
+    ...prevStats,
+    refreshTimestamp,
+  }));
+}
+
+function ProfileSceneForRoute(
+  props: Readonly<{
+    sceneRoute: TabRoute;
+    targetUserId: string | undefined;
+    displayUser: CharacterType | null | undefined;
+    handleTabHeightChange: (key: string, height: number) => void;
+    onProfileOpenTabCount: (count: number) => void;
+    onProfileClosedTabCount: (count: number) => void;
+  }>,
+): React.ReactElement | null {
+  const {
+    sceneRoute,
+    targetUserId,
+    displayUser,
+    handleTabHeightChange,
+    onProfileOpenTabCount,
+    onProfileClosedTabCount,
+  } = props;
+
+  switch (sceneRoute.key) {
+    case 'open':
+      return (
+        <OpenRoute
+          userId={targetUserId}
+          user={displayUser}
+          onHeightChange={(h) => handleTabHeightChange('open', h)}
+          onLoadedContentCount={onProfileOpenTabCount}
+        />
+      );
+    case 'closed':
+      return (
+        <ClosedRoute
+          userId={targetUserId}
+          user={displayUser}
+          onHeightChange={(h) => handleTabHeightChange('closed', h)}
+          onLoadedContentCount={onProfileClosedTabCount}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+function ProfileScreenTabBar(
+  p: SceneRendererProps & { navigationState: NavigationState<TabRoute> },
+): React.ReactElement {
+  return (
+    <View style={styles.tabBarContainer}>
+      <View style={styles.tabBarInner}>
+        {p.navigationState.routes.map((tabRoute, tabIndex) => {
+          const isFocused = p.navigationState.index === tabIndex;
+          return (
+            <TouchableOpacity
+              key={tabRoute.key}
+              style={styles.tabBarItem}
+              onPress={() => p.jumpTo(tabRoute.key)}
+            >
+              <Text
+                style={[
+                  styles.tabBarText,
+                  {
+                    color: isFocused ? colors.secondary : colors.textSecondary,
+                    fontWeight: isFocused ? 'bold' : 'normal',
+                  },
+                ]}
+              >
+                {tabRoute.title}
+              </Text>
+              {isFocused ? <View style={styles.tabBarIndicator} /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function ProfileScreenGate(props: Readonly<{
+  isOwnProfile: boolean;
+  loadingUser: boolean;
+  viewingUser: CharacterType | null;
+  externalUserId: string | undefined;
+  navigation: NavigationProp<RootStackParamList>;
+}>): React.ReactElement | null {
+  const { isOwnProfile, loadingUser, viewingUser, externalUserId, navigation } = props;
+
+  if (!isOwnProfile && !loadingUser && !viewingUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
+          <Text style={styles.errorText}>משתמש לא נמצא</Text>
+          <Text style={styles.errorSubtext}>userId: {externalUserId}</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                (navigation as { navigate: (name: string) => void }).navigate('HomeStack');
+              }
+            }}
+          >
+            <Ionicons name="home" size={20} color={colors.white} />
+            <Text style={styles.backButtonText}>חזרה לעמוד הבית</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isOwnProfile && loadingUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="hourglass-outline" size={60} color={colors.textSecondary} />
+          <Text style={styles.errorText}>טוען...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return null;
+}
 
 export function ProfileScreenContent(
   props: Readonly<{
@@ -247,10 +425,6 @@ export function ProfileScreenContent(
   }, [isOwnProfile, selectedUser, viewingUser]);
 
   const selectRandomUser = () => {
-    if (isRealAuth) {
-      Alert.alert(t('common:errorTitle'), t('profile:alerts.disabledOnRealAuth'));
-      return;
-    }
     Alert.alert(t('common:errorTitle'), t('profile:alerts.disabledOnRealAuth'));
   };
 
@@ -331,35 +505,17 @@ export function ProfileScreenContent(
 
   useFocusEffect(
     React.useCallback(() => {
-      async function refreshStats(): Promise<void> {
-        logger.logScreenOpened('ProfileScreen');
-        logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', {
-          isOwnProfile,
-          targetUserId,
-        });
-        await updateUserStats();
-        if (isOwnProfile) {
-          await loadRecentActivities();
-        } else if (viewingUser && selectedUser) {
-          try {
-            await refreshFollowStatsForUser(
-              viewingUser.id,
-              selectedUser.id,
-              setUpdatedCounts,
-              setIsFollowing,
-            );
-          } catch (error) {
-            console.error('❌ Refresh follow stats error:', error);
-          }
-        }
-
-        const refreshTimestamp = Date.now();
-        setUserStats((prevStats) => ({
-          ...prevStats,
-          refreshTimestamp,
-        }));
-      }
-      refreshStats().catch(() => {});
+      refreshProfileScreenOnFocus({
+        isOwnProfile,
+        targetUserId,
+        viewingUser,
+        selectedUser,
+        updateUserStats,
+        loadRecentActivities,
+        setUpdatedCounts,
+        setIsFollowing,
+        setUserStats,
+      }).catch(() => {});
     }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities]),
   );
 
@@ -370,64 +526,20 @@ export function ProfileScreenContent(
   }, [selectedUser, isOwnProfile, loadRecentActivities]);
 
   const renderScene = useCallback(
-    ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
-      switch (sceneRoute.key) {
-        case 'open':
-          return (
-            <OpenRoute
-              userId={targetUserId}
-              user={displayUser}
-              onHeightChange={(h) => handleTabHeightChange('open', h)}
-              onLoadedContentCount={onProfileOpenTabCount}
-            />
-          );
-        case 'closed':
-          return (
-            <ClosedRoute
-              userId={targetUserId}
-              user={displayUser}
-              onHeightChange={(h) => handleTabHeightChange('closed', h)}
-              onLoadedContentCount={onProfileClosedTabCount}
-            />
-          );
-        default:
-          return null;
-      }
-    },
+    ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => (
+      <ProfileSceneForRoute
+        sceneRoute={sceneRoute}
+        targetUserId={targetUserId}
+        displayUser={displayUser}
+        handleTabHeightChange={handleTabHeightChange}
+        onProfileOpenTabCount={onProfileOpenTabCount}
+        onProfileClosedTabCount={onProfileClosedTabCount}
+      />
+    ),
     [targetUserId, displayUser, handleTabHeightChange, onProfileOpenTabCount, onProfileClosedTabCount],
   );
 
   const currentTabHeight = tabHeights[routes[index].key] || 600;
-
-  const renderTabBar = (p: SceneRendererProps & { navigationState: NavigationState<TabRoute> }) => (
-    <View style={styles.tabBarContainer}>
-      <View style={styles.tabBarInner}>
-        {p.navigationState.routes.map((tabRoute, tabIndex) => {
-          const isFocused = p.navigationState.index === tabIndex;
-          return (
-            <TouchableOpacity
-              key={tabRoute.key}
-              style={styles.tabBarItem}
-              onPress={() => p.jumpTo(tabRoute.key)}
-            >
-              <Text
-                style={[
-                  styles.tabBarText,
-                  {
-                    color: isFocused ? colors.secondary : colors.textSecondary,
-                    fontWeight: isFocused ? 'bold' : 'normal',
-                  },
-                ]}
-              >
-                {tabRoute.title}
-              </Text>
-              {isFocused ? <View style={styles.tabBarIndicator} /> : null}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
 
   // Prepare avatar source with validation and fallbacks
   const avatarUrl = displayUser?.avatar || (displayUser as any)?.avatar_url;
@@ -449,7 +561,11 @@ export function ProfileScreenContent(
       return;
     }
     try {
-      await toggleFollowAction(isFollowing, selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
+      if (isFollowing) {
+        await unfollowProfileUser(selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
+      } else {
+        await followProfileUser(selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
+      }
     } catch (error) {
       console.error('❌ Follow/Unfollow error:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');
@@ -512,7 +628,7 @@ export function ProfileScreenContent(
     routes,
     setIndex,
     renderScene,
-    renderTabBar,
+    renderTabBar: ProfileScreenTabBar,
     currentTabHeight,
     selectRandomUser,
     handleCreateSampleData,
@@ -522,40 +638,15 @@ export function ProfileScreenContent(
     onSignOut: signOut,
   };
 
-  if (!isOwnProfile && !loadingUser && !viewingUser) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>משתמש לא נמצא</Text>
-          <Text style={styles.errorSubtext}>userId: {externalUserId}</Text>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              } else {
-                (navigation as { navigate: (name: string) => void }).navigate('HomeStack');
-              }
-            }}
-          >
-            <Ionicons name="home" size={20} color={colors.white} />
-            <Text style={styles.backButtonText}>חזרה לעמוד הבית</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!isOwnProfile && loadingUser) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="hourglass-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>טוען...</Text>
-        </View>
-      </SafeAreaView>
-    );
+  const gateUi = ProfileScreenGate({
+    isOwnProfile,
+    loadingUser,
+    viewingUser,
+    externalUserId,
+    navigation: rootNavigation,
+  });
+  if (gateUi) {
+    return gateUi;
   }
 
   return (

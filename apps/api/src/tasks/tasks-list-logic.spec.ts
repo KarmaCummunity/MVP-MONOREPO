@@ -5,7 +5,7 @@ import { UserResolutionService } from "../services/user-resolution.service";
 
 describe("TasksListQueryService Logic", () => {
   let service: TasksListQueryService;
-  let mockPool: Partial<Pool>;
+  let mockPool: Pool;
   let mockRedis: Partial<RedisCacheService>;
   let mockUserRes: Partial<UserResolutionService>;
   let mockQuery: jest.MockedFunction<
@@ -16,7 +16,7 @@ describe("TasksListQueryService Logic", () => {
     mockQuery = jest.fn().mockResolvedValue({ rows: [], exists: true });
     mockPool = {
       query: mockQuery as unknown as Pool["query"],
-    };
+    } as Pool;
     mockRedis = {
       set: jest.fn(),
     };
@@ -24,7 +24,7 @@ describe("TasksListQueryService Logic", () => {
       resolveUserId: jest.fn(),
     };
     service = new TasksListQueryService(
-      mockPool as Pool,
+      mockPool,
       mockRedis as RedisCacheService,
       mockUserRes as UserResolutionService,
     );
