@@ -1,5 +1,5 @@
 import { TasksListQueryService } from "./tasks-list-query.service";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { UserResolutionService } from "../services/user-resolution.service";
 
@@ -8,10 +8,14 @@ describe("TasksListQueryService Logic", () => {
   let mockPool: Partial<Pool>;
   let mockRedis: Partial<RedisCacheService>;
   let mockUserRes: Partial<UserResolutionService>;
+  let mockQuery: jest.MockedFunction<
+    (text: string, values?: unknown[]) => Promise<{ rows: unknown[] }>
+  >;
 
   beforeEach(() => {
+    mockQuery = jest.fn().mockResolvedValue({ rows: [], exists: true });
     mockPool = {
-      query: jest.fn().mockResolvedValue({ rows: [], exists: true }),
+      query: mockQuery as unknown as Pool["query"],
     };
     mockRedis = {
       set: jest.fn(),
@@ -27,12 +31,10 @@ describe("TasksListQueryService Logic", () => {
   });
 
   it("applies parent_task_id IS NULL when no filters are present", async () => {
-    // Mock the table exists check
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [{ exists: true }],
     });
-    // Mock the main query
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [],
     });
 
@@ -48,17 +50,23 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: undefined,
     });
 
-    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
-      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = mockQuery.mock.calls.find(
+      (call): call is [string, unknown[]] =>
+        typeof call[0] === "string" &&
+        call[0].includes("SELECT") &&
+        call[0].includes("FROM tasks"),
     );
+    if (!lastCall) {
+      throw new Error("Expected a SELECT FROM tasks query call");
+    }
     expect(lastCall[0]).toContain("parent_task_id IS NULL");
   });
 
   it("does NOT apply parent_task_id IS NULL when search is present", async () => {
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [{ exists: true }],
     });
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [],
     });
 
@@ -74,18 +82,24 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: "find me",
     });
 
-    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
-      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = mockQuery.mock.calls.find(
+      (call): call is [string, unknown[]] =>
+        typeof call[0] === "string" &&
+        call[0].includes("SELECT") &&
+        call[0].includes("FROM tasks"),
     );
+    if (!lastCall) {
+      throw new Error("Expected a SELECT FROM tasks query call");
+    }
     expect(lastCall[0]).not.toContain("parent_task_id IS NULL");
     expect(lastCall[0]).toContain("ILIKE");
   });
 
   it("does NOT apply parent_task_id IS NULL when priority filter is present", async () => {
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [{ exists: true }],
     });
-    (mockPool.query as jest.Mock).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [],
     });
 
@@ -101,9 +115,15 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: undefined,
     });
 
-    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
-      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = mockQuery.mock.calls.find(
+      (call): call is [string, unknown[]] =>
+        typeof call[0] === "string" &&
+        call[0].includes("SELECT") &&
+        call[0].includes("FROM tasks"),
     );
+    if (!lastCall) {
+      throw new Error("Expected a SELECT FROM tasks query call");
+    }
     expect(lastCall[0]).not.toContain("parent_task_id IS NULL");
     expect(lastCall[0]).toContain("priority = $1");
   });

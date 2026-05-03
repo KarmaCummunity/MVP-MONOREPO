@@ -13,24 +13,6 @@ import { logger } from '../utils/loggerService';
 
 const Oauthredirect_LOG = 'oauthredirect';
 
-// Parse JWT token
-const parseJWT = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Failed to parse JWT token:', error);
-    return null;
-  }
-};
-
 export default function OAuthRedirect() {
   const router = useRouter();
   const { setSelectedUserWithMode } = useUser();
@@ -39,10 +21,10 @@ export default function OAuthRedirect() {
   useEffect(() => {
     const processAuth = async () => {
       try {
-        const hash = window.location.hash;
+        const hash = globalThis.window?.location.hash ?? '';
         logger.debug(Oauthredirect_LOG, 'OAuth redirect hash', { hash });
 
-        if (!hash || !hash.includes('id_token=')) {
+        if (!hash?.includes('id_token=')) {
           console.error('❌ [OAuthRedirect] No id_token found');
           setStatus('error');
           setTimeout(() => router.replace('/'), 2000);
@@ -57,12 +39,7 @@ export default function OAuthRedirect() {
         }
 
         logger.debug(Oauthredirect_LOG, '✅ [OAuthRedirect] Found token');
-        const profile = parseJWT(idToken);
-        logger.debug(Oauthredirect_LOG, 'OAuth redirect profile', { profile });
-
-        if (!profile) {
-          throw new Error('Failed to parse token');
-        }
+        // Do not decode JWT claims client-side (Sonar S5659). Server verifies id_token and returns user.
 
         // Send idToken to server to get UUID
         const { API_BASE_URL } = await import('../utils/config.constants');
@@ -89,9 +66,9 @@ export default function OAuthRedirect() {
         const serverUser = serverResponse.user;
         const userData = {
           id: serverUser.id, // UUID from database, not Google ID
-          name: serverUser.name || profile.name || profile.email?.split('@')[0] || 'User',
-          email: serverUser.email || profile.email || '',
-          avatar: serverUser.avatar || profile.picture || 'https://i.pravatar.cc/150?img=1',
+          name: serverUser.name || serverUser.email?.split('@')[0] || 'User',
+          email: serverUser.email || '',
+          avatar: serverUser.avatar || 'https://i.pravatar.cc/150?img=1',
           phone: serverUser.phone || '+972500000000',
           bio: serverUser.bio || '',
           karmaPoints: serverUser.karmaPoints || 0,
@@ -135,7 +112,7 @@ export default function OAuthRedirect() {
       }
     };
 
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       processAuth();
     }
   }, [router, setSelectedUserWithMode]);

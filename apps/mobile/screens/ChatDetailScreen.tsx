@@ -38,6 +38,7 @@ import { useUser } from '../stores/userStore';
 import { getMessages, sendMessage, markMessagesAsRead, Message, subscribeToMessages } from '../utils/chatService';
 import { pickImage, pickVideo, takePhoto, pickDocument, validateFile, FileData } from '../utils/fileService';
 import { uploadFileWithProgress, buildChatFilePath } from '../utils/storageService';
+import { generateId } from '../utils/chat/id';
 import { apiService } from '../utils/apiService';
 import { USE_BACKEND } from '../utils/config.constants';
 import colors from '../globals/colors';
@@ -460,7 +461,7 @@ export default function ChatDetailScreen() {
         return;
       }
 
-      const tempMessageId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const tempMessageId = generateId('temp');
 
       const fullPath = buildChatFilePath(conversationId, tempMessageId, fileData.name);
 

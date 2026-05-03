@@ -82,7 +82,7 @@ function showUpdateNotification() {
   const lastNotification = localStorage.getItem('last-update-notification');
   const now = Date.now();
   
-  if (lastNotification && now - parseInt(lastNotification) < VERSION_CHECK_INTERVAL) {
+  if (lastNotification && now - Number.parseInt(lastNotification, 10) < VERSION_CHECK_INTERVAL) {
     return; // כבר הצגנו הודעה לאחרונה
   }
 
@@ -111,14 +111,15 @@ function showUpdateNotification() {
     cursor: pointer;
   `;
 
-  notification.innerHTML = `
-    <div style="margin-bottom: 8px;">
-      🎉 גרסה חדשה זמינה!
-    </div>
-    <div style="font-size: 13px; opacity: 0.9;">
-      לחץ כאן כדי לרענן ולקבל את העדכון האחרון
-    </div>
-  `;
+  const titleLine = document.createElement('div');
+  titleLine.style.marginBottom = '8px';
+  titleLine.textContent = '🎉 גרסה חדשה זמינה!';
+  const subtitleLine = document.createElement('div');
+  subtitleLine.style.fontSize = '13px';
+  subtitleLine.style.opacity = '0.9';
+  subtitleLine.textContent = 'לחץ כאן כדי לרענן ולקבל את העדכון האחרון';
+  notification.appendChild(titleLine);
+  notification.appendChild(subtitleLine);
 
   // הוספת אנימציה
   const style = document.createElement('style');
@@ -138,7 +139,7 @@ function showUpdateNotification() {
 
   // כשלוחצים על ההודעה - מרעננים
   notification.addEventListener('click', () => {
-    window.location.reload();
+    globalThis.window?.location.reload();
   });
 
   // אוטו-סגירה אחרי 10 שניות
@@ -156,7 +157,7 @@ function showUpdateNotification() {
 async function clearBrowserCache() {
   try {
     // ניקוי Service Worker cache
-    if ('serviceWorker' in navigator && 'caches' in window) {
+    if ('serviceWorker' in navigator && 'caches' in globalThis) {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map(cacheName => caches.delete(cacheName))
@@ -177,7 +178,7 @@ async function clearBrowserCache() {
  */
 export function initVersionChecker() {
   // Only run on web platform
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (globalThis.window === undefined || typeof document === 'undefined') {
     logger.debug(VersionChecker_LOG, 'Version checker: Not running on web platform');
     return;
   }
@@ -202,7 +203,7 @@ export function initVersionChecker() {
   }, VERSION_CHECK_INTERVAL);
 
   // בדיקה כאשר המשתמש חוזר לטאב (focus)
-  window.addEventListener('focus', async () => {
+  globalThis.window?.addEventListener('focus', async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
       showUpdateNotification();
@@ -210,7 +211,7 @@ export function initVersionChecker() {
   });
 
   // בדיקה כאשר המשתמש חוזר אונליין
-  window.addEventListener('online', async () => {
+  globalThis.window?.addEventListener('online', async () => {
     const hasUpdate = await checkForUpdates();
     if (hasUpdate) {
       showUpdateNotification();
@@ -223,7 +224,7 @@ export function initVersionChecker() {
  */
 export async function forceAppUpdate() {
   await clearBrowserCache();
-  window.location.reload();
+  globalThis.window?.location.reload();
 }
 
 /**
@@ -234,7 +235,7 @@ export function getVersionInfo() {
     version: getCurrentVersion(),
     buildTimestamp: getCurrentBuildTimestamp(),
     buildDate: getCurrentBuildTimestamp() 
-      ? new Date(parseInt(getCurrentBuildTimestamp()!) * 1000).toLocaleString('he-IL')
+      ? new Date(Number.parseInt(getCurrentBuildTimestamp()!, 10) * 1000).toLocaleString('he-IL')
       : 'Unknown',
   };
 }
