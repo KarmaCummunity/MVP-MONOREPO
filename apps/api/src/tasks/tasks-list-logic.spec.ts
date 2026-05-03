@@ -48,8 +48,8 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: undefined,
     });
 
-    const lastCall = (mockPool.query as jest.Mock).mock.calls.find(
-      (call) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
+      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
     );
     expect(lastCall[0]).toContain("parent_task_id IS NULL");
   });
@@ -74,8 +74,8 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: "find me",
     });
 
-    const lastCall = (mockPool.query as jest.Mock).mock.calls.find(
-      (call) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
+      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
     );
     expect(lastCall[0]).not.toContain("parent_task_id IS NULL");
     expect(lastCall[0]).toContain("ILIKE");
@@ -101,8 +101,8 @@ describe("TasksListQueryService Logic", () => {
       searchQuery: undefined,
     });
 
-    const lastCall = (mockPool.query as jest.Mock).mock.calls.find(
-      (call) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
+    const lastCall = (mockPool.query as jest.Mock<any, any>).mock.calls.find(
+      (call: string[]) => call[0].includes("SELECT") && call[0].includes("FROM tasks"),
     );
     expect(lastCall[0]).not.toContain("parent_task_id IS NULL");
     expect(lastCall[0]).toContain("priority = $1");

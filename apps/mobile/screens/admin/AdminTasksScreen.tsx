@@ -18,6 +18,41 @@ import { AdminTasksPickerField } from './AdminTasksPickerField';
 import { useAdminTasksScreen } from './useAdminTasksScreen';
 import { useToast } from '../../utils/toastService';
 
+type AdminTaskListEmptyProps = Readonly<{
+  listLoading: boolean;
+  hasActiveListFilters: boolean;
+  onClearFilters: () => void;
+  t: (key: string) => string;
+}>;
+
+function AdminTaskListEmptyComponent({
+  listLoading,
+  hasActiveListFilters,
+  onClearFilters,
+  t,
+}: AdminTaskListEmptyProps): React.ReactElement | null {
+  if (listLoading) return null;
+  return (
+    <View>
+      {hasActiveListFilters ? (
+        <>
+          <Text style={styles.emptyText}>{t('admin:tasks.noTasksMatchFilters')}</Text>
+          <TouchableOpacity
+            onPress={onClearFilters}
+            style={{ marginTop: 16, alignItems: 'center' }}
+          >
+            <Text style={[styles.emptyText, { color: colors.primary, fontWeight: '600' }]}>
+              {t('admin:tasks.clearFilters')}
+            </Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
+      )}
+    </View>
+  );
+}
+
 export default function AdminTasksScreen() {
   const { ToastComponent } = useToast();
   const {
@@ -118,25 +153,12 @@ export default function AdminTasksScreen() {
           ]}
           ListHeaderComponent={listHeaderBelowSearch}
           ListEmptyComponent={
-            listLoading ? null : (
-              <View>
-                {hasActiveListFilters ? (
-                  <>
-                    <Text style={styles.emptyText}>{t('admin:tasks.noTasksMatchFilters')}</Text>
-                    <TouchableOpacity
-                      onPress={clearListFilters}
-                      style={{ marginTop: 16, alignItems: 'center' }}
-                    >
-                      <Text style={[styles.emptyText, { color: colors.primary, fontWeight: '600' }]}>
-                        {t('admin:tasks.clearFilters')}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <Text style={styles.emptyText}>{t('admin:tasks.noTasks')}</Text>
-                )}
-              </View>
-            )
+            <AdminTaskListEmptyComponent
+              listLoading={listLoading}
+              hasActiveListFilters={hasActiveListFilters}
+              onClearFilters={clearListFilters}
+              t={t}
+            />
           }
           scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web' ? true : undefined}

@@ -326,29 +326,44 @@ export function useAdminTasksScreen() {
     }
   }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, persistedHydrated]);
 
+  function buildEffectiveStatuses(statuses: TaskStatus[]): TaskStatus[] {
+    if (statuses.length > 0) {
+      return [...new Set(statuses)];
+    }
+    return TASK_STATUSES_EXCLUDING_DONE;
+  }
+
+  function buildFetchFilterState(
+    effectiveStatuses: TaskStatus[],
+    currentQuery: string,
+    priorities: TaskPriority[],
+    categories: string[],
+    assignee: 'all' | 'me',
+  ): TaskFilterState {
+    return {
+      ...(currentQuery.trim() ? { textSearch: { text: currentQuery } } : {}),
+      ...(effectiveStatuses.length > 0 ? { status: effectiveStatuses } : {}),
+      ...(priorities.length > 0 ? { priority: priorities } : {}),
+      ...(categories.length > 0 ? { category: categories } : {}),
+      ownership: assignee === 'me' ? ['mine'] : ['all'],
+    };
+  }
+
   const fetchTasks = useCallback(async (isLoadMore = false) => {
     const seq = ++fetchTasksSeqRef.current;
     if (!isLoadMore) {
       setLoading(true);
     }
     setError(null);
-    const explicitStatusSelected = filterStatuses.length > 0;
-    let effectiveStatuses: TaskStatus[] | undefined;
-    if (explicitStatusSelected) {
-      effectiveStatuses = [...new Set(filterStatuses)];
-    } else {
-      effectiveStatuses = TASK_STATUSES_EXCLUDING_DONE;
-    }
 
-    const filterState: TaskFilterState = {
-      ...(query.trim() ? { textSearch: { text: query } } : {}),
-      ...(effectiveStatuses !== undefined && effectiveStatuses.length > 0
-        ? { status: effectiveStatuses }
-        : {}),
-      ...(filterPriorities.length > 0 ? { priority: filterPriorities } : {}),
-      ...(filterCategories.length > 0 ? { category: filterCategories } : {}),
-      ownership: filterAssignee === 'me' ? ['mine'] : ['all'],
-    };
+    const effectiveStatuses = buildEffectiveStatuses(filterStatuses);
+    const filterState = buildFetchFilterState(
+      effectiveStatuses,
+      query,
+      filterPriorities,
+      filterCategories,
+      filterAssignee,
+    );
 
     const currentPage = isLoadMore ? page : 0;
     const apiFilters = {
@@ -387,10 +402,8 @@ export function useAdminTasksScreen() {
         setError(t('admin:tasks.errLoadTasksRetry'));
       }
     } finally {
-      if (seq === fetchTasksSeqRef.current) {
-        if (!isLoadMore) {
-          setLoading(false);
-        }
+      if (seq === fetchTasksSeqRef.current && !isLoadMore) {
+        setLoading(false);
       }
     }
   }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser, t, page]);

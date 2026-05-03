@@ -41,6 +41,20 @@ import { useProfileViewingUser } from './useProfileViewingUser';
 import type { ProfileRecentActivity } from './profileScreenActivity.types';
 import { ProfileScrollInner, type ProfileScrollInnerProps } from './ProfileScrollInner';
 
+async function refreshFollowStatsForUser(
+  viewingUserId: string,
+  selectedUserId: string,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+  setIsFollowing: (v: boolean) => void,
+): Promise<void> {
+  const [stats, counts] = await Promise.all([
+    getFollowStats(viewingUserId, selectedUserId),
+    getUpdatedFollowCounts(viewingUserId),
+  ]);
+  setUpdatedCounts(counts);
+  setIsFollowing(stats.isFollowing);
+}
+
 type ProfileExtras = CharacterType & { totalDonations?: number };
 
 type UserStatsState = Readonly<{
@@ -286,12 +300,12 @@ export function ProfileScreenContent(
           await loadRecentActivities();
         } else if (viewingUser && selectedUser) {
           try {
-            const [stats, counts] = await Promise.all([
-              getFollowStats(viewingUser.id, selectedUser.id),
-              getUpdatedFollowCounts(viewingUser.id),
-            ]);
-            setUpdatedCounts(counts);
-            setIsFollowing(stats.isFollowing);
+            await refreshFollowStatsForUser(
+              viewingUser.id,
+              selectedUser.id,
+              setUpdatedCounts,
+              setIsFollowing,
+            );
           } catch (error) {
             console.error('❌ Refresh follow stats error:', error);
           }

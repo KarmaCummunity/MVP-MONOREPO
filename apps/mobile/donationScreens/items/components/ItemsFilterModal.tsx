@@ -41,7 +41,7 @@ const CONDITIONS = [
 
 const RADIUS_OPTIONS = [1, 2, 5, 10, 20, 50];
 
-export default function ItemsFilterModal({ visible, onClose, onApply, initialFilters }: ItemsFilterModalProps) {
+export default function ItemsFilterModal({ visible, onClose, onApply, initialFilters }: Readonly<ItemsFilterModalProps>) {
   const { t: ti } = useTranslation('items');
   const { t: tc } = useTranslation('common');
 

@@ -161,6 +161,38 @@ function CreatePostTabPlaceholder(): null {
   return null;
 }
 
+/**
+ * Renders the bottom tab bar with the AdminTab route filtered out so it never
+ * occupies visual space. The active index is recalculated after filtering so
+ * BottomTabBar never tries to read `routes[index]` for a missing route.
+ */
+function BottomTabBarWithoutAdmin(props: React.ComponentProps<typeof BottomTabBar>): React.ReactElement {
+  const { state } = props;
+  const adminIndex = state.routes.findIndex((r) => r.name === 'AdminTab');
+  const filteredRoutes = state.routes.filter((r) => r.name !== 'AdminTab');
+
+  let newIndex = state.index;
+  if (adminIndex !== -1) {
+    if (state.index !== adminIndex) {
+      // Shift index down when AdminTab was before the currently active tab
+      if (state.index > adminIndex) {
+        newIndex--;
+      }
+    } else {
+      // When on AdminTab (which is filtered out), point index to HomeScreen
+      const homeIdx = filteredRoutes.findIndex((r) => r.name === 'HomeScreen');
+      newIndex = homeIdx !== -1 ? homeIdx : 0;
+    }
+  }
+
+  const filteredState = {
+    ...state,
+    routes: filteredRoutes,
+    index: newIndex,
+  } as typeof state;
+  return <BottomTabBar {...props} state={filteredState} />;
+}
+
 function hideDueToSiteMode(mode: string): boolean {
   return globalThis.window !== undefined && mode === "site";
 }
@@ -442,35 +474,7 @@ export default function BottomNavigator(): React.ReactElement {
     <Tab.Navigator
       id={undefined}
       initialRouteName="HomeScreen"
-      tabBar={(props) => {
-        // Professional fix: filter out AdminTab from the rendered bar so it doesn't take up any space.
-        // This keeps the bar identical for all users while keeping the bottom bar visible in admin screens.
-        // We must also adjust the index to avoid "Cannot read properties of undefined (reading 'key')" crash
-        // when the active route is the one we filtered out (AdminTab).
-        const { state } = props;
-        const adminIndex = state.routes.findIndex((r) => r.name === 'AdminTab');
-        const filteredRoutes = state.routes.filter((r) => r.name !== 'AdminTab');
-
-        let newIndex = state.index;
-        if (adminIndex !== -1) {
-          if (state.index === adminIndex) {
-            // When on AdminTab (which is filtered out), we point the index to HomeScreen
-            // so that BottomTabBar doesn't crash trying to access routes[index].
-            const homeIdx = filteredRoutes.findIndex((r) => r.name === 'HomeScreen');
-            newIndex = homeIdx !== -1 ? homeIdx : 0;
-          } else if (state.index > adminIndex) {
-            // Shift index if AdminTab was before the current tab
-            newIndex--;
-          }
-        }
-
-        const filteredState = {
-          ...state,
-          routes: filteredRoutes,
-          index: newIndex,
-        };
-        return <BottomTabBar {...props} state={filteredState as any} />;
-      }}
+      tabBar={BottomTabBarWithoutAdmin}
       screenOptions={({ route }): BottomTabNavigationOptions =>
         computeBottomTabScreenOptions(
           route as NestedRouteLike & { name: keyof BottomTabNavigatorParamList },

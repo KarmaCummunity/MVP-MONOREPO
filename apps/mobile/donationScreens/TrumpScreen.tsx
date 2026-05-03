@@ -167,12 +167,12 @@ export default function TrumpScreen({
   );
 
   const handleSearch = (query: string, filters?: string[], sorts?: string[]) => {
-    if (!mode) {
-      offer.setToLocation(query);
-    } else {
+    if (mode) {
       trumpData.setSearchQuery(query);
       trumpData.setSelectedFilters(filters || []);
       trumpData.setSelectedSorts(sorts || []);
+    } else {
+      offer.setToLocation(query);
     }
   };
 

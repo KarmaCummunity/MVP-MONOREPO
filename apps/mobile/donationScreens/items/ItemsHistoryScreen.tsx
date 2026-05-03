@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
+import type { ListRenderItemInfo } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import colors from '../../globals/colors';
@@ -77,7 +78,7 @@ export default function ItemsHistoryScreen() {
     }, [loadHistory])
   );
 
-  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+  const renderItem = useCallback(({ item }: ListRenderItemInfo<FeedItem>) => {
     const availableWidth = width - screenPadding * 2;
     const totalGaps = SEARCH_GRID_COLUMNS - 1;
     const itemWidth = (availableWidth - totalGaps * COLUMN_GAP) / SEARCH_GRID_COLUMNS;
