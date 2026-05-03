@@ -121,6 +121,11 @@
   },
   "post": {
     "noTitle": "פוסט ללא כותרת",
+    "deleteConfirmTitle": "מחיקת פוסט",
+    "deleteConfirmMessage": "לא ניתן לבטל פעולה זו. אם לפוסט צמודה נסיעה, פריט או בקשות — הם עשויים להימחק יחד איתו.",
+    "deleteSuccess": "הפוסט נמחק",
+    "deleteError": "לא ניתן למחוק את הפוסט",
+    "deleteLoginRequired": "יש להתחבר כדי למחוק פוסט",
     "closedSuccess": "הפוסט נסגר בהצלחה",
     "closeError": "שגיאה בסגירת הפוסט",
     "reopenSuccess": "הפוסט נפתח מחדש בהצלחה",

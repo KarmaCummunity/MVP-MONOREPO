@@ -83,7 +83,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  const { mode, setMode, loadItems, handlePostClosed, handlePostReopen, selectedUser, setAllItems } = data;
+  const { mode, setMode, loadItems, handlePostClosed, handlePostDeleted, handlePostReopen, selectedUser, setAllItems } = data;
 
   const {
     searchQuery,
@@ -109,6 +109,9 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     selectedPostForReport,
     setSelectedPostForReport,
   } = usePostMenu({
+    onDelete: (postId) => {
+      handlePostDeleted(postId);
+    },
     onReopen: (item) => {
       handlePostReopen(item).catch((err: unknown) => {
         console.error('Error reopening post from items screen:', err);

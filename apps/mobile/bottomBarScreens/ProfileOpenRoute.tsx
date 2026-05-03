@@ -41,7 +41,11 @@ export default function ProfileOpenRoute({ userId, user, onHeightChange }: Props
     reportModalVisible,
     setReportModalVisible,
     setSelectedPostForReport
-  } = usePostMenu();
+  } = usePostMenu({
+    onDelete: (postId) => {
+      setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+    },
+  });
 
   const handleReportSubmit = async (_reason: string) => {
     setReportModalVisible(false);

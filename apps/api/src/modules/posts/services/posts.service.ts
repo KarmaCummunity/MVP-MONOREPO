@@ -8,6 +8,10 @@ import {
   buildPostsSelectQuery,
 } from "../helpers/posts-query.builder";
 import { UpdatePostBody } from "../dto/update-post.dto";
+import {
+  isPostRowAbsent,
+  runPostDeletionSideEffects,
+} from "../../../services/post-deletion-side-effects";
 
 const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
@@ -505,52 +509,20 @@ export class PostsService {
         `Deleting post ${postId} (type: ${post.post_type}) by user ${userId} (owner: ${isOwner}, admin: ${isSuperAdmin})`,
       );
 
-      let deletionStrategy = "post_only";
-      let relatedEntityDeleted = false;
+      const { deletionStrategy, relatedEntityDeleted } =
+        await runPostDeletionSideEffects(client, postId, post);
 
-      switch (post.post_type) {
-        case "ride":
-          if (post.ride_id) {
-            await client.query("DELETE FROM rides WHERE id = $1", [
-              post.ride_id,
-            ]);
-            deletionStrategy = "ride_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `Deleted ride ${post.ride_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          }
-          break;
-
-        case "item":
-        case "donation":
-          if (post.item_id) {
-            await client.query("DELETE FROM items WHERE id = $1", [
-              post.item_id,
-            ]);
-            deletionStrategy = "item_cascade";
-            relatedEntityDeleted = true;
-            this.logger.log(
-              `Deleted item ${post.item_id} (post auto-deleted via CASCADE)`,
-            );
-          } else {
-            await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          }
-          break;
-
-        case "task_completion":
-        case "task_assignment":
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          this.logger.log(
-            `Deleted task post ${postId} (task ${post.task_id} preserved)`,
-          );
-          break;
-
-        default:
-          await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-          this.logger.log(`Deleted general post ${postId}`);
+      const postRemoved = await isPostRowAbsent(client, postId);
+      if (!postRemoved) {
+        await client.query("ROLLBACK");
+        this.logger.error(
+          `Post ${postId} still present after deletion attempt (type: ${post.post_type})`,
+        );
+        return {
+          success: false,
+          error:
+            "Post could not be removed. Please try again or contact support.",
+        };
       }
 
       await client.query(

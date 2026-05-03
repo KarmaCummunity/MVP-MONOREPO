@@ -16,6 +16,10 @@ import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../database/database.module";
 import { RedisCacheService } from "../redis/redis-cache.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import {
+  isPostRowAbsent,
+  runPostDeletionSideEffects,
+} from "../services/post-deletion-side-effects";
 
 interface LikeBody {
   user_id: string;
@@ -1275,61 +1279,6 @@ export class PostsController {
         { liker_id: likerUserId, post_id: postId, comment_id: commentId },
       ],
     );
-  }
-
-  private async executeDeletePostSideEffects(
-    client: PoolClient,
-    postId: string,
-    post: {
-      post_type: string;
-      ride_id?: string | null;
-      item_id?: string | null;
-      task_id?: string | null;
-    },
-  ): Promise<{ deletionStrategy: string; relatedEntityDeleted: boolean }> {
-    switch (post.post_type) {
-      case "ride":
-        if (post.ride_id) {
-          await client.query("DELETE FROM rides WHERE id = $1", [post.ride_id]);
-          this.logger.log(
-            `✅ Deleted ride ${post.ride_id} (post auto-deleted via CASCADE)`,
-          );
-          return {
-            deletionStrategy: "ride_cascade",
-            relatedEntityDeleted: true,
-          };
-        }
-        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
-
-      case "item":
-      case "donation":
-        if (post.item_id) {
-          await client.query("DELETE FROM items WHERE id = $1", [post.item_id]);
-          this.logger.log(
-            `✅ Deleted item ${post.item_id} (post auto-deleted via CASCADE)`,
-          );
-          return {
-            deletionStrategy: "item_cascade",
-            relatedEntityDeleted: true,
-          };
-        }
-        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
-
-      case "task_completion":
-      case "task_assignment":
-        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-        this.logger.log(
-          `✅ Deleted task post ${postId} (task ${post.task_id} preserved)`,
-        );
-        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
-
-      default:
-        await client.query("DELETE FROM posts WHERE id = $1", [postId]);
-        this.logger.log(`✅ Deleted general post ${postId}`);
-        return { deletionStrategy: "post_only", relatedEntityDeleted: false };
-    }
   }
 
   // ============================================
@@ -2671,7 +2620,20 @@ export class PostsController {
       );
 
       const { deletionStrategy, relatedEntityDeleted } =
-        await this.executeDeletePostSideEffects(client, postId, post);
+        await runPostDeletionSideEffects(client, postId, post);
+
+      const postRemoved = await isPostRowAbsent(client, postId);
+      if (!postRemoved) {
+        await client.query("ROLLBACK");
+        this.logger.error(
+          `Post ${postId} still present after deletion attempt (type: ${post.post_type})`,
+        );
+        return {
+          success: false,
+          error:
+            "Post could not be removed. Please try again or contact support.",
+        };
+      }
 
       // Track deletion activity
       await client.query(

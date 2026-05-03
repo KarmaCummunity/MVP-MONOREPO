@@ -69,10 +69,8 @@ export const usePostMenu = (options: UsePostMenuOptions = {}): UsePostMenuReturn
 
     // Actions
     const handleDelete = () => {
-      deletePost(item.id, item.subtype || 'general', () => {
-        if (options.onDelete) {
-          options.onDelete(item.id);
-        }
+      deletePost(item.id, () => {
+        options.onDelete?.(item.id);
       });
     };
 

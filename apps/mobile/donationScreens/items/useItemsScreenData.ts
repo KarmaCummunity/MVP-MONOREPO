@@ -10,6 +10,7 @@ import type { FeedItem } from '../../types/feed';
 import { mapPostToFeedItemForItemsScreen } from './mapPostToFeedItemForItemsScreen';
 import { mapServerRowToDonationItem } from './mapServerRowToDonationItem';
 import type { DonationItem, ItemType } from './itemsScreen.types';
+import { logger } from '../../utils/loggerService';
 
 type RouteParams = { mode?: string } | undefined;
 
@@ -201,7 +202,22 @@ export function useItemsScreenData(
       const reloader = loadItemsRef.current;
       if (reloader) {
         reloader().catch((err: unknown) => {
-          console.error('Error reloading items after close:', err);
+          logger.error('useItemsScreenData', 'Error reloading items after close', { error: String(err) });
+        });
+      }
+    }, 100);
+  }, []);
+
+  /** After server delete: drop from all local lists and refetch (same pattern as close). */
+  const handlePostDeleted = useCallback((postId: string) => {
+    setAllPosts((prev) => prev.filter((p) => p.id !== postId));
+    setRecentPosts((prev) => prev.filter((p) => p.id !== postId));
+    setOpenRequestPosts((prev) => prev.filter((p) => p.id !== postId));
+    setTimeout(() => {
+      const reloader = loadItemsRef.current;
+      if (reloader) {
+        reloader().catch((err: unknown) => {
+          logger.error('useItemsScreenData', 'Error reloading items after delete', { error: String(err) });
         });
       }
     }, 100);
@@ -253,6 +269,7 @@ export function useItemsScreenData(
     loadItemsRef,
     loadItems,
     handlePostClosed,
+    handlePostDeleted,
     handlePostReopen,
     selectedUser,
     filterDataSlice,

@@ -1,128 +1,95 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../utils/apiService';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
+import { logger } from '../utils/loggerService';
+
+const LOG = 'usePostDeletion';
+
 export const usePostDeletion = () => {
-    const { selectedUser } = useUser();
-    const [isDeleting, setIsDeleting] = useState(false);
+  const { t } = useTranslation('common');
+  const { selectedUser } = useUser();
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const canDelete = (postAuthorId: string): boolean => {
-        if (!selectedUser) return false;
+  const canDelete = useCallback(
+    (postAuthorId: string): boolean => {
+      if (!selectedUser) return false;
+      if (postAuthorId === selectedUser.id) return true;
+      if (selectedUser.roles?.includes('super_admin')) return true;
+      return false;
+    },
+    [selectedUser],
+  );
 
-        // User can delete their own posts
-        if (postAuthorId === selectedUser.id) return true;
+  const showDeleteConfirmation = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const title = t('post.deleteConfirmTitle');
+      const message = t('post.deleteConfirmMessage');
 
-        // Super admin can delete any post
-        if (selectedUser.roles?.includes('super_admin')) return true;
+      if (Platform.OS === 'web') {
+        const confirmed =
+          typeof globalThis.confirm === 'function'
+            ? globalThis.confirm(`${title}\n\n${message}`)
+            : false;
+        resolve(confirmed);
+        return;
+      }
 
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: t('cancel'), style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: t('delete'),
+            style: 'destructive',
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: true },
+      );
+    });
+  }, [t]);
+
+  const deletePost = useCallback(
+    async (postId: string, onSuccess?: () => void): Promise<boolean> => {
+      if (!selectedUser) {
+        toastService.showError(t('post.deleteLoginRequired'));
         return false;
-    };
+      }
 
-    const showDeleteConfirmation = (postType: string): Promise<boolean> => {
-        return new Promise((resolve) => {
-            const messages = {
-                ride: {
-                    title: 'מחיקת פוסט טרמפ',
-                    message: 'מחיקת הפוסט תמחק גם את הנסיעה ואת כל ההזמנות. האם להמשיך?'
-                },
-                item: {
-                    title: 'מחיקת פוסט פריט',
-                    message: 'מחיקת הפוסט תמחק גם את הפריט ואת כל הבקשות. האם להמשיך?'
-                },
-                donation: {
-                    title: 'מחיקת פוסט תרומה',
-                    message: 'מחיקת הפוסט תמחק גם את התרומה. האם להמשיך?'
-                },
-                task_completion: {
-                    title: 'מחיקת פוסט משימה',
-                    message: 'האם למחוק את הפוסט? (המשימה תישאר)'
-                },
-                task_assignment: {
-                    title: 'מחיקת פוסט משימה',
-                    message: 'האם למחוק את הפוסט? (המשימה תישאר)'
-                },
-                default: {
-                    title: 'מחיקת פוסט',
-                    message: 'האם למחוק את הפוסט?'
-                }
-            };
+      const confirmed = await showDeleteConfirmation();
+      if (!confirmed) return false;
 
-            const config = messages[postType as keyof typeof messages] || messages.default;
+      setIsDeleting(true);
 
-            if (Platform.OS === 'web') {
-                const confirmed = window.confirm(`${config.title}\n\n${config.message}`);
-                resolve(confirmed);
-            } else {
-                Alert.alert(
-                    config.title,
-                    config.message,
-                    [
-                        {
-                            text: 'ביטול',
-                            style: 'cancel',
-                            onPress: () => resolve(false)
-                        },
-                        {
-                            text: 'מחק',
-                            style: 'destructive',
-                            onPress: () => resolve(true)
-                        }
-                    ],
-                    { cancelable: true }
-                );
-            }
-        });
-    };
+      try {
+        const result = await apiService.deletePost(postId, selectedUser.id);
 
-    const deletePost = async (
-        postId: string,
-        postType: string,
-        onSuccess?: () => void
-    ): Promise<boolean> => {
-        if (!selectedUser) {
-            toastService.showError('יש להתחבר כדי למחוק פוסט');
-            return false;
+        if (result.success) {
+          toastService.showSuccess(t('post.deleteSuccess'));
+          onSuccess?.();
+          return true;
         }
 
-        // Show confirmation dialog
-        const confirmed = await showDeleteConfirmation(postType);
-        if (!confirmed) return false;
+        toastService.showError(result.error || t('post.deleteError'));
+        return false;
+      } catch (error) {
+        logger.error(LOG, 'deletePost failed', { error: String(error) });
+        toastService.showError(t('post.deleteError'));
+        return false;
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [selectedUser, showDeleteConfirmation, t],
+  );
 
-        setIsDeleting(true);
-
-        try {
-            const result = await apiService.deletePost(postId, selectedUser.id);
-
-            if (result.success) {
-                toastService.showSuccess(
-                    result.data?.message || 'הפוסט נמחק בהצלחה'
-                );
-
-                // Call success callback
-                if (onSuccess) {
-                    onSuccess();
-                }
-
-                return true;
-            } else {
-                toastService.showError(
-                    result.error || 'שגיאה במחיקת הפוסט'
-                );
-                return false;
-            }
-        } catch (error) {
-            console.error('Error deleting post:', error);
-            toastService.showError('שגיאה במחיקת הפוסט');
-            return false;
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    return {
-        canDelete,
-        deletePost,
-        isDeleting
-    };
+  return {
+    canDelete,
+    deletePost,
+    isDeleting,
+  };
 };

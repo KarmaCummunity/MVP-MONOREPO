@@ -48,7 +48,11 @@ export const ClosedRoute = ({
     setReportModalVisible,
     selectedPostForReport,
     setSelectedPostForReport
-  } = usePostMenu();
+  } = usePostMenu({
+    onDelete: (postId) => {
+      setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+    },
+  });
 
   const handlePostPress = useCallback(
     (feedItem: FeedItem) => {

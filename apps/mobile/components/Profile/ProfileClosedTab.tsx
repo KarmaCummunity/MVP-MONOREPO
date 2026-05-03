@@ -42,7 +42,11 @@ export default function ProfileClosedTab({ userId, user, onHeightChange }: Props
     setReportModalVisible,
     selectedPostForReport,
     setSelectedPostForReport,
-  } = usePostMenu();
+  } = usePostMenu({
+    onDelete: (postId) => {
+      setPosts((prev) => prev.filter((p) => String(p.id) !== String(postId)));
+    },
+  });
 
   const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
