@@ -42,12 +42,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (item) {
-      setTitle(item.title || '');
-      setDescription(item.description || '');
-      setImage(item.thumbnail || null);
-    }
-  }, [item]);
+    if (!visible || !item) return;
+    setTitle(item.title || '');
+    setDescription(item.description || '');
+    setImage(item.thumbnail || null);
+  }, [visible, item]);
 
   const handlePickImage = async () => {
     try {
@@ -61,11 +60,14 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
         return;
       }
 
+      // Android crop UI is unreliable; iOS handles allowsEditing consistently.
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
+        ...(Platform.OS === 'ios'
+          ? { allowsEditing: true, aspect: [16, 9] as [number, number] }
+          : { allowsEditing: false }),
         quality: 0.8,
+        allowsMultipleSelection: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -167,16 +169,26 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
           <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
             <Ionicons name="close" size={28} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('edit_post.title') || 'עריכת פוסט'}</Text>
+          <Text
+            style={[styles.headerTitle, { textAlign: 'center' }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {t('edit_post.title') || 'עריכת פוסט'}
+          </Text>
           <TouchableOpacity
             onPress={handleSave}
-            style={[styles.headerButton, styles.saveButton]}
+            style={[
+              styles.headerButton,
+              styles.saveButton,
+              { alignItems: isRTL ? 'flex-start' : 'flex-end' },
+            ]}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Text style={styles.saveButtonText}>{t('common.done') || 'שמור'}</Text>
+              <Text style={styles.saveButtonText}>{t('edit_post.save') || 'שמור'}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -226,7 +238,10 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
               <View style={styles.imageContainer}>
                 <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
                 <TouchableOpacity
-                  style={styles.removeImageButton}
+                  style={[
+                    styles.removeImageButton,
+                    isRTL ? { left: 12, right: undefined } : { right: 12, left: undefined },
+                  ]}
                   onPress={handleRemoveImage}
                   disabled={loading}
                 >
@@ -248,7 +263,10 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
 
             {image && (
               <TouchableOpacity
-                style={styles.changeImageButton}
+                style={[
+                  styles.changeImageButton,
+                  { flexDirection: isRTL ? 'row-reverse' : 'row' },
+                ]}
                 onPress={handlePickImage}
                 disabled={loading}
               >
@@ -301,6 +319,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   headerTitle: {
+    flex: 1,
     fontSize: FontSizes.title,
     fontWeight: '700',
     color: colors.textPrimary,
@@ -357,7 +376,6 @@ const styles = StyleSheet.create({
   removeImageButton: {
     position: 'absolute',
     top: 12,
-    right: 12,
     backgroundColor: colors.white,
     borderRadius: 16,
   },
@@ -378,7 +396,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   changeImageButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,

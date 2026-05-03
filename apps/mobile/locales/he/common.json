@@ -130,6 +130,7 @@
   },
   "edit_post": {
     "title": "עריכת פוסט",
+    "save": "שמור",
     "post_title": "כותרת",
     "title_placeholder": "הכנס כותרת לפוסט",
     "title_required": "כותרת היא שדה חובה",
