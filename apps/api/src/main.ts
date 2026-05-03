@@ -14,12 +14,6 @@
 // ✅ Production-safe error messages (no stack traces in prod)
 // ✅ Helmet.js security headers (XSS, clickjacking, MITM protection)
 // ✅ Global rate limiting via ThrottlerModule
-//
-// TODO: Add request/response logging middleware for audit trail
-// TODO: Add API documentation setup (Swagger/OpenAPI)
-// TODO: Add metrics collection and monitoring setup (Prometheus)
-// TODO: Configure proper timeouts and request size limits
-// TODO: Add CSRF protection for state-changing operations
 
 // MVP: Reduced startup logging (verbose debug banners commented out)
 // console.log('========================================');
@@ -38,7 +32,425 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import * as dotenv from "dotenv";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
+import type { NextFunction, Request, Response } from "express";
 import "./sanity";
+
+function environmentStatusEmoji(environment: string): string {
+  if (environment === "development") {
+    return "🟢";
+  }
+  if (environment === "production") {
+    return "🔴";
+  }
+  return "⚪";
+}
+
+function deploymentTierLabel(
+  isProduction: boolean,
+  isDevelopment: boolean,
+): string {
+  if (isProduction) {
+    return "🔴 PRODUCTION";
+  }
+  if (isDevelopment) {
+    return "🟢 DEVELOPMENT";
+  }
+  return "🟡 OTHER";
+}
+
+type EnvVarIssue = {
+  missing: string[];
+  invalid: Array<{ key: string; requirement: string; current: number }>;
+};
+
+function collectRequiredEnvVarIssues(logger: Logger): EnvVarIssue {
+  const required = [
+    { key: "GOOGLE_CLIENT_ID", fallback: "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" },
+    { key: "DATABASE_URL", fallback: null },
+    { key: "JWT_SECRET", fallback: null, minLength: 32 },
+  ];
+
+  const missing: string[] = [];
+  const invalid: Array<{ key: string; requirement: string; current: number }> =
+    [];
+
+  for (const { key, fallback, minLength } of required) {
+    if (!process.env[key]) {
+      if (fallback && process.env[fallback]) {
+        logger.warn(`Using ${fallback} as fallback for ${key}`);
+        process.env[key] = process.env[fallback];
+      } else {
+        missing.push(key);
+      }
+    }
+
+    const value = process.env[key];
+    if (minLength && value && value.length < minLength) {
+      invalid.push({
+        key,
+        requirement: `minimum ${minLength} characters`,
+        current: value.length,
+      });
+    }
+  }
+
+  return { missing, invalid };
+}
+
+function logGenerateJwtSecretCommands(logger: Logger): void {
+  logger.error(
+    "   node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+  );
+}
+
+function exitIfMissingEnvVars(logger: Logger, missing: string[]): void {
+  if (missing.length === 0) {
+    return;
+  }
+  logger.error(
+    `❌ Missing REQUIRED environment variables: ${missing.join(", ")}`,
+  );
+  logger.error("💡 Set these variables in your .env file or environment");
+  logger.error("⚠️  Server cannot start without proper configuration");
+  if (missing.includes("JWT_SECRET")) {
+    logger.error("💡 For JWT_SECRET, generate a secure random string:");
+    logGenerateJwtSecretCommands(logger);
+  }
+  process.exit(1);
+}
+
+function exitIfInvalidEnvVars(
+  logger: Logger,
+  invalid: Array<{ key: string; requirement: string; current: number }>,
+): void {
+  if (invalid.length === 0) {
+    return;
+  }
+  logger.error(`❌ Invalid environment variables:`);
+  for (const { key, requirement, current } of invalid) {
+    logger.error(
+      `   ${key}: requires ${requirement}, but has ${current} characters`,
+    );
+  }
+  if (invalid.some((v) => v.key === "JWT_SECRET")) {
+    logger.error("💡 Generate a secure JWT_SECRET (32+ characters):");
+    logGenerateJwtSecretCommands(logger);
+  }
+  process.exit(1);
+}
+
+function assertRequiredEnvVarsOrExit(logger: Logger): void {
+  const { missing, invalid } = collectRequiredEnvVarIssues(logger);
+  exitIfMissingEnvVars(logger, missing);
+  exitIfInvalidEnvVars(logger, invalid);
+}
+
+function validateDatabaseSeparationOrExit(
+  logger: Logger,
+  environment: string,
+  databaseUrl: string,
+): void {
+  if (environment === "development") {
+    if (databaseUrl.includes("RHkhivARk")) {
+      logger.error(
+        "🚨 CRITICAL: DATABASE_URL appears to be PRODUCTION but ENVIRONMENT is development!",
+      );
+      logger.error(
+        "   This would connect your dev server to the production database!",
+      );
+      logger.error(
+        "   Fix: Update DATABASE_URL in Railway to use the development Postgres",
+      );
+      process.exit(1);
+      return;
+    }
+    if (
+      databaseUrl.includes("mmWLXgvXF") ||
+      databaseUrl.includes("postgres-a3d6beef")
+    ) {
+      logger.log("✅ Database: Development (verified by connection string)");
+      return;
+    }
+    logger.warn(
+      "⚠️  Cannot verify database environment from connection string",
+    );
+    return;
+  }
+
+  if (environment === "production") {
+    if (
+      databaseUrl.includes("mmWLXgvXF") ||
+      databaseUrl.includes("postgres-a3d6beef")
+    ) {
+      logger.error(
+        "🚨 CRITICAL: DATABASE_URL appears to be DEVELOPMENT but ENVIRONMENT is production!",
+      );
+      logger.error(
+        "   This would connect your prod server to the development database!",
+      );
+      logger.error(
+        "   Fix: Update DATABASE_URL in Railway to use the production Postgres",
+      );
+      process.exit(1);
+      return;
+    }
+    if (databaseUrl.includes("RHkhivARk")) {
+      logger.log("✅ Database: Production (verified by connection string)");
+      return;
+    }
+    logger.warn(
+      "⚠️  Cannot verify database environment from connection string",
+    );
+    return;
+  }
+
+  logger.warn(
+    `⚠️  ENVIRONMENT not set (currently: ${environment}). Set to 'development' or 'production'`,
+  );
+}
+
+function logRedisSeparationHints(
+  logger: Logger,
+  environment: string,
+  redisUrl: string,
+): void {
+  const isSharedRedis = redisUrl.includes("deQMolmzgWZsqeAkiEpZPFvejfGjenEm");
+  if (isSharedRedis) {
+    logger.warn("⚠️  Redis appears to be SHARED between environments!");
+    logger.warn(
+      "   Recommendation: Create separate Redis instances for dev and prod",
+    );
+    logger.warn("   This prevents cache pollution and session mixing");
+  }
+
+  if (
+    environment === "development" &&
+    redisUrl.includes("ggCVffISJOmdiIHAXBSQpsQCPfaFbaOR")
+  ) {
+    logger.log("✅ Redis: Development (separate instance)");
+    return;
+  }
+  if (environment === "production" && isSharedRedis) {
+    logger.log("✅ Redis: Production");
+  }
+}
+
+function applyHelmetToApp(app: NestExpressApplication): void {
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: false,
+      hsts: { maxAge: 31536000 },
+      frameguard: { action: "deny" },
+      noSniff: true,
+      xssFilter: true,
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    }),
+  );
+}
+
+function resolveCorsAllowedOrigins(
+  logger: Logger,
+  isProduction: boolean,
+): string[] {
+  let corsOrigin = process.env.CORS_ORIGIN;
+
+  if (corsOrigin && corsOrigin.startsWith('"') && corsOrigin.endsWith('"')) {
+    corsOrigin = corsOrigin.slice(1, -1);
+    logger.log("🔧 Removed surrounding quotes from CORS_ORIGIN");
+  }
+
+  if (!corsOrigin) {
+    logger.warn(
+      "⚠️  WARNING: CORS_ORIGIN not set! Using default origins based on environment.",
+    );
+  }
+
+  const defaultOrigins = isProduction
+    ? ["https://karma-community-kc.com", "https://www.karma-community-kc.com"]
+    : [
+        "https://dev.karma-community-kc.com",
+        "http://localhost:19006",
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "http://127.0.0.1:3000",
+      ];
+
+  const allowedOrigins = corsOrigin
+    ? corsOrigin.split(",").map((s) => s.trim())
+    : defaultOrigins;
+
+  if (!isProduction) {
+    const devDomains = [
+      "https://dev.karma-community-kc.com",
+      "http://localhost:19006",
+      "http://localhost:3000",
+      "http://localhost:8081",
+    ];
+    devDomains.forEach((domain) => {
+      if (!allowedOrigins.includes(domain)) {
+        allowedOrigins.push(domain);
+      }
+    });
+    logger.log(
+      `🔧 Forced inclusion of development domains in CORS allowed origins`,
+    );
+  }
+
+  if (isProduction) {
+    const prodWebOrigins = [
+      "https://karma-community-kc.com",
+      "https://www.karma-community-kc.com",
+    ];
+    prodWebOrigins.forEach((domain) => {
+      if (!allowedOrigins.includes(domain)) {
+        allowedOrigins.push(domain);
+      }
+    });
+    logger.log(
+      `🔧 Ensured canonical production web origins are included in CORS allowlist`,
+    );
+  }
+
+  return allowedOrigins;
+}
+
+function registerCrossOriginPolicies(app: NestExpressApplication): void {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+    res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
+    next();
+  });
+}
+
+function registerCorsWithProxyFallback(
+  app: NestExpressApplication,
+  logger: Logger,
+  allowedOrigins: string[],
+  isProduction: boolean,
+): void {
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "X-Auth-Token",
+      "Origin",
+      "Accept",
+    ],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    exposedHeaders: [
+      "Cross-Origin-Opener-Policy",
+      "Cross-Origin-Embedder-Policy",
+    ],
+  });
+
+  registerCrossOriginPolicies(app);
+
+  logger.log(
+    `🌐 CORS enabled for ${isProduction ? "PRODUCTION" : "DEVELOPMENT"} environment`,
+  );
+  logger.log(`🌐 Allowed origins: ${allowedOrigins.join(", ")}`);
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Credentials", "true");
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+      );
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Requested-With, X-Auth-Token, Origin, Accept",
+      );
+      if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+      }
+    } else if (origin && !isProduction) {
+      logger.warn(
+        `🚫 Blocked CORS request from origin: ${origin} (not in allowed list)`,
+      );
+    }
+
+    next();
+  });
+}
+
+function logConnectionSummary(logger: Logger): void {
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    try {
+      const dbUrlObj = new URL(dbUrl);
+      const dbName = dbUrlObj.pathname.replace("/", "") || "unknown";
+      const dbHost = dbUrlObj.hostname || "unknown";
+      logger.log(`💾 Database: ✅ Connected to ${dbName}@${dbHost}`);
+    } catch {
+      logger.log(`💾 Database: ✅ Connected (URL configured)`);
+    }
+  } else {
+    logger.log(`💾 Database: ❌ Not connected - DATABASE_URL missing!`);
+  }
+
+  const redisUrlResolved =
+    process.env.REDIS_URL ||
+    process.env.REDIS_PUBLIC_URL ||
+    process.env.UPSTASH_REDIS_URL ||
+    "";
+  if (redisUrlResolved) {
+    try {
+      const redisUrlObj = new URL(redisUrlResolved);
+      const redisHost = redisUrlObj.hostname || "unknown";
+      logger.log(`⚡ Redis: ✅ Configured (${redisHost})`);
+    } catch {
+      logger.log(`⚡ Redis: ✅ Configured (connection URL present)`);
+    }
+  } else {
+    logger.log(
+      `⚡ Redis: ❌ Not configured — set REDIS_URL (Railway injects this when Redis is linked)`,
+    );
+  }
+}
+
+function logStartupBanner(
+  logger: Logger,
+  port: number,
+  environment: string,
+  isProduction: boolean,
+): void {
+  const isDevelopment = environment === "development";
+  const tierLabel = deploymentTierLabel(isProduction, isDevelopment);
+
+  logger.log("═══════════════════════════════════════════════════");
+  logger.log("🚀 Karma Community Server started successfully!");
+  logger.log("═══════════════════════════════════════════════════");
+  logger.log(`📍 Port: ${port}`);
+  logger.log(`📍 Environment: ${environment.toUpperCase()} ${tierLabel}`);
+  logger.log(
+    `🔒 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? "✅ Configured" : "❌ Not configured"}`,
+  );
+  logConnectionSummary(logger);
+
+  if (
+    isProduction &&
+    !process.env.ENVIRONMENT &&
+    process.env.NODE_ENV !== "production"
+  ) {
+    logger.warn(
+      '⚠️  WARNING: Running in production mode but ENVIRONMENT is not explicitly set to "production"',
+    );
+  }
+
+  logger.log("═══════════════════════════════════════════════════");
+}
 
 // MVP: Reduced startup logging
 // console.log("🔥🔥🔥 PROCESS STARTING: src/main.ts LOADED 🔥🔥🔥");
@@ -66,76 +478,7 @@ import "./sanity";
  */
 function validateEnvironment(): void {
   const logger = new Logger("Bootstrap");
-
-  const required = [
-    { key: "GOOGLE_CLIENT_ID", fallback: "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" },
-    { key: "DATABASE_URL", fallback: null },
-    // REDIS_URL is now optional - removed from required list
-    { key: "JWT_SECRET", fallback: null, minLength: 32 },
-  ];
-
-  const missing: string[] = [];
-  const invalid: Array<{ key: string; requirement: string; current: number }> =
-    [];
-
-  for (const { key, fallback, minLength } of required) {
-    if (!process.env[key]) {
-      if (fallback && process.env[fallback]) {
-        logger.warn(`Using ${fallback} as fallback for ${key}`);
-        process.env[key] = process.env[fallback];
-      } else {
-        missing.push(key);
-      }
-    }
-
-    // Validate minimum length if specified
-    const value = process.env[key];
-    if (minLength && value && value.length < minLength) {
-      invalid.push({
-        key,
-        requirement: `minimum ${minLength} characters`,
-        current: value.length,
-      });
-    }
-  }
-
-  if (missing.length > 0) {
-    // [MVP] Agent debug log removed
-    logger.error(
-      `❌ Missing REQUIRED environment variables: ${missing.join(", ")}`,
-    );
-    logger.error("💡 Set these variables in your .env file or environment");
-    logger.error("⚠️  Server cannot start without proper configuration");
-    if (missing.includes("JWT_SECRET")) {
-      logger.error("💡 For JWT_SECRET, generate a secure random string:");
-      logger.error(
-        "   node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
-      );
-    }
-    process.exit(1);
-  }
-
-  if (invalid.length > 0) {
-    logger.error(`❌ Invalid environment variables:`);
-    for (const { key, requirement, current } of invalid) {
-      logger.error(
-        `   ${key}: requires ${requirement}, but has ${current} characters`,
-      );
-    }
-    if (invalid.some((v) => v.key === "JWT_SECRET")) {
-      logger.error("💡 Generate a secure JWT_SECRET (32+ characters):");
-      logger.error(
-        "   node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
-      );
-    }
-    process.exit(1);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // ENVIRONMENT SEPARATION VALIDATION
-  // ═══════════════════════════════════════════════════════════════
-  // Validate that environment configuration matches the database
-  // This prevents critical errors like connecting dev to prod DB
+  assertRequiredEnvVarsOrExit(logger);
 
   const environment =
     process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
@@ -147,80 +490,11 @@ function validateEnvironment(): void {
     "";
 
   logger.log(
-    `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
+    `📍 Environment: ${environment.toUpperCase()} ${environmentStatusEmoji(environment)}`,
   );
 
-  // Check DATABASE_URL matches environment
-  if (environment === "development") {
-    // DEV should use password: mmWLXgvXF... or host: postgres-a3d6beef
-    if (databaseUrl.includes("RHkhivARk")) {
-      logger.error(
-        "🚨 CRITICAL: DATABASE_URL appears to be PRODUCTION but ENVIRONMENT is development!",
-      );
-      logger.error(
-        "   This would connect your dev server to the production database!",
-      );
-      logger.error(
-        "   Fix: Update DATABASE_URL in Railway to use the development Postgres",
-      );
-      process.exit(1);
-    } else if (
-      databaseUrl.includes("mmWLXgvXF") ||
-      databaseUrl.includes("postgres-a3d6beef")
-    ) {
-      logger.log("✅ Database: Development (verified by connection string)");
-    } else {
-      logger.warn(
-        "⚠️  Cannot verify database environment from connection string",
-      );
-    }
-  } else if (environment === "production") {
-    // PROD should use password: RHkhivARk...
-    if (
-      databaseUrl.includes("mmWLXgvXF") ||
-      databaseUrl.includes("postgres-a3d6beef")
-    ) {
-      logger.error(
-        "🚨 CRITICAL: DATABASE_URL appears to be DEVELOPMENT but ENVIRONMENT is production!",
-      );
-      logger.error(
-        "   This would connect your prod server to the development database!",
-      );
-      logger.error(
-        "   Fix: Update DATABASE_URL in Railway to use the production Postgres",
-      );
-      process.exit(1);
-    } else if (databaseUrl.includes("RHkhivARk")) {
-      logger.log("✅ Database: Production (verified by connection string)");
-    } else {
-      logger.warn(
-        "⚠️  Cannot verify database environment from connection string",
-      );
-    }
-  } else {
-    logger.warn(
-      `⚠️  ENVIRONMENT not set (currently: ${environment}). Set to 'development' or 'production'`,
-    );
-  }
-
-  // Check if Redis is shared (warning only, not critical)
-  const isSharedRedis = redisUrl.includes("deQMolmzgWZsqeAkiEpZPFvejfGjenEm");
-  if (isSharedRedis) {
-    logger.warn("⚠️  Redis appears to be SHARED between environments!");
-    logger.warn(
-      "   Recommendation: Create separate Redis instances for dev and prod",
-    );
-    logger.warn("   This prevents cache pollution and session mixing");
-  }
-
-  if (
-    environment === "development" &&
-    redisUrl.includes("ggCVffISJOmdiIHAXBSQpsQCPfaFbaOR")
-  ) {
-    logger.log("✅ Redis: Development (separate instance)");
-  } else if (environment === "production" && isSharedRedis) {
-    logger.log("✅ Redis: Production");
-  }
+  validateDatabaseSeparationOrExit(logger, environment, databaseUrl);
+  logRedisSeparationHints(logger, environment, redisUrl);
 
   logger.log("✅ Environment validation passed");
 }
@@ -270,160 +544,16 @@ async function bootstrap(): Promise<void> {
 
     const port = Number(process.env.PORT || 3001);
 
-    // SEC-002.2: Security headers via Helmet.js
-    // Minimal config to avoid Railway's nginx buffer overflow ("upstream sent too big header")
-    app.use(
-      helmet({
-        contentSecurityPolicy: false, // CSP can be strict — disabled for now to avoid breaking mobile
-        crossOriginEmbedderPolicy: false, // Disabled to allow cross-origin resources
-        crossOriginOpenerPolicy: false, // Disabled to avoid breaking OAuth popups
-        hsts: { maxAge: 31536000 }, // Strict-Transport-Security: 1 year
-        frameguard: { action: "deny" }, // X-Frame-Options: DENY — prevents clickjacking
-        noSniff: true, // X-Content-Type-Options: nosniff
-        xssFilter: true, // X-XSS-Protection: 1; mode=block
-        referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-      }),
-    );
-
+    // SEC-002.2: Security headers (Helmet) — minimal config for Railway proxy header limits
+    applyHelmetToApp(app);
     logger.log("🛡️  Helmet.js security headers enabled (SEC-002.2)");
 
-    // Determine environment for CORS configuration
     const environment =
       process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
     const isProduction = environment === "production";
 
-    // Configure CORS (Cross-Origin Resource Sharing)
-    let corsOrigin = process.env.CORS_ORIGIN;
-
-    // Remove surrounding quotes if present (Railway sometimes includes them)
-    if (corsOrigin && corsOrigin.startsWith('"') && corsOrigin.endsWith('"')) {
-      corsOrigin = corsOrigin.slice(1, -1);
-      logger.log("🔧 Removed surrounding quotes from CORS_ORIGIN");
-    }
-
-    if (!corsOrigin) {
-      logger.warn(
-        "⚠️  WARNING: CORS_ORIGIN not set! Using default origins based on environment.",
-      );
-    }
-
-    // Default origins based on environment
-    const defaultOrigins = isProduction
-      ? ["https://karma-community-kc.com", "https://www.karma-community-kc.com"]
-      : [
-          "https://dev.karma-community-kc.com",
-          "http://localhost:19006",
-          "http://localhost:3000",
-          "http://localhost:8081",
-          "http://127.0.0.1:3000",
-        ];
-
-    const allowedOrigins = corsOrigin
-      ? corsOrigin.split(",").map((s) => s.trim())
-      : defaultOrigins;
-
-    // Force include development domains if not in production
-    // This ensures that even if CORS_ORIGIN is set in Railway but missing the dev domain, it still works
-    if (!isProduction) {
-      const devDomains = [
-        "https://dev.karma-community-kc.com",
-        "http://localhost:19006",
-        "http://localhost:3000",
-        "http://localhost:8081",
-      ];
-
-      // Add unique domains
-      devDomains.forEach((domain) => {
-        if (!allowedOrigins.includes(domain)) {
-          allowedOrigins.push(domain);
-        }
-      });
-
-      logger.log(
-        `🔧 Forced inclusion of development domains in CORS allowed origins`,
-      );
-    }
-
-    app.enableCors({
-      origin: allowedOrigins,
-      credentials: true,
-      methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-      allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "X-Auth-Token",
-        "Origin",
-        "Accept",
-      ],
-      preflightContinue: false,
-      optionsSuccessStatus: 204,
-      exposedHeaders: [
-        "Cross-Origin-Opener-Policy",
-        "Cross-Origin-Embedder-Policy",
-      ],
-    });
-
-    // Add Cross-Origin-Opener-Policy header for Google OAuth
-    app.use(
-      (
-        req: import("express").Request,
-        res: import("express").Response,
-        next: import("express").NextFunction,
-      ) => {
-        res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-        res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
-        next();
-      },
-    );
-
-    logger.log(
-      `🌐 CORS enabled for ${isProduction ? "PRODUCTION" : "DEVELOPMENT"} environment`,
-    );
-    logger.log(`🌐 Allowed origins: ${allowedOrigins.join(", ")}`);
-
-    // Extra CORS fallback middleware for proxy compatibility
-    // Some proxies don't properly forward CORS headers, so we add them manually
-
-    app.use(
-      (
-        req: import("express").Request,
-        res: import("express").Response,
-        next: import("express").NextFunction,
-      ) => {
-        const origin = req.headers.origin;
-
-        // Only set CORS headers if origin is in allowed list
-        if (origin && allowedOrigins.includes(origin)) {
-          res.header("Access-Control-Allow-Origin", origin);
-          res.header("Vary", "Origin");
-          res.header("Access-Control-Allow-Credentials", "true");
-          res.header(
-            "Access-Control-Allow-Methods",
-            "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-          );
-          res.header(
-            "Access-Control-Allow-Headers",
-            "Content-Type, Authorization, X-Requested-With, X-Auth-Token, Origin, Accept",
-          );
-
-          // Handle preflight requests
-          if (req.method === "OPTIONS") {
-            return res.sendStatus(204);
-          }
-        } else if (origin && !isProduction) {
-          // In development, log blocked origins for debugging
-          logger.warn(
-            `🚫 Blocked CORS request from origin: ${origin} (not in allowed list)`,
-          );
-        } else if (origin && isProduction) {
-          // In production, silently block unauthorized origins (security)
-          // Don't set any CORS headers, browser will block the request
-        }
-
-        next();
-      },
-    );
+    const allowedOrigins = resolveCorsAllowedOrigins(logger, isProduction);
+    registerCorsWithProxyFallback(app, logger, allowedOrigins, isProduction);
 
     // Configure global validation pipe with security settings
     // This automatically validates all incoming requests against DTOs
@@ -446,68 +576,7 @@ async function bootstrap(): Promise<void> {
     const httpServer = app.getHttpServer();
     httpServer.setTimeout(30000);
 
-    // Log successful startup with configuration summary
-    const isDevelopment = environment === "development";
-    logger.log("═══════════════════════════════════════════════════");
-    logger.log("🚀 Karma Community Server started successfully!");
-    logger.log("═══════════════════════════════════════════════════");
-    logger.log(`📍 Port: ${port}`);
-    logger.log(
-      `📍 Environment: ${environment.toUpperCase()} ${isProduction ? "🔴 PRODUCTION" : isDevelopment ? "🟢 DEVELOPMENT" : "🟡 OTHER"}`,
-    );
-    logger.log(
-      `🔒 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? "✅ Configured" : "❌ Not configured"}`,
-    );
-
-    // Show database connection details (masked for security)
-    const dbUrl = process.env.DATABASE_URL;
-    if (dbUrl) {
-      try {
-        const dbUrlObj = new URL(dbUrl);
-        const dbName = dbUrlObj.pathname.replace("/", "") || "unknown";
-        const dbHost = dbUrlObj.hostname || "unknown";
-        logger.log(`💾 Database: ✅ Connected to ${dbName}@${dbHost}`);
-      } catch {
-        logger.log(`💾 Database: ✅ Connected (URL configured)`);
-      }
-    } else {
-      logger.log(`💾 Database: ❌ Not connected - DATABASE_URL missing!`);
-    }
-
-    // Show Redis connection details (same URL resolution as redis.module.ts — Railway provides REDIS_URL)
-    const redisUrlResolved =
-      process.env.REDIS_URL ||
-      process.env.REDIS_PUBLIC_URL ||
-      process.env.UPSTASH_REDIS_URL ||
-      "";
-    if (redisUrlResolved) {
-      try {
-        const redisUrlObj = new URL(redisUrlResolved);
-        const redisHost = redisUrlObj.hostname || "unknown";
-        logger.log(`⚡ Redis: ✅ Configured (${redisHost})`);
-      } catch {
-        logger.log(`⚡ Redis: ✅ Configured (connection URL present)`);
-      }
-    } else {
-      logger.log(
-        `⚡ Redis: ❌ Not configured — set REDIS_URL (Railway injects this when Redis is linked)`,
-      );
-    }
-
-    // Warn if running in production without proper environment flag
-    if (
-      isProduction &&
-      !process.env.ENVIRONMENT &&
-      process.env.NODE_ENV !== "production"
-    ) {
-      logger.warn(
-        '⚠️  WARNING: Running in production mode but ENVIRONMENT is not explicitly set to "production"',
-      );
-    }
-
-    // [MVP] Agent debug log removed
-
-    logger.log("═══════════════════════════════════════════════════");
+    logStartupBanner(logger, port, environment, isProduction);
   } catch (error) {
     // [MVP] Agent debug log removed
 
@@ -588,5 +657,3 @@ process.on("uncaughtException", (error) => {
   logger.error("⚠️  Application will exit due to critical error");
   process.exit(1);
 });
-
-import "./sanity";

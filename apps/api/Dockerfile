@@ -33,6 +33,9 @@ RUN test -f ./apps/api/dist/main.js || \
 FROM node:20
 WORKDIR /app
 
+# Ensure runtime is treated as production when variables are omitted from Railway (CORS defaults, Nest behavior).
+ENV NODE_ENV=production
+
 LABEL Name="kc-mvp-server" Version="1.5.0"
 
 # Copy package files for production install
