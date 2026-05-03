@@ -14,9 +14,9 @@ import { AdminStackParamList } from '../globals/types';
 import { useUser } from '../stores/userStore';
 import AdminHierarchyTree from '../components/AdminHierarchyTree';
 
-interface AdminDashboardScreenProps {
+type AdminDashboardScreenProps = Readonly<{
   navigation: NavigationProp<AdminStackParamList>;
-}
+}>;
 
 interface AdminButton {
   id: string;
@@ -95,6 +95,7 @@ const adminButtons: AdminButton[] = [
 ];
 
 import { useAdminProtection } from '../hooks/useAdminProtection';
+import { isOrganizationRootEmail } from '../utils/org.constants';
 
 type AdminDashboardRouteProp = RouteProp<AdminStackParamList, 'AdminDashboard'>;
 
@@ -165,7 +166,9 @@ export default function AdminDashboardScreen({ navigation }: AdminDashboardScree
           ))}
 
           {/* Admin management - visible to all admins (admin or super_admin role) */}
-          {(selectedUser?.roles?.includes('admin') || selectedUser?.roles?.includes('super_admin') || selectedUser?.email?.toLowerCase() === 'navesarussi@gmail.com' || selectedUser?.email?.toLowerCase() === 'karmacommunity2.0@gmail.com') && (
+          {(selectedUser?.roles?.includes('admin') ||
+            selectedUser?.roles?.includes('super_admin') ||
+            isOrganizationRootEmail(selectedUser?.email)) && (
             <TouchableOpacity
               key="admins"
               style={[styles.button, { backgroundColor: colors.errorLight }]}

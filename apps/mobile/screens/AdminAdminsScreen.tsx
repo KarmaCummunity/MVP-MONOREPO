@@ -25,10 +25,11 @@ import { useUser } from '../stores/userStore';
 import { logger } from '../utils/loggerService';
 import { apiService } from '../src/api/api.service';
 import { useAdminProtection } from '../hooks/useAdminProtection';
+import { isOrganizationRootEmail } from '../utils/org.constants';
 
-interface AdminAdminsScreenProps {
+type AdminAdminsScreenProps = Readonly<{
     navigation: NavigationProp<AdminStackParamList>;
-}
+}>;
 
 const LOG_SOURCE = 'AdminAdminsScreen';
 
@@ -107,7 +108,11 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 // Extract managers from the list (admins + super admin)
                 const managers = response.data.filter((u: AdminUser) => {
                     const roles = u.roles || [];
-                    return roles.includes('admin') || roles.includes('super_admin') || u.email === 'navesarussi@gmail.com';
+                    return (
+                        roles.includes('admin') ||
+                        roles.includes('super_admin') ||
+                        isOrganizationRootEmail(u.email)
+                    );
                 });
                 setAllManagers(managers);
 
@@ -223,8 +228,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         const currentRoles = Array.isArray(user.roles) ? user.roles : [];
         const isAdmin = currentRoles.includes('admin') || currentRoles.includes('super_admin');
-        const superAdminEmails = ['navesarussi@gmail.com', 'karmacommunity2.0@gmail.com'];
-        const isSuperAdmin = superAdminEmails.includes(user.email?.toLowerCase() || '');
+        const isSuperAdmin = isOrganizationRootEmail(user.email);
 
         logger.debug(LOG_SOURCE, 'User check', {
             isAdmin,
@@ -386,7 +390,13 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
         logger.debug(LOG_SOURCE, 'removeManager called for', { target: selectedForManager.name || selectedForManager.email, selectedForManagerId: selectedForManager.id, selectedUserId: selectedUser?.id });
 
         if (Platform.OS === 'web') {
-            if (typeof window !== 'undefined' && window.confirm(t('admin:admins.confirmRemoveManagerMessage', { name: selectedForManager.name || selectedForManager.email }))) {
+            if (
+                globalThis.window?.confirm(
+                    t('admin:admins.confirmRemoveManagerMessage', {
+                        name: selectedForManager.name || selectedForManager.email,
+                    }),
+                )
+            ) {
                 await performRemoveManager();
             }
         } else {
@@ -396,7 +406,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 [
                     { text: t('common:cancel'), style: 'cancel' },
                     {
-                        text: 'הסר',
+                        text: t('common:delete'),
                         style: 'destructive',
                         onPress: performRemoveManager
                     }
@@ -649,7 +659,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
                     const _isSameUser = user.id === selectedUser?.id;
-                    const isRootAdmin = user.email === 'karmacommunity2.0@gmail.com';
+                    const isRootAdmin = isOrganizationRootEmail(user.email);
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);
                     const hierarchyLevel = user.hierarchy_level;
@@ -671,7 +681,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                                 <Text style={styles.userEmail}>{user.email}</Text>
                                 
                                 {/* Display hierarchy level */}
-                                {levelText && (
+                                {!!levelText && (
                                     <View style={[styles.managerBadge, { backgroundColor: colors.primary + '20', marginTop: 4 }]}>
                                         <Ionicons name="layers-outline" size={12} color={colors.primary} />
                                         <Text style={[styles.managerText, { color: colors.primary }]}>{levelText}</Text>
@@ -907,7 +917,7 @@ const styles = StyleSheet.create({
     lockedButton: { backgroundColor: colors.textTertiary },
     actionBtnText: { color: colors.buttonText, fontSize: 12, fontWeight: 'bold' },
 
-    modalBackdrop: { flex: 1, backgroundColor: colors.modalOverlay, justifyContent: 'center', padding: 20 },
+    modalBackdrop: { flex: 1, backgroundColor: colors.overlayBlack50, justifyContent: 'center', padding: 20 },
     modalCard: { backgroundColor: colors.background, borderRadius: 16, padding: 20, maxHeight: '80%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: 'bold', flex: 1 },

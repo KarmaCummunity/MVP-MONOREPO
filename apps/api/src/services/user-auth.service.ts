@@ -72,6 +72,67 @@ export class UserAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  /**
+   * Emails that receive full org super-admin bootstrap in DB + JWT.
+   * Always includes `KC_ROOT_ADMIN_EMAIL_FALLBACK`; also `ROOT_ADMIN_EMAIL` when set (ops override).
+   */
+  private getOrgSuperAdminBootstrapEmails(): Set<string> {
+    const set = new Set<string>();
+    set.add(KC_ROOT_ADMIN_EMAIL_FALLBACK.toLowerCase().trim());
+    const fromEnv = process.env.ROOT_ADMIN_EMAIL?.trim().toLowerCase();
+    if (fromEnv) {
+      set.add(fromEnv);
+    }
+    return set;
+  }
+
+  private isOrgSuperAdminBootstrapEmail(
+    email: string | null | undefined,
+  ): boolean {
+    if (!email || typeof email !== "string") {
+      return false;
+    }
+    return this.getOrgSuperAdminBootstrapEmails().has(
+      email.toLowerCase().trim(),
+    );
+  }
+
+  /**
+   * Ensures org root account(s) have `super_admin` and `admin` in DB before issuing JWTs from resolve-id
+   * (OAuth / resolve-id parity with password login).
+   */
+  private async ensureOrgSuperAdminRolesInResolveTransaction(
+    client: PoolClient,
+    userId: string,
+    email: string | null,
+    currentRoles: string[],
+  ): Promise<string[]> {
+    if (!this.isOrgSuperAdminBootstrapEmail(email)) {
+      return currentRoles;
+    }
+    const next = [...currentRoles];
+    if (!next.includes("super_admin")) {
+      await client.query(
+        `UPDATE user_profiles SET roles = array_append(roles, 'super_admin') WHERE id = $1 AND NOT ('super_admin' = ANY(roles))`,
+        [userId],
+      );
+      next.push("super_admin");
+    }
+    if (!next.includes("admin")) {
+      await client.query(
+        `UPDATE user_profiles SET roles = array_append(roles, 'admin') WHERE id = $1 AND NOT ('admin' = ANY(roles))`,
+        [userId],
+      );
+      next.push("admin");
+    }
+    if (next.length !== currentRoles.length) {
+      this.logger.log("Granted org super-admin bootstrap roles on resolve-id", {
+        userId,
+      });
+    }
+    return next;
+  }
+
   async registerUser(userData: RegisterUserBody): Promise<{
     success: boolean;
     error?: string;
@@ -98,8 +159,11 @@ export class UserAuthService {
         passwordHash = await argon2.hash(userData.password);
       }
 
-      const shouldBeAdmin = normalizedEmail === KC_ROOT_ADMIN_EMAIL_FALLBACK;
-      const initialRoles = shouldBeAdmin ? ["user", "admin"] : ["user"];
+      const shouldBootstrapSuperAdmin =
+        this.isOrgSuperAdminBootstrapEmail(normalizedEmail);
+      const initialRoles = shouldBootstrapSuperAdmin
+        ? ["user", "admin", "super_admin"]
+        : ["user"];
 
       const nowIso = new Date().toISOString();
       const { rows: newUser } = await client.query(
@@ -209,15 +273,24 @@ export class UserAuthService {
 
       const user = rows[0];
 
-      const shouldBeAdmin = normalizedEmail === KC_ROOT_ADMIN_EMAIL_FALLBACK;
-      const currentRoles: string[] = user.roles || [];
-
-      if (shouldBeAdmin && !currentRoles.includes("admin")) {
-        await this.pool.query(
-          `UPDATE user_profiles SET roles = array_append(roles, 'admin') WHERE id = $1`,
-          [user.id],
-        );
-        user.roles = [...currentRoles, "admin"];
+      if (this.isOrgSuperAdminBootstrapEmail(normalizedEmail)) {
+        const currentRoles: string[] = user.roles || [];
+        const nextRoles = [...currentRoles];
+        if (!nextRoles.includes("super_admin")) {
+          await this.pool.query(
+            `UPDATE user_profiles SET roles = array_append(roles, 'super_admin') WHERE id = $1 AND NOT ('super_admin' = ANY(roles))`,
+            [user.id],
+          );
+          nextRoles.push("super_admin");
+        }
+        if (!nextRoles.includes("admin")) {
+          await this.pool.query(
+            `UPDATE user_profiles SET roles = array_append(roles, 'admin') WHERE id = $1 AND NOT ('admin' = ANY(roles))`,
+            [user.id],
+          );
+          nextRoles.push("admin");
+        }
+        user.roles = nextRoles;
       }
 
       if (loginData.password && user.password_hash) {
@@ -325,7 +398,7 @@ export class UserAuthService {
         resolvedBy = "firebase_uid";
       } else if (google_id && user.google_id === google_id) {
         resolvedBy = "google_id";
-      } else if (email && user.email?.toLowerCase() === email.toLowerCase()) {
+      } else if (email?.toLowerCase() === user.email?.toLowerCase()) {
         resolvedBy = "email";
       }
       this.logger.log(`✅ User resolved by ${resolvedBy}:`, {
@@ -334,6 +407,13 @@ export class UserAuthService {
       });
 
       await this.linkResolveIdentifiers(client, user, firebase_uid, google_id);
+
+      user.roles = await this.ensureOrgSuperAdminRolesInResolveTransaction(
+        client,
+        user.id,
+        user.email,
+        user.roles || ["user"],
+      );
 
       await client.query("COMMIT");
 
@@ -466,6 +546,9 @@ export class UserAuthService {
         }
 
         const normalizedEmail = firebaseUser.email.toLowerCase().trim();
+        const initialRoles = this.isOrgSuperAdminBootstrapEmail(normalizedEmail)
+          ? ["user", "admin", "super_admin"]
+          : ["user"];
         const providerData = firebaseUser.providerData as
           | FirebaseProviderInfo[]
           | undefined;
@@ -505,7 +588,7 @@ export class UserAuthService {
               "ישראל",
               "Israel",
               [],
-              ["user"],
+              initialRoles,
               firebaseUser.emailVerified || false,
               JSON.stringify({
                 language: "he",
@@ -548,7 +631,7 @@ export class UserAuthService {
               "ישראל",
               "Israel",
               [],
-              ["user"],
+              initialRoles,
               firebaseUser.emailVerified || false,
               JSON.stringify({
                 language: "he",

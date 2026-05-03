@@ -21,7 +21,7 @@ import { AdminStackParamList } from '../../globals/types';
 import { useUser } from '../../stores/userStore';
 import { logger } from '../../utils/loggerService';
 import { apiService } from '../../utils/apiService';
-import { KC_ORGANIZATION_ROOT_EMAIL } from '../../utils/org.constants';
+import { isOrganizationRootEmail } from '../../utils/org.constants';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 
 interface AdminAdminsScreenProps {
@@ -102,7 +102,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                 const managers = response.data.filter((u: any) => {
                     const roles = u.roles || [];
                     return roles.includes('admin') || roles.includes('super_admin') ||
-                        (u.email || '').toLowerCase() === KC_ORGANIZATION_ROOT_EMAIL.toLowerCase();
+                        isOrganizationRootEmail(u.email);
                 });
                 setAllManagers(managers);
 
@@ -231,8 +231,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
 
         const currentRoles = Array.isArray(user.roles) ? user.roles : [];
         const isAdmin = currentRoles.includes('admin') || currentRoles.includes('super_admin');
-        const superAdminEmails = [KC_ORGANIZATION_ROOT_EMAIL.toLowerCase()];
-        const isSuperAdmin = superAdminEmails.includes((user.email || '').toLowerCase());
+        const isSuperAdmin = isOrganizationRootEmail(user.email);
 
         logger.debug(LOG_SOURCE, 'User check', {
             isAdmin,
@@ -555,7 +554,7 @@ export default function AdminAdminsScreen({ navigation: _navigation }: AdminAdmi
                     const userRoles = user.roles || [];
                     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
                     const isVolunteer = userRoles.includes('volunteer');
-                    const isRootAdmin = (user.email || '').toLowerCase() === KC_ORGANIZATION_ROOT_EMAIL.toLowerCase(); // המנהל הראשי - מוגן לחלוטין
+                    const isRootAdmin = isOrganizationRootEmail(user.email);
                     const userCanBePromoted = canPromote(user);
                     const userCanBeDemoted = canDemote(user);
                     const hierarchyLevel = user.hierarchy_level;

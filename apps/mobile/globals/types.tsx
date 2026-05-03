@@ -241,6 +241,7 @@ export type AdminStackParamList = {
   AdminFiles: undefined;
   AdminCRM: undefined;
   AdminTimeManagement: undefined;
+  AdminTables: undefined;
   ChatListScreen: undefined;
   ChatDetailScreen: ChatDetailScreenParams;
   NewChatScreen: undefined;
