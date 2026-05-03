@@ -162,7 +162,7 @@ export function ProfileScreenContent(
       }
     }
 
-    void loadFollowStats();
+    loadFollowStats().catch(() => {});
   }, [viewingUser, selectedUser, isOwnProfile]);
 
   const updateUserStats = useCallback(async () => {
@@ -270,7 +270,7 @@ export function ProfileScreenContent(
   );
 
   useEffect(() => {
-    void updateUserStats();
+    updateUserStats().catch(() => {});
   }, [selectedUser, viewingUser, isOwnProfile, updateUserStats]);
 
   useFocusEffect(
@@ -303,13 +303,13 @@ export function ProfileScreenContent(
           refreshTimestamp,
         }));
       }
-      void refreshStats();
+      refreshStats().catch(() => {});
     }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities]),
   );
 
   useEffect(() => {
     if (isOwnProfile) {
-      void loadRecentActivities();
+      loadRecentActivities().catch(() => {});
     }
   }, [selectedUser, isOwnProfile, loadRecentActivities]);
 

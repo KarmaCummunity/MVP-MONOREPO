@@ -119,7 +119,7 @@ export default function BookmarksScreen() {
         text: t('bookmarks:removeConfirm'),
         style: 'destructive',
         onPress: () => {
-          void performRemoveBookmark(bookmark);
+          performRemoveBookmark(bookmark).catch(() => {});
         },
       },
     ]);
@@ -146,7 +146,7 @@ export default function BookmarksScreen() {
         text: t('bookmarks:clearConfirm'),
         style: 'destructive',
         onPress: () => {
-          void performClearAllBookmarks();
+          performClearAllBookmarks().catch(() => {});
         },
       },
     ]);
