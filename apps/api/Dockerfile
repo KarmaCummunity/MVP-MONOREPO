@@ -19,6 +19,9 @@ RUN npm ci --include=dev
 # Copy entire monorepo source
 COPY . .
 
+# Build shared workspace types first (api depends on generated dist declarations)
+RUN npm run build --workspace @kc/shared-types
+
 # Build the API workspace from root using workspace command
 RUN npm run build --workspace @kc/api
 
