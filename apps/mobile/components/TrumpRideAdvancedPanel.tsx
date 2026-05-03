@@ -9,6 +9,7 @@ import {
   ScrollView,
   type StyleProp,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -78,7 +79,7 @@ export function TrumpRideAdvancedFooter({
 export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInnerProps): React.ReactElement {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'he';
-  const textAlign = isRTL ? 'right' : 'left';
+  const textAlign: TextStyle['textAlign'] = isRTL ? 'right' : 'left';
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const {

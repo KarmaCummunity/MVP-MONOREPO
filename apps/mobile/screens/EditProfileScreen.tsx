@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: LAYOUT_CONSTANTS.SPACING.MD },
   fieldRow: { flexDirection: 'row-reverse', gap: LAYOUT_CONSTANTS.SPACING.SM },
   label: { fontSize: FontSizes.small, color: colors.textSecondary, marginBottom: 6, textAlign: 'right' },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
+  input: { backgroundColor: colors.surfaceGrayBlue, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
   avatarRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: LAYOUT_CONSTANTS.SPACING.MD, marginBottom: LAYOUT_CONSTANTS.SPACING.LG },
   avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.backgroundSecondary },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },

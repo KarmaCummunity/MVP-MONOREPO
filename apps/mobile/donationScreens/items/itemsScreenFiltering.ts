@@ -244,18 +244,19 @@ export function getFilteredItemsForItemsScreen(params: {
   advancedFilters?: { categories: string[]; condition: string[]; address: string; radius: number };
   sortLabels: ItemsScreenSortLabels;
   conditionLabels: ReturnType<typeof buildItemsConditionFilterLabels>;
+  searchQuery: string;
   t: ItemsScreenTranslate;
 }): FeedItem[] | DonationItem[] {
   const {
     mode,
     allPosts,
     allItems,
-    searchQuery,
     selectedFilters,
     selectedSorts,
     advancedFilters,
     sortLabels,
     conditionLabels,
+    searchQuery,
     t,
   } = params;
 

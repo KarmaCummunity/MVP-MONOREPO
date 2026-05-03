@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, TextInput } from 'react-native';
+import { Text, TextInput, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { CreatePostComposerModalStyles } from './createPostComposerModalStyles';
 import TimeInput from './TimeInput';
@@ -34,7 +34,7 @@ export default function TrumpRideBasicFields({
 }: TrumpRideBasicFieldsProps): React.ReactElement {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'he';
-  const textAlign = isRTL ? 'right' : 'left';
+  const textAlign: TextStyle['textAlign'] = isRTL ? 'right' : 'left';
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const getFieldStyle = (fieldName: string) => [

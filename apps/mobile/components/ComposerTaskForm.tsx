@@ -1,6 +1,6 @@
 // Admin quick-create task fields for CreatePostComposerModal (same API as AdminTasksScreen).
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
-import { View, TextInput, ScrollView } from 'react-native';
+import { View, TextInput, ScrollView, TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import colors from '../globals/colors';
 import apiService, { ApiResponse } from '../utils/apiService';
@@ -50,7 +50,7 @@ const ComposerTaskForm = forwardRef<ComposerTaskFormHandle, Props>(function Comp
 ) {
   const { i18n, t } = useTranslation(['common', 'search', 'admin']);
   const isRTL = i18n.language === 'he';
-  const textAlign = isRTL ? 'right' : 'left';
+  const textAlign: TextStyle['textAlign'] = isRTL ? 'right' : 'left';
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const getFieldStyle = (fieldName: string) => [

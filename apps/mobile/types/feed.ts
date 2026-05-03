@@ -104,6 +104,9 @@ export interface FeedItem {
     // Item specific (optional)
     category?: string;
     intent?: 'give' | 'request';
+    condition?: string;
+    city?: string;
+    address?: string;
 }
 
 /** Challenge UUID for navigation (top-level from API mapper or nested snapshot). */
