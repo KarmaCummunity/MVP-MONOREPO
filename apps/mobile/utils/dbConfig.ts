@@ -14,7 +14,7 @@ export { API_BASE_URL } from './config.constants';
 
 const DEFAULT_API_BASE_URLS = {
   development: 'http://localhost:3001',
-  production: 'https://kc-mvp-server-production.up.railway.app',
+  production: 'https://kc-prod-server-production.up.railway.app',
 };
 
 // Backend configuration

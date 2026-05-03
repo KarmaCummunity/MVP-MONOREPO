@@ -16,7 +16,7 @@
     "ios": "EXPO_NO_METRO_WORKSPACE_ROOT=1 expo run:ios",
     "web": "EXPO_NO_METRO_WORKSPACE_ROOT=1 expo start --web",
     "prebuild:web": "bash scripts/update-build-version.sh",
-    "build:web": "EXPO_PUBLIC_API_BASE_URL=https://kc-mvp-server-production.up.railway.app expo export --platform web",
+    "build:web": "EXPO_PUBLIC_API_BASE_URL=https://kc-prod-server-production.up.railway.app expo export --platform web",
     "postbuild:web": "bash scripts/restore-build-placeholders.sh",
     "build:web:local": "EXPO_PUBLIC_API_BASE_URL=http://localhost:3001 expo export:web",
     "audit:colors": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ts-node scripts/audit-colors.ts",

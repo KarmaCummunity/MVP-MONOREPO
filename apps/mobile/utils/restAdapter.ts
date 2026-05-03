@@ -42,7 +42,7 @@ export class RestAdapter {
       }
 
       // Otherwise use production server
-      return 'https://kc-mvp-server-production.up.railway.app';
+      return 'https://kc-prod-server-production.up.railway.app';
     }
 
     // Fallback to config constant

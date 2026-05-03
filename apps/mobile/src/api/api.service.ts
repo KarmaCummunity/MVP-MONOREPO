@@ -79,7 +79,7 @@ class ApiService {
       }
 
       // Otherwise use production server
-      return 'https://kc-mvp-server-production.up.railway.app';
+      return 'https://kc-prod-server-production.up.railway.app';
     }
 
     // For native apps, use lazy initialization

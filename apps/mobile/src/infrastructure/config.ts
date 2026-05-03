@@ -66,7 +66,7 @@ const getSimpleApiUrl = (): string => {
     }
     
     // Otherwise use production server
-    const prodUrl = 'https://kc-mvp-server-production.up.railway.app';
+    const prodUrl = 'https://kc-prod-server-production.up.railway.app';
     console.log('🌐 Using production API URL:', prodUrl);
     return prodUrl;
   }
@@ -74,7 +74,7 @@ const getSimpleApiUrl = (): string => {
   // Fallback to appropriate environment URL for native apps
   return IS_DEVELOPMENT
     ? 'https://kc-mvp-server-development.up.railway.app'
-    : 'https://kc-mvp-server-production.up.railway.app';
+    : 'https://kc-prod-server-production.up.railway.app';
 };
 
 // Export as getter function to ensure runtime evaluation
