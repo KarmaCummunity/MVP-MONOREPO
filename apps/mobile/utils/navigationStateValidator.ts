@@ -105,7 +105,7 @@ export const validateNavigationState = (
       } else if (route.name === 'DonationsTab') {
         nestedStackName = 'DonationsStack';
       } else if (route.name === 'AdminTab') {
-        nestedStackName = 'AdminStack';
+        nestedStackName = 'AdminTab';
       } else if (route.name === 'BottomTab') {
         nestedStackName = 'BottomTab';
       }

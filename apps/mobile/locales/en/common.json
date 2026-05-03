@@ -51,7 +51,9 @@
   },
   "accessibility": {
     "aboutButton": "About",
-    "aboutButtonHint": "Open About Karma Community screen"
+    "aboutButtonHint": "Open About Karma Community screen",
+    "createPostAdmin": "Create post or admin task",
+    "createPostUser": "Create give or request post"
   },
   "newChat": "New Chat",
   "chat": "Chat",

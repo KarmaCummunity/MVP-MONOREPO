@@ -11,6 +11,7 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Dimensions,
+  Share,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { TabView } from 'react-native-tab-view';
@@ -80,6 +81,7 @@ export type ProfileScrollInnerProps = Readonly<{
   setViewingUser: React.Dispatch<React.SetStateAction<CharacterType | null>>;
   onToggleFollow: () => Promise<void>;
   onOpenChat: () => Promise<void>;
+  onSignOut: () => Promise<void>;
 }>;
 
 function ProfilePostsCountStat(props: Readonly<{ value: number | null; label: string }>) {
@@ -165,7 +167,23 @@ export function ProfileScrollInner(props: ProfileScrollInnerProps) {
     setViewingUser,
     onToggleFollow,
     onOpenChat,
+    onSignOut,
   } = props;
+
+  const handleShareProfile = async () => {
+    try {
+      const profileUrl = `https://karma-community-kc.com/profile/${selectedUser?.id || targetUserId || ''}`;
+      const message = t('profile:alerts.shareMessage', { url: profileUrl });
+      
+      await Share.share({
+        message,
+        url: profileUrl, // URL property is primarily for iOS
+        title: t('profile:alerts.shareProfile'),
+      });
+    } catch (error) {
+      console.error('Error sharing profile:', error);
+    }
+  };
 
   const highlightIdx = useMemo(() => storyHighlightIndices(layout, isRealAuth), [layout, isRealAuth]);
 
@@ -255,21 +273,12 @@ export function ProfileScrollInner(props: ProfileScrollInnerProps) {
                   <Text style={styles.menuItemText}>{t('profile:menu.bookmarks')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setShowMenu(false);
-                  }}
-                >
-                  <Ionicons name="analytics-outline" size={scaleSize(20)} color={colors.textPrimary} />
-                  <Text style={styles.menuItemText}>{t('profile:menu.communityStats')}</Text>
-                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => {
                     setShowMenu(false);
-                    Alert.alert(t('profile:alerts.shareProfile'), t('profile:alerts.shareProfileDesc'));
+                    void handleShareProfile();
                   }}
                 >
                   <Ionicons name="share-outline" size={scaleSize(20)} color={colors.textPrimary} />
@@ -287,41 +296,33 @@ export function ProfileScrollInner(props: ProfileScrollInnerProps) {
                   <Text style={styles.menuItemText}>{t('profile:menu.editProfile')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setShowMenu(false);
-                    Alert.alert(t('profile:alerts.settings'), t('profile:alerts.openSettings'));
-                  }}
-                >
-                  <Ionicons name="settings-outline" size={scaleSize(20)} color={colors.textPrimary} />
-                  <Text style={styles.menuItemText}>{t('profile:menu.settings')}</Text>
-                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+
 
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => {
                     setShowMenu(false);
-                    Alert.alert(t('profile:alerts.help'), t('profile:alerts.openHelp'));
+                    if (selectedUser) {
+                      void onSignOut();
+                    } else {
+                      navigation.navigate('LoginScreen' as never);
+                    }
                   }}
                 >
-                  <Ionicons name="help-circle-outline" size={scaleSize(20)} color={colors.textPrimary} />
-                  <Text style={styles.menuItemText}>{t('profile:menu.help')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    setShowMenu(false);
-                    navigation.navigate('LoginScreen' as never);
-                  }}
-                >
-                  <Ionicons name="log-in-outline" size={scaleSize(20)} color={colors.textPrimary} />
-                  <Text style={styles.menuItemText}>{t('profile:menu.login')}</Text>
+                  <Ionicons
+                    name={selectedUser ? 'log-out-outline' : 'log-in-outline'}
+                    size={scaleSize(20)}
+                    color={colors.textPrimary}
+                  />
+                  <Text style={styles.menuItemText}>
+                    {selectedUser ? t('profile:menu.logout') : t('profile:menu.login')}
+                  </Text>
                 </TouchableOpacity>
 
                 {(layout === 'native' || !isRealAuth) && (
                   <>
+                    <View style={styles.menuDivider} />
                     <TouchableOpacity style={styles.menuItem} onPress={selectRandomUser}>
                       <Ionicons name="shuffle-outline" size={scaleSize(20)} color={colors.textPrimary} />
                       <Text style={styles.menuItemText}>{t('profile:menu.switchUser')}</Text>

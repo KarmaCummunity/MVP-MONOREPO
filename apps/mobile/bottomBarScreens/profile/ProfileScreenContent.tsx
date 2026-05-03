@@ -41,6 +41,103 @@ import { useProfileViewingUser } from './useProfileViewingUser';
 import type { ProfileRecentActivity } from './profileScreenActivity.types';
 import { ProfileScrollInner, type ProfileScrollInnerProps } from './ProfileScrollInner';
 
+async function refreshFollowStatsForUser(
+  viewingUserId: string,
+  selectedUserId: string,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+  setIsFollowing: (v: boolean) => void,
+): Promise<void> {
+  const [stats, counts] = await Promise.all([
+    getFollowStats(viewingUserId, selectedUserId),
+    getUpdatedFollowCounts(viewingUserId),
+  ]);
+  setUpdatedCounts(counts);
+  setIsFollowing(stats.isFollowing);
+}
+
+async function unfollowProfileUser(
+  selectedUserId: string,
+  displayUserId: string,
+  setIsFollowing: (v: boolean) => void,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+): Promise<void> {
+  const success = await unfollowUser(selectedUserId, displayUserId);
+  if (!success) return;
+  setIsFollowing(false);
+  const newCounts = await getUpdatedFollowCounts(displayUserId);
+  setUpdatedCounts(newCounts);
+  Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+}
+
+async function followProfileUser(
+  selectedUserId: string,
+  displayUserId: string,
+  setIsFollowing: (v: boolean) => void,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+): Promise<void> {
+  const success = await followUser(selectedUserId, displayUserId);
+  if (!success) return;
+  setIsFollowing(true);
+  const newCounts = await getUpdatedFollowCounts(displayUserId);
+  setUpdatedCounts(newCounts);
+  Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
+}
+
+async function loadFollowStatsAction(
+  viewingUser: any,
+  selectedUser: any,
+  isOwnProfile: boolean,
+  setUpdatedCounts: (v: any) => void,
+  setIsFollowing: (v: boolean) => void,
+): Promise<void> {
+  if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) {
+    return;
+  }
+
+  try {
+    logger.debug('ProfileScreenContent', 'Loading follow stats for user', { name: viewingUser.name });
+    const [stats, counts] = await Promise.all([
+      getFollowStats(viewingUser.id, selectedUser.id),
+      getUpdatedFollowCounts(viewingUser.id),
+    ]);
+    setUpdatedCounts(counts);
+    setIsFollowing(stats.isFollowing);
+  } catch (error) {
+    console.error('❌ Load follow stats error:', error);
+  }
+}
+
+async function updateUserStatsAction(
+  isOwnProfile: boolean,
+  selectedUser: any,
+  viewingUser: any,
+  setUserStats: (v: any) => void,
+): Promise<void> {
+  try {
+    const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
+    if (!userIdToUse) {
+      console.warn('⚠️ No user ID, skipping stats update');
+      return;
+    }
+
+    const currentUserStats = await getFollowStats(userIdToUse, userIdToUse);
+    const userToUse = isOwnProfile ? selectedUser : viewingUser;
+    const extras = userToUse as ProfileExtras | null | undefined;
+
+    setUserStats({
+      posts: 0,
+      followers: currentUserStats.followersCount,
+      following: currentUserStats.followingCount,
+      karmaPoints: userToUse?.karmaPoints ?? 0,
+      completedTasks: extras?.completedTasks ?? 0,
+      totalDonations: extras?.totalDonations ?? 0,
+    });
+  } catch (error) {
+    console.error('❌ Update user stats error:', error);
+  }
+}
+
+
 type ProfileExtras = CharacterType & { totalDonations?: number };
 
 type UserStatsState = Readonly<{
@@ -53,6 +150,182 @@ type UserStatsState = Readonly<{
   refreshTimestamp?: number;
 }>;
 
+async function refreshProfileScreenOnFocus(params: {
+  isOwnProfile: boolean;
+  targetUserId: string | undefined;
+  viewingUser: CharacterType | null;
+  selectedUser: CharacterType | null | undefined;
+  updateUserStats: () => Promise<void>;
+  loadRecentActivities: () => Promise<void>;
+  setUpdatedCounts: React.Dispatch<React.SetStateAction<{ followersCount: number; followingCount: number }>>;
+  setIsFollowing: React.Dispatch<React.SetStateAction<boolean>>;
+  setUserStats: React.Dispatch<React.SetStateAction<UserStatsState>>;
+}): Promise<void> {
+  const {
+    isOwnProfile,
+    targetUserId,
+    viewingUser,
+    selectedUser,
+    updateUserStats,
+    loadRecentActivities,
+    setUpdatedCounts,
+    setIsFollowing,
+    setUserStats,
+  } = params;
+
+  logger.logScreenOpened('ProfileScreen');
+  logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', {
+    isOwnProfile,
+    targetUserId,
+  });
+  await updateUserStats();
+  if (isOwnProfile) {
+    await loadRecentActivities();
+  } else if (viewingUser && selectedUser) {
+    try {
+      await refreshFollowStatsForUser(
+        viewingUser.id,
+        selectedUser.id,
+        setUpdatedCounts,
+        setIsFollowing,
+      );
+    } catch (error) {
+      console.error('❌ Refresh follow stats error:', error);
+    }
+  }
+
+  const refreshTimestamp = Date.now();
+  setUserStats((prevStats) => ({
+    ...prevStats,
+    refreshTimestamp,
+  }));
+}
+
+function ProfileSceneForRoute(
+  props: Readonly<{
+    sceneRoute: TabRoute;
+    targetUserId: string | undefined;
+    displayUser: CharacterType | null | undefined;
+    handleTabHeightChange: (key: string, height: number) => void;
+    onProfileOpenTabCount: (count: number) => void;
+    onProfileClosedTabCount: (count: number) => void;
+  }>,
+): React.ReactElement | null {
+  const {
+    sceneRoute,
+    targetUserId,
+    displayUser,
+    handleTabHeightChange,
+    onProfileOpenTabCount,
+    onProfileClosedTabCount,
+  } = props;
+
+  switch (sceneRoute.key) {
+    case 'open':
+      return (
+        <OpenRoute
+          userId={targetUserId}
+          user={displayUser}
+          onHeightChange={(h) => handleTabHeightChange('open', h)}
+          onLoadedContentCount={onProfileOpenTabCount}
+        />
+      );
+    case 'closed':
+      return (
+        <ClosedRoute
+          userId={targetUserId}
+          user={displayUser}
+          onHeightChange={(h) => handleTabHeightChange('closed', h)}
+          onLoadedContentCount={onProfileClosedTabCount}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+function ProfileScreenTabBar(
+  p: SceneRendererProps & { navigationState: NavigationState<TabRoute> },
+): React.ReactElement {
+  return (
+    <View style={styles.tabBarContainer}>
+      <View style={styles.tabBarInner}>
+        {p.navigationState.routes.map((tabRoute, tabIndex) => {
+          const isFocused = p.navigationState.index === tabIndex;
+          return (
+            <TouchableOpacity
+              key={tabRoute.key}
+              style={styles.tabBarItem}
+              onPress={() => p.jumpTo(tabRoute.key)}
+            >
+              <Text
+                style={[
+                  styles.tabBarText,
+                  {
+                    color: isFocused ? colors.secondary : colors.textSecondary,
+                    fontWeight: isFocused ? 'bold' : 'normal',
+                  },
+                ]}
+              >
+                {tabRoute.title}
+              </Text>
+              {isFocused ? <View style={styles.tabBarIndicator} /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function ProfileScreenGate(props: Readonly<{
+  isOwnProfile: boolean;
+  loadingUser: boolean;
+  viewingUser: CharacterType | null;
+  externalUserId: string | undefined;
+  navigation: NavigationProp<RootStackParamList>;
+}>): React.ReactElement | null {
+  const { isOwnProfile, loadingUser, viewingUser, externalUserId, navigation } = props;
+
+  if (!isOwnProfile && !loadingUser && !viewingUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
+          <Text style={styles.errorText}>משתמש לא נמצא</Text>
+          <Text style={styles.errorSubtext}>userId: {externalUserId}</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                (navigation as { navigate: (name: string) => void }).navigate('HomeStack');
+              }
+            }}
+          >
+            <Ionicons name="home" size={20} color={colors.white} />
+            <Text style={styles.backButtonText}>חזרה לעמוד הבית</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isOwnProfile && loadingUser) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="hourglass-outline" size={60} color={colors.textSecondary} />
+          <Text style={styles.errorText}>טוען...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return null;
+}
+
 export function ProfileScreenContent(
   props: Readonly<{
     tabBarHeight: number;
@@ -63,7 +336,7 @@ export function ProfileScreenContent(
   const { tabBarHeight, manualParams, forceOtherProfile } = props;
   const route = useRoute();
   const { t } = useTranslation(['profile', 'common']);
-  const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth } = useUser();
+  const { selectedUser, setSelectedUserWithMode: _setSelectedUserWithMode, isRealAuth, signOut } = useUser();
   const navigation = useNavigation();
   const rootNavigation = navigation as NavigationProp<RootStackParamList>;
   const { ToastComponent } = useToast();
@@ -144,57 +417,14 @@ export function ProfileScreenContent(
   }, [isOwnProfile]);
 
   useEffect(() => {
-    async function loadFollowStats(): Promise<void> {
-      if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) {
-        return;
-      }
-
-      try {
-        logger.debug('ProfileScreenContent', 'Loading follow stats for user', { name: viewingUser.name });
-        const [stats, counts] = await Promise.all([
-          getFollowStats(viewingUser.id, selectedUser.id),
-          getUpdatedFollowCounts(viewingUser.id),
-        ]);
-        setUpdatedCounts(counts);
-        setIsFollowing(stats.isFollowing);
-      } catch (error) {
-        console.error('❌ Load follow stats error:', error);
-      }
-    }
-
-    loadFollowStats().catch(() => {});
+    loadFollowStatsAction(viewingUser, selectedUser, isOwnProfile, setUpdatedCounts, setIsFollowing).catch(() => {});
   }, [viewingUser, selectedUser, isOwnProfile]);
 
   const updateUserStats = useCallback(async () => {
-    try {
-      const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
-      if (!userIdToUse) {
-        console.warn('⚠️ No user ID, skipping stats update');
-        return;
-      }
-
-      const currentUserStats = await getFollowStats(userIdToUse, userIdToUse);
-      const userToUse = isOwnProfile ? selectedUser : viewingUser;
-      const extras = userToUse as ProfileExtras | null | undefined;
-
-      setUserStats({
-        posts: 0,
-        followers: currentUserStats.followersCount,
-        following: currentUserStats.followingCount,
-        karmaPoints: userToUse?.karmaPoints ?? 0,
-        completedTasks: extras?.completedTasks ?? 0,
-        totalDonations: extras?.totalDonations ?? 0,
-      });
-    } catch (error) {
-      console.error('❌ Update user stats error:', error);
-    }
+    await updateUserStatsAction(isOwnProfile, selectedUser, viewingUser, setUserStats);
   }, [isOwnProfile, selectedUser, viewingUser]);
 
   const selectRandomUser = () => {
-    if (isRealAuth) {
-      Alert.alert(t('common:errorTitle'), t('profile:alerts.disabledOnRealAuth'));
-      return;
-    }
     Alert.alert(t('common:errorTitle'), t('profile:alerts.disabledOnRealAuth'));
   };
 
@@ -275,35 +505,17 @@ export function ProfileScreenContent(
 
   useFocusEffect(
     React.useCallback(() => {
-      async function refreshStats(): Promise<void> {
-        logger.logScreenOpened('ProfileScreen');
-        logger.debug('ProfileScreenContent', 'Screen focused, refreshing stats', {
-          isOwnProfile,
-          targetUserId,
-        });
-        await updateUserStats();
-        if (isOwnProfile) {
-          await loadRecentActivities();
-        } else if (viewingUser && selectedUser) {
-          try {
-            const [stats, counts] = await Promise.all([
-              getFollowStats(viewingUser.id, selectedUser.id),
-              getUpdatedFollowCounts(viewingUser.id),
-            ]);
-            setUpdatedCounts(counts);
-            setIsFollowing(stats.isFollowing);
-          } catch (error) {
-            console.error('❌ Refresh follow stats error:', error);
-          }
-        }
-
-        const refreshTimestamp = Date.now();
-        setUserStats((prevStats) => ({
-          ...prevStats,
-          refreshTimestamp,
-        }));
-      }
-      refreshStats().catch(() => {});
+      refreshProfileScreenOnFocus({
+        isOwnProfile,
+        targetUserId,
+        viewingUser,
+        selectedUser,
+        updateUserStats,
+        loadRecentActivities,
+        setUpdatedCounts,
+        setIsFollowing,
+        setUserStats,
+      }).catch(() => {});
     }, [selectedUser, viewingUser, isOwnProfile, targetUserId, updateUserStats, loadRecentActivities]),
   );
 
@@ -314,66 +526,29 @@ export function ProfileScreenContent(
   }, [selectedUser, isOwnProfile, loadRecentActivities]);
 
   const renderScene = useCallback(
-    ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => {
-      switch (sceneRoute.key) {
-        case 'open':
-          return (
-            <OpenRoute
-              userId={targetUserId}
-              user={displayUser}
-              onHeightChange={(h) => handleTabHeightChange('open', h)}
-              onLoadedContentCount={onProfileOpenTabCount}
-            />
-          );
-        case 'closed':
-          return (
-            <ClosedRoute
-              userId={targetUserId}
-              user={displayUser}
-              onHeightChange={(h) => handleTabHeightChange('closed', h)}
-              onLoadedContentCount={onProfileClosedTabCount}
-            />
-          );
-        default:
-          return null;
-      }
-    },
+    ({ route: sceneRoute }: SceneRendererProps & { route: TabRoute }) => (
+      <ProfileSceneForRoute
+        sceneRoute={sceneRoute}
+        targetUserId={targetUserId}
+        displayUser={displayUser}
+        handleTabHeightChange={handleTabHeightChange}
+        onProfileOpenTabCount={onProfileOpenTabCount}
+        onProfileClosedTabCount={onProfileClosedTabCount}
+      />
+    ),
     [targetUserId, displayUser, handleTabHeightChange, onProfileOpenTabCount, onProfileClosedTabCount],
   );
 
   const currentTabHeight = tabHeights[routes[index].key] || 600;
 
-  const renderTabBar = (p: SceneRendererProps & { navigationState: NavigationState<TabRoute> }) => (
-    <View style={styles.tabBarContainer}>
-      <View style={styles.tabBarInner}>
-        {p.navigationState.routes.map((tabRoute, tabIndex) => {
-          const isFocused = p.navigationState.index === tabIndex;
-          return (
-            <TouchableOpacity
-              key={tabRoute.key}
-              style={styles.tabBarItem}
-              onPress={() => p.jumpTo(tabRoute.key)}
-            >
-              <Text
-                style={[
-                  styles.tabBarText,
-                  {
-                    color: isFocused ? colors.secondary : colors.textSecondary,
-                    fontWeight: isFocused ? 'bold' : 'normal',
-                  },
-                ]}
-              >
-                {tabRoute.title}
-              </Text>
-              {isFocused ? <View style={styles.tabBarIndicator} /> : null}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
+  // Prepare avatar source with validation and fallbacks
+  const avatarUrl = displayUser?.avatar || (displayUser as any)?.avatar_url;
+  const safeAvatarUri = sanitiseAvatarUrl(avatarUrl);
+  
+  if (__DEV__ && avatarUrl && !safeAvatarUri) {
+    logger.warn('ProfileScreenContent', 'Avatar URL rejected by validator', { avatarUrl });
+  }
 
-  const safeAvatarUri = sanitiseAvatarUrl(displayUser?.avatar);
   const avatarSource = safeAvatarUri ? { uri: safeAvatarUri } : defaultLogo;
 
   const handleToggleFollow = useCallback(async () => {
@@ -387,21 +562,9 @@ export function ProfileScreenContent(
     }
     try {
       if (isFollowing) {
-        const success = await unfollowUser(selectedUser.id, displayUser.id);
-        if (success) {
-          setIsFollowing(false);
-          const newCounts = await getUpdatedFollowCounts(displayUser.id);
-          setUpdatedCounts(newCounts);
-          Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
-        }
+        await unfollowProfileUser(selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
       } else {
-        const success = await followUser(selectedUser.id, displayUser.id);
-        if (success) {
-          setIsFollowing(true);
-          const newCounts = await getUpdatedFollowCounts(displayUser.id);
-          setUpdatedCounts(newCounts);
-          Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
-        }
+        await followProfileUser(selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
       }
     } catch (error) {
       console.error('❌ Follow/Unfollow error:', error);
@@ -465,49 +628,25 @@ export function ProfileScreenContent(
     routes,
     setIndex,
     renderScene,
-    renderTabBar,
+    renderTabBar: ProfileScreenTabBar,
     currentTabHeight,
     selectRandomUser,
     handleCreateSampleData,
     setViewingUser,
     onToggleFollow: handleToggleFollow,
     onOpenChat: handleOpenChat,
+    onSignOut: signOut,
   };
 
-  if (!isOwnProfile && !loadingUser && !viewingUser) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="person-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>משתמש לא נמצא</Text>
-          <Text style={styles.errorSubtext}>userId: {externalUserId}</Text>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              } else {
-                (navigation as { navigate: (name: string) => void }).navigate('HomeStack');
-              }
-            }}
-          >
-            <Ionicons name="home" size={20} color={colors.white} />
-            <Text style={styles.backButtonText}>חזרה לעמוד הבית</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!isOwnProfile && loadingUser) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="hourglass-outline" size={60} color={colors.textSecondary} />
-          <Text style={styles.errorText}>טוען...</Text>
-        </View>
-      </SafeAreaView>
-    );
+  const gateUi = ProfileScreenGate({
+    isOwnProfile,
+    loadingUser,
+    viewingUser,
+    externalUserId,
+    navigation: rootNavigation,
+  });
+  if (gateUi) {
+    return gateUi;
   }
 
   return (

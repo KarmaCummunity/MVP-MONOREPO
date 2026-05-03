@@ -51,7 +51,9 @@
   },
   "accessibility": {
     "aboutButton": "אודות",
-    "aboutButtonHint": "פתח את מסך אודות קהילת קארמה"
+    "aboutButtonHint": "פתח את מסך אודות קהילת קארמה",
+    "createPostAdmin": "יצירת פוסט או משימת מנהל",
+    "createPostUser": "יצירת פוסט נתינה או בקשה"
   },
   "newChat": "שיחה חדשה",
   "chat": "שיחה",

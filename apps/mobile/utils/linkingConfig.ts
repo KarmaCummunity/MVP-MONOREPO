@@ -20,9 +20,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
     'https://karma-community-kc.com',
     'https://www.karma-community-kc.com',
     'https://dev.karma-community-kc.com',
-    'http://dev.karma-community-kc.com',
-    'http://karma-community-kc.com',
-    'http://www.karma-community-kc.com',
+    // Cleartext HTTP only for local dev tooling (Sonar S5332 — no production HTTP prefixes).
     'http://localhost:8081',
     'http://localhost:19006',
     'http://127.0.0.1:8081',
@@ -158,7 +156,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
               },
             },
           },
-          
           // Admin Tab (only visible to admins)
           AdminTab: {
             screens: {
@@ -241,7 +238,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       
       // Login Screen
       LoginScreen: 'login',
-      
+
       // Legacy/Inactive Screen
       InactiveScreen: 'inactive',
     },

@@ -10,6 +10,7 @@ import { useUser } from '../stores/userStore';
 import { useTranslation } from 'react-i18next';
 import { pickImage, takePhoto } from '../utils/fileService';
 import { enhancedDB } from '../utils/enhancedDatabaseService';
+import { uploadFile, buildUserImagePath } from '../utils/storageService';
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>();
@@ -47,6 +48,23 @@ export default function EditProfileScreen() {
 
     setIsSaving(true);
     try {
+      let finalAvatarUrl = avatar.trim();
+
+      // If avatar is a local file URI, upload it first to Firebase Storage
+      if (selectedUser?.id && (finalAvatarUrl.startsWith('file://') || finalAvatarUrl.startsWith('content://') || finalAvatarUrl.startsWith('blob:'))) {
+        try {
+          const fileName = `avatar_${Date.now()}.jpg`;
+          const storagePath = buildUserImagePath(selectedUser.id, fileName);
+          const uploadResult = await uploadFile(storagePath, finalAvatarUrl);
+          finalAvatarUrl = uploadResult.url;
+          logger.info('EditProfileScreen', 'Uploaded avatar successfully', { url: finalAvatarUrl });
+        } catch (uploadError) {
+          logger.error('EditProfileScreen', 'Failed to upload avatar', { error: uploadError });
+          // We continue with the local URI as fallback, but warn the user
+          // Alert.alert('שים לב', 'העלאת התמונה נכשלה, התמונה תישמר מקומית בלבד.');
+        }
+      }
+
       // Prepare data for API (convert interests string to array)
       const interestsArray = interests.trim() 
         ? interests.split(',').map(i => i.trim()).filter(i => i.length > 0)
@@ -54,7 +72,7 @@ export default function EditProfileScreen() {
 
       const updateData = {
         name: fullName,
-        avatar_url: avatar.trim(), // API expects avatar_url
+        avatar_url: finalAvatarUrl, // Use the uploaded URL
         bio: bio.trim(),
         phone: phone.trim(),
         city: city.trim(),
@@ -80,7 +98,7 @@ export default function EditProfileScreen() {
             name: response.data.name || fullName,
             email: email.trim(), // Keep the email from form (not updated via API)
             phone: response.data.phone || phone.trim(),
-            avatar: response.data.avatar_url || response.data.avatar || avatar.trim(),
+            avatar: response.data.avatar_url || response.data.avatar || finalAvatarUrl,
             bio: response.data.bio || bio.trim(),
             karmaPoints: response.data.karma_points || response.data.karmaPoints || selectedUser?.karmaPoints || 0,
             joinDate: response.data.join_date || response.data.joinDate || selectedUser?.joinDate || new Date().toISOString(),
@@ -367,7 +385,7 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: LAYOUT_CONSTANTS.SPACING.MD },
   fieldRow: { flexDirection: 'row-reverse', gap: LAYOUT_CONSTANTS.SPACING.SM },
   label: { fontSize: FontSizes.small, color: colors.textSecondary, marginBottom: 6, textAlign: 'right' },
-  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
+  input: { backgroundColor: colors.surfaceGrayBlue, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 12 : 8, textAlign: 'right' },
   avatarRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: LAYOUT_CONSTANTS.SPACING.MD, marginBottom: LAYOUT_CONSTANTS.SPACING.LG },
   avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.backgroundSecondary },
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },

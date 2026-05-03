@@ -62,6 +62,7 @@ export type DonationsStackParamList = {
   DonationsScreen: undefined;
   TrumpScreen: undefined;
   ItemsScreen: undefined;
+  ItemsHistoryScreen: undefined;
   PostDetailScreen: { postId: string; initialItem?: FeedItem };
   CommunityChallengesScreen: { mode?: 'search' | 'offer' } | undefined;
   ChallengeDetailsScreen: { challengeId: string; openEntryForm?: boolean } | undefined;
@@ -211,6 +212,8 @@ export type RootStackParamList = {
   DiscoverPeopleScreen: undefined;
   EditProfileScreen: undefined;
   AdminDashboard: { viewOnly?: boolean; hideTopBar?: boolean; hideBottomBar?: boolean };
+  AdminOrgApprovalsScreen: undefined;
+  OrgDashboardScreen: undefined;
 };
 
 // --- Donations Stack (Example - adjust if you have internal screens) ---

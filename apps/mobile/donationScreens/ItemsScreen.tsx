@@ -26,6 +26,7 @@ import type { ItemsScreenProps, ItemType, DonationItem } from './items/itemsScre
 import { logger } from '../utils/loggerService';
 import { usePostComposerStore } from '../stores/postComposerStore';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
+import ItemsFilterModal from './items/components/ItemsFilterModal';
 
 export type { ItemsScreenProps } from './items/itemsScreen.types';
 
@@ -80,6 +81,7 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DonationItem | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   const { mode, setMode, loadItems, handlePostClosed, handlePostReopen, selectedUser, setAllItems } = data;
 
@@ -90,6 +92,8 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
     filterOptions,
     sortOptions,
     filteredPosts,
+    advancedFilters,
+    setAdvancedFilters,
     handleSearch,
     handleClearAll,
   } = filters;
@@ -267,7 +271,6 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
       ti('donationScreen.menu.history'),
       ti('donationScreen.menu.settings'),
       ti('donationScreen.menu.help'),
-      ti('donationScreen.menu.contact'),
     ],
     [ti],
   );
@@ -317,14 +320,14 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         <Icon name="search-outline" size={48} color={colors.textSecondary} />
         <Text style={itemsScreenStyles.emptyStateTitle}>{ti('donationScreen.search.emptyTitle')}</Text>
         <Text style={itemsScreenStyles.emptyStateText}>{ti('donationScreen.search.emptySubtitle')}</Text>
-        {(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0) && (
+        {(searchQuery || selectedFilters.length > 0 || selectedSorts.length > 0 || advancedFilters.categories.length > 0 || advancedFilters.condition.length > 0 || advancedFilters.address !== '') && (
           <TouchableOpacity style={itemsScreenStyles.emptyStateClearButton} onPress={handleClearAll}>
             <Text style={itemsScreenStyles.emptyStateClearButtonText}>{ti('donationScreen.search.clearAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
     ),
-    [searchQuery, selectedFilters, selectedSorts, handleClearAll, ti],
+    [searchQuery, selectedFilters, selectedSorts, advancedFilters, handleClearAll, ti],
   );
 
   return (
@@ -333,9 +336,13 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         mode={mode}
         menuOptions={menuOptions}
         onToggleMode={() => setMode(!mode)}
-        onSelectMenuItem={(o) =>
-          Alert.alert(ti('donationScreen.alerts.menuAlertTitle'), ti('donationScreen.alerts.menuAlertSelected', { option: o }))
-        }
+        onSelectMenuItem={(o) => {
+          if (o === ti('donationScreen.menu.history')) {
+            navigation.navigate('ItemsHistoryScreen');
+          } else {
+            Alert.alert(ti('donationScreen.alerts.menuAlertTitle'), ti('donationScreen.alerts.menuAlertSelected', { option: o }));
+          }
+        }}
         title=""
         placeholder={mode ? ti('donationScreen.search.headerPlaceholder') : ti('donationScreen.offer.headerPlaceholder')}
         filterOptions={filterOptions}
@@ -343,6 +350,16 @@ export default function ItemsScreen({ navigation, route }: ItemsScreenProps) {
         searchData={data.allItems}
         onSearch={handleSearch}
         formatFilterLabel={formatItemsFilterLabel}
+        onFilterPress={() => setFilterModalVisible(true)}
+      />
+
+      <ItemsFilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        initialFilters={advancedFilters}
+        onApply={(newFilters) => {
+          setAdvancedFilters(newFilters);
+        }}
       />
 
       {mode ? (

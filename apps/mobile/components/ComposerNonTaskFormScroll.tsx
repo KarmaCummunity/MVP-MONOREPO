@@ -1,7 +1,9 @@
-import React from 'react';
-import { ScrollView, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, TextInput, TextStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { CreatePostComposerModalStyles } from './createPostComposerModalStyles';
 import TrumpRideBasicFields from './TrumpRideBasicFields';
+import colors from '../globals/colors';
 
 type Styles = CreatePostComposerModalStyles;
 
@@ -52,8 +54,19 @@ export default function ComposerNonTaskFormScroll({
   onRideToChange,
   onRideDepartureChange,
 }: ComposerNonTaskFormScrollProps): React.ReactElement {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'he';
+  const textAlign: TextStyle['textAlign'] = isRTL ? 'right' : 'left';
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const getFieldStyle = (fieldName: string) => [
+    s.input,
+    { textAlign },
+    focusedField === fieldName && s.inputFocused
+  ];
+
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+    <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
       {showTrumpRideFields ? (
         <TrumpRideBasicFields
           styles={s}
@@ -69,29 +82,61 @@ export default function ComposerNonTaskFormScroll({
         />
       ) : (
         <>
-          <TextInput style={s.input} placeholder={t('common:postComposer.title')} value={title} onChangeText={onTitleChange} />
+          <TextInput 
+            style={getFieldStyle('title')} 
+            placeholder={t('common:postComposer.title')} 
+            placeholderTextColor={colors.textTertiary}
+            value={title} 
+            onChangeText={onTitleChange} 
+            onFocus={() => setFocusedField('title')}
+            onBlur={() => setFocusedField(null)}
+          />
           <TextInput
-            style={[s.input, s.multiline]}
+            style={[getFieldStyle('description'), s.multiline]}
             placeholder={t('common:postComposer.description')}
+            placeholderTextColor={colors.textTertiary}
             value={description}
             onChangeText={onDescriptionChange}
+            onFocus={() => setFocusedField('description')}
+            onBlur={() => setFocusedField(null)}
             multiline
           />
-          <TextInput style={s.input} placeholder={t('common:postComposer.city')} value={city} onChangeText={onCityChange} />
+          <TextInput 
+            style={getFieldStyle('city')} 
+            placeholder={t('common:postComposer.city')} 
+            placeholderTextColor={colors.textTertiary}
+            value={city} 
+            onChangeText={onCityChange} 
+            onFocus={() => setFocusedField('city')}
+            onBlur={() => setFocusedField(null)}
+          />
         </>
       )}
       {showQuantityField ? (
         <TextInput
-          style={s.input}
+          style={getFieldStyle('quantity')}
           placeholder={t('common:postComposer.quantity')}
+          placeholderTextColor={colors.textTertiary}
           value={quantity}
           onChangeText={onQuantityChange}
+          onFocus={() => setFocusedField('quantity')}
+          onBlur={() => setFocusedField(null)}
           keyboardType="number-pad"
         />
       ) : null}
       {showAmountField ? (
-        <TextInput style={s.input} placeholder={t('common:postComposer.amount')} value={amount} onChangeText={onAmountChange} keyboardType="number-pad" />
+        <TextInput 
+          style={getFieldStyle('amount')} 
+          placeholder={t('common:postComposer.amount')} 
+          placeholderTextColor={colors.textTertiary}
+          value={amount} 
+          onChangeText={onAmountChange} 
+          onFocus={() => setFocusedField('amount')}
+          onBlur={() => setFocusedField(null)}
+          keyboardType="number-pad" 
+        />
       ) : null}
     </ScrollView>
   );
 }
+

@@ -21,6 +21,8 @@ import { apiService } from '../../utils/apiService';
 import { useAdminProtection } from '../../hooks/useAdminProtection';
 import { pickDocument, validateFile, FileData, formatFileSize } from '../../utils/fileService';
 import { uploadFileWithProgress, buildAdminFilePath } from '../../utils/storageService';
+import { generateId } from '../../utils/chat/id';
+import { isSafeExternalUrl } from '../../utils/urlValidator';
 
 type AdminFilesScreenProps = Readonly<{
     navigation: NavigationProp<AdminStackParamList>;
@@ -72,6 +74,10 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
     }, [loadFiles]);
 
     const handleOpen = (url: string) => {
+        if (!isSafeExternalUrl(url)) {
+            Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
+            return;
+        }
         Linking.openURL(url).catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור'));
     };
 
@@ -120,8 +126,7 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
         setUploadProgress(0);
 
         try {
-            // Generate file ID
-            const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const fileId = generateId('file');
             
             // Build file path in Firebase Storage
             const fullPath = buildAdminFilePath(currentFolder, fileId, selectedFile.name);
@@ -240,16 +245,7 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>הוספת קובץ</Text>
 
-                        {!selectedFile ? (
-                            <>
-                                <Text style={styles.label}>בחר קובץ מהטלפון/מחשב</Text>
-                                <TouchableOpacity style={styles.pickFileButton} onPress={handlePickFile}>
-                                    <Ionicons name="document-outline" size={24} color={colors.primary} />
-                                    <Text style={styles.pickFileText}>בחר קובץ</Text>
-                                </TouchableOpacity>
-                                <Text style={styles.hintText}>מקסימום 10MB</Text>
-                            </>
-                        ) : (
+                        {selectedFile ? (
                             <>
                                 <View style={styles.selectedFileContainer}>
                                     <Ionicons name="document" size={24} color={colors.primary} />
@@ -272,6 +268,15 @@ export default function AdminFilesScreen({ navigation: _navigation }: AdminFiles
                                         <Text style={styles.progressText}>{Math.round(uploadProgress)}%</Text>
                                     </View>
                                 )}
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.label}>בחר קובץ מהטלפון/מחשב</Text>
+                                <TouchableOpacity style={styles.pickFileButton} onPress={handlePickFile}>
+                                    <Ionicons name="document-outline" size={24} color={colors.primary} />
+                                    <Text style={styles.pickFileText}>בחר קובץ</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.hintText}>מקסימום 10MB</Text>
                             </>
                         )}
 

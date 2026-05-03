@@ -37,6 +37,7 @@
     "selectedUser": "Selected user: {{name}}",
     "shareProfile": "Share profile",
     "shareProfileDesc": "Share your profile with others",
+    "shareMessage": "Hey! Check out my profile on Karma Community: {{url}}",
     "editProfile": "Edit profile",
     "editProfileDesc": "Edit your profile details",
     "settings": "Settings",
@@ -58,6 +59,7 @@
     "settings": "Settings",
     "help": "Help",
     "login": "Login",
+    "logout": "Logout",
     "switchUser": "Switch user"
   },
   "activity": "Activity",

@@ -10,7 +10,7 @@ import ComposerModalChrome from './ComposerModalChrome';
 import { useComposerFormReset } from './useComposerFormReset';
 import { useDedicatedPostComposerSubmit } from './useDedicatedPostComposerSubmit';
 
-const POST_CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'time', 'challenges'] as const;
+const POST_CATEGORIES = ['items', 'money', 'trump', 'knowledge', 'challenges'] as const;
 const TASK_CATEGORY_SLUG = 'tasks' as const;
 
 export default function CreatePostComposerModal(): React.ReactElement {

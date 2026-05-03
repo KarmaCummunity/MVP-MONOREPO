@@ -54,7 +54,10 @@
       "pickup": "עם איסוף עצמי",
       "paidDelivery": "משלוח בתשלום",
       "accessibility": "נגישות",
-      "includeRequests": "הצג בקשות"
+      "includeRequests": "הצג בקשות",
+      "new": "חדש",
+      "location": "מיקום ורדיוס",
+      "radius": "רדיוס (ק\"מ)"
     },
     "sorts": {
       "alphabetical": "אלפביתי",
@@ -123,6 +126,13 @@
       "settings": "הגדרות",
       "help": "עזרה",
       "contact": "צור קשר"
+    },
+    "history": {
+      "given": "נתתי",
+      "received": "קיבלתי",
+      "open": "פתוח",
+      "closed": "סגור",
+      "empty": "אין פריטים להצגה"
     }
   }
 }

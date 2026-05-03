@@ -1,7 +1,11 @@
 import { Pool } from "pg";
 import * as dotenv from "dotenv";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import {
+  buildVerifiedPgSslOptions,
+  isPgSslEnabled,
+} from "../database/pgSslOptions";
 
 // Check for different env files
 const envFiles = [".env.production", ".env.development", ".env"];
@@ -72,31 +76,22 @@ async function runMigration() {
 
   if (connectionString) {
     console.log("🔗 Connecting via DATABASE_URL");
-    const sslFlag =
-      process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE;
-    const sslEnabled =
-      (sslFlag && /^(1|true|require)$/i.test(sslFlag)) ||
-      /sslmode=require/i.test(connectionString);
+    const sslEnabled = isPgSslEnabled(connectionString);
 
     pool = new Pool({
       connectionString,
-      ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+      ssl: sslEnabled ? buildVerifiedPgSslOptions() : undefined,
     });
   } else {
     console.log("🔗 Connecting via discrete env vars");
+    const sslEnabled = isPgSslEnabled(null);
     pool = new Pool({
       host: process.env.POSTGRES_HOST || process.env.PGHOST || "localhost",
       port: Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5432),
       user: process.env.POSTGRES_USER || process.env.PGUSER || "kc",
-      password:
-        process.env.POSTGRES_PASSWORD ||
-        process.env.PGPASSWORD ||
-        "kc_password",
+      password: process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || "",
       database: process.env.POSTGRES_DB || process.env.PGDATABASE || "kc_db",
-      ssl:
-        process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE
-          ? { rejectUnauthorized: false }
-          : undefined,
+      ssl: sslEnabled ? buildVerifiedPgSslOptions() : undefined,
     });
   }
 

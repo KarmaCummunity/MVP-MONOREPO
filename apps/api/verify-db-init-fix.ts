@@ -1,13 +1,18 @@
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import {
+    buildVerifiedPgSslOptions,
+    isPgSslEnabled,
+} from './src/database/pgSslOptions';
 
 
 // Try to load .env from current working directory
 const envPath = path.resolve(process.cwd(), '.env');
 console.log(`Loading .env from: ${envPath}`);
 
-if (require('fs').existsSync(envPath)) {
+if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath });
     console.log('.env file found and loaded.');
 } else {
@@ -19,22 +24,20 @@ let poolConfig;
 
 if (process.env.DATABASE_URL) {
     const connectionString = process.env.DATABASE_URL;
-    const sslFlag = process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE;
-    const sslEnabled = (sslFlag && /^(1|true|require)$/i.test(sslFlag)) || /sslmode=require/i.test(connectionString);
+    const sslEnabled = isPgSslEnabled(connectionString);
 
     poolConfig = {
         connectionString,
-        ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+        ssl: sslEnabled ? buildVerifiedPgSslOptions() : undefined,
     };
 } else {
     // Fall back to discrete env vars
     const host = process.env.POSTGRES_HOST || process.env.PGHOST || 'localhost';
     const port = Number(process.env.POSTGRES_PORT || process.env.PGPORT || 5432);
     const user = process.env.POSTGRES_USER || process.env.PGUSER || 'kc';
-    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || 'kc_password';
+    const password = process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || '';
     const database = process.env.POSTGRES_DB || process.env.PGDATABASE || 'kc_db';
-    const sslFlag = process.env.PG_SSL || process.env.POSTGRES_SSL || process.env.PGSSLMODE;
-    const sslEnabled = sslFlag ? /^(1|true|require)$/i.test(sslFlag) : false;
+    const sslEnabled = isPgSslEnabled(null);
 
     console.log(`Using discrete config: host=${host}, port=${port}, user=${user}, db=${database}`);
 
@@ -44,7 +47,7 @@ if (process.env.DATABASE_URL) {
         user,
         password,
         database,
-        ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+        ssl: sslEnabled ? buildVerifiedPgSslOptions() : undefined,
     };
 }
 

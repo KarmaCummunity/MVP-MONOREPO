@@ -1,15 +1,19 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
   View,
   Text,
   SafeAreaView,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { NavigationProp, ParamListBase, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import colors from '../globals/colors';
 
 import HeaderComp from '../components/HeaderComp';
 import DonationStatsFooter from '../components/DonationStatsFooter';
@@ -27,6 +31,7 @@ import OptionsModal from '../components/Feed/OptionsModal';
 import ReportPostModal from '../components/Feed/ReportPostModal';
 import { FeedItem } from '../types/feed';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
+import { computeFeedCellWidth } from '../utils/feedLayout';
 
 import { trumpScreenStyles as localStyles } from './trump/trumpScreen.styles';
 import { useTrumpScreenData } from './trump/useTrumpScreenData';
@@ -43,10 +48,14 @@ export default function TrumpScreen({
   const routeParams = route.params as { mode?: string } | undefined;
   const initialMode = routeParams?.mode === 'offer' ? false : true;
   const [mode, setMode] = useState(initialMode);
-  const { t } = useTranslation(['donations', 'common', 'trump', 'search']);
+  const [isModeLoaded, setIsModeLoaded] = useState(false);
+
+  const { t } = useTranslation(['donations', 'common', 'trump', 'search', 'items', 'comments']);
+
   const { selectedUser } = useUser();
   const { openComposer } = usePostComposerStore();
   const [openRequestsExpanded, setOpenRequestsExpanded] = useState(false);
+  const [recentRidesExpanded, setRecentRidesExpanded] = useState(false);
 
   const handleReportSubmit = async (_reason: string) => {
     if (!selectedPostForReport) return;
@@ -54,26 +63,62 @@ export default function TrumpScreen({
     setSelectedPostForReport(null);
   };
 
+  // 1. Load persisted mode from AsyncStorage or route params
   useEffect(() => {
-    if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
-      const newMode = routeParams.mode === 'search';
-      setMode((prev) => (newMode !== prev ? newMode : prev));
-    }
+    const loadMode = async () => {
+      // If mode is explicitly in route params, use it
+      if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
+        const wantsSearch = routeParams.mode === 'search';
+        setMode((prev) => (prev === wantsSearch ? prev : wantsSearch));
+        setIsModeLoaded(true);
+        return;
+      }
+
+      // Otherwise, try to load from storage
+      try {
+        const savedMode = await AsyncStorage.getItem('trump_screen_mode');
+        if (savedMode === 'offer') {
+          setMode(false);
+        } else if (savedMode === 'search') {
+          setMode(true);
+        }
+      } catch (e) {
+        console.error('Failed to load trump screen mode', e);
+      } finally {
+        setIsModeLoaded(true);
+      }
+    };
+    loadMode();
   }, [routeParams?.mode]);
 
+  // 2. Persist mode to AsyncStorage when it changes
   useEffect(() => {
-    const newMode = mode ? 'search' : 'offer';
-    const currentMode = routeParams?.mode;
-    if (!currentMode || currentMode === 'undefined' || currentMode === 'null') {
-      (navigation as { setParams: (p: object) => void }).setParams({ mode: 'search' });
+    if (isModeLoaded) {
+      AsyncStorage.setItem('trump_screen_mode', mode ? 'search' : 'offer').catch((e) =>
+        console.error('Failed to save trump screen mode', e),
+      );
+    }
+  }, [mode, isModeLoaded]);
+
+  // 3. Keep route params in sync with the current mode
+  useEffect(() => {
+    if (!isModeLoaded) return;
+
+    const newModeString = mode ? 'search' : 'offer';
+    const currentModeParam = routeParams?.mode;
+
+    if (!currentModeParam || currentModeParam === 'undefined' || currentModeParam === 'null') {
+      (navigation as { setParams: (p: object) => void }).setParams({ mode: newModeString });
       return;
     }
-    if (newMode !== currentMode) {
-      (navigation as { setParams: (p: object) => void }).setParams({ mode: newMode });
+
+    if (newModeString !== currentModeParam) {
+      (navigation as { setParams: (p: object) => void }).setParams({ mode: newModeString });
     }
-  }, [mode, navigation, routeParams?.mode]);
+  }, [mode, navigation, routeParams?.mode, isModeLoaded]);
 
   const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -122,22 +167,23 @@ export default function TrumpScreen({
   );
 
   const handleSearch = (query: string, filters?: string[], sorts?: string[]) => {
-    if (!mode) {
-      offer.setToLocation(query);
-    } else {
+    if (mode) {
       trumpData.setSearchQuery(query);
       trumpData.setSelectedFilters(filters || []);
       trumpData.setSelectedSorts(sorts || []);
+    } else {
+      offer.setToLocation(query);
     }
   };
 
   const handleToggleMode = () => setMode(!mode);
 
-  const { width } = Dimensions.get('window');
+  const { width } = useWindowDimensions();
+  const [gridWidth, setGridWidth] = useState(0);
   const isMobile = isMobileWeb();
   const SEARCH_GRID_COLUMNS = 2;
   /** Horizontal gap between the two grid cards (must match `columnWrapper.gap` in trumpScreen.styles). */
-  const COLUMN_GAP = 12;
+  const COLUMN_GAP = 8;
 
   const HORIZONTAL_PADDING = isMobile ? 8 : 16;
   const screenPadding = HORIZONTAL_PADDING;
@@ -193,9 +239,16 @@ export default function TrumpScreen({
     <SafeAreaView style={localStyles.safeArea}>
       <HeaderComp
         mode={mode}
-        menuOptions={['היסטוריה', 'הגדרות']}
+        menuOptions={[t('trump:menu.history'), t('trump:menu.settings')]}
         onToggleMode={handleToggleMode}
-        onSelectMenuItem={() => {}}
+
+        onSelectMenuItem={(o) => {
+          if (o === t('trump:menu.history')) {
+            navigation.navigate('ItemsHistoryScreen');
+          } else if (o === t('trump:menu.settings')) {
+            navigation.navigate('SettingsScreen');
+          }
+        }}
         title=""
         placeholder={mode ? t('trump:ui.searchPlaceholder.seek') : t('trump:ui.searchPlaceholder.offer')}
         filterOptions={trumpFilterOptions}
@@ -217,31 +270,51 @@ export default function TrumpScreen({
             onPress={() => setOpenRequestsExpanded((prev) => !prev)}
             activeOpacity={0.7}
           >
-            <Text style={localStyles.sectionTitle}>{t('trump:ui.openRequestsList')}</Text>
-            <Text style={localStyles.emptyStateText}>{openRequestsExpanded ? '▲' : '▼'}</Text>
+            <Text style={[localStyles.sectionTitle, { marginBottom: 0, textAlign: 'right' }]}>{t('trump:ui.openRequestsList')}</Text>
+            <Ionicons name={openRequestsExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
           </TouchableOpacity>
           {openRequestsExpanded && (
-            <View style={localStyles.section}>
+            <View style={[localStyles.section, { width: '100%' }]}>
               {trumpData.openRequestPosts.length === 0 ? (
                 <Text style={localStyles.emptyStateText}>{t('trump:ui.noOpenRequests')}</Text>
               ) : (
-                trumpData.openRequestPosts.map((post) => {
-                  const containerPadding = 16;
-                  const cardWidth = width - containerPadding * 2;
-                  return (
-                    <View key={post.id} style={localStyles.recentItemWrapper}>
-                      <PostReelItem
-                        item={post}
-                        cardWidth={cardWidth}
-                        numColumns={1}
-                        onPress={() => {}}
-                        onCommentPress={() => {}}
-                        onMorePress={handleMorePress}
-                        onPostClosed={trumpData.handlePostClosed}
-                      />
-                    </View>
-                  );
-                })
+                <View
+                  style={localStyles.gridContainer}
+                  onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+                >
+                  {gridWidth > 0 &&
+                    trumpData.openRequestPosts.map((post, index) => {
+                      const itemWidth =
+                        Math.floor(
+                          computeFeedCellWidth({
+                            windowWidth: gridWidth,
+                            horizontalPadding: 0,
+                            numColumns: 2,
+                            columnGap: 8,
+                          })
+                        ) - 1;
+                      const isEven = index % 2 === 0;
+                      return (
+                        <View
+                          key={post.id}
+                          style={[
+                            localStyles.gridItemWrapper,
+                            { width: itemWidth, marginLeft: isEven ? 0 : 8 },
+                          ]}
+                        >
+                          <PostReelItem
+                            item={post}
+                            cardWidth={itemWidth}
+                            numColumns={2}
+                            onPress={() => {}}
+                            onCommentPress={() => {}}
+                            onMorePress={handleMorePress}
+                            onPostClosed={trumpData.handlePostClosed}
+                          />
+                        </View>
+                      );
+                    })}
+                </View>
               )}
             </View>
           )}
@@ -286,30 +359,39 @@ export default function TrumpScreen({
             isSubmitting={offer.isPublishing}
           />
 
-          <View style={localStyles.section}>
-            <Text style={localStyles.sectionTitle}>{t('trump:ui.yourRecentRides')}</Text>
-            {trumpData.recentPosts.length === 0 ? (
-              <Text style={localStyles.emptyStateText}>{t('trump:ui.noRecentRides')}</Text>
-            ) : (
-              trumpData.recentPosts.map((post) => {
-                const containerPadding = 16;
-                const historyCardWidth = width - containerPadding * 2;
-                return (
-                  <View key={post.id} style={{ marginBottom: 16, width: '100%' }}>
-                    <PostReelItem
-                      item={post}
-                      cardWidth={historyCardWidth}
-                      numColumns={1}
-                      onPress={handleFeedPostPress}
-                      onCommentPress={() => {}}
-                      onMorePress={handleMorePress}
-                      onPostClosed={trumpData.handlePostClosed}
-                    />
-                  </View>
-                );
-              })
-            )}
-          </View>
+          <TouchableOpacity
+            style={localStyles.openRequestsToggle}
+            onPress={() => setRecentRidesExpanded((prev) => !prev)}
+            activeOpacity={0.7}
+          >
+            <Text style={[localStyles.sectionTitle, { marginBottom: 0, textAlign: 'right' }]}>{t('trump:ui.yourRecentRides')}</Text>
+            <Ionicons name={recentRidesExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
+          </TouchableOpacity>
+          {recentRidesExpanded && (
+            <View style={localStyles.section}>
+              {trumpData.recentPosts.length === 0 ? (
+                <Text style={localStyles.emptyStateText}>{t('trump:ui.noRecentRides')}</Text>
+              ) : (
+                trumpData.recentPosts.map((post) => {
+                  const containerPadding = 16;
+                  const historyCardWidth = width - containerPadding * 2;
+                  return (
+                    <View key={post.id} style={{ marginBottom: 16, width: '100%' }}>
+                      <PostReelItem
+                        item={post}
+                        cardWidth={historyCardWidth}
+                        numColumns={1}
+                        onPress={handleFeedPostPress}
+                        onCommentPress={() => {}}
+                        onMorePress={handleMorePress}
+                        onPostClosed={trumpData.handlePostClosed}
+                      />
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          )}
 
           <View style={[localStyles.section, { marginTop: 30, paddingBottom: 20 }]}>
             <View
@@ -409,15 +491,16 @@ export default function TrumpScreen({
               icon: 'car-outline',
             },
             {
-              label: 'לייקים',
+              label: t('items:statsLikes') || 'לייקים',
               value: trumpData.filteredPosts.reduce((sum, p) => sum + (p.likes || 0), 0),
               icon: 'heart-outline',
             },
             {
-              label: 'תגובות',
+              label: t('comments:title') || 'תגובות',
               value: trumpData.filteredPosts.reduce((sum, p) => sum + (p.comments || 0), 0),
               icon: 'chatbubble-outline',
             },
+
           ]}
         />
       )}

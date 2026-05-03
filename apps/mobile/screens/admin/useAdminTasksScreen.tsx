@@ -141,6 +141,9 @@ export function useAdminTasksScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [subtasks, setSubtasks] = useState<Record<string, AdminTask[]>>({});
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 50;
   const tabBarHeight = useSafeBottomTabBarHeight();
   const [headerHeight, setHeaderHeight] = useState(0);
   const screenHeight = Platform.OS === 'web' ? Dimensions.get('window').height : undefined;
@@ -162,12 +165,6 @@ export function useAdminTasksScreen() {
     );
   }, [tasks]);
 
-  // Root tasks only; order matches API (driven by listSort)
-  const rootTasksForList = useMemo(
-    () => tasks.filter((t) => !t.parent_task_id),
-    [tasks],
-  );
-
   const hasActiveListFilters = useMemo(
     () => hasActiveAdminTaskListFilters(
       query,
@@ -179,6 +176,15 @@ export function useAdminTasksScreen() {
     [query, filterAssignee, filterStatuses, filterPriorities, filterCategories],
   );
 
+  // Root tasks only; order matches API (driven by listSort)
+  const rootTasksForList = useMemo(() => {
+    if (!hasActiveListFilters) {
+      return tasks.filter((t) => !t.parent_task_id);
+    }
+    const taskIds = new Set(tasks.map((t) => t.id));
+    return tasks.filter((t) => !t.parent_task_id || !taskIds.has(t.parent_task_id));
+  }, [tasks, hasActiveListFilters]);
+
   const clearListFilters = useCallback(() => {
     setQuery('');
     setFilterAssignee('all');
@@ -187,6 +193,8 @@ export function useAdminTasksScreen() {
     setFilterCategories([]);
     setListSort('priority_status');
     setSearchBarRemountKey((k) => k + 1);
+    setPage(0);
+    setHasMore(true);
   }, []);
 
   const listLoading = !persistedHydrated || loading;
@@ -201,7 +209,6 @@ export function useAdminTasksScreen() {
       setFilterCategories([...new Set(parsed.categories)]);
       const nextSort = sortKeys?.[0];
       if (nextSort && TASK_LIST_SORT_OPTIONS.some((o) => o.value === nextSort)) {
-
         setListSort(nextSort as TasksListSort);
       } else if (sortKeys?.length === 0) {
         setListSort('priority_status');
@@ -209,6 +216,13 @@ export function useAdminTasksScreen() {
     },
     [],
   );
+
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore) {
+      return;
+    }
+    setPage((prev) => prev + 1);
+  }, [loading, hasMore]);
 
   // Load persisted header/filters only after we know the current user so web does not apply
   // another account's (or stale demo) filters from the shared legacy AsyncStorage key.
@@ -304,32 +318,64 @@ export function useAdminTasksScreen() {
     listSort,
   ]);
 
-  const fetchTasks = useCallback(async () => {
-    const seq = ++fetchTasksSeqRef.current;
-    setLoading(true);
-    setError(null);
-    const explicitStatusSelected = filterStatuses.length > 0;
-    let effectiveStatuses: TaskStatus[] | undefined;
-    if (explicitStatusSelected) {
-      effectiveStatuses = [...new Set(filterStatuses)];
-    } else {
-      effectiveStatuses = TASK_STATUSES_EXCLUDING_DONE;
+  // Reset pagination when filters change
+  useEffect(() => {
+    if (persistedHydrated) {
+      setPage(0);
+      setHasMore(true);
     }
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, persistedHydrated]);
 
-    const filterState: TaskFilterState = {
-      ...(query.trim() ? { textSearch: { text: query } } : {}),
-      ...(effectiveStatuses !== undefined && effectiveStatuses.length > 0
-        ? { status: effectiveStatuses }
-        : {}),
-      ...(filterPriorities.length > 0 ? { priority: filterPriorities } : {}),
-      ...(filterCategories.length > 0 ? { category: filterCategories } : {}),
-      ownership: filterAssignee === 'me' ? ['mine'] : ['all'],
+  function buildEffectiveStatuses(statuses: TaskStatus[]): TaskStatus[] {
+    if (statuses.length > 0) {
+      return [...new Set(statuses)];
+    }
+    return TASK_STATUSES_EXCLUDING_DONE;
+  }
+
+  function buildFetchFilterState(
+    effectiveStatuses: TaskStatus[],
+    currentQuery: string,
+    priorities: TaskPriority[],
+    categories: string[],
+    assignee: 'all' | 'me',
+  ): TaskFilterState {
+    return {
+      ...(currentQuery.trim() ? { textSearch: { text: currentQuery } } : {}),
+      ...(effectiveStatuses.length > 0 ? { status: effectiveStatuses } : {}),
+      ...(priorities.length > 0 ? { priority: priorities } : {}),
+      ...(categories.length > 0 ? { category: categories } : {}),
+      ownership: assignee === 'me' ? ['mine'] : ['all'],
     };
-    const apiFilters = taskFilterStateToApiTaskFilters(filterState, {
-      currentUserId: selectedUser?.id,
-      sort: listSort,
-    });
-    logger.debug(ADMIN_TASKS_LOG, 'Fetching tasks', { filterState, apiFilters, selectedUserId: selectedUser?.id });
+  }
+
+  const fetchTasks = useCallback(async (isLoadMore = false) => {
+    const seq = ++fetchTasksSeqRef.current;
+    if (!isLoadMore) {
+      setLoading(true);
+    }
+    setError(null);
+
+    const effectiveStatuses = buildEffectiveStatuses(filterStatuses);
+    const filterState = buildFetchFilterState(
+      effectiveStatuses,
+      query,
+      filterPriorities,
+      filterCategories,
+      filterAssignee,
+    );
+
+    const currentPage = isLoadMore ? page : 0;
+    const apiFilters = {
+      ...taskFilterStateToApiTaskFilters(filterState, {
+        currentUserId: selectedUser?.id,
+        sort: listSort,
+      }),
+      limit: PAGE_SIZE,
+      offset: currentPage * PAGE_SIZE,
+    };
+
+    logger.debug(ADMIN_TASKS_LOG, 'Fetching tasks', { filterState, apiFilters, selectedUserId: selectedUser?.id, isLoadMore, page: currentPage });
     try {
       const res: ApiResponse<AdminTask[]> = await apiService.getTasks(apiFilters);
       if (seq !== fetchTasksSeqRef.current) {
@@ -340,7 +386,13 @@ export function useAdminTasksScreen() {
         count: res.data?.length,
       });
       if (res.success) {
-        setTasks((res.data || []).map(normalizeAdminTaskFromApi));
+        const newTasks = (res.data || []).map(normalizeAdminTaskFromApi);
+        if (isLoadMore) {
+          setTasks((prev) => [...prev, ...newTasks]);
+        } else {
+          setTasks(newTasks);
+        }
+        setHasMore(newTasks.length === PAGE_SIZE);
       } else {
         setError(res.error || t('admin:tasks.errLoadTasks'));
       }
@@ -350,24 +402,28 @@ export function useAdminTasksScreen() {
         setError(t('admin:tasks.errLoadTasksRetry'));
       }
     } finally {
-      if (seq === fetchTasksSeqRef.current) {
+      if (seq === fetchTasksSeqRef.current && !isLoadMore) {
         setLoading(false);
       }
     }
-  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser, t]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, selectedUser, t, page]);
 
   useEffect(() => {
     if (!persistedHydrated) {
       return;
     }
     let timeout: ReturnType<typeof setTimeout> | undefined;
-    if (query) {
-      timeout = setTimeout(() => fetchTasks(), 500);
+    if (page === 0) {
+      if (query) {
+        timeout = setTimeout(() => fetchTasks(false), 500);
+      } else {
+        fetchTasks(false);
+      }
     } else {
-      fetchTasks();
+      fetchTasks(true);
     }
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, persistedHydrated, fetchTasks]);
+  }, [query, filterStatuses, listSort, filterPriorities, filterCategories, filterAssignee, persistedHydrated, fetchTasks, page]);
 
   const resetForm = () => {
     setFormData({
@@ -777,5 +833,7 @@ export function useAdminTasksScreen() {
     handleSaveHours,
     closeHoursModal,
     pendingTask,
+    loadMore,
+    hasMore,
   };
 }

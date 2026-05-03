@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import colors from '../globals/colors';
 import type { PostIntent } from '../stores/postComposerStore';
@@ -85,6 +86,8 @@ export type ComposerModalChromeProps = Readonly<{
 
 export default function ComposerModalChrome(p: ComposerModalChromeProps): React.ReactElement {
   const s = p.styles;
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'he';
 
   let toggleSlot: React.ReactNode = null;
   if (!p.contentIsTask) {
@@ -109,18 +112,27 @@ export default function ComposerModalChrome(p: ComposerModalChromeProps): React.
       <View style={[s.sheet, Platform.OS === 'web' && s.sheetWeb, p.contentIsTask && s.sheetTask]}>
         <View style={s.handle} />
         <View style={s.headerRow}>
-          <Text style={s.title}>{p.titleText}</Text>
-          <TouchableOpacity onPress={p.closeComposer}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          <TouchableOpacity 
+            style={isRTL ? s.closeButtonLeft : s.closeButton} 
+            onPress={p.closeComposer}
+          >
+            <Ionicons name="close" size={28} color={colors.textSecondary} />
           </TouchableOpacity>
+          <Text style={s.title}>{p.titleText}</Text>
         </View>
 
         {toggleSlot}
 
         <View style={s.categoriesRow}>
           {p.categoryChips.map((c) => (
-            <TouchableOpacity key={c} style={[s.categoryChip, p.category === c && s.categoryChipActive]} onPress={() => p.setCategory(c)}>
-              <Text style={s.categoryText}>{p.t(`donations:categories.${c}.title`, { defaultValue: c })}</Text>
+            <TouchableOpacity 
+              key={c} 
+              style={[s.categoryChip, p.category === c && s.categoryChipActive]} 
+              onPress={() => p.setCategory(c)}
+            >
+              <Text style={[s.categoryText, p.category === c && s.categoryTextActive]}>
+                {p.t(`donations:categories.${c}.title`, { defaultValue: c })}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

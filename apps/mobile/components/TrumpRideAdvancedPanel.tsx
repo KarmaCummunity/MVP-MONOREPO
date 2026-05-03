@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   ScrollView,
   type StyleProp,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../globals/colors';
@@ -75,6 +77,11 @@ export function TrumpRideAdvancedFooter({
 }
 
 export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInnerProps): React.ReactElement {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'he';
+  const textAlign: TextStyle['textAlign'] = isRTL ? 'right' : 'left';
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
   const {
     styles: s,
     chip,
@@ -98,6 +105,14 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
     setGenderPref,
   } = props;
 
+  const labelStyle = [s.subLabel, !isRTL && s.subLabelLtr];
+  const checkboxLabelStyle = [s.checkboxLabel, !isRTL && s.checkboxLabelLtr];
+  const inputStyle = (fieldName: string) => [
+    s.input,
+    { textAlign },
+    focusedField === fieldName && s.inputFocused
+  ];
+
   return (
     <ScrollView
       style={s.advancedScroll}
@@ -107,7 +122,7 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
     >
       <View style={s.advancedPanel}>
         <TouchableOpacity
-          style={s.checkboxRow}
+          style={[s.checkboxRow, !isRTL && { flexDirection: 'row-reverse' }]}
           onPress={() => {
             const next = !isRecurring;
             setIsRecurring(next);
@@ -117,17 +132,16 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
             }
           }}
         >
-          <View style={[s.checkbox, isRecurring && s.checkboxChecked]}>
+          <Text style={checkboxLabelStyle}>{t('trump:ui.recurringRide')}</Text>
+          <View style={[s.checkbox, isRecurring && s.checkboxChecked, isRTL ? { marginEnd: 12 } : { marginStart: 12 }]}>
             {isRecurring ? <Ionicons name="checkmark" size={16} color={colors.white} /> : null}
           </View>
-          <Text style={s.checkboxLabel}>{t('trump:ui.recurringRide')}</Text>
         </TouchableOpacity>
 
         {isRecurring ? (
           <View style={s.advancedBlock}>
-            <Text style={s.subLabel}>{t('trump:ui.recurrenceConfigLabel')}</Text>
-            <View style={s.freqRow}>
-              <Text style={s.freqLabel}>{t('trump:ui.recurrenceFrequencyLabel')}</Text>
+            <Text style={labelStyle}>{t('trump:ui.recurrenceConfigLabel')}</Text>
+            <View style={[s.freqRow, !isRTL && { flexDirection: 'row-reverse' }]}>
               <TextInput
                 style={s.freqInput}
                 value={String(recurrenceFrequency)}
@@ -136,9 +150,10 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
                 }
                 keyboardType="number-pad"
               />
+              <Text style={s.freqLabel}>{t('trump:ui.recurrenceFrequencyLabel')}</Text>
             </View>
-            <Text style={s.subLabel}>{t('trump:ui.recurrenceUnitLabel')}</Text>
-            <View style={s.chipRow}>
+            <Text style={labelStyle}>{t('trump:ui.recurrenceUnitLabel')}</Text>
+            <View style={[s.chipRow, !isRTL && { justifyContent: 'flex-start' }]}>
               {(['day', 'week', 'month'] as const).map((u) => (
                 <TouchableOpacity key={u} style={chip(recurrenceUnit === u)} onPress={() => setRecurrenceUnit(u)}>
                   <Text style={[s.chipText, recurrenceUnit === u && s.chipTextActive]}>{recurrenceUnitLabel(u)}</Text>
@@ -148,7 +163,7 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
           </View>
         ) : null}
 
-        <Text style={s.subLabel}>{t('common:postComposer.rideSeatsLabel')}</Text>
+        <Text style={labelStyle}>{t('common:postComposer.rideSeatsLabel')}</Text>
         <View style={s.stepperRow}>
           <TouchableOpacity style={s.stepperBtn} onPress={() => setSeats((v) => Math.max(1, v - 1))} accessibilityRole="button">
             <Text style={s.stepperBtnText}>−</Text>
@@ -159,8 +174,8 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
           </TouchableOpacity>
         </View>
 
-        <Text style={s.subLabel}>{t('common:postComposer.fuelParticipation')}</Text>
-        <View style={s.chipRowWrap}>
+        <Text style={labelStyle}>{t('common:postComposer.fuelParticipation')}</Text>
+        <View style={[s.chipRowWrap, !isRTL && { justifyContent: 'flex-start' }]}>
           {(
             [
               ['none', t('common:postComposer.fuelNone')] as const,
@@ -175,16 +190,19 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
         </View>
         {fuelMode === 'up_to' ? (
           <TextInput
-            style={s.input}
+            style={inputStyle('fuelCap')}
             placeholder={t('common:postComposer.fuelCapPlaceholder')}
+            placeholderTextColor={colors.textTertiary}
             value={fuelCapNis}
             onChangeText={(x) => setFuelCapNis(x.replaceAll(/\D/g, ''))}
+            onFocus={() => setFocusedField('fuelCap')}
+            onBlur={() => setFocusedField(null)}
             keyboardType="number-pad"
           />
         ) : null}
 
-        <Text style={s.subLabel}>{t('common:postComposer.smokingPref')}</Text>
-        <View style={s.chipRowWrap}>
+        <Text style={labelStyle}>{t('common:postComposer.smokingPref')}</Text>
+        <View style={[s.chipRowWrap, !isRTL && { justifyContent: 'flex-start' }]}>
           {(
             [
               ['no_smokers', t('common:postComposer.smokingNo')] as const,
@@ -198,8 +216,8 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
           ))}
         </View>
 
-        <Text style={s.subLabel}>{t('common:postComposer.genderPref')}</Text>
-        <View style={s.chipRowWrap}>
+        <Text style={labelStyle}>{t('common:postComposer.genderPref')}</Text>
+        <View style={[s.chipRowWrap, !isRTL && { justifyContent: 'flex-start' }]}>
           {(
             [
               ['any', t('common:postComposer.genderAny')] as const,
@@ -216,3 +234,4 @@ export default function TrumpRideAdvancedPanel(props: TrumpRideAdvancedPanelInne
     </ScrollView>
   );
 }
+

@@ -10,6 +10,7 @@ import { donationResources } from '../utils/donationResources';
 import ScrollContainer from '../components/ScrollContainer';
 import AddLinkComponent from '../components/AddLinkComponent';
 import { logger } from '../utils/loggerService';
+import { isSafeExternalUrl } from '../utils/urlValidator';
 
 export interface CategoryConfig {
   id: string;
@@ -69,6 +70,9 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
     const controller = new AbortController();
 
     const checkUrl = async (url: string): Promise<boolean> => {
+      if (!isSafeExternalUrl(url)) {
+        return false;
+      }
       try {
         const timeout = setTimeout(() => controller.abort(), 5000);
         // Some servers block HEAD; try HEAD then GET fallback
@@ -143,14 +147,26 @@ const CategoryScreen: React.FC<Props> = ({ route, config: propConfig }) => {
                 return (
                   <TouchableOpacity
                     key={`${config.id}-${res.url}`}
-                    style={[styles.linkButton, !isHealthy === true ? styles.linkButtonDisabled : null, { borderColor: config.color }]}
+                    style={[
+                      styles.linkButton,
+                      isHealthy === true ? null : styles.linkButtonDisabled,
+                      { borderColor: config.color },
+                    ]}
                     activeOpacity={0.8}
                     onPress={async () => {
                       try {
+                        if (!isSafeExternalUrl(res.url)) {
+                          Alert.alert(t('common:error'), t('common:cannotOpenLink'));
+                          return;
+                        }
                         const supported = await Linking.canOpenURL(res.url);
                         if (supported) await Linking.openURL(res.url);
                         else Alert.alert(t('common:error'), t('common:cannotOpenLink'));
-                      } catch (_e) {
+                      } catch (error) {
+                        logger.warn('CategoryScreen', 'Open donation link failed', {
+                          url: res.url,
+                          error: error instanceof Error ? error.message : String(error),
+                        });
                         Alert.alert(t('common:error'), t('common:cannotOpenLink'));
                       }
                     }}

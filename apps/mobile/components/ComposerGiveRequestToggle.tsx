@@ -25,10 +25,10 @@ export default function ComposerGiveRequestToggle({
   return (
     <View style={s.toggleRow}>
       <TouchableOpacity style={[s.toggleBtn, intent === 'give' && s.toggleBtnActive]} onPress={onGive}>
-        <Text style={s.toggleText}>{giveLabel}</Text>
+        <Text style={[s.toggleText, intent === 'give' && s.giveTextActive]}>{giveLabel}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[s.toggleBtn, intent === 'request' && s.requestBtnActive]} onPress={onRequest}>
-        <Text style={s.toggleText}>{requestLabel}</Text>
+      <TouchableOpacity style={[s.toggleBtn, intent === 'request' && s.toggleBtnActive]} onPress={onRequest}>
+        <Text style={[s.toggleText, intent === 'request' && s.requestTextActive]}>{requestLabel}</Text>
       </TouchableOpacity>
     </View>
   );

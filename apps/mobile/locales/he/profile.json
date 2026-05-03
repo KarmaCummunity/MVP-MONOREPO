@@ -42,6 +42,7 @@
     "selectedUser": "נבחר משתמש: {{name}}",
     "shareProfile": "שתף פרופיל",
     "shareProfileDesc": "שתף את הפרופיל שלך עם אחרים",
+    "shareMessage": "היי! בואו לראות את הפרופיל שלי ב-Karma Community: {{url}}",
     "editProfile": "ערוך פרופיל",
     "editProfileDesc": "ערוך את פרטי הפרופיל שלך",
     "settings": "הגדרות",
@@ -63,6 +64,7 @@
     "settings": "הגדרות",
     "help": "עזרה",
     "login": "התחברות",
+    "logout": "התנתקות",
     "switchUser": "שנה משתמש"
   },
   "activity": "פעילות",
