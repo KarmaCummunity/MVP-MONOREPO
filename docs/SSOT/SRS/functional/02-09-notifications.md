@@ -8,6 +8,7 @@
 - **Controller prefix:** `/api/notifications`
 - **Guards:** `ThrottleGuard` + `JwtAuthGuard` on entire controller
 - **Endpoints:**
+  - `GET /api/notifications/:userId/unread-count` — unread count only (aggregate; for badges without listing rows)
   - `GET /api/notifications/:userId` — get user notifications
   - `POST /api/notifications/:userId/read-all` — mark all as read
   - `PUT /api/notifications/:userId/:notificationId/read` — mark one as read
@@ -16,4 +17,4 @@
 - **Database:** Two tables exist:
   - `user_notifications` (in `schema.sql`) — general notifications
   - `notifications` (in `migrations/create_notifications_table.sql`) — with JSONB `data` field, `item_id`
-- **Mobile push:** Expo Notifications with polling (5-second interval), local notification scheduling, Android channel configuration
+- **Mobile push:** Expo Notifications with polling (~15s interval when native listener is active), local notification scheduling, Android channel configuration

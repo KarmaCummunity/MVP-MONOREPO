@@ -486,6 +486,21 @@ export const db = {
     return DatabaseService.list(DB_COLLECTIONS.NOTIFICATIONS, userId);
   },
 
+  getUnreadNotificationsCount: async (userId: string): Promise<number> => {
+    if (USE_BACKEND) {
+      const res = await apiService.getNotificationsUnreadCount(userId);
+      if (res.success && typeof res.data?.unreadCount === "number") {
+        return res.data.unreadCount;
+      }
+      return 0;
+    }
+    const list = await DatabaseService.list<{ read?: boolean }>(
+      DB_COLLECTIONS.NOTIFICATIONS,
+      userId,
+    );
+    return list.filter((n) => !n.read).length;
+  },
+
   markNotificationAsRead: async (userId: string, notificationId: string) => {
     if (USE_BACKEND) {
       const res = await apiService.markNotificationAsRead(userId, notificationId);

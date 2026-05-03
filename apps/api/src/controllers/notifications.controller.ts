@@ -110,12 +110,48 @@ export class NotificationsController {
     }
   }
 
+  /**
+   * Lightweight unread count (single aggregate query) for badges/polling.
+   * Declared before @Get(":userId") so routing matches the longer path first.
+   */
+  @Get(":userId/unread-count")
+  async getUnreadNotificationsCount(
+    @Param("userId") userId: string,
+    @Req() req: Request,
+  ) {
+    this.validateOwnership(req, userId);
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      this.logger.warn(`Invalid UUID for unread-count: ${userId}`);
+      return { success: false, error: "Invalid user ID format" };
+    }
+
+    try {
+      const client = await this.pool.connect();
+      try {
+        await this.ensureTableExists(client);
+        const { rows } = await client.query<{ count: number }>(
+          `SELECT COUNT(*)::int AS count FROM user_notifications WHERE user_id = $1 AND is_read = false`,
+          [userId],
+        );
+        const unreadCount = Number(rows[0]?.count ?? 0) || 0;
+        return { success: true, data: { unreadCount } };
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      this.logger.error("Error counting unread notifications:", error);
+      return { success: false, error: "Failed to count unread notifications" };
+    }
+  }
+
   @Get(":userId")
   async getUserNotifications(
     @Param("userId") userId: string,
+    @Req() req: Request,
     @Query("limit") limit = "50",
     @Query("offset") offset = "0",
-    @Req() req: Request,
   ) {
     this.validateOwnership(req, userId);
     this.logger.debug(`getUserNotifications for userId: ${userId}`);
@@ -151,21 +187,34 @@ export class NotificationsController {
 
         const { rows } = await client.query(query, [
           userId,
-          parseInt(limit),
-          parseInt(offset),
+          Number.parseInt(limit, 10),
+          Number.parseInt(offset, 10),
         ]);
 
         return {
           success: true,
-          data: rows.map((row) => ({
-            ...row,
-            // Ensure data includes type for frontend compatibility
-            data: {
-              ...(row.data || {}),
-              type: row.type,
-              relatedId: row.relatedId,
-            },
-          })),
+          data: rows.map((row) => {
+            const existing =
+              row.data != null &&
+              typeof row.data === "object" &&
+              !Array.isArray(row.data)
+                ? row.data
+                : null;
+            return {
+              ...row,
+              // Ensure data includes type for frontend compatibility
+              data: existing
+                ? {
+                    ...existing,
+                    type: row.type,
+                    relatedId: row.relatedId,
+                  }
+                : {
+                    type: row.type,
+                    relatedId: row.relatedId,
+                  },
+            };
+          }),
         };
       } finally {
         client.release();

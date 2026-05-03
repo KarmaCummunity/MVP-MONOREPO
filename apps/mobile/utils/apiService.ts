@@ -5,16 +5,11 @@
 // - Env: Base URL derived from `dbConfig` (EXPO_PUBLIC_API_BASE_URL).
 // Enhanced API service for connecting to the new backend
 
-// TODO: Add comprehensive error handling with retry logic and exponential backoff
-// TODO: Implement proper TypeScript interfaces for all API requests/responses
-// TODO: Add request/response interceptors for authentication and logging
-// TODO: Add request caching mechanism for GET requests
-// TODO: Implement proper timeout handling and abort controllers
-// TODO: Add network connectivity checks before making requests
-// TODO: Add comprehensive unit tests for all API methods
-// TODO: Implement proper API versioning support
-// TODO: Add request/response transformation middleware
-// TODO: Add comprehensive logging and monitoring
+// Future enhancements (non-blocking): stronger request/response typing, retries with backoff,
+// auth/logging interceptors, GET caching, connectivity checks, broader unit coverage, API versioning,
+// transformation middleware, and richer observability (tracked in product backlog, not this file).
+import { getAuth } from 'firebase/auth';
+import { tokenManager } from '../auth/services/tokenManager';
 import { API_BASE_URL as CONFIG_API_BASE_URL } from './config.constants';
 import { logger } from './loggerService';
 import { fetchWithAuth } from '../auth/interceptors/authFetchInterceptor';
@@ -48,8 +43,8 @@ class ApiService {
     }
 
     // For web, detect environment from domain at runtime
-    if (typeof window !== 'undefined' && window.location) {
-      const hostname = window.location.hostname;
+    if (globalThis.window?.location) {
+      const hostname = globalThis.window.location.hostname;
 
       // If on localhost, use local server
       if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
@@ -66,9 +61,7 @@ class ApiService {
     }
 
     // For native apps, use lazy initialization
-    if (this._baseURL === null) {
-      this._baseURL = CONFIG_API_BASE_URL;
-    }
+    this._baseURL ??= CONFIG_API_BASE_URL;
     return this._baseURL;
   }
 
@@ -121,12 +114,8 @@ class ApiService {
       }
     });
     const qs = params.toString();
-    return this.request(
-      `/api/tasks${qs ? `?${qs}` : ''}`,
-      {},
-      true,
-      TASKS_HTTP_TIMEOUT_MS,
-    );
+    const path = qs.length > 0 ? `/api/tasks?${qs}` : '/api/tasks';
+    return this.request(path, {}, true, TASKS_HTTP_TIMEOUT_MS);
   }
 
   async createTask(taskData: any): Promise<ApiResponse> {
@@ -275,7 +264,6 @@ class ApiService {
    */
   private async validateAndRefreshToken(): Promise<string | null> {
     try {
-      const { tokenManager } = await import('../auth/services/tokenManager');
       const token = await tokenManager.getAccessToken();
       if (token) return token;
       return null;
@@ -292,7 +280,6 @@ class ApiService {
   private async getFirebaseIdToken(forceRefresh = false): Promise<string | null> {
     try {
       const { getFirebase } = await import('./firebaseClient');
-      const { getAuth } = await import('firebase/auth');
       const { app } = getFirebase();
       const auth = getAuth(app);
       const user = auth.currentUser;
@@ -306,7 +293,6 @@ class ApiService {
 
   private async clearStoredJwt(): Promise<void> {
     try {
-      const { tokenManager } = await import('../auth/services/tokenManager');
       await tokenManager.clearTokens();
     } catch (e) {
       console.warn('Failed to clear JWT from tokenManager:', e);
@@ -335,7 +321,7 @@ class ApiService {
     _retryOn401: boolean = true,
     timeoutMs: number = 30_000,
   ): Promise<ApiResponse<T>> {
-    // TODO: Add request ID for tracing and debugging
+    // Correlation/request IDs can be wired when the API documents tracing headers.
     try {
       const url = this.buildUrl(endpoint);
 
@@ -796,6 +782,10 @@ class ApiService {
     return this.request(`/api/notifications/${userId}?limit=${limit}&offset=${offset}`);
   }
 
+  async getNotificationsUnreadCount(userId: string): Promise<ApiResponse<{ unreadCount: number }>> {
+    return this.request(`/api/notifications/${userId}/unread-count`);
+  }
+
   async markNotificationAsRead(userId: string, notificationId: string): Promise<ApiResponse> {
     return this.request(`/api/notifications/${userId}/${notificationId}/read`, {
       method: 'PUT',
@@ -888,7 +878,8 @@ class ApiService {
       }
     });
     const qs = params.toString();
-    return this.request(`/api/community-members${qs ? `?${qs}` : ''}`);
+    const path = qs.length > 0 ? `/api/community-members?${qs}` : '/api/community-members';
+    return this.request(path);
   }
 
   async getCommunityMember(memberId: string): Promise<ApiResponse> {
@@ -944,9 +935,16 @@ class ApiService {
     return {
       getAll: (filters: any) => {
         const params = new URLSearchParams();
-        Object.entries(filters || {}).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && String(v).length > 0) {
-            params.append(k, String(v));
+        Object.entries(filters ?? {}).forEach(([k, v]) => {
+          if (v === undefined || v === null) {
+            return;
+          }
+          const serialized =
+            v !== null && typeof v === 'object'
+              ? JSON.stringify(v)
+              : String(v as string | number | boolean | bigint);
+          if (serialized.length > 0) {
+            params.append(k, serialized);
           }
         });
         return this.request(`/api/crm?${params.toString()}`);
@@ -962,9 +960,16 @@ class ApiService {
     return {
       getAll: (filters: any) => {
         const params = new URLSearchParams();
-        Object.entries(filters || {}).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && String(v).length > 0) {
-            params.append(k, String(v));
+        Object.entries(filters ?? {}).forEach(([k, v]) => {
+          if (v === undefined || v === null) {
+            return;
+          }
+          const serialized =
+            v !== null && typeof v === 'object'
+              ? JSON.stringify(v)
+              : String(v as string | number | boolean | bigint);
+          if (serialized.length > 0) {
+            params.append(k, serialized);
           }
         });
         return this.request(`/api/admin-files?${params.toString()}`);
@@ -1008,7 +1013,7 @@ class ApiService {
         : `/api/items/${collection}/${userId}`;
 
       const response = await this.request<T>(endpoint);
-      return response.success ? response.data || null : null;
+      return response.success ? (response.data ?? null) : null;
     } catch (error) {
       console.error('Legacy API request failed:', error);
       return null;
@@ -1034,9 +1039,7 @@ class ApiService {
 let _apiServiceInstance: ApiService | null = null;
 
 function getApiServiceInstance(): ApiService {
-  if (_apiServiceInstance === null) {
-    _apiServiceInstance = new ApiService();
-  }
+  _apiServiceInstance ??= new ApiService();
   return _apiServiceInstance;
 }
 

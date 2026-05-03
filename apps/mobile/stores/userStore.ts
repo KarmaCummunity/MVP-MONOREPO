@@ -8,7 +8,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { tokenManager } from '../auth/services/tokenManager.js';
+import { tokenManager } from '../auth/services/tokenManager';
 import { getFirebase } from '../utils/firebaseClient';
 import { logger } from '../utils/loggerService';
 import { KC_ORGANIZATION_ROOT_EMAIL } from '../utils/org.constants';
