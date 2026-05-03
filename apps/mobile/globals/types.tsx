@@ -272,6 +272,7 @@ export interface UserPreview {
   bio?: string;
   karmaPoints?: number;
   completedTasks?: number;
+  postsCount?: number;
   followersCount?: number;
   roles?: string[];
   isVerified?: boolean;
