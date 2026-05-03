@@ -55,6 +55,87 @@ async function refreshFollowStatsForUser(
   setIsFollowing(stats.isFollowing);
 }
 
+async function toggleFollowAction(
+  isFollowing: boolean,
+  selectedUserId: string,
+  displayUserId: string,
+  setIsFollowing: (v: boolean) => void,
+  setUpdatedCounts: (counts: { followersCount: number; followingCount: number }) => void,
+): Promise<void> {
+  if (isFollowing) {
+    const success = await unfollowUser(selectedUserId, displayUserId);
+    if (success) {
+      setIsFollowing(false);
+      const newCounts = await getUpdatedFollowCounts(displayUserId);
+      setUpdatedCounts(newCounts);
+      Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
+    }
+  } else {
+    const success = await followUser(selectedUserId, displayUserId);
+    if (success) {
+      setIsFollowing(true);
+      const newCounts = await getUpdatedFollowCounts(displayUserId);
+      setUpdatedCounts(newCounts);
+      Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
+    }
+  }
+}
+
+async function loadFollowStatsAction(
+  viewingUser: any,
+  selectedUser: any,
+  isOwnProfile: boolean,
+  setUpdatedCounts: (v: any) => void,
+  setIsFollowing: (v: boolean) => void,
+): Promise<void> {
+  if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) {
+    return;
+  }
+
+  try {
+    logger.debug('ProfileScreenContent', 'Loading follow stats for user', { name: viewingUser.name });
+    const [stats, counts] = await Promise.all([
+      getFollowStats(viewingUser.id, selectedUser.id),
+      getUpdatedFollowCounts(viewingUser.id),
+    ]);
+    setUpdatedCounts(counts);
+    setIsFollowing(stats.isFollowing);
+  } catch (error) {
+    console.error('❌ Load follow stats error:', error);
+  }
+}
+
+async function updateUserStatsAction(
+  isOwnProfile: boolean,
+  selectedUser: any,
+  viewingUser: any,
+  setUserStats: (v: any) => void,
+): Promise<void> {
+  try {
+    const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
+    if (!userIdToUse) {
+      console.warn('⚠️ No user ID, skipping stats update');
+      return;
+    }
+
+    const currentUserStats = await getFollowStats(userIdToUse, userIdToUse);
+    const userToUse = isOwnProfile ? selectedUser : viewingUser;
+    const extras = userToUse as ProfileExtras | null | undefined;
+
+    setUserStats({
+      posts: 0,
+      followers: currentUserStats.followersCount,
+      following: currentUserStats.followingCount,
+      karmaPoints: userToUse?.karmaPoints ?? 0,
+      completedTasks: extras?.completedTasks ?? 0,
+      totalDonations: extras?.totalDonations ?? 0,
+    });
+  } catch (error) {
+    console.error('❌ Update user stats error:', error);
+  }
+}
+
+
 type ProfileExtras = CharacterType & { totalDonations?: number };
 
 type UserStatsState = Readonly<{
@@ -158,50 +239,11 @@ export function ProfileScreenContent(
   }, [isOwnProfile]);
 
   useEffect(() => {
-    async function loadFollowStats(): Promise<void> {
-      if (isOwnProfile || !viewingUser || !selectedUser || !viewingUser.id) {
-        return;
-      }
-
-      try {
-        logger.debug('ProfileScreenContent', 'Loading follow stats for user', { name: viewingUser.name });
-        const [stats, counts] = await Promise.all([
-          getFollowStats(viewingUser.id, selectedUser.id),
-          getUpdatedFollowCounts(viewingUser.id),
-        ]);
-        setUpdatedCounts(counts);
-        setIsFollowing(stats.isFollowing);
-      } catch (error) {
-        console.error('❌ Load follow stats error:', error);
-      }
-    }
-
-    loadFollowStats().catch(() => {});
+    loadFollowStatsAction(viewingUser, selectedUser, isOwnProfile, setUpdatedCounts, setIsFollowing).catch(() => {});
   }, [viewingUser, selectedUser, isOwnProfile]);
 
   const updateUserStats = useCallback(async () => {
-    try {
-      const userIdToUse = isOwnProfile ? selectedUser?.id : viewingUser?.id;
-      if (!userIdToUse) {
-        console.warn('⚠️ No user ID, skipping stats update');
-        return;
-      }
-
-      const currentUserStats = await getFollowStats(userIdToUse, userIdToUse);
-      const userToUse = isOwnProfile ? selectedUser : viewingUser;
-      const extras = userToUse as ProfileExtras | null | undefined;
-
-      setUserStats({
-        posts: 0,
-        followers: currentUserStats.followersCount,
-        following: currentUserStats.followingCount,
-        karmaPoints: userToUse?.karmaPoints ?? 0,
-        completedTasks: extras?.completedTasks ?? 0,
-        totalDonations: extras?.totalDonations ?? 0,
-      });
-    } catch (error) {
-      console.error('❌ Update user stats error:', error);
-    }
+    await updateUserStatsAction(isOwnProfile, selectedUser, viewingUser, setUserStats);
   }, [isOwnProfile, selectedUser, viewingUser]);
 
   const selectRandomUser = () => {
@@ -407,23 +449,7 @@ export function ProfileScreenContent(
       return;
     }
     try {
-      if (isFollowing) {
-        const success = await unfollowUser(selectedUser.id, displayUser.id);
-        if (success) {
-          setIsFollowing(false);
-          const newCounts = await getUpdatedFollowCounts(displayUser.id);
-          setUpdatedCounts(newCounts);
-          Alert.alert('ביטול עקיבה', 'ביטלת את העקיבה בהצלחה');
-        }
-      } else {
-        const success = await followUser(selectedUser.id, displayUser.id);
-        if (success) {
-          setIsFollowing(true);
-          const newCounts = await getUpdatedFollowCounts(displayUser.id);
-          setUpdatedCounts(newCounts);
-          Alert.alert('עקיבה', 'התחלת לעקוב בהצלחה');
-        }
-      }
+      await toggleFollowAction(isFollowing, selectedUser.id, displayUser.id, setIsFollowing, setUpdatedCounts);
     } catch (error) {
       console.error('❌ Follow/Unfollow error:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה בביצוע הפעולה');

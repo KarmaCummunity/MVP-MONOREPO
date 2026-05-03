@@ -173,15 +173,15 @@ function BottomTabBarWithoutAdmin(props: React.ComponentProps<typeof BottomTabBa
 
   let newIndex = state.index;
   if (adminIndex !== -1) {
-    if (state.index !== adminIndex) {
+    if (state.index === adminIndex) {
+      // When on AdminTab (which is filtered out), point index to HomeScreen
+      const homeIdx = filteredRoutes.findIndex((r) => r.name === 'HomeScreen');
+      newIndex = homeIdx !== -1 ? homeIdx : 0;
+    } else {
       // Shift index down when AdminTab was before the currently active tab
       if (state.index > adminIndex) {
         newIndex--;
       }
-    } else {
-      // When on AdminTab (which is filtered out), point index to HomeScreen
-      const homeIdx = filteredRoutes.findIndex((r) => r.name === 'HomeScreen');
-      newIndex = homeIdx !== -1 ? homeIdx : 0;
     }
   }
 

@@ -1,0 +1,433 @@
+bottomBarScreens/SearchScreen.tsx(159,21): error TS2345: Argument of type 'Promise<never[] | { id: string; type: string; title: string; subtitle: string | undefined; description: string | undefined; image: any; meta: any; rawData: DonationData; }[]>' is not assignable to parameter of type 'Promise<SearchResult[]>'.
+  Type 'never[] | { id: string; type: string; title: string; subtitle: string | undefined; description: string | undefined; image: any; meta: any; rawData: DonationData; }[]' is not assignable to type 'SearchResult[]'.
+    Type '{ id: string; type: string; title: string; subtitle: string | undefined; description: string | undefined; image: any; meta: any; rawData: DonationData; }[]' is not assignable to type 'SearchResult[]'.
+      Type '{ id: string; type: string; title: string; subtitle: string | undefined; description: string | undefined; image: any; meta: any; rawData: DonationData; }' is not assignable to type 'SearchResult'.
+        Types of property 'type' are incompatible.
+          Type 'string' is not assignable to type '"user" | "donation" | "ride" | "hashtag"'.
+components/AutocompleteDropdownComp.tsx(69,25): error TS2339: Property 'dropdownIcon' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteDropdownComp.tsx(92,13): error TS2322: Type '"dialog"' is not assignable to type 'AccessibilityRole | undefined'.
+components/AutocompleteDropdownComp.tsx(96,59): error TS2339: Property 'dropdownSearchIcon' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteDropdownComp.tsx(106,60): error TS2339: Property 'dropdownCloseIcon' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteDropdownComp.tsx(140,19): error TS2339: Property 'dropdownLabel' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteDropdownComp.tsx(167,29): error TS2339: Property 'dropdownModalOverlay' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteDropdownComp.tsx(172,29): error TS2551: Property 'dropdownModalBackground' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'dropdownBackground'?
+components/AutocompleteDropdownComp.tsx(187,31): error TS2551: Property 'dropdownSearchBorder' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'dropdownBorder'?
+components/AutocompleteDropdownComp.tsx(210,19): error TS2339: Property 'dropdownNoOptionsText' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/AutocompleteInputOnly.tsx(69,19): error TS2339: Property 'dropdownLabel' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/ChatMessageBubble.tsx(247,19): error TS2339: Property 'chatTime' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/CommentsModal.tsx(275,30): error TS2339: Property 'success' does not exist on type 'ToastService'.
+components/CommunityStatsGrid.tsx(108,62): error TS2551: Property 'legacyDarkGreen' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'legacyGreen'?
+components/CommunityStatsGrid.tsx(118,60): error TS2551: Property 'legacyDarkGreen' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'legacyGreen'?
+components/CommunityStatsGrid.tsx(201,19): error TS2551: Property 'legacyDarkBlue' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'legacyBlue'?
+components/Feed/PostCard/ItemFeedCard.tsx(213,29): error TS2322: Type '{ uri: string | null; }' is not assignable to type 'ImageSourcePropType | undefined'.
+  Types of property 'uri' are incompatible.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+components/Feed/PostCard/ItemFeedCard.tsx(221,33): error TS2322: Type '{ uri: string | null; }' is not assignable to type 'ImageSourcePropType | undefined'.
+  Types of property 'uri' are incompatible.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+components/Feed/PostCard/TaskFeedCard.tsx(189,48): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, string>'.
+components/Feed/PostCard/TaskFeedCard.tsx(333,17): error TS2322: Type 'string | null | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/Feed/PostCard/TaskFeedCard.tsx(351,25): error TS2322: Type 'string | null | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+components/SettingsItem.tsx(39,46): error TS2339: Property 'danger' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+components/StatDetailsModal.tsx(125,19): error TS2551: Property 'legacyDarkBlue' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'. Did you mean 'legacyBlue'?
+donationScreens/SupportScreen.tsx(11,23): error TS2339: Property 'pinkDeep' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/responsive/__tests__/layout.test.ts(42,7): error TS2345: Argument of type '{ ios: string; }' is not assignable to parameter of type 'ResponsiveByPlatform<string>'.
+  Property 'default' is missing in type '{ ios: string; }' but required in type '{ default: string; }'.
+globals/responsive/componentStyles.ts(12,37): error TS2345: Argument of type '360' is not assignable to parameter of type '"100%"'.
+globals/styles.tsx(198,29): error TS2339: Property 'surfaceVariant' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(292,28): error TS2339: Property 'surfaceVariant' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(328,25): error TS2339: Property 'surfaceVariant' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(405,29): error TS2339: Property 'pinkDeep' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(446,25): error TS2339: Property 'surfaceVariant' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(510,3): error TS2322: Type '{ backgroundColor: string; alignSelf?: "stretch" | undefined; width?: "100%" | undefined; maxWidth?: "100vw" | undefined; minHeight?: "100vh" | undefined; flex: number; }' is not assignable to type 'ViewStyle | TextStyle | ImageStyle'.
+  Type '{ backgroundColor: string; alignSelf?: "stretch" | undefined; width?: "100%" | undefined; maxWidth?: "100vw" | undefined; minHeight?: "100vh" | undefined; flex: number; }' is not assignable to type 'ImageStyle'.
+    Types of property 'maxWidth' are incompatible.
+      Type '"100vw" | undefined' is not assignable to type 'DimensionValue | undefined'.
+        Type '"100vw"' is not assignable to type 'DimensionValue | undefined'.
+globals/styles.tsx(552,19): error TS2339: Property 'topNavTitle' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+globals/styles.tsx(588,29): error TS2339: Property 'pinkDeep' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+hooks/useScrollPosition.ts(207,3): error TS2322: Type 'RefObject<ScrollView | FlatList<any> | null>' is not assignable to type 'RefObject<ScrollView | FlatList<any>>'.
+  Type 'ScrollView | FlatList<any> | null' is not assignable to type 'ScrollView | FlatList<any>'.
+    Type 'null' is not assignable to type 'ScrollView | FlatList<any>'.
+hooks/useScrollPosition.ts(329,5): error TS2322: Type 'RefObject<ScrollView | FlatList<any> | null>' is not assignable to type 'RefObject<ScrollView | FlatList<any>>'.
+  Type 'ScrollView | FlatList<any> | null' is not assignable to type 'ScrollView | FlatList<any>'.
+    Type 'null' is not assignable to type 'ScrollView | FlatList<any>'.
+screens/Landing/components/Feature.tsx(36,7): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/Feature.tsx(43,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/Feature.tsx(44,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/Feature.tsx(45,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/FloatingMenu.tsx(43,13): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(46,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(65,9): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(73,13): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(77,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(82,25): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'ViewStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/FloatingMenu.tsx(94,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(101,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(106,17): error TS2322: Type 'false | ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/FloatingMenu.tsx(120,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/FloatingMenu.tsx(124,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'ViewStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/FloatingMenu.tsx(126,19): error TS2322: Type 'false | ViewStyle | TextStyle | ImageStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'ViewStyle' is not assignable to type 'TextStyle | Falsy | RegisteredStyle<TextStyle> | RecursiveArray<TextStyle | Falsy | RegisteredStyle<TextStyle>> | readonly (TextStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(53,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(54,13): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(56,15): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(57,15): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(58,15): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(63,13): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'false | "" | Value | RegisteredStyle<ViewStyle> | WithAnimatedObject<ViewStyle> | AnimatedInterpolation<string | number> | WithAnimatedArray<...> | readonly (false | ... 6 more ... | undefined)[] | null | undefined'.
+  Type 'TextStyle' is not assignable to type 'false | "" | Value | RegisteredStyle<ViewStyle> | WithAnimatedObject<ViewStyle> | AnimatedInterpolation<string | number> | WithAnimatedArray<...> | readonly (false | ... 6 more ... | undefined)[] | null | undefined'.
+    Type 'TextStyle' is not assignable to type 'WithAnimatedObject<ViewStyle>'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type '"auto" | "pointer" | Value | AnimatedInterpolation<string | number> | undefined'.
+          Type 'string' is not assignable to type '"auto" | "pointer" | Value | AnimatedInterpolation<string | number> | undefined'.
+screens/Landing/components/HeroSection.tsx(76,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(77,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(78,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(79,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(80,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(84,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(85,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(88,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ImageStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<ImageStyle>'.
+    Type 'ViewStyle' is not assignable to type 'ImageStyle'.
+      Types of property 'overflow' are incompatible.
+        Type '"visible" | "hidden" | "scroll" | undefined' is not assignable to type '"visible" | "hidden" | undefined'.
+          Type '"scroll"' is not assignable to type '"visible" | "hidden" | undefined'.
+screens/Landing/components/HeroSection.tsx(97,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(100,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(101,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(106,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(108,21): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(110,27): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(110,48): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(115,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(117,21): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(119,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(124,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(126,21): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(131,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(136,17): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(138,23): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(149,21): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/HeroSection.tsx(164,21): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/HeroSection.tsx(175,19): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/JoinLoginHeroButton.tsx(28,13): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Type 'TextStyle' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/JoinLoginHeroButton.tsx(38,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/Section.tsx(37,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/components/Section.tsx(38,11): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+  Type 'TextStyle' is not assignable to type 'StyleProp<ViewStyle>'.
+    Type 'TextStyle' is not assignable to type 'ViewStyle'.
+      Types of property 'cursor' are incompatible.
+        Type 'string | undefined' is not assignable to type 'CursorValue | undefined'.
+          Type 'string' is not assignable to type 'CursorValue | undefined'.
+screens/Landing/components/Section.tsx(39,23): error TS2322: Type 'ViewStyle | TextStyle | ImageStyle' is not assignable to type 'StyleProp<TextStyle>'.
+  Type 'ViewStyle' is not assignable to type 'StyleProp<TextStyle>'.
+    Type 'ViewStyle' is not assignable to type 'TextStyle'.
+      Types of property 'userSelect' are incompatible.
+        Type 'string | undefined' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+          Type 'string' is not assignable to type '"none" | "auto" | "all" | "contain" | "text" | undefined'.
+screens/Landing/sections/StatsSection.tsx(143,49): error TS2339: Property 'label' does not exist on type 'StatCardConfig'.
+screens/Landing/styles/index.ts(391,34): error TS2345: Argument of type '{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; fontWeight: string; color: string; textAlign: string; marginBottom: number; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: { ...; }; }' is not assignable to parameter of type 'NamedStyles<any> | (NamedStyles<{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; ... 4 more ...; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: { ...; }; }> & NamedStyles<...>)'.
+  Type '{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; fontWeight: string; color: string; textAlign: string; marginBottom: number; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: { ...; }; }' is not assignable to type 'NamedStyles<{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; fontWeight: string; color: string; textAlign: string; marginBottom: number; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: ...'.
+    Type '{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; fontWeight: string; color: string; textAlign: string; marginBottom: number; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: { ...; }; }' is not assignable to type 'NamedStyles<{ section: { paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }; sectionTitle: { fontSize: number; fontWeight: string; color: string; textAlign: string; marginBottom: number; letterSpacing: number; }; ... 43 more ...; donationCtaButtonText: ...'.
+      Types of property 'section' are incompatible.
+        Type '{ paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }' is not assignable to type 'ViewStyle | TextStyle | ImageStyle'.
+          Type '{ paddingHorizontal: number; paddingVertical: number; width: string; alignSelf: string; maxWidth: string | number; }' is not assignable to type 'ImageStyle'.
+            Types of property 'alignSelf' are incompatible.
+              Type 'string' is not assignable to type '"auto" | FlexAlignType | undefined'.
+screens/postDetail/PostDetailBody.tsx(623,29): error TS2339: Property 'surfaceMuted' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(630,29): error TS2339: Property 'surfaceMuted' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(651,95): error TS2339: Property 'surfaceMuted' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(658,113): error TS2339: Property 'borderLight' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(690,62): error TS2339: Property 'textBodyNeutral' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(700,28): error TS2339: Property 'borderLight' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(706,44): error TS2339: Property 'textBodyNeutral' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+screens/postDetail/PostDetailBody.tsx(723,28): error TS2339: Property 'borderLight' does not exist on type '{ primary: string; secondary: string; accent: string; greenBright: string; background: string; backgroundPrimary: string; backgroundSecondary: string; backgroundTertiary: string; cardBackground: string; ... 194 more ...; shadowBubbleSoft: string; }'.
+utils/__tests__/buildTrumpRideRequestMetadata.test.ts(9,19): error TS1355: A 'const' assertions can only be applied to references to enum members, or string, number, boolean, array, or object literals.
+utils/bookmarksService.ts(71,61): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/bookmarksService.ts(125,77): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/chat/advanced.ts(272,19): error TS2345: Argument of type '(chat: Conversation) => void' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => void'.
+  Types of parameters 'chat' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'Conversation'.
+utils/chat/maintenance.ts(178,19): error TS2345: Argument of type '(chat: Conversation) => void' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => void'.
+  Types of parameters 'chat' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'Conversation'.
+utils/config.constants.ts(14,82): error TS2345: Argument of type '"localhost" | "127.0.0.1" | "0.0.0.0"' is not assignable to parameter of type 'Record<string, unknown> | undefined'.
+  Type 'string' is not assignable to type 'Record<string, unknown>'.
+utils/config.constants.ts(20,82): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/config.constants.ts(25,80): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/config.constants.ts(48,91): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/config.constants.ts(59,69): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/config.constants.ts(66,67): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/config.constants.ts(72,72): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/followService.ts(528,74): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(172,122): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(550,98): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(564,96): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(577,110): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(593,89): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(606,103): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(621,110): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(634,103): error TS2554: Expected 2-4 arguments, but got 8.
+utils/notificationService.ts(680,88): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/notificationService.ts(701,92): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Record<string, unknown>'.
+utils/restAdapter.ts(69,65): error TS2345: Argument of type '"" | { body: BodyInit; }' is not assignable to parameter of type 'Record<string, unknown> | undefined'.
+  Type 'string' is not assignable to type 'Record<string, unknown>'.
+utils/taskFilterQuery/toApiTaskFilters.ts(40,9): error TS2540: Cannot assign to 'sort' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(43,9): error TS2540: Cannot assign to 'limit' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(46,9): error TS2540: Cannot assign to 'offset' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(87,11): error TS2540: Cannot assign to 'q' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(92,9): error TS2540: Cannot assign to 'status' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(95,9): error TS2540: Cannot assign to 'priority' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(98,9): error TS2540: Cannot assign to 'category' because it is a read-only property.
+utils/taskFilterQuery/toApiTaskFilters.ts(101,9): error TS2540: Cannot assign to 'assignee' because it is a read-only property.
+utils/versionChecker.ts(28,3): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.

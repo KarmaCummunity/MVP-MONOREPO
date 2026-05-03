@@ -69,7 +69,7 @@ export default function TrumpScreen({
       // If mode is explicitly in route params, use it
       if (routeParams?.mode && routeParams.mode !== 'undefined' && routeParams.mode !== 'null') {
         const wantsSearch = routeParams.mode === 'search';
-        setMode((prev) => (prev !== wantsSearch ? wantsSearch : prev));
+        setMode((prev) => (prev === wantsSearch ? prev : wantsSearch));
         setIsModeLoaded(true);
         return;
       }
