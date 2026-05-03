@@ -6,6 +6,26 @@
   "retry": "נסה שוב",
   "sellerHint": "מפרסם/ת",
   "viewProfile": "פרופיל",
+  "quickMessage": "הודעה מהירה למפרסם/ת",
+  "closePost": "סגירת הפוסט",
+  "closePostConfirmTitle": "לסגור את הפוסט?",
+  "closePostConfirmMessage": "פעולה זו מסמנת את הפריט/הנסיעה/המשימה כהושלמו. אפשר לרענן את הרשימה אחרי הסגירה.",
+  "closePostConfirmAction": "סגור",
+  "challengeSection": "אתגר",
+  "challengeCategory": "קטגוריה",
+  "challengeGoal": "יעד",
+  "statusValues": {
+    "active": "פעיל",
+    "full": "מלא",
+    "completed": "הושלם",
+    "cancelled": "בוטל",
+    "delivered": "נמסר",
+    "expired": "פג תוקף",
+    "open": "פתוח",
+    "in_progress": "בביצוע",
+    "done": "בוצע",
+    "archived": "בארכיון"
+  },
   "intent": {
     "give": "לתת",
     "request": "לקבל"
@@ -55,5 +75,19 @@
     "task_completion": "השלמת משימה",
     "task_post": "משימה",
     "community_challenge": "אתגר"
+  },
+  "share": {
+    "message": {
+      "generic": "ראו פוסט בקהילת קארמה (KC).",
+      "itemGive": "חפץ למסירה בקהילת קארמה (KC).",
+      "itemRequest": "בקשה לחפץ בקהילת קארמה (KC).",
+      "itemDelivered": "חפץ שמסרו בקהילת קארמה (KC).",
+      "rideOffered": "הצעת טרמפ בקהילת קארמה (KC).",
+      "rideRequest": "בקשת טרמפ בקהילת קארמה (KC).",
+      "rideCompleted": "נסיעה שהושלמה בקהילת קארמה (KC).",
+      "taskOpened": "משימה שנפתחה בקהילת קארמה (KC).",
+      "taskCompleted": "משימה שבוצעה בקהילת קארמה (KC).",
+      "challenge": "פוסט אתגר קהילתי בקהילת קארמה (KC)."
+    }
   }
 }

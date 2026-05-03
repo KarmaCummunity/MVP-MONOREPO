@@ -81,6 +81,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
               HomeMain: 'home',
               /** In-app marketing landing (authenticated); unauth site entry remains root `LandingSiteScreen: 'about-site'`. */
               LandingSiteScreen: 'about-site/app',
+              /** Web share links: `/PostDetailScreen?postId=` (no `initialItem` — loaded via API). */
+              PostDetailScreen: {
+                path: 'PostDetailScreen',
+                parse: {
+                  postId: (postId: string) => postId || '',
+                },
+              },
               /** Same paths as previous root entries — nested here so refresh keeps BottomNavigator visible. */
               SettingsScreen: 'settings',
               NotificationsScreen: 'notifications',
