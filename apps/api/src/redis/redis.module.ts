@@ -9,6 +9,15 @@ import Redis from "ioredis";
 
 export const REDIS = "REDIS";
 
+/** Railway injects REDIS_URL; host/port fragments are easy to misconfigure — require the URL here. */
+function isRailwayRuntime(): boolean {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_PROJECT_ID,
+  );
+}
+
 @Global()
 @Module({
   providers: [
@@ -28,6 +37,18 @@ export const REDIS = "REDIS";
           process.env.REDIS_PORT ||
           process.env.REDISPORT ||
           process.env.UPSTASH_REDIS_PORT;
+
+        if (isRailwayRuntime() && !redisUrl) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[redis] ⚠️  Railway detected: set REDIS_URL (redis service reference). Host/port only is not supported here.",
+          );
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[redis] 💡 In Railway Dashboard, link Redis to this service so REDIS_URL is injected.",
+          );
+          return null;
+        }
 
         // If no Redis configuration is provided, return null (Redis is optional)
         if (!redisUrl && (!internalHost || !internalPort)) {

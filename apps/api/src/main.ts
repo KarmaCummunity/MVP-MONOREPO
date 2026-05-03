@@ -140,7 +140,11 @@ function validateEnvironment(): void {
   const environment =
     process.env.ENVIRONMENT || process.env.NODE_ENV || "unknown";
   const databaseUrl = process.env.DATABASE_URL || "";
-  const redisUrl = process.env.REDIS_URL || "";
+  const redisUrl =
+    process.env.REDIS_URL ||
+    process.env.REDIS_PUBLIC_URL ||
+    process.env.UPSTASH_REDIS_URL ||
+    "";
 
   logger.log(
     `📍 Environment: ${environment.toUpperCase()} ${environment === "development" ? "🟢" : environment === "production" ? "🔴" : "⚪"}`,
@@ -470,18 +474,24 @@ async function bootstrap(): Promise<void> {
       logger.log(`💾 Database: ❌ Not connected - DATABASE_URL missing!`);
     }
 
-    // Show Redis connection details (masked for security)
-    const redisUrl = process.env.REDIS_URL;
-    if (redisUrl) {
+    // Show Redis connection details (same URL resolution as redis.module.ts — Railway provides REDIS_URL)
+    const redisUrlResolved =
+      process.env.REDIS_URL ||
+      process.env.REDIS_PUBLIC_URL ||
+      process.env.UPSTASH_REDIS_URL ||
+      "";
+    if (redisUrlResolved) {
       try {
-        const redisUrlObj = new URL(redisUrl);
+        const redisUrlObj = new URL(redisUrlResolved);
         const redisHost = redisUrlObj.hostname || "unknown";
-        logger.log(`⚡ Redis: ✅ Connected to ${redisHost}`);
+        logger.log(`⚡ Redis: ✅ Configured (${redisHost})`);
       } catch {
-        logger.log(`⚡ Redis: ✅ Connected (URL configured)`);
+        logger.log(`⚡ Redis: ✅ Configured (connection URL present)`);
       }
     } else {
-      logger.log(`⚡ Redis: ❌ Not connected - REDIS_URL missing!`);
+      logger.log(
+        `⚡ Redis: ❌ Not configured — set REDIS_URL (Railway injects this when Redis is linked)`,
+      );
     }
 
     // Warn if running in production without proper environment flag
