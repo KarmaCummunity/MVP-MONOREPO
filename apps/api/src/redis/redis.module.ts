@@ -38,16 +38,45 @@ function isRailwayRuntime(): boolean {
           process.env.REDISPORT ||
           process.env.UPSTASH_REDIS_PORT;
 
-        if (isRailwayRuntime() && !redisUrl) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[redis] ⚠️  Railway detected: set REDIS_URL (redis service reference). Host/port only is not supported here.",
-          );
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[redis] 💡 In Railway Dashboard, link Redis to this service so REDIS_URL is injected.",
-          );
-          return null;
+        if (isRailwayRuntime()) {
+          // On Railway, ONLY use REDIS_URL — never fall back to REDIS_HOST/REDIS_PORT.
+          // Railway injects REDIS_HOST=redis.railway.internal (the generic hostname for a
+          // service named "redis"), but if the actual Redis service has a different name
+          // (e.g. KC-PROD-Rdis → kc-prod-rdis.railway.internal) that hostname won't resolve.
+          // The REDIS_URL reference variable always points to the correct service endpoint.
+          if (!redisUrl) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[redis] ⚠️  Railway detected but REDIS_URL is not set — running without Redis.",
+            );
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[redis] 💡 In Railway Dashboard, add a Redis service and link it to this service so REDIS_URL is injected.",
+            );
+            return null;
+          }
+          // Validate that REDIS_URL does not contain the generic railway.internal hostname.
+          // If it does, the Redis service name likely doesn't match "redis" and the URL
+          // was constructed from REDIS_HOST rather than a proper service reference variable.
+          try {
+            const parsedUrl = new URL(redisUrl);
+            if (parsedUrl.hostname === "redis.railway.internal") {
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[redis] ⚠️  REDIS_URL points to redis.railway.internal which may not resolve.",
+              );
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[redis] 💡 Ensure REDIS_URL is set as a reference variable to your Redis service (not a hardcoded hostname).",
+              );
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[redis] 💡 In Railway Dashboard: Variables → REDIS_URL → set value to ${{Redis.REDIS_URL}} (replace 'Redis' with your service name).",
+              );
+            }
+          } catch {
+            // ignore URL parse errors
+          }
         }
 
         // If no Redis configuration is provided, return null (Redis is optional)
@@ -60,6 +89,13 @@ function isRailwayRuntime(): boolean {
           console.warn(
             "[redis] 💡 To enable Redis, set REDIS_URL environment variable",
           );
+          return null;
+        }
+
+        // On Railway, skip the host/port fallback entirely — REDIS_URL is required.
+        // Using REDIS_HOST on Railway risks connecting to the wrong hostname (e.g.
+        // redis.railway.internal instead of kc-prod-rdis.railway.internal).
+        if (isRailwayRuntime() && !redisUrl) {
           return null;
         }
 

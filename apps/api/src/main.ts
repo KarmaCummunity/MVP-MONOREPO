@@ -410,6 +410,17 @@ function logConnectionSummary(logger: Logger): void {
       const redisUrlObj = new URL(redisUrlResolved);
       const redisHost = redisUrlObj.hostname || "unknown";
       logger.log(`⚡ Redis: ✅ Configured (${redisHost})`);
+      // Warn if REDIS_URL contains the generic railway.internal hostname — this means
+      // the URL was not set as a proper service reference variable and will fail DNS
+      // resolution when the Redis service name is not literally "redis".
+      if (redisHost === "redis.railway.internal") {
+        logger.warn(
+          "⚠️  REDIS_URL hostname is redis.railway.internal — this only resolves if your Redis service is named exactly 'redis'.",
+        );
+        logger.warn(
+          "💡 Fix: In Railway Dashboard → KC-PROD-Server → Variables → REDIS_URL, set the value to ${{KC-PROD-Rdis.REDIS_URL}} (reference variable pointing to your Redis service).",
+        );
+      }
     } catch {
       logger.log(`⚡ Redis: ✅ Configured (connection URL present)`);
     }
