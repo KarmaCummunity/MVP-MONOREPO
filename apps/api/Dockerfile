@@ -9,6 +9,7 @@ WORKDIR /app
 # Copy all package.json files for monorepo workspaces
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
+COPY packages/shared-types/package*.json ./packages/shared-types/
 
 # Install all dependencies (including dev deps for build)
 RUN npm ci --include=dev
@@ -31,6 +32,7 @@ LABEL Name="kc-mvp-server" Version="1.5.0"
 # Copy package files for production install
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
+COPY packages/shared-types/package*.json ./packages/shared-types/
 
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force

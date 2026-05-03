@@ -42,6 +42,7 @@
     "_TODO_ADD_SCRIPTS": "// TODO: Add missing scripts: migration:run, migration:revert, seed, security-audit"
   },
   "dependencies": {
+    "@kc/shared-types": "file:../../packages/shared-types",
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.19",
