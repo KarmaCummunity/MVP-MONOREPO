@@ -8,23 +8,18 @@ const PRODUCTION_WEB_ORIGIN = 'https://karma-community-kc.com';
  * Optional override: EXPO_PUBLIC_WEB_APP_ORIGIN.
  */
 export function getPublicWebAppOrigin(): string {
-    const fromEnv =
-        typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_WEB_APP_ORIGIN
-            ? String(process.env.EXPO_PUBLIC_WEB_APP_ORIGIN).trim()
-            : '';
+    const rawEnv = globalThis.process?.env?.EXPO_PUBLIC_WEB_APP_ORIGIN;
+    const fromEnv = rawEnv ? String(rawEnv).trim() : '';
     if (fromEnv && /^https?:\/\//i.test(fromEnv)) {
         return fromEnv.replace(/\/$/, '');
     }
-    if (
-        typeof globalThis !== 'undefined' &&
-        typeof globalThis.window !== 'undefined' &&
-        globalThis.window?.location?.origin
-    ) {
-        const h = globalThis.window.location.hostname || '';
+    const loc = globalThis.window?.location;
+    if (loc?.origin) {
+        const h = loc.hostname || '';
         if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') {
             return PRODUCTION_WEB_ORIGIN;
         }
-        return globalThis.window.location.origin.replace(/\/$/, '');
+        return loc.origin.replace(/\/$/, '');
     }
     return PRODUCTION_WEB_ORIGIN;
 }
