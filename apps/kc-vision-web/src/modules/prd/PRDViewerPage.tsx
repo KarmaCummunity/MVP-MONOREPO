@@ -37,6 +37,8 @@ export function PRDViewerPage() {
     [current],
   )
 
+  const hasDocs = files.length > 0
+
   return (
     <div className="flex h-screen flex-col bg-white">
       {/* Top bar */}
@@ -64,30 +66,44 @@ export function PRDViewerPage() {
             </p>
           </div>
           <nav className="p-2 flex flex-col gap-1" dir="rtl">
-            {files.map((f) => (
-              <button
-                key={f.path}
-                type="button"
-                onClick={() => setSelectedPath(f.path)}
-                className={`w-full rounded-lg px-3 py-2 text-right text-sm transition-colors ${
-                  selectedPath === f.path
-                    ? 'bg-teal-600 text-white font-semibold'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+            {hasDocs ? (
+              files.map((f) => (
+                <button
+                  key={f.path}
+                  type="button"
+                  onClick={() => setSelectedPath(f.path)}
+                  className={`w-full rounded-lg px-3 py-2 text-right text-sm transition-colors ${
+                    selectedPath === f.path
+                      ? 'bg-teal-600 text-white font-semibold'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))
+            ) : (
+              <p className="px-2 py-2 text-right text-sm text-slate-500 leading-relaxed">
+                לא נמצאו קבצי PRD בתיקייה PRD_HE_V2. ודא שהבנייה כוללת את תיקיית
+                docs/SSOT/PRD_HE_V2 (למשל ב-Dockerfile).
+              </p>
+            )}
           </nav>
         </aside>
 
         {/* Main markdown content */}
         <main className="flex-1 overflow-y-auto">
           <div className="px-8 py-6 max-w-4xl mx-auto" dir="rtl">
-            <article
-              className="prose prose-slate prose-headings:text-teal-800 prose-a:text-teal-600 max-w-none"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            {hasDocs ? (
+              <article
+                className="prose prose-slate prose-headings:text-teal-800 prose-a:text-teal-600 max-w-none"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            ) : (
+              <p className="text-slate-600 text-base leading-relaxed">
+                תוכן המסמך לא זמין. אם אתה מנהל המערכת, בדוק שהקבצים מועתקים לנתיב
+                docs/SSOT/PRD_HE_V2 לפני פקודת הבנייה של האתר.
+              </p>
+            )}
           </div>
         </main>
 
