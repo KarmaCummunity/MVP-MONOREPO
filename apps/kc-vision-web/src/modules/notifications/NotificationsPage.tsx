@@ -21,7 +21,7 @@ export function NotificationsPage() {
     <div>
       <PageHeader
         title="התראות"
-        subtitle="§2.9 כולל סוגי אופרטור"
+        subtitle="כולל סוגי אופרטור"
         action={
           <button
             type="button"

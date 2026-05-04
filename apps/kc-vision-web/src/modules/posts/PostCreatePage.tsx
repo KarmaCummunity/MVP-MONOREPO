@@ -28,7 +28,7 @@ export function PostCreatePage() {
 
   return (
     <div>
-      <PageHeader title="יצירת פוסט (דמה)" subtitle="§2.5.7–§2.5.8" />
+      <PageHeader title="יצירת פוסט (דמה)"/>
       <form
         className="max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-6"
         onSubmit={(e) => {

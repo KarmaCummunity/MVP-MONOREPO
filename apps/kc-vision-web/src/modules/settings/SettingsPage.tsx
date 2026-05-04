@@ -264,7 +264,7 @@ export function SettingsPage() {
     <div>
       <PageHeader
         title="הגדרות"
-        subtitle="§3.14 — פרופיל, התראות, פרטיות, שפה ואודות"
+        subtitle=" פרופיל, התראות, פרטיות, שפה ואודות"
       />
       <Tabs
         tabs={[
