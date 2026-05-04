@@ -1,10 +1,11 @@
 # Railway — KC Vision Web (Dockerfile under apps/mobile for historical path).
 #
-# CRITICAL — Root Directory: leave EMPTY (repo root) in Railway service settings.
-# If Root Directory is apps/mobile, Docker build context excludes apps/kc-vision-web
-# and COPY apps/kc-vision-web/... fails. Use dockerfilePath below; do not chroot the service.
+# Root Directory MUST be empty (repo root) in Railway service settings.
+# Setting it to apps/mobile excludes apps/kc-vision-web from the Docker build
+# context, breaking every COPY apps/kc-vision-web/... instruction.
+# This was fixed via API: serviceInstanceUpdate rootDirectory → "" (2026-05-05).
 #
-# Watch paths assume repo root as above (Railway docs: patterns are from /).
+# Watch paths are relative to repo root (Railway docs: patterns are from /).
 
 [build]
 builder = "DOCKERFILE"
