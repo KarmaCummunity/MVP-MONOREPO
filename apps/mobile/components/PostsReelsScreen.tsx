@@ -40,6 +40,7 @@ import { postsService } from '../utils/postsService';
 import { logger } from '../utils/loggerService';
 import { navigateToPostDetail } from '../utils/navigateToPostDetail';
 import { usePostMenu } from '../hooks/usePostMenu';
+import { reopenFeedPostWithUiFeedback } from '../utils/reopenFeedPost';
 import { useUser } from '../stores/userStore';
 import { toastService } from '../utils/toastService';
 import { isMobileWeb } from '../globals/responsive';
@@ -159,7 +160,13 @@ const PostsReelsScreen: React.FC<PostsReelsScreenProps> = ({
         console.error('Error hiding post:', error);
         toastService.showError(t('post.hideError') || 'שגיאה בהסתרת הפוסט');
       }
-    }
+    },
+    onReopen: async (item) => {
+      const ok = await reopenFeedPostWithUiFeedback(item);
+      if (ok) {
+        refresh();
+      }
+    },
   });
 
   const filteredFeed = useMemo(

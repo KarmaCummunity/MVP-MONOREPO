@@ -1,72 +1,40 @@
 // Extracted from ProfileScreen — Closed tab.
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
-import colors from '../../globals/colors';
-import { useUser } from '../../stores/userStore';
+import React, { useEffect } from 'react';
 import { apiService } from '../../utils/apiService';
 import { enhancedDB } from '../../utils/enhancedDatabaseService';
-import PostReelItem from '../../components/Feed/PostReelItem';
 import type { FeedItem } from '../../types/feed';
-import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
-import { usePostMenu } from '../../hooks/usePostMenu';
-import OptionsModal from '../../components/Feed/OptionsModal';
-import ReportPostModal from '../../components/Feed/ReportPostModal';
 import { formatRideTime } from './profileScreenHelpers';
-import { styles } from './profileScreen.styles';
 import { logger } from '../../utils/loggerService';
+import { ProfilePostsWithGridShell } from './ProfilePostsWithGridShell';
+import { useProfilePostsTabShell } from './useProfilePostsTabShell';
 export const ClosedRoute = ({
   userId,
   user,
   onHeightChange,
   onLoadedContentCount,
+  reloadSignal,
+  onReopenSuccess,
 }: {
   userId?: string;
   user?: any;
   onHeightChange?: (height: number) => void;
   onLoadedContentCount?: (count: number) => void;
+  /** Increment to refetch tab content (e.g. after reopening a closed post). */
+  reloadSignal?: number;
+  /** Called after a successful reopen so the parent can bump `reloadSignal`. */
+  onReopenSuccess?: () => void;
 }) => {
-  const { t } = useTranslation(['profile']);
-  const navigation = useNavigation();
-  const { selectedUser } = useUser();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { db } = require('../../utils/databaseService');
-  const onCountRef = React.useRef(onLoadedContentCount);
-  onCountRef.current = onLoadedContentCount;
-
-  // Post menu hook
   const {
-    handleMorePress,
-    optionsModalVisible,
-    setOptionsModalVisible,
-    modalOptions,
-    modalPosition,
-    reportModalVisible,
-    setReportModalVisible,
-    selectedPostForReport,
-    setSelectedPostForReport
-  } = usePostMenu();
-
-  const handlePostPress = useCallback(
-    (feedItem: FeedItem) => {
-      navigateToPostDetail(navigation as never, { postId: feedItem.id, initialItem: feedItem });
-    },
-    [navigation],
-  );
-
-  // Report submit handler
-  const handleReportSubmit = async (_reason: string) => {
-    if (!selectedPostForReport) return;
-    // Report functionality can be implemented here if needed
-    setReportModalVisible(false);
-    setSelectedPostForReport(null);
-  };
-
-  // Use provided userId or fallback to selectedUser.id
-  const targetUserId = userId || selectedUser?.id;
+    selectedUser,
+    posts,
+    setPosts,
+    loading,
+    setLoading,
+    db,
+    onCountRef,
+    targetUserId,
+    postIx,
+  } = useProfilePostsTabShell(userId, onLoadedContentCount, onReopenSuccess);
 
   useEffect(() => {
     const loadClosedContent = async () => {
@@ -253,6 +221,7 @@ export const ClosedRoute = ({
               ...item,
               price: item.price
             },
+            itemId: item.id,
             price: item.price,
             rawData: item
           });
@@ -403,7 +372,7 @@ export const ClosedRoute = ({
 
         logger.debug('ClosedRoute', 'Total closed content', { count: allContent.length });
         loadedCount = allContent.length;
-        setPosts(allContent);
+        setPosts(allContent as FeedItem[]);
       } catch (error) {
         console.error('Error loading closed content:', error);
         loadedCount = 0;
@@ -415,66 +384,18 @@ export const ClosedRoute = ({
     };
 
     loadClosedContent();
-  }, [targetUserId, user, selectedUser?.id, db]);
-
-  if (loading) {
-    return (
-      <View style={styles.tabContentPlaceholder}>
-        <Text style={styles.placeholderText}>טוען תוכן סגור...</Text>
-      </View>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <View style={[styles.tabContentPlaceholder, { height: 400 }]} onLayout={(e) => onHeightChange && onHeightChange(Math.max(400, e.nativeEvent.layout.height))}>
-        <Ionicons name="checkmark-done-circle-outline" size={60} color={colors.textSecondary} />
-        <Text style={styles.placeholderText}>אין תוכן סגור עדיין</Text>
-        <Text style={styles.placeholderSubtext}>התוכן הסגור שלך יופיע כאן</Text>
-      </View>
-    );
-  }
-
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth / 3;
+  }, [targetUserId, user, selectedUser?.id, db, reloadSignal, setLoading, setPosts, onCountRef]);
 
   return (
-    <View style={styles.tabContentContainer}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        key={3}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <PostReelItem
-            item={item}
-            numColumns={3}
-            cardWidth={cardWidth}
-            onPress={handlePostPress}
-            onMorePress={handleMorePress}
-          />
-        )}
-        onContentSizeChange={(w, h) => {
-          if (onHeightChange) onHeightChange(h);
-        }}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
-      {/* Modals */}
-      <OptionsModal
-        visible={optionsModalVisible}
-        onClose={() => setOptionsModalVisible(false)}
-        options={modalOptions}
-        title={t('common.options') || 'Options'}
-        anchorPosition={modalPosition}
-      />
-      <ReportPostModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-        onSubmit={handleReportSubmit}
-        isLoading={false}
-      />
-    </View>
+    <ProfilePostsWithGridShell
+      loading={loading}
+      posts={posts}
+      onHeightChange={onHeightChange}
+      loadingLabel="טוען תוכן סגור..."
+      emptyIcon="checkmark-done-circle-outline"
+      emptyTitle="אין תוכן סגור עדיין"
+      emptySubtitle="התוכן הסגור שלך יופיע כאן"
+      postIx={postIx}
+    />
   );
 };
