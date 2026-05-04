@@ -2278,7 +2278,7 @@ export class PostsController {
    *
    * Rules:
    * 1. Only post owner can update
-   * 2. Can update: title, description, image_url
+   * 2. Can update: title, description, images (client sends `image` as a single URL string)
    */
   @Put(":postId")
   @UseGuards(JwtAuthGuard)
@@ -2347,8 +2347,13 @@ export class PostsController {
       }
 
       if (body.image !== undefined) {
-        updates.push(`image_url = $${paramIndex++}`);
-        values.push(body.image);
+        // posts.images is TEXT[] in schema.sql — not image_url
+        const imageUrls =
+          body.image && String(body.image).trim() !== ""
+            ? [String(body.image).trim()]
+            : [];
+        updates.push(`images = $${paramIndex++}::text[]`);
+        values.push(imageUrls);
       }
 
       if (updates.length === 0) {
