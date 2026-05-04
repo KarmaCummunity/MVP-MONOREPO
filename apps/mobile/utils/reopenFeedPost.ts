@@ -1,5 +1,6 @@
 import type { FeedItem } from '../types/feed';
 import type { ApiResponse } from './apiService';
+import { apiService } from './apiService';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -46,7 +47,6 @@ function isRideSubtype(subtype: string): boolean {
  * Align status transitions with `feedPostOwnerClose` (inverse).
  */
 export async function reopenFeedPost(item: FeedItem): Promise<{ success: boolean; error?: string }> {
-  const { apiService } = await import('./apiService');
   const api = apiService as ApiLike;
 
   const subtype = String(item.subtype || item.type || '');

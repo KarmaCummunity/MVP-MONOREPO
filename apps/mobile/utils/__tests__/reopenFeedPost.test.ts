@@ -1,4 +1,5 @@
 import type { FeedItem } from '../../types/feed';
+import { reopenFeedPost } from '../reopenFeedPost';
 
 const mockUpdateTask = jest.fn();
 const mockUpdateRide = jest.fn();
@@ -32,7 +33,6 @@ function baseItem(over: Partial<FeedItem> = {}): FeedItem {
 
 describe('reopenFeedPost', () => {
   beforeEach(() => {
-    jest.resetModules();
     mockUpdateTask.mockReset();
     mockUpdateRide.mockReset();
     mockUpdateItem.mockReset();
@@ -41,7 +41,6 @@ describe('reopenFeedPost', () => {
 
   it('reopens a closed task via updateTask(open)', async () => {
     mockUpdateTask.mockResolvedValue({ success: true });
-    const { reopenFeedPost } = await import('../reopenFeedPost');
     const taskId = '11111111-1111-1111-1111-111111111111';
     const result = await reopenFeedPost(
       baseItem({
@@ -57,7 +56,6 @@ describe('reopenFeedPost', () => {
 
   it('reopens ride via updateRide(active)', async () => {
     mockUpdateRide.mockResolvedValue({ success: true });
-    const { reopenFeedPost } = await import('../reopenFeedPost');
     const rideId = '22222222-2222-2222-2222-222222222222';
     const result = await reopenFeedPost(
       baseItem({
@@ -72,7 +70,6 @@ describe('reopenFeedPost', () => {
 
   it('reopens item via updateItem(available)', async () => {
     mockUpdateItem.mockResolvedValue({ success: true });
-    const { reopenFeedPost } = await import('../reopenFeedPost');
     const itemId = '33333333-3333-3333-3333-333333333333';
     const result = await reopenFeedPost(
       baseItem({
@@ -87,7 +84,6 @@ describe('reopenFeedPost', () => {
 
   it('reopens donation from synthetic id donation_<uuid> when itemId missing', async () => {
     mockUpdateDonation.mockResolvedValue({ success: true });
-    const { reopenFeedPost } = await import('../reopenFeedPost');
     const donationId = '44444444-4444-4444-4444-444444444444';
     const result = await reopenFeedPost(
       baseItem({
