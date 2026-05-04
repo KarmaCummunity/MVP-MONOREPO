@@ -1,5 +1,9 @@
 # Web frontend Dockerfile — KC Vision Web (Vite static SPA + Nginx)
-# Built from monorepo root. Railway references apps/mobile/Dockerfile (historical path).
+# Historical path: apps/mobile/Dockerfile (Railway / CI).
+#
+# Build context MUST be the monorepo root (`.`). If the platform sets Root Directory
+# to apps/mobile only, COPY apps/kc-vision-web/... fails — clear Root Directory and
+# set dockerfilePath to apps/mobile/Dockerfile instead (see apps/mobile/railway.toml).
 
 FROM node:20-alpine AS webbuild
 WORKDIR /app/apps/kc-vision-web

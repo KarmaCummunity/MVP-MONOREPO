@@ -1,15 +1,21 @@
 # Railway — KC Vision Web (Dockerfile under apps/mobile for historical path).
 #
-# Watch paths: With service Root Directory = apps/mobile, Railway can skip deploys
-# when only sibling dirs change (e.g. apps/kc-vision-web), even if those paths are
-# listed here. Using a repo-wide pattern avoids false "Skipped" for this service.
-# To narrow again: set Root Directory to monorepo root (/) in Railway and use
-# directory-scoped patterns (see docs/deployments/monorepo).
+# CRITICAL — Root Directory: leave EMPTY (repo root) in Railway service settings.
+# If Root Directory is apps/mobile, Docker build context excludes apps/kc-vision-web
+# and COPY apps/kc-vision-web/... fails. Use dockerfilePath below; do not chroot the service.
+#
+# Watch paths assume repo root as above (Railway docs: patterns are from /).
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
-watchPatterns = ["**"]
+watchPatterns = [
+  "apps/mobile/Dockerfile",
+  "apps/mobile/web/**",
+  "apps/kc-vision-web/**",
+  "package.json",
+  "package-lock.json",
+]
 
 [deploy]
 startCommand = ""
