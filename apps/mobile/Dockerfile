@@ -2,18 +2,12 @@
 # Built from monorepo root. Railway references apps/mobile/Dockerfile (historical path).
 
 FROM node:20-alpine AS webbuild
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/mobile/package.json ./apps/mobile/
-COPY apps/kc-vision-web/package.json ./apps/kc-vision-web/
-
-RUN npm ci --legacy-peer-deps --workspace=@kc/vision-web
-
-COPY apps/kc-vision-web ./apps/kc-vision-web
-
 WORKDIR /app/apps/kc-vision-web
+
+COPY apps/kc-vision-web/package.json ./
+RUN npm install --legacy-peer-deps
+
+COPY apps/kc-vision-web ./
 RUN npm run build
 
 FROM nginx:1.25-alpine AS web
