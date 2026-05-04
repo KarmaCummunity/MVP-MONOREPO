@@ -1,15 +1,15 @@
-# Railway Configuration — deploy only when web app or install manifests change.
+# Railway — KC Vision Web (Dockerfile under apps/mobile for historical path).
+#
+# Watch paths: With service Root Directory = apps/mobile, Railway can skip deploys
+# when only sibling dirs change (e.g. apps/kc-vision-web), even if those paths are
+# listed here. Using a repo-wide pattern avoids false "Skipped" for this service.
+# To narrow again: set Root Directory to monorepo root (/) in Railway and use
+# directory-scoped patterns (see docs/deployments/monorepo).
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
-watchPatterns = [
-  "apps/mobile/Dockerfile",
-  "apps/mobile/web/**",
-  "apps/kc-vision-web/**",
-  "package.json",
-  "package-lock.json",
-]
+watchPatterns = ["**"]
 
 [deploy]
 startCommand = ""
