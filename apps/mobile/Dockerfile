@@ -32,3 +32,4 @@ COPY --from=webbuild /app/apps/kc-vision-web/dist /usr/share/nginx/html
 LABEL Name="kc-vision-web" Version="1.0.0"
 EXPOSE 8080
 CMD ["/docker-entrypoint.sh"]
+

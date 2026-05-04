@@ -12,6 +12,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
 watchPatterns = [
   "apps/mobile/Dockerfile",
+  "apps/mobile/railway.toml",
   "apps/mobile/web/**",
   "apps/kc-vision-web/**",
   "package.json",
