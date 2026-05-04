@@ -1,0 +1,45 @@
+{
+  "app": { "title": "KC Vision", "prototypeBanner": "Vision prototype — no backend" },
+  "nav": {
+    "feed": "Feed",
+    "profile": "Profile",
+    "donations": "Donations",
+    "rides": "Rides",
+    "items": "Items",
+    "chat": "Chat",
+    "challenges": "Challenges",
+    "notifications": "Notifications",
+    "statistics": "Statistics",
+    "admin": "Admin",
+    "sync": "Sync",
+    "shiduchimTov": "Good Matching",
+    "discover": "Discover",
+    "hierarchy": "Hierarchy",
+    "logout": "Log out",
+    "login": "Log in",
+    "more": "More",
+    "operatorQueue": "Operator Queue"
+  },
+  "persona": {
+    "label": "Persona (mock)",
+    "guest": "Guest",
+    "community": "Community member",
+    "volunteer": "Volunteer",
+    "volunteer_manager": "Volunteer manager",
+    "operator": "Operator",
+    "org_admin": "Org admin",
+    "admin": "Admin",
+    "super_admin": "Super admin"
+  },
+  "auth": {
+    "loginTitle": "Login (mock)",
+    "registerTitle": "Register (mock)",
+    "email": "Email",
+    "password": "Password",
+    "google": "Google (mock)",
+    "guest": "Continue as guest",
+    "submit": "Sign in",
+    "register": "Sign up"
+  },
+  "common": { "save": "Save", "cancel": "Cancel", "search": "Search", "loading": "Loading…" }
+}

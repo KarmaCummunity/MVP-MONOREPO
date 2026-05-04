@@ -1,0 +1,45 @@
+{
+  "app": { "title": "KC Vision", "prototypeBanner": "אב־טיפוס ויז'ן — אין שרת / אין backend" },
+  "nav": {
+    "feed": "פיד",
+    "profile": "פרופיל",
+    "donations": "תרומות",
+    "rides": "נסיעות",
+    "items": "פריטים",
+    "chat": "צ'אט",
+    "challenges": "אתגרים",
+    "notifications": "התראות",
+    "statistics": "סטטיסטיקה",
+    "admin": "ניהול",
+    "sync": "סנכרון",
+    "shiduchimTov": "שידוכים טוב",
+    "discover": "גילוי אנשים",
+    "hierarchy": "היררכיה",
+    "logout": "יציאה",
+    "login": "כניסה",
+    "more": "עוד",
+    "operatorQueue": "תור אופרטור"
+  },
+  "persona": {
+    "label": "פרסונה (דמה)",
+    "guest": "אורח",
+    "community": "חבר קהילה",
+    "volunteer": "מתנדב",
+    "volunteer_manager": "מנהל מתנדבים",
+    "operator": "אופרטור",
+    "org_admin": "מנהל ארגון",
+    "admin": "אדמין",
+    "super_admin": "סופר אדמין"
+  },
+  "auth": {
+    "loginTitle": "כניסה (דמה)",
+    "registerTitle": "הרשמה (דמה)",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "google": "Google (דמה)",
+    "guest": "המשך כאורח",
+    "submit": "התחבר",
+    "register": "הירשם"
+  },
+  "common": { "save": "שמור", "cancel": "בטל", "search": "חיפוש", "loading": "טוען…" }
+}

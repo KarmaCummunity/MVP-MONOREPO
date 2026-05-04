@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* ── PRD markdown prose ─────────────────────────────────────── */
+.prd-prose {
+  color: #374151;
+  line-height: 1.85;
+  font-size: 0.9375rem;
+}
+.prd-prose h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 2rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+.prd-prose h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #134e4a;
+  margin: 1.75rem 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #ccfbf1;
+}
+.prd-prose h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f766e;
+  margin: 1.4rem 0 0.5rem;
+}
+.prd-prose h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 1.1rem 0 0.4rem;
+}
+.prd-prose p {
+  margin: 0.75rem 0;
+}
+.prd-prose ul,
+.prd-prose ol {
+  margin: 0.75rem 0;
+  padding-inline-start: 1.5rem;
+}
+.prd-prose li {
+  margin: 0.3rem 0;
+}
+.prd-prose strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+.prd-prose em {
+  color: #475569;
+}
+.prd-prose a {
+  color: #0d9488;
+  text-decoration: underline;
+}
+.prd-prose a:hover {
+  color: #0f766e;
+}
+.prd-prose code {
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.82em;
+  color: #0f766e;
+  font-family: ui-monospace, monospace;
+}
+.prd-prose pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-size: 0.82em;
+}
+.prd-prose blockquote {
+  border-inline-start: 4px solid #0d9488;
+  background: #f0fdfa;
+  border-radius: 0 8px 8px 0;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  color: #134e4a;
+  font-style: italic;
+}
+.prd-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+.prd-prose th {
+  background: #f1f5f9;
+  color: #374151;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  text-align: right;
+}
+.prd-prose td {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+.prd-prose tr:nth-child(even) td {
+  background: #f8fafc;
+}
+.prd-prose hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5rem 0;
+}

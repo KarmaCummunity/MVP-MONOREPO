@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # File overview:
-# - Purpose: One-command local spin-up for backend (DB+Redis via Docker) and Expo client with API pointing to localhost.
-# - Works with the new kc-monorepo structure where server is in apps/api and mobile is in apps/mobile.
-# - Steps: Free ports, docker compose up, build server, ensure DB schema via ts-node, start server, smoke-test APIs, start Expo.
-# - Inputs: PORT (server), EXPO_PORT (Expo dev server). Exports EXPO_PUBLIC_API_BASE_URL and flags.
+# - Purpose: One-command local spin-up for backend (DB+Redis via Docker), API server, and KC Vision Web (Vite POC) pointing at localhost API.
+# - Works with the monorepo layout: apps/api, apps/mobile (checks/lints), apps/kc-vision-web (browser UI).
+# - Steps: Free ports, docker compose up, build server, ensure DB schema via ts-node, start server, smoke-test APIs, start Vite (Vision Web).
+# - Inputs: PORT (API server), EXPO_PORT (web UI dev server — KC Vision Web / Vite, default 8081).
+#   Exports EXPO_PUBLIC_* for legacy scripts; the browser client is kc-vision-web (Vite), not Expo Web.
 # - Code quality: lint and Snyk always run. Client audit:all and Sonar (if SONAR_TOKEN) run by default.
 #   Set SKIP_CHECKS=1 to skip only Sonar and client audit — not lint or Snyk.
 set -euo pipefail
@@ -12,6 +13,7 @@ THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
 CLIENT_DIR="$(cd "$THIS_DIR/.." && pwd)"
 MONOREPO_ROOT="$(cd "$CLIENT_DIR/../.." && pwd)"
 SERVER_DIR="$(cd "$MONOREPO_ROOT/apps/api" && pwd)"
+VISION_WEB_DIR="$(cd "$MONOREPO_ROOT/apps/kc-vision-web" && pwd)"
 SERVER_PORT=${PORT:-3001}
 EXPO_PORT=${EXPO_PORT:-8081}
 
@@ -125,6 +127,11 @@ if [[ ! -f "$CLIENT_DIR/package.json" ]]; then
   log_error "package.json not found in $CLIENT_DIR"
   exit 1
 fi
+
+if [[ ! -f "$VISION_WEB_DIR/package.json" ]]; then
+  log_error "package.json not found in $VISION_WEB_DIR (kc-vision-web)"
+  exit 1
+fi
 log_success "Required files found"
 
 # Check Docker availability
@@ -151,8 +158,11 @@ log_info "Running Code Quality & Security Checks (Lint, Snyk, audit, Sonar if to
 log_info "Running server linting..."
 (cd "$SERVER_DIR" && npm run lint)
 
-log_info "Running client linting..."
+log_info "Running client linting (mobile)..."
 (cd "$CLIENT_DIR" && npm run lint)
+
+log_info "Running KC Vision Web linting..."
+(cd "$VISION_WEB_DIR" && npm run lint)
 log_success "Lint checks passed."
 
 # --- Client audit (skip when SKIP_CHECKS=1) ---
@@ -217,9 +227,9 @@ if ! is_port_available "$SERVER_PORT"; then
   fi
 fi
 
-# Check and free Expo port
+# Check and free web UI port (Vite / KC Vision Web; env EXPO_PORT kept for backward compatibility)
 if ! is_port_available "$EXPO_PORT"; then
-  log_warning "Port $EXPO_PORT is in use. Attempting to free it..."
+  log_warning "Port $EXPO_PORT (web UI) is in use. Attempting to free it..."
   kill_port "$EXPO_PORT"
   sleep 2
   if ! is_port_available "$EXPO_PORT"; then
@@ -438,7 +448,7 @@ export ENVIRONMENT=${ENVIRONMENT:-development}
 export NODE_ENV=${NODE_ENV:-development}
 
 # CORS configuration (IMPORTANT)
-export CORS_ORIGIN=${CORS_ORIGIN:-"http://localhost:8081,http://localhost:3000,http://localhost:19006"}
+export CORS_ORIGIN=${CORS_ORIGIN:-"http://localhost:8081,http://localhost:5173,http://localhost:3000,http://localhost:19006"}
 
 # JWT Secret (CRITICAL - try .env first, then generate)
 if [[ -z "${JWT_SECRET:-}" ]]; then
@@ -796,35 +806,20 @@ fi
 log_success "API Health Tests passed"
 
 # ============================================================================
-# Client (Expo) Startup
+# Client (KC Vision Web — Vite) Startup
 # ============================================================================
 
-cd "$CLIENT_DIR"
-log_info "Starting Expo (API=http://localhost:$SERVER_PORT)"
+log_info "Starting KC Vision Web / Vite (API=http://localhost:$SERVER_PORT, port=$EXPO_PORT)"
 
-# CRITICAL: Remove old static HTML file that interferes with Expo web
-if [[ -f "$CLIENT_DIR/public/index.html" ]]; then
-  log_warning "Removing old static HTML file (public/index.html) that interferes with Expo web"
-  mv "$CLIENT_DIR/public/index.html" "$CLIENT_DIR/public/index.html.old" 2>/dev/null || true
-fi
-
-if [[ ! -d node_modules ]]; then 
-  log_info "Installing client dependencies..."
-  npm ci || npm install
+# Root install supplies hoisted deps for @kc/vision-web workspace
+if [[ ! -d "$MONOREPO_ROOT/node_modules" ]]; then
+  log_info "Installing monorepo dependencies (root node_modules missing)..."
+  (cd "$MONOREPO_ROOT" && npm install --legacy-peer-deps)
 fi
 
 export EXPO_PUBLIC_API_BASE_URL=http://localhost:"$SERVER_PORT"
 export EXPO_PUBLIC_USE_BACKEND=1
 export EXPO_PUBLIC_USE_FIRESTORE=0
-export EXPO_ROUTER_APP_ROOT=./app
-export EXPO_USE_METRO_WORKSPACE_ROOT=1
-
-# Clear cache before starting to avoid circular dependency issues
-log_info "Clearing Metro cache..."
-rm -rf "$CLIENT_DIR/.expo" "$CLIENT_DIR/node_modules/.cache" 2>/dev/null || true
-
-# Start Expo in foreground at the end of script
-
 
 # ============================================================================
 # Final User Message
@@ -835,8 +830,8 @@ echo "════════════════════════�
 echo "🎉 Local E2E Environment is Ready!"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
-echo "📍 Server: http://localhost:$SERVER_PORT"
-echo "📍 Expo:   http://localhost:$EXPO_PORT"
+echo "📍 API:        http://localhost:$SERVER_PORT"
+echo "📍 Web (POC):  http://localhost:$EXPO_PORT"
 echo ""
 echo "🔧 Environment: $ENVIRONMENT"
 echo "🗄️  Database: $POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB"
@@ -848,20 +843,10 @@ echo "   - Server logs: Check terminal output"
 echo "   - Database: docker exec -it \$(docker ps -q -f name=postgres) psql -U kc -d kc_db"
 echo "   - Redis: docker exec -it \$(docker ps -q -f name=redis) redis-cli"
 echo ""
-echo "⚠️  IMPORTANT: Open http://localhost:$EXPO_PORT in your browser"
-echo "   (NOT http://localhost:3001 or any other port)"
-echo ""
-echo "   If you see the 'coming soon' page:"
-echo "   1. Clear browser cache (Ctrl+Shift+R or Cmd+Shift+R)"
-echo "   2. Make sure you're opening http://localhost:$EXPO_PORT"
-echo "   3. Check browser console for errors (F12)"
-echo "   4. Try incognito/private mode"
-echo ""
-echo "   The app should show either:"
-echo "   - LandingSiteScreen (if web mode = 'site')"
-echo "   - LoginScreen or HomeScreen (if web mode = 'app')"
+echo "⚠️  Open http://localhost:$EXPO_PORT for the KC Vision Web POC (Vite)."
+echo "   Expo Web is not started by this script."
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Start Expo
-EXPO_ROUTER_APP_ROOT=./app EXPO_USE_METRO_WORKSPACE_ROOT=1 EXPO_DEV_SERVER_PORT="$EXPO_PORT" npx expo start --port "$EXPO_PORT" --web --clear
+# Vite in foreground — same default port as before (8081) unless EXPO_PORT is overridden
+(cd "$MONOREPO_ROOT" && npm run dev --workspace=@kc/vision-web -- --port "$EXPO_PORT" --host)

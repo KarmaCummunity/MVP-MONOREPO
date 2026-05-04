@@ -1,0 +1,47 @@
+name: Mobile PR audit (changed files)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-pr-audit.yml'
+
+concurrency:
+  group: mobile-pr-audit-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-changed:
+    name: Scoped mobile audits
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run audits on changed mobile TS/TSX files
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          LIST="$(mktemp)"
+          git diff --name-only --diff-filter=ACMRT "${BASE_SHA}"..."${HEAD_SHA}" | grep -E '^apps/mobile/.*\.(tsx?)$' > "${LIST}" || true
+          if [ ! -s "${LIST}" ]; then
+            echo "No mobile .ts/.tsx files in this diff; skipping."
+            rm -f "${LIST}"
+            exit 0
+          fi
+          npm run audit:changed --workspace @kc/mobile -- --files-from="${LIST}"
+          rm -f "${LIST}"

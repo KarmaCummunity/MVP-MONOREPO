@@ -4,7 +4,9 @@
 builder = "DOCKERFILE"
 dockerfilePath = "apps/mobile/Dockerfile"
 watchPatterns = [
-  "apps/mobile/**",
+  "apps/mobile/Dockerfile",
+  "apps/mobile/web/**",
+  "apps/kc-vision-web/**",
   "package.json",
   "package-lock.json",
 ]
