@@ -1,22 +1,11 @@
 import type { FeedItem } from '../types/feed';
 import { logger } from './loggerService';
 import type { ApiResponse } from './apiService';
+import { isLegacyTimestampItemId, isUuid, isValidDedicatedItemId } from './feedPostEntityIds';
 
 export type CloseOwnerPostResult =
   | { success: true }
   | { success: false; error: string };
-
-function isValidUUID(id: string | undefined): boolean {
-  if (!id) return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(id);
-}
-
-function isValidItemId(id: string | undefined): boolean {
-  if (!id) return false;
-  const isTimestamp = /^\d{10,13}$/.test(id);
-  return !isTimestamp && id.length > 0;
-}
 
 type ApiLike = {
   updateTask: (id: string, body: { status: string }) => Promise<ApiResponse>;
@@ -31,7 +20,7 @@ function toCloseResult(res: ApiResponse): CloseOwnerPostResult {
 
 async function closeTaskOwnerPost(item: FeedItem, api: ApiLike): Promise<CloseOwnerPostResult> {
   const taskId = item.taskId || item.taskData?.id;
-  if (taskId && isValidUUID(taskId)) {
+  if (taskId && isUuid(taskId)) {
     return toCloseResult(await api.updateTask(taskId, { status: 'done' }));
   }
   logger.warn('feedPostOwnerClose', 'Invalid or missing task ID', { taskId, postId: item.id });
@@ -40,7 +29,7 @@ async function closeTaskOwnerPost(item: FeedItem, api: ApiLike): Promise<CloseOw
 
 async function closeRideOwnerPost(item: FeedItem, api: ApiLike): Promise<CloseOwnerPostResult> {
   const rideId = item.rideId;
-  if (rideId && isValidUUID(rideId)) {
+  if (rideId && isUuid(rideId)) {
     return toCloseResult(await api.updateRide(rideId, { status: 'completed' }));
   }
   logger.warn('feedPostOwnerClose', 'Invalid or missing ride ID', { rideId, postId: item.id });
@@ -56,14 +45,14 @@ async function closeItemOrDonationOwnerPost(item: FeedItem, api: ApiLike): Promi
       error: 'לא ניתן לסגור את הפוסט - ID של הפריט לא נמצא. אנא רענן את הפיד ונסה שוב.',
     };
   }
-  if (/^\d{10,13}$/.test(itemId)) {
+  if (isLegacyTimestampItemId(itemId)) {
     logger.error('feedPostOwnerClose', 'Item ID is timestamp (legacy post)', { itemId, postId: item.id });
     return {
       success: false,
       error: 'לא ניתן לסגור את הפוסט - זה פוסט ישן שנוצר לפני התיקון. אנא צור פריט חדש.',
     };
   }
-  if (isValidItemId(itemId)) {
+  if (isValidDedicatedItemId(itemId)) {
     logger.debug('feedPostOwnerClose', 'updateItem delivered', { itemId });
     return toCloseResult(await api.updateItem(itemId, { status: 'delivered' }));
   }

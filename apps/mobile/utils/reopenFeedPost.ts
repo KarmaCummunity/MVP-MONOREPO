@@ -1,23 +1,12 @@
 import type { FeedItem } from '../types/feed';
 import type { ApiResponse } from './apiService';
 import { apiService } from './apiService';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isUuid(id: string | undefined): boolean {
-  return !!id && UUID_RE.test(id);
-}
-
-function isLegacyTimestampItemId(id: string | undefined): boolean {
-  return !!id && /^\d{10,13}$/.test(id);
-}
-
-/** Closed tab uses `donation_<uuid>` when the row is not a linked post. */
-function donationIdFromSyntheticFeedId(feedId: string | undefined): string | undefined {
-  if (!feedId || !feedId.startsWith('donation_')) return undefined;
-  const rest = feedId.slice('donation_'.length);
-  return isUuid(rest) ? rest : undefined;
-}
+import {
+  donationIdFromSyntheticFeedId,
+  isLegacyTimestampItemId,
+  isUuid,
+  isValidDedicatedItemId,
+} from './feedPostEntityIds';
 
 type ApiLike = {
   updateTask: (id: string, body: { status: string }) => Promise<ApiResponse>;
@@ -56,7 +45,7 @@ export async function reopenFeedPost(item: FeedItem): Promise<{ success: boolean
     if (!isUuid(taskId)) {
       return { success: false, error: 'Task ID missing or invalid' };
     }
-    return toResult(await api.updateTask(taskId!, { status: 'open' }));
+    return toResult(await api.updateTask(taskId, { status: 'open' }));
   }
 
   if (isRideSubtype(subtype)) {
@@ -64,22 +53,22 @@ export async function reopenFeedPost(item: FeedItem): Promise<{ success: boolean
     if (!isUuid(rideId)) {
       return { success: false, error: 'Ride ID missing or invalid' };
     }
-    return toResult(await api.updateRide(rideId!, { status: 'active' }));
+    return toResult(await api.updateRide(rideId, { status: 'active' }));
   }
 
   const itemId = item.itemId;
   const hasDedicatedItem =
     subtype === 'item' ||
     subtype === 'donation' ||
-    (typeof itemId === 'string' && itemId.length > 0 && !isLegacyTimestampItemId(itemId));
+    isValidDedicatedItemId(itemId);
 
-  if (hasDedicatedItem && itemId && !isLegacyTimestampItemId(itemId)) {
+  if (hasDedicatedItem && isValidDedicatedItemId(itemId)) {
     return toResult(await api.updateItem(itemId, { status: 'available' }));
   }
 
   if (subtype === 'donation') {
     const raw = (item as FeedItem & { rawData?: { id?: string } }).rawData;
-    const donationFromRaw = raw?.id && isUuid(raw.id) ? raw.id : undefined;
+    const donationFromRaw = isUuid(raw?.id) ? raw?.id : undefined;
     const donationId = donationFromRaw ?? donationIdFromSyntheticFeedId(item.id);
     if (donationId) {
       return toResult(await api.updateDonation(donationId, { status: 'active' }));
@@ -95,10 +84,15 @@ export async function reopenFeedPost(item: FeedItem): Promise<{ success: boolean
  * @returns whether the API reported success
  */
 export async function reopenFeedPostWithUiFeedback(item: FeedItem): Promise<boolean> {
+  const { toastService } = await import('./toastService');
+  const { default: i18n } = await import('../app/i18n');
+  const reopenErrorToast = (): void => {
+    toastService.showError(
+      i18n.t('post.reopenError', { ns: 'common', defaultValue: 'Error reopening post' }),
+    );
+  };
   try {
     const result = await reopenFeedPost(item);
-    const { toastService } = await import('./toastService');
-    const { default: i18n } = await import('../app/i18n');
     if (result.success) {
       toastService.showSuccess(
         i18n.t('post.reopenSuccess', { ns: 'common', defaultValue: 'Post reopened successfully' }),
@@ -111,12 +105,8 @@ export async function reopenFeedPostWithUiFeedback(item: FeedItem): Promise<bool
     );
     return false;
   } catch (e) {
-    const { toastService } = await import('./toastService');
-    const { default: i18n } = await import('../app/i18n');
     console.error('reopenFeedPostWithUiFeedback', e);
-    toastService.showError(
-      i18n.t('post.reopenError', { ns: 'common', defaultValue: 'Error reopening post' }),
-    );
+    reopenErrorToast();
     return false;
   }
 }

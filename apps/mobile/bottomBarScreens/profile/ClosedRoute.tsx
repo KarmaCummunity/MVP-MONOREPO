@@ -14,6 +14,7 @@ import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
 import { usePostMenu } from '../../hooks/usePostMenu';
 import OptionsModal from '../../components/Feed/OptionsModal';
 import ReportPostModal from '../../components/Feed/ReportPostModal';
+import { runProfileReopenPostMenuAction } from '../../utils/profileReopenPostMenuAction';
 import { formatRideTime } from './profileScreenHelpers';
 import { styles } from './profileScreen.styles';
 import { logger } from '../../utils/loggerService';
@@ -55,13 +56,7 @@ export const ClosedRoute = ({
     selectedPostForReport,
     setSelectedPostForReport
   } = usePostMenu({
-    onReopen: async (item) => {
-      const { reopenFeedPostWithUiFeedback } = await import('../../utils/reopenFeedPost');
-      const ok = await reopenFeedPostWithUiFeedback(item);
-      if (ok) {
-        onReopenSuccess?.();
-      }
-    },
+    onReopen: (item) => runProfileReopenPostMenuAction(item, onReopenSuccess),
   });
 
   const handlePostPress = useCallback(
