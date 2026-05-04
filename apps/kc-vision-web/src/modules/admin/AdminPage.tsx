@@ -38,7 +38,7 @@ export function AdminPage() {
     <div>
       <PageHeader
         title="ניהול"
-        subtitle="§3.11 + §13 — לוח בקרה כולל לכלל הפעילות הארגונית"
+        subtitle="לוח בקרה כולל לכלל הפעילות הארגונית"
       />
       <Tabs<TabId> tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">

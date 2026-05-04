@@ -14,7 +14,7 @@ export function OperatorQueuePage() {
   return (
     <RequireRole allow={['operator', 'admin', 'super_admin']}>
       <div>
-        <PageHeader title="תור התאמה" subtitle="§2.14.2" />
+        <PageHeader title="תור התאמה"/>
         <ul className="space-y-3">
           {items.map((q) => (
             <li
