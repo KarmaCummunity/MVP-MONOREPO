@@ -1,20 +1,15 @@
 // Extracted from ProfileScreen — Open tab.
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
 import colors from '../../globals/colors';
 import { useUser } from '../../stores/userStore';
 import { collectOpenTabFeed } from './openRouteLoadOpenContent';
-import PostReelItem from '../../components/Feed/PostReelItem';
 import type { FeedItem } from '../../types/feed';
-import { navigateToPostDetail } from '../../utils/navigateToPostDetail';
-import { usePostMenu } from '../../hooks/usePostMenu';
-import OptionsModal from '../../components/Feed/OptionsModal';
-import ReportPostModal from '../../components/Feed/ReportPostModal';
-import { runProfileReopenPostMenuAction } from '../../utils/profileReopenPostMenuAction';
 import { styles } from './profileScreen.styles';
+import { ProfileTabPostsGrid } from './ProfileTabPostsGrid';
+import { useProfileTabPostInteractions } from './useProfileTabPostInteractions';
+
 export const OpenRoute = ({
   userId,
   user,
@@ -33,46 +28,26 @@ export const OpenRoute = ({
   /** Called after a successful reopen so the parent can bump `reloadSignal`. */
   onReopenSuccess?: () => void;
 }) => {
-  const { t } = useTranslation(['profile']);
-  const navigation = useNavigation();
   const { selectedUser } = useUser();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { db } = require('../../utils/databaseService');
   const onCountRef = React.useRef(onLoadedContentCount);
   onCountRef.current = onLoadedContentCount;
 
-  // Post menu hook
   const {
     handleMorePress,
+    handlePostPress,
+    handleReportSubmit,
     optionsModalVisible,
     setOptionsModalVisible,
     modalOptions,
     modalPosition,
     reportModalVisible,
     setReportModalVisible,
-    selectedPostForReport,
-    setSelectedPostForReport
-  } = usePostMenu({
-    onReopen: (item) => runProfileReopenPostMenuAction(item, onReopenSuccess),
-  });
+    optionsTitle,
+  } = useProfileTabPostInteractions(onReopenSuccess);
 
-  const handlePostPress = useCallback(
-    (feedItem: FeedItem) => {
-      navigateToPostDetail(navigation as never, { postId: feedItem.id, initialItem: feedItem });
-    },
-    [navigation],
-  );
-
-  // Report submit handler
-  const handleReportSubmit = async (_reason: string) => {
-    if (!selectedPostForReport) return;
-    // Report functionality can be implemented here if needed
-    setReportModalVisible(false);
-    setSelectedPostForReport(null);
-  };
-
-  // Use provided userId or fallback to selectedUser.id
   const targetUserId = userId || selectedUser?.id;
 
   useEffect(() => {
@@ -93,7 +68,7 @@ export const OpenRoute = ({
           db,
         });
         loadedCount = allContent.length;
-        setPosts(allContent as any[]);
+        setPosts(allContent as FeedItem[]);
       } catch (error) {
         console.error('Error loading open content:', error);
         loadedCount = 0;
@@ -105,7 +80,7 @@ export const OpenRoute = ({
     };
 
     void loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db, reloadSignal, onReopenSuccess]);
+  }, [targetUserId, user, selectedUser?.id, db, reloadSignal]);
 
   if (loading) {
     return (
@@ -128,44 +103,20 @@ export const OpenRoute = ({
     );
   }
 
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth / 3;
-
   return (
-    <View style={styles.tabContentContainer}>
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        key={3}
-        scrollEnabled={false}
-        renderItem={({ item }) => (
-          <PostReelItem
-            item={item}
-            numColumns={3}
-            cardWidth={cardWidth}
-            onPress={handlePostPress}
-            onMorePress={handleMorePress}
-          />
-        )}
-        onContentSizeChange={(_w, h) => onHeightChange?.(h)}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
-      {/* Modals */}
-      <OptionsModal
-        visible={optionsModalVisible}
-        onClose={() => setOptionsModalVisible(false)}
-        options={modalOptions}
-        title={t('common.options') || 'Options'}
-        anchorPosition={modalPosition}
-      />
-      <ReportPostModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-        onSubmit={handleReportSubmit}
-        isLoading={false}
-      />
-    </View>
+    <ProfileTabPostsGrid
+      posts={posts}
+      onHeightChange={onHeightChange}
+      handlePostPress={handlePostPress}
+      handleMorePress={handleMorePress}
+      optionsModalVisible={optionsModalVisible}
+      setOptionsModalVisible={setOptionsModalVisible}
+      modalOptions={modalOptions}
+      modalPosition={modalPosition}
+      reportModalVisible={reportModalVisible}
+      setReportModalVisible={setReportModalVisible}
+      handleReportSubmit={handleReportSubmit}
+      optionsTitle={optionsTitle}
+    />
   );
 };

@@ -1,12 +1,7 @@
 import type { FeedItem } from '../types/feed';
 import type { ApiResponse } from './apiService';
 import { apiService } from './apiService';
-import {
-  donationIdFromSyntheticFeedId,
-  isLegacyTimestampItemId,
-  isUuid,
-  isValidDedicatedItemId,
-} from './feedPostEntityIds';
+import { donationIdFromSyntheticFeedId, isUuid, isValidDedicatedItemId } from './feedPostEntityIds';
 
 type ApiLike = {
   updateTask: (id: string, body: { status: string }) => Promise<ApiResponse>;
