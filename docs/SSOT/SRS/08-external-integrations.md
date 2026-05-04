@@ -25,13 +25,7 @@
 |-----------|-------|--------------|
 | **SonarCloud** | Static code analysis in CI pipeline | `SONAR_TOKEN` (CI secret), project config in workflow YAML |
 
-### 8.4 Snyk
-
-| Component | Usage | Configuration |
-|-----------|-------|--------------|
-| **Snyk** | Dependency vulnerability scanning in CI | `SNYK_TOKEN` (optional) |
-
-### 8.5 Expo Application Services (EAS)
+### 8.4 Expo Application Services (EAS)
 
 | Component | Usage |
 |-----------|-------|

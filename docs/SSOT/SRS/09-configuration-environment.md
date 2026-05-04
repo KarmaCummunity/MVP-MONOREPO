@@ -31,7 +31,6 @@
 | `ROOT_ADMIN_EMAIL` | **Yes** | — | Bootstrap super_admin email |
 | `FORCE_FULL_SCHEMA` | No | `false` | Force schema rebuild |
 | `SKIP_FULL_SCHEMA` | No | `0` | Skip schema init |
-| `SNYK_TOKEN` | No | — | Snyk API token for quality gate |
 | **`OPERATOR_NOTIFICATION_ENABLED`** | No | `true` | **NEW:** Enable/disable push notifications to operators when new queue items arrive (§2.14.5). Useful for staging environments where operator notifications are not desired. |
 | **`OPERATOR_QUEUE_POLL_INTERVAL_MS`** | No | `10000` | **NEW:** Suggested polling interval (ms) returned to operator clients for queue refresh. Server hint only — client enforces actual interval. |
 
@@ -82,8 +81,8 @@
 
 **CI/CD (GitHub Actions):**rigger | Steps |
 |----------|---------|-------|
-| `quality-gate.yml` | Push to `dev`/`main` + PR on `apps/api/**` | ESLint (changed files), tests (`npm run test:ci`), SonarCloud scan, Snyk (optional), quality gate API check |
-| `pr-quality-check.yml` | PR on `apps/api/**` | ESLint, tests, SonarCloud, Snyk, PR comment with results |
+| `quality-gate.yml` | Push to `dev`/`main` + PR on `apps/api/**` | ESLint (changed files), tests (`npm run test:ci`), SonarCloud scan, quality gate API check |
+| `pr-quality-check.yml` | PR on `apps/api/**` | ESLint, tests, SonarCloud, PR comment with results |
 | `sonar.yml` | Push/PR on `apps/api/**` | Tests + SonarCloud scan |
 
 **Pre-push hook (`.husky/pre-push`):**

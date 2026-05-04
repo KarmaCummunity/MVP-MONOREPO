@@ -42,5 +42,4 @@ kc-monorepo/
   docs/         # documentation
   tools/quality/
     sonar/      # Sonar analysis scripts (input under data/, output under out/)
-    snyk/       # Snyk reports (JSON)
 ```
