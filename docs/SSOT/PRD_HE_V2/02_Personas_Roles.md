@@ -91,6 +91,35 @@
 | ניהול כספים ארגוני  | ❌    | ❌   | ❌     | ❌          | ❌     | ✅          | ✅           |
 | ניהול הרשאות כלליות | ❌    | ❌   | ❌     | ❌          | ❌     | ❌          | ✅           |
 
+### 2.4 Additive alignment notes with the SRS
+
+The role model above should be read together with `docs/SSOT/SRS/functional/02-02-users.md` and `docs/SSOT/SRS/03-non-functional-requirements.md`. The implementation-facing role vocabulary is: `user`, `volunteer`, `volunteer_manager`, `operator`, `admin`, `org_admin`, and `super_admin`, with organization affiliation represented through organization membership or a future durable organization link.
+
+#### 2.4.1 Missing role granularity to preserve in design and implementation
+* **Admin:** a platform administrator delegated by a Super Admin. Admin can operate platform-management workflows that policy assigns to admins, but does not automatically own every Super Admin capability.
+* **Org Manager:** an organization-scoped manager below Org Admin. This role should inherit only the organization-scoped capabilities explicitly delegated by the Org Admin.
+* **Volunteer Manager:** a volunteer who manages a reporting subtree of volunteers or other volunteer managers. Circular manager assignments must be rejected, and demotion requires a clear reassignment policy for direct and indirect reports.
+* **Operators Manager:** a supervisor for operators. This role is operationally close to operator workflows, but should not imply broad organization-finance or platform-admin permissions.
+* **Org Volunteer:** a volunteer formally linked to an organization. The same person may also be a regular community user and may hold additional roles.
+
+#### 2.4.2 Permission clarifications
+* **Operator is not a general admin role.** Operators may access the Good Matching / Shiduchim Tov queue and matching cases, but they should not receive organization finance, user-role management, or general admin access unless they also hold an admin role.
+* **Admin and Super Admin oversight of operator workflows** is for quality, audit, reassignment, and moderation. It should not be presented to end users as receiving match proposals in the same sense as volunteers or donors.
+* **Org Admin and Org Manager permissions** must be scoped to their organization unless a separate platform role grants broader access.
+* **Verified status remains a trust signal, not a permission tier**, unless a future product decision explicitly changes this rule and updates both PRD and SRS.
+
+#### 2.4.3 Suggested expanded permission matrix dimensions
+
+| Capability area | User | Volunteer | Volunteer Manager | Org Volunteer | Org Manager | Org Admin | Operator | Operators Manager | Admin | Super Admin |
+| ---------------- | ---- | --------- | ----------------- | ------------- | ----------- | --------- | -------- | ----------------- | ----- | ----------- |
+| Public feed participation | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Receive match proposals as candidate | No | Yes | Yes | Yes | Policy-based | Policy-based | No | No | No | No |
+| Operator queue access | No | No | No | No | No | No | Own/operator queue | Team oversight | Oversight | Full |
+| Organization dashboard | No | No | Team-only if delegated | Limited org scope | Delegated org scope | Full org scope | No | No | Platform oversight only | Full |
+| Volunteer hierarchy management | No | No | Own subtree | No | Delegated org scope | Full org scope | No | No | Policy-based | Full |
+| Platform role management | No | No | No | No | No | No | No | No | Delegated only | Full |
+| Financial administration | No | No | No | No | Delegated org scope | Full org scope | No | No | Platform oversight only | Full |
+
 ---
 *הפרק הבא: [3. פיצ'רים ותהליכי ליבה](./03_Core_Features.md)*
 *חזרה ל[אינדקס ראשי](./00_Index.md)*

@@ -29,6 +29,24 @@
 * **הוגנות** – אין מטרות רווח; אין ניצול של מבקשי/נותני עזרה.
 * **הכלה** – הפלטפורמה פתוחה לכל אדם, ללא קשר לרקע חברתי-כלכלי.
 
+<section dir="ltr" lang="en">
+
+### 1.5 Additive product guardrails and success-quality metrics
+
+Growth metrics should be balanced with trust, safety, and completion metrics so the product does not optimize only for activity volume. Recommended additional guardrail KPIs:
+
+| Area | Additive KPI | Why it matters |
+| ---- | ------------ | -------------- |
+| Privacy and trust | Rate of privacy-related reports, operator PII access audits reviewed, verified identity completion rate | Ensures sensitive help requests remain safe and auditable. |
+| Matching quality | Completed Shiduchim Tov cases, average time to first operator action, candidate acceptance/decline rate | Measures whether human-assisted matching creates real outcomes, not only queue activity. |
+| Donation integrity | Confirmed donation outcomes versus donation intents, disputed donation reports | Separates real completed giving from unprocessed or manual payment intentions. |
+| Accessibility | Critical flows passing RTL, dynamic text, contrast, and screen-reader checks | Keeps the platform usable for users with different abilities and devices. |
+| Moderation health | Report resolution time, repeated offender rate, hidden-content false-positive feedback | Maintains community safety while protecting legitimate users. |
+
+These guardrails should be reviewed alongside MAU, engagement, and organization growth before a feature is considered successful.
+
+</section>
+
 ---
 *הפרק הבא: [2. קהלי יעד, תפקידים והרשאות](./02_Personas_Roles.md)*
 *חזרה ל[אינדקס ראשי](./00_Index.md)*
