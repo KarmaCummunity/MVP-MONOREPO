@@ -1,14 +1,9 @@
 // Extracted from ProfileScreen — Open tab.
-import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import colors from '../../globals/colors';
-import { useUser } from '../../stores/userStore';
+import React, { useEffect } from 'react';
 import { collectOpenTabFeed } from './openRouteLoadOpenContent';
 import type { FeedItem } from '../../types/feed';
-import { styles } from './profileScreen.styles';
-import { ProfileTabPostsGrid } from './ProfileTabPostsGrid';
-import { useProfileTabPostInteractions } from './useProfileTabPostInteractions';
+import { ProfilePostsWithGridShell } from './ProfilePostsWithGridShell';
+import { useProfilePostsTabShell } from './useProfilePostsTabShell';
 
 export const OpenRoute = ({
   userId,
@@ -28,27 +23,17 @@ export const OpenRoute = ({
   /** Called after a successful reopen so the parent can bump `reloadSignal`. */
   onReopenSuccess?: () => void;
 }) => {
-  const { selectedUser } = useUser();
-  const [posts, setPosts] = useState<FeedItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { db } = require('../../utils/databaseService');
-  const onCountRef = React.useRef(onLoadedContentCount);
-  onCountRef.current = onLoadedContentCount;
-
   const {
-    handleMorePress,
-    handlePostPress,
-    handleReportSubmit,
-    optionsModalVisible,
-    setOptionsModalVisible,
-    modalOptions,
-    modalPosition,
-    reportModalVisible,
-    setReportModalVisible,
-    optionsTitle,
-  } = useProfileTabPostInteractions(onReopenSuccess);
-
-  const targetUserId = userId || selectedUser?.id;
+    selectedUser,
+    posts,
+    setPosts,
+    loading,
+    setLoading,
+    db,
+    onCountRef,
+    targetUserId,
+    postIx,
+  } = useProfilePostsTabShell(userId, onLoadedContentCount, onReopenSuccess);
 
   useEffect(() => {
     const loadOpenContent = async () => {
@@ -80,43 +65,18 @@ export const OpenRoute = ({
     };
 
     void loadOpenContent();
-  }, [targetUserId, user, selectedUser?.id, db, reloadSignal]);
-
-  if (loading) {
-    return (
-      <View style={styles.tabContentPlaceholder}>
-        <Text style={styles.placeholderText}>טוען תוכן פתוח...</Text>
-      </View>
-    );
-  }
-
-  if (posts.length === 0) {
-    return (
-      <View
-        style={[styles.tabContentPlaceholder, { height: 400 }]}
-        onLayout={(e) => onHeightChange?.(Math.max(400, e.nativeEvent.layout.height))}
-      >
-        <Ionicons name="folder-open-outline" size={60} color={colors.textSecondary} />
-        <Text style={styles.placeholderText}>אין תוכן פתוח עדיין</Text>
-        <Text style={styles.placeholderSubtext}>התוכן הפתוח שלך יופיע כאן</Text>
-      </View>
-    );
-  }
+  }, [targetUserId, user, selectedUser?.id, db, reloadSignal, setLoading, setPosts, onCountRef]);
 
   return (
-    <ProfileTabPostsGrid
+    <ProfilePostsWithGridShell
+      loading={loading}
       posts={posts}
       onHeightChange={onHeightChange}
-      handlePostPress={handlePostPress}
-      handleMorePress={handleMorePress}
-      optionsModalVisible={optionsModalVisible}
-      setOptionsModalVisible={setOptionsModalVisible}
-      modalOptions={modalOptions}
-      modalPosition={modalPosition}
-      reportModalVisible={reportModalVisible}
-      setReportModalVisible={setReportModalVisible}
-      handleReportSubmit={handleReportSubmit}
-      optionsTitle={optionsTitle}
+      loadingLabel="טוען תוכן פתוח..."
+      emptyIcon="folder-open-outline"
+      emptyTitle="אין תוכן פתוח עדיין"
+      emptySubtitle="התוכן הפתוח שלך יופיע כאן"
+      postIx={postIx}
     />
   );
 };
