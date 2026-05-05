@@ -21,6 +21,25 @@
 6. [6. ניווט ומבנה האפליקציה](./06_Navigation_Structure.md)
 7. [7. כללים עסקיים מרכזיים](./07_Business_Rules.md)
 
+### 🌍 תת-ספר: עולמות תרומה (Donation Worlds)
+
+ה-DNA של הפלטפורמה הוא חלוקת כל סוגי הנתינה והבקשות ל**עולמות**. כל עולם מתועד במסמך עומק ייעודי ב-[`./donation_worlds/`](./donation_worlds/00_Index.md).
+
+* [📖 אינדקס עולמות התרומה](./donation_worlds/00_Index.md)
+* [💰 עולם הכסף](./donation_worlds/01_Money.md)
+* [📦 עולם החפצים](./donation_worlds/02_Items.md)
+* [🍎 עולם המזון](./donation_worlds/03_Food.md)
+* [⚕️ עולם הרפואה](./donation_worlds/04_Medical.md)
+* [🏠 עולם הדיור / האירוח](./donation_worlds/05_Housing.md)
+* [🚗 עולם הנסיעות שיתופיות](./donation_worlds/06_Rides.md)
+* [📚 עולם הידע](./donation_worlds/07_Knowledge.md)
+* [🕒 עולם הזמן והתנדבות](./donation_worlds/08_Time.md)
+* [🐾 עולם בעלי החיים](./donation_worlds/09_Animals.md)
+* [🌱 עולם הסביבה](./donation_worlds/10_Environment.md)
+* [🎨 עולם היצירה](./donation_worlds/11_Creative.md)
+* [💞 עולם השידוכים הרומנטיים](./donation_worlds/12_Matchmaking_Romantic.md)
+* [🎨 עולם עיצוב האפליקציה](./donation_worlds/13_App_Design.md)
+
 ---
 *מעבר לפרק הראשון: [1. חזון, ייעוד ומטרות עסקיות](./01_Vision_Goals.md)*
 

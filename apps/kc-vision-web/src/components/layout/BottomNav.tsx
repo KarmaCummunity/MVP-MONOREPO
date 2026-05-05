@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
@@ -10,13 +9,11 @@ import {
   LayoutGrid,
   Link2,
   MessageCircle,
-  MoreHorizontal,
   RefreshCw,
   Shield,
   Trophy,
   UserCircle,
   Users,
-  X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -62,8 +59,6 @@ function TabButton({ to, icon: Icon, label }: Readonly<{ to: string; icon: typeo
 
 export function BottomNav() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const [moreOpen, setMoreOpen] = useState(false)
   const preset = usePersonaStore((s) => s.preset)
   const roles = getRolesForPreset(preset)
   const uid = getActingUserId(preset)
@@ -86,65 +81,37 @@ export function BottomNav() {
     ...(uid ? [] : [{ to: '/login', icon: UserCircle, labelKey: 'nav.login' as const }]),
   ]
 
-  const handleMoreItemClick = (to: string) => {
-    setMoreOpen(false)
-    navigate(to)
-  }
-
   return (
-    <>
-      {/* More sheet overlay */}
-      {moreOpen && (
-        <button
-          type="button"
-          aria-label="Close menu"
-          className="fixed inset-0 z-40 w-full bg-black/40 backdrop-blur-sm"
-          onClick={() => setMoreOpen(false)}
-        />
-      )}
-
-      {/* More slide-up sheet */}
-      <div
-        className={cn(
-          'fixed bottom-16 left-0 right-0 z-50 mx-auto max-w-lg rounded-t-2xl bg-white shadow-2xl transition-transform duration-300',
-          !moreOpen && 'translate-y-full pointer-events-none',
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <span className="text-sm font-semibold text-slate-700">
-            {t('nav.more', 'עוד')}
-          </span>
-          <button
-            type="button"
-            onClick={() => setMoreOpen(false)}
-            className="rounded-full p-1 text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-4 gap-1 p-3 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 z-30 bg-white shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
+      <div className="mx-auto w-full max-w-lg border-t border-slate-200 px-2 py-2">
+        <div className="flex flex-nowrap gap-1 overflow-x-auto pb-safe">
           {MORE_ITEMS.map((item) => {
             const Icon = item.icon
             const label = t(item.labelKey, item.labelKey.split('.').pop() ?? '')
             return (
-              <button
+              <NavLink
                 key={item.to}
-                type="button"
-                onClick={() => handleMoreItemClick(item.to)}
-                className="flex flex-col items-center gap-1 rounded-xl p-3 text-center text-xs font-medium text-slate-600 hover:bg-teal-50 hover:text-teal-700 active:scale-95 transition-all"
+                to={item.to}
+                title={label}
+                aria-label={label}
+                className={({ isActive }) =>
+                  cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors',
+                    isActive
+                      ? 'bg-teal-100 text-teal-700'
+                      : 'bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-700',
+                  )
+                }
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <span className="leading-tight">{label}</span>
-              </button>
+                <Icon className="h-5 w-5" aria-hidden />
+              </NavLink>
             )
           })}
         </div>
       </div>
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-stretch border-t border-slate-200 bg-white shadow-[0_-1px_12px_rgba(0,0,0,0.06)]">
+      <nav className="flex h-16 items-stretch border-t border-slate-200 bg-white">
         <div className="mx-auto flex w-full max-w-lg items-stretch">
           {MAIN_TABS.slice(0, 2).map((tab) => (
             <TabButton
@@ -156,21 +123,23 @@ export function BottomNav() {
           ))}
 
           {/* Center FAB — Create Post */}
-          <NavLink
-            to="/posts/new"
-            className={({ isActive }) =>
-              cn(
-                'flex flex-1 flex-col items-center justify-center gap-0.5',
-                isActive ? 'text-teal-700' : 'text-white',
-              )
-            }
-          >
-            <span className="flex h-12 w-12 -translate-y-3 items-center justify-center rounded-full bg-teal-600 shadow-lg shadow-teal-500/30 hover:bg-teal-500 active:scale-95 transition-all">
-              <Activity className="h-5 w-5 text-white" aria-hidden />
-            </span>
-          </NavLink>
+          <div className="relative z-10 flex min-w-14 shrink-0 items-stretch justify-center">
+            <NavLink
+              to="/posts/new"
+              className={({ isActive }) =>
+                cn(
+                  'flex flex-col items-center justify-center gap-0.5',
+                  isActive ? 'text-teal-700' : 'text-white',
+                )
+              }
+            >
+              <span className="flex h-12 w-12 -translate-y-3 items-center justify-center rounded-full bg-teal-600 shadow-lg shadow-teal-500/30 transition-all hover:bg-teal-500 active:scale-95">
+                <Activity className="h-5 w-5 text-white" aria-hidden />
+              </span>
+            </NavLink>
+          </div>
 
-          {MAIN_TABS.slice(2).map((tab) => (
+          {MAIN_TABS.slice(2, 3).map((tab) => (
             <TabButton
               key={tab.to}
               to={tab.to}
@@ -178,21 +147,8 @@ export function BottomNav() {
               label={t(tab.labelKey)}
             />
           ))}
-
-          {/* More button */}
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            className={cn(
-              'flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-              moreOpen ? 'text-teal-700' : 'text-slate-500 hover:text-teal-600',
-            )}
-          >
-            <MoreHorizontal className="h-5 w-5" aria-hidden />
-            <span>{t('nav.more', 'עוד')}</span>
-          </button>
         </div>
       </nav>
-    </>
+    </div>
   )
 }
