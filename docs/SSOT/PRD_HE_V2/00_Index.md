@@ -9,16 +9,6 @@
 
 מסמך זה מאגד באופן מאורגן ומקיף את **כלל** דרישות המוצר, הפיצ'רים, זרימות המשתמש (User Flows) ומיפוי המסכים של פלטפורמת **Karma Community**. המסמך מהווה את ה-**"אמת הארגונית היחידה" (Single Source of Truth)** ונכתב מנקודת מבטו של מנהל מוצר – ללא התייחסות טכנית, תוך דגש על חוויית משתמש, לוגיקה עסקית וזרימות פונקציונליות.
 
-<section dir="ltr" lang="en">
-
-## Additive alignment note — SRS precedence and review scope
-
-This PRD_HE_V2 package remains a product-facing, Hebrew narrative for vision, user experience, flows, and business rules. For binding product and engineering behavior, the authoritative SSOT remains `docs/SSOT/SRS/`, starting at `docs/SSOT/SRS/README.md`. When this PRD and the SRS describe the same behavior differently, implementation decisions should follow the SRS and this PRD should be updated additively to preserve traceability.
-
-The additive review performed in May 2026 focuses on clarifying gaps without deleting any existing PRD text. The main areas requiring explicit alignment are: four-level post anonymity, Shiduchim Tov versus romantic matchmaking, operator matching privacy rules, expanded role matrices, guest/admin navigation, payment-processing status, accessibility, offline/sync behavior, moderation, and audit/PII retention.
-
-</section>
-
 ---
 
 ## תוכן עניינים (אינדקס)

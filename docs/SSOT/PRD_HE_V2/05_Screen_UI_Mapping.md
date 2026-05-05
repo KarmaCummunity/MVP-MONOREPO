@@ -258,46 +258,6 @@
 **13.11 Admin Review:** בחינת תכנים מדווחים (Content Moderation).
 **13.12 Admin Org Approvals:** אישור/דחיית ארגונים חדשים.
 
-### 5.3 Additive alignment notes and missing UI details
-
-These additions align the screen inventory with `docs/SSOT/SRS/functional/*`, especially post anonymity, Shiduchim Tov, navigation, and privacy requirements. They are additive clarifications and do not replace the screen list above.
-
-#### 5.3.1 Post composer and privacy selection details
-* **Create Post Composer** should include an explicit `Give / Receive` intent selector (`לתת / לקבל`) for donation-context posts, category selection, category-specific fields, and a clear visual badge preview for how the post will appear in the feed.
-* **Privacy Selection Modal** should present four anonymity levels, not only three:
-  1. Operators only.
-  2. Operators + followers, with masked identity for followers.
-  3. Public limited, with redacted identity and no direct DM.
-  4. Fully public, default.
-* **Level 3 contact behavior:** post cards and detail screens should show a platform-mediated contact CTA or "contact unavailable" state rather than exposing direct chat/profile contact.
-* **Author view:** the author's own hidden or redacted posts should remain visible in "My Profile" with clear status badges.
-
-#### 5.3.2 Shiduchim Tov versus romantic matchmaking screens
-* **Matchmaking Screen** remains the romantic/singles category described in the donations module.
-* **Shiduchim Tov Screen** should be added as a separate Good Matching entry in the donations experience.
-* **Non-operator view:** explainer, FAQ, aggregate impact stats only, CTA to create a private request with anonymity level 1 preselected, and CTA to learn more.
-* **Operator view:** queue, case detail, case list, candidate search, proposal modal, notes panel, status timeline, and read-only audit log.
-* **Role fallback:** if operator access is revoked mid-session, the screen should redirect to the explainer with a friendly permission message.
-
-#### 5.3.3 Operator workspace UI safeguards
-* Queue cards should show only the fields required for triage: excerpt, category, city, urgency, assignment status, and creation date.
-* Case detail should visibly separate requester PII, internal notes, candidate-facing summary, and audit trail.
-* Candidate proposal UI should force a short match rationale before sending a proposal.
-* PII access should be intentional in the UI and traceable in audit logs.
-
-#### 5.3.4 Admin, organization, and moderation screens
-* **Admin tab/screen access** should be conditional by role. Guests and regular users should never see admin navigation.
-* **Admin Review** should support reported public posts, reported redacted posts, and high-privacy posts that require admin-only review.
-* **Org Dashboard** should clearly distinguish Org Admin, Org Manager, Org Employee, and Org Volunteer permissions so users do not see actions outside their organization scope.
-* **Org Onboarding** should show a "pending approval" state and a clear rejection/resubmission path.
-
-#### 5.3.5 Accessibility and responsive UI requirements
-* All icon-only buttons need accessible labels in Hebrew and English.
-* Focus order should match visual order in RTL and LTR.
-* Text size, contrast, and touch targets should remain usable on small phones, tablets, and web.
-* Modal screens should be dismissible through explicit actions and should not trap screen-reader users.
-* Error states should use user-friendly copy and must not expose technical stack traces.
-
 ---
 *הפרק הבא: [6. ניווט ומבנה האפליקציה](./06_Navigation_Structure.md)*
 *חזרה ל[אינדקס ראשי](./00_Index.md)*
