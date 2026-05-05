@@ -19,6 +19,12 @@
 | **Google Places API** | Location autocomplete and place details | `GOOGLE_API_KEY` |
 | **google-auth-library (server)** | Server-side Google token verification | `GOOGLE_CLIENT_ID` |
 
+### 8.2.1 Sign in with Apple
+
+| Service | Usage | Configuration |
+|---------|-------|----------------|
+| **Apple ID (Sign in with Apple)** | User authentication on the **iOS** app when Google SSO is enabled — **App Store requirement** (Guideline 4.8) | Apple Developer: App ID capability, Services ID, Sign in with Apple key; client/server secrets as per Apple’s flow |
+
 ### 8.3 SonarCloud
 
 | Component | Usage | Configuration |

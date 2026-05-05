@@ -18,7 +18,7 @@ Karma Community (KC) is a **community-oriented social platform** designed to fac
 
 ### 1.3 Core Capabilities
 
-- **User authentication** — email/password, Google OAuth, Firebase Auth, guest mode
+- **User authentication** — email/password, Google OAuth, Sign in with Apple (iOS, required with Google per App Store), Firebase Auth, guest mode
 - **Donations management** — money, items, time, knowledge across 30+ categories
 - **Ride-sharing** — offer and book community rides
 - **Social feed** — posts (multiple types), likes, comments, hide/unhide, reels view; **filtering and sorting** of feed content (see §2.5.6)

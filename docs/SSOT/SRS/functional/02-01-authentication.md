@@ -40,7 +40,18 @@
   - User matched/created by `google_id` or `email`
   - Firebase UID linked if available
 
-#### 2.1.4 Token Refresh
+#### 2.1.4 Sign in with Apple (iOS)
+
+- **Description:** Authenticate via Sign in with Apple on the **iOS** client when Google SSO is offered — **required for App Store compliance** (Guideline 4.8).
+- **Platform:** iOS app build only; Android and Web do not surface this provider in MVP.
+- **Inputs:** Apple identity token (and authorization code if used by the backend exchange flow).
+- **Outputs:** JWT token pair + user data (same session model as other auth methods).
+- **Business logic:**
+  - Verify Apple-issued JWT (JWKS: `https://appleid.apple.com/auth/keys`).
+  - User matched/created by Apple `sub` (stable subject identifier); handle **Hide My Email** relay addresses per Apple rules.
+  - Account unlinking / provider pairing deferred (same as Google — see MVP “no account linking”).
+
+#### 2.1.5 Token Refresh
 
 - **Description:** Refresh expired access token using refresh token
 - **Endpoint:** `POST /auth/refresh`
@@ -51,22 +62,22 @@
   - Fetch **latest roles from database** (ensures role changes propagate)
   - Issue a new access token with the same session ID
 
-#### 2.1.5 Email Availability Check
+#### 2.1.6 Email Availability Check
 
 - **Description:** Check if email is already registered
 - **Endpoint:** `GET /auth/check-email`
 - **Inputs:** email (query parameter)
 - **Outputs:** Boolean availability
 
-#### 2.1.6 User ID Resolution
+#### 2.1.7 User ID Resolution
 
-- **Description:** Resolve user identity from Firebase UID, Google ID, or email
+- **Description:** Resolve user identity from Firebase UID, Google ID, Apple subject (`sub`), or email
 - **Endpoint:** `POST /api/users/resolve-id`
-- **Inputs:** `firebase_uid`, `google_id`, `email`
+- **Inputs:** `firebase_uid`, `google_id`, `apple_sub`, `email`
 - **Outputs:** Resolved user profile + JWT tokens
-- **Business logic:** Tries matching by `firebase_uid` → `google_id` → `email`; creates user if none found
+- **Business logic:** Tries matching by `firebase_uid` → `google_id` → `apple_sub` → `email`; creates user if none found
 
-#### 2.1.7 Session Management
+#### 2.1.8 Session Management
 
 - **Description:** Redis-based session management
 - **Endpoints:**
@@ -79,7 +90,7 @@
   - `GET /session/protected` — test protected endpoint
 - **Business logic:** Sessions stored in Redis with prefix `session:`, TTL 24 hours
 
-#### 2.1.8 Token Revocation
+#### 2.1.9 Token Revocation
 
 - **Description:** Blacklist tokens upon logout
 - **Business logic:**
