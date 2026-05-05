@@ -12,6 +12,11 @@ COPY apps/kc-vision-web/package.json ./
 RUN npm install --legacy-peer-deps
 
 COPY apps/kc-vision-web ./
+# PRD viewer uses import.meta.glob from monorepo docs/ (see PRDViewerPage.tsx).
+# Local dev has the full repo; Docker previously copied only apps/kc-vision-web, so
+# production builds bundled zero markdown files. Mirror the path Vite resolves to:
+# .../src/modules/prd -> ../../../../.. -> /app, then docs/SSOT/PRD_HE_V2.
+COPY docs/SSOT/PRD_HE_V2 /app/docs/SSOT/PRD_HE_V2
 RUN npm run build
 
 FROM nginx:1.25-alpine AS web
