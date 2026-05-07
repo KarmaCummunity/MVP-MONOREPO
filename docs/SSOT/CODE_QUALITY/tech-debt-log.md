@@ -2,6 +2,7 @@
 
 | Date | Item | Notes |
 |--------|------|--------|
+| 2026-05-07 | `[PENDING REFACTOR]:` Daily audit clean-architecture follow-ups | Split `apps/api/src/controllers/donations.controller.ts` into controller + application services; move `apps/api/src/controllers/items-delivery.service.ts` out of `controllers/`; decouple mobile profile/composer rules from AsyncStorage/Zustand store modules; introduce repository/port boundaries for mobile hooks that import `databaseService` directly. |
 | 2026-04-26 | ~~`[PENDING REFACTOR]:` Split `apps/mobile/donationScreens/TrumpScreen.tsx`~~ **Done (initial split)** | Implemented: `donationScreens/trump/` — `useTrumpScreenData`, `useTrumpOfferRideFlow`, `mapPostToFeedItemForTrumpScreen`, `trumpScreen.styles`; shell `TrumpScreen.tsx` ~330 LOC. Fixes: `loadRides`/`getFilteredRides` stale `mode` deps, `await loadRides()` after publish, `RideOfferForm` `isSubmitting`. Follow-ups: shrink hooks toward ~200 LOC/file; dedupe `mapPostToFeedItem*` with `useFeedData` if desired. |
 | — | — | Add rows here; Use of `[PENDING REFACTOR]: ...` from the work rules |
 | 2026-04-27 | ~~`[PENDING REFACTOR]:` Shared i18n for donation open-request CTAs~~ **N/A (KnowledgeScreen removed)** | Prior note referred to `KnowledgeScreen`; screen removed from Donations stack. |
