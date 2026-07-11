@@ -45,5 +45,5 @@ Daily deep scan against the current `dev` baseline (`3d92f9d`) and the project S
 ## Verification Evidence
 
 * `git fetch origin dev && git diff --stat origin/dev...HEAD` confirmed this audit branch started with no source changes beyond `origin/dev`.
-* `npm audit --workspaces --audit-level=moderate` completed with 32 vulnerabilities: 2 low, 15 moderate, 13 high, 2 critical.
+* `npm audit --workspaces --audit-level=moderate` returned non-zero; the latest observed run reported 85 vulnerabilities: 2 low, 12 moderate, 69 high, 2 critical. Counts may vary as the npm advisory database updates, but critical/high dependency findings are reproducible.
 * Targeted `rg` scans checked hardcoded secrets/config, auth guards and identity body fields, XSS/eval patterns, request-time DDL, SQL interpolation patterns, TODO/FIXME debt, and domain-layer paths.
