@@ -32,4 +32,3 @@
 * **Security-critical behavior is largely untested:** the API has only 5 tracked spec files. There are no focused tests for profile role updates, hierarchy RBAC, resolve-id proof, rides/items ownership, chat membership, or refresh-role propagation. Add negative authorization and boundary tests before refactoring.
 * **Duplicate feed/post mapping and linked-post creation paths can drift.** Main feed, items, and rides use separate metadata/time/location mappers, while multiple API controllers independently create linked posts. Consolidate only after characterization tests lock current data shapes.
 * **Tracked generated and backup artifacts increase risk and noise.** Database backups, `eslint-report.json`, ad-hoc verification scripts, stale Sonar output, and alternate server entrypoints are committed. Classify each as required evidence, reproducible generated output, or removable artifact; purge sensitive history first.
-
