@@ -33,6 +33,8 @@
 | **Org-affiliated volunteer** | Formal `user_profiles.organization_id` (or membership table) may be **missing**; `organizations` / `organization_applications` tables exist without full API | §2.2.5 |
 | **Feed filter/sort API** | §2.5.6 requires query params or dedicated feed endpoint; **verify** `GET /api/posts` supports all declared filters/sorts | `posts.controller.ts` / `posts.service.ts` |
 | **Profile personalization** | §2.2.6 requires role-based layout; **verify** profile screens branch on `roles` and `settings` | `ProfileScreen` / related components |
+| **§2.1.6 identity-proof vs §3.2** | Functional §2.1.6 documents `POST /api/users/resolve-id` issuing JWT pairs from `email` / `firebase_uid` / `google_id` alone. NFR §3.2 forbids auth bypass and requires verified identity. **Current code matches the unsafe functional contract** (unguarded identifier-only minting). **Required:** amend §2.1.6 to require verified provider token/password/authenticated session before token issuance; harden the endpoint accordingly. | Daily audit 2026-07-24; `users.controller.ts` `resolve-id`; `user-auth.service.ts` |
+| **Chat guest access vs §3.2/§3.5** | Chat uses `OptionalAuthGuard` (guest reads / optional sender binding). This conflicts with authorization and data-minimization requirements in §3.2/§3.5 for private conversation metadata and messages. **Required:** resolve SSOT in favor of authenticated participant-only access; require membership checks on conversation/message routes. | Daily audit 2026-07-24; `chat.controller.ts`; §2.7 |
 
 ### 10.2 Assumptions
 
