@@ -1,8 +1,11 @@
 # 🛡️ Daily Audit Report: 2026-07-27
 
-**HEAD:** `3d92f9d` (same as `origin/dev`; no application code merged since 2026-07-24 audit)  
-**Evidence timestamp:** `2026-07-27T06:07:06Z`  
-**Scope:** Holistic deep-scan of `apps/api`, `apps/mobile`, committed config/docs/backups; focused re-verification of persistent critical findings.  
+**HEAD:** `3d92f9d` (same as `origin/dev`; no application code merged since 2026-07-24 audit)
+
+**Evidence timestamp:** `2026-07-27T06:07:06Z`
+
+**Scope:** Holistic deep-scan of `apps/api`, `apps/mobile`, committed config/docs/backups; focused re-verification of persistent critical findings.
+
 **npm audit (workspaces, observed range this run):** first pass **37** total (critical **4**, high **19**); re-check at final HEAD **61** total (critical **4**, high **46**). Registry remains non-deterministic for this lockfile — report max/range, not a single stable count. Critical packages: `handlebars`, `shell-quote`, `tar`, `websocket-driver`.
 
 ## 🚨 Critical Vulnerabilities
