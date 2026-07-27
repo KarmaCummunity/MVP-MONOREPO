@@ -56,6 +56,9 @@
 
 | Risk | Severity | Details |
 |------|----------|---------|
+| **§2.1.6 `resolve-id` vs §3.2 auth** | Critical | Functional §2.1.6 documents minting JWT pairs from bare `firebase_uid` / `google_id` / `email` (and creating users if missing). That conflicts with §3.2 (possession-proof authentication, no auth bypass). **Prefer §3.2.** Code at `POST /api/users/resolve-id` still implements the insecure §2.1.6 behavior (daily audit 2026-07-27). Update §2.1.6 to require ID-token/password proof, or remove token minting from this endpoint. |
+| **Optional/unguarded mutation surfaces vs §3.2/§3.5** | Critical | §2.7 chat documents `OptionalAuthGuard` for guest read; several write/control surfaces (rides, items, CRM, community-members, sessions, rate-limit) are unguarded or optional-auth in code, which violates §3.2 authorization and §3.5 access-control expectations. Guest access MUST remain read-only where product allows guests at all. |
+| **Profile / hierarchy authorization gaps vs §2.2** | Critical | §2.2.1 says profile updates are restricted to authenticated users or admin; implementation allows any JWT to update any `:id` and accepts `roles` / `firebase_uid` from the body. Hierarchy endpoints trust body-supplied acting admin IDs. Align code with §2.2 + §3.2 (JWT principal only; role changes admin-gated). |
 | **Custom JWT implementation** | Medium | Hand-rolled HMAC-SHA256 JWT instead of battle-tested library (`jsonwebtoken`, `jose`). Functional but increases maintenance burden and attack surface |
 | **No global exception filter** | Medium | Unhandled exceptions may leak stack traces in development. Production disables error messages via `ValidationPipe` but no catch-all filter |
 | **Inline SQL injection risk** | Low-Medium | Most SQL uses parameterized queries (`$1`, `$2`), but complex queries with `pg-format` and string interpolation require careful review |
