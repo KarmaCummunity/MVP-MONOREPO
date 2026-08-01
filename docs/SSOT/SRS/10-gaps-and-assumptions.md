@@ -70,6 +70,9 @@
 | **No Prisma/ORM** | Info | Deferred; see `docs/SSOT/CODE_QUALITY/tech-debt-log.md`. Current raw SQL works but makes schema changes harder to track |
 | **Anonymity enforcement complexity** | Medium | Implementing server-side anonymity filtering in `PostsService.getPosts()` requires per-request role checking and follower-set joins, which may degrade feed query performance without proper indexing (add index on `posts.anonymity_level`). |
 | **Operator PII access audit** | Medium | Without proper audit logging from day one, it will be difficult to retrospectively demonstrate compliance with privacy requirements. Audit tables (§6.1.13) should be created alongside the matching module. |
+| **§2.1.6 `resolve-id` vs §3.2** | Critical | Functional §2.1.6 specifies identifier-only `POST /api/users/resolve-id` that returns JWT tokens (and may create users). This conflicts with §3.2 authentication expectations (prove possession via Firebase ID token / Google ID token / password). Prefer §3.2 for security posture; revise or deprecate §2.1.6. Reconfirmed daily audit 2026-08-01 at HEAD `3d92f9d`. |
+| **Unguarded mutating API surfaces** | Critical | Rides, items-delivery, CRM, community-members, session logout-all, and rate-limit admin endpoints lack JWT/admin guards; chat uses `OptionalAuthGuard` that always returns `true`. Conflicts with §3.2 authorization. Reconfirmed 2026-08-01. |
+| **Profile / hierarchy authz holes** | Critical | `PUT /api/users/:id` accepts client `roles` / `firebase_uid` without ownership checks; hierarchy promote/set-manager trust body-supplied actor IDs. Conflicts with §3.2 RBAC. Reconfirmed 2026-08-01. |
 
 ### 10.4 Deferred Items (track in CODE_QUALITY)
 
